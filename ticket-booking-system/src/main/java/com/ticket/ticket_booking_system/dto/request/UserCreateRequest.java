@@ -68,4 +68,55 @@ public class UserCreateRequest {
     public static UserCreateRequestBuilder builder() {
         return new UserCreateRequestBuilder();
     }
+    
+    // Define builder class manually since Lombok's generated builder isn't being recognized
+    public static class UserCreateRequestBuilder {
+        private String firstName;
+        private String lastName;
+        private String email;
+        private String password;
+        private String phoneNumber;
+        private String role;
+        
+        public UserCreateRequestBuilder firstName(String firstName) {
+            this.firstName = firstName;
+            return this;
+        }
+        
+        public UserCreateRequestBuilder lastName(String lastName) {
+            this.lastName = lastName;
+            return this;
+        }
+        
+        public UserCreateRequestBuilder email(String email) {
+            this.email = email;
+            return this;
+        }
+        
+        public UserCreateRequestBuilder password(String password) {
+            this.password = password;
+            return this;
+        }
+        
+        public UserCreateRequestBuilder phoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+            return this;
+        }
+        
+        public UserCreateRequestBuilder role(String role) {
+            this.role = role;
+            return this;
+        }
+        
+        public UserCreateRequest build() {
+            UserCreateRequest request = new UserCreateRequest();
+            request.firstName = firstName;
+            request.lastName = lastName;
+            request.email = email;
+            request.password = password;
+            request.phoneNumber = phoneNumber;
+            request.role = role;
+            return request;
+        }
+    }
 }

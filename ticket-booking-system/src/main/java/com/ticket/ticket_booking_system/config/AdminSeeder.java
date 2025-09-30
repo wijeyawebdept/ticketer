@@ -15,12 +15,16 @@ import java.time.LocalDate;
  * if one doesn't already exist in the database.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class AdminSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    
+    public AdminSeeder(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public void run(String... args) throws Exception {

@@ -73,7 +73,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
         email: user?.email || '',
         password: '', // Don't prefill password for security
         phoneNumber: user?.phoneNumber || '',
-        role: user?.role || UserRole.CUSTOMER,
+        role: user?.role || UserRole.USER,
       }}
       validationSchema={Yup.object({
         firstName: Yup.string()
@@ -247,9 +247,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                   label="Role"
                   required
                 >
+                  <MenuItem value={UserRole.USER}>User</MenuItem>
+                  <MenuItem value={UserRole.ORGANIZER}>Organizer</MenuItem>
                   <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
-                  <MenuItem value={UserRole.STAFF}>Staff</MenuItem>
-                  <MenuItem value={UserRole.CUSTOMER}>Customer</MenuItem>
                 </Select>
                 {touched.role && errors.role && (
                   <FormHelperText>{errors.role as string}</FormHelperText>

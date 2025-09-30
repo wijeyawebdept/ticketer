@@ -7,7 +7,6 @@ import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,11 +16,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
+// Removed RequiredArgsConstructor since we're implementing the constructor manually
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    
+    // Manual constructor since Lombok's RequiredArgsConstructor isn't being processed
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     @Transactional
@@ -109,7 +114,7 @@ public class UserServiceImpl implements UserService {
             user.setLastName(request.getLastName());
         }
         
-        if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
+        if (request.getEmail() != null && !user.getUsername().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
             }
@@ -140,7 +145,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
         
-        user.setActive(!user.isActive());
+        user.setActive(!user.isAccountNonLocked());
         userRepository.save(user);
     }
 
@@ -178,13 +183,13 @@ public class UserServiceImpl implements UserService {
 
     private UserResponse mapUserToResponse(User user) {
         return UserResponse.builder()
-                .id(user.getUserId())
+                .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .email(user.getEmail())
+                .email(user.getUsername())
                 .phoneNumber(user.getPhoneNumber())
                 .role(user.getRole().name())
-                .active(user.isActive())
+                .active(user.isAccountNonLocked())
                 .emailVerified(user.isEmailVerified())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())

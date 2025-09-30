@@ -32,20 +32,73 @@ public class UserUpdateRequest {
         return firstName;
     }
     
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
     public String getLastName() {
         return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
     
     public String getEmail() {
         return email;
     }
     
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+    
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
     
     // Static builder method for compatibility
     public static UserUpdateRequestBuilder builder() {
         return new UserUpdateRequestBuilder();
+    }
+    
+    // Define builder class manually since Lombok's generated builder isn't being recognized
+    public static class UserUpdateRequestBuilder {
+        private String firstName;
+        private String lastName;
+        private String email;
+        private String phoneNumber;
+        
+        public UserUpdateRequestBuilder firstName(String firstName) {
+            this.firstName = firstName;
+            return this;
+        }
+        
+        public UserUpdateRequestBuilder lastName(String lastName) {
+            this.lastName = lastName;
+            return this;
+        }
+        
+        public UserUpdateRequestBuilder email(String email) {
+            this.email = email;
+            return this;
+        }
+        
+        public UserUpdateRequestBuilder phoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+            return this;
+        }
+        
+        public UserUpdateRequest build() {
+            UserUpdateRequest request = new UserUpdateRequest();
+            request.setFirstName(firstName);
+            request.setLastName(lastName);
+            request.setEmail(email);
+            request.setPhoneNumber(phoneNumber);
+            return request;
+        }
     }
 }

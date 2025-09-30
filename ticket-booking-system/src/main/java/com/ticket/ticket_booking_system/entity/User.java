@@ -129,8 +129,6 @@ public class User implements UserDetails {
         this.userId = id;
     }
     
-    // getUserId method removed to avoid duplication with getId()
-    
     // Additional compatibility methods
     public Role getRole() {
         return role;
@@ -140,8 +138,9 @@ public class User implements UserDetails {
         this.role = role;
     }
     
-    public boolean isActive() {
-        return active;
+    // isActive is already defined by isAccountNonLocked()
+    public void setActive(boolean active) {
+        this.active = active;
     }
     
     public boolean isEmailVerified() {
@@ -156,8 +155,16 @@ public class User implements UserDetails {
         return createdAt;
     }
     
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
     public LocalDateTime getLastLoginAt() {
         return lastLoginAt;
+    }
+    
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
     
     public LocalDateTime getUpdatedAt() {
@@ -174,5 +181,148 @@ public class User implements UserDetails {
     
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
+    }
+    
+    // Additional getter and setter methods
+    public String getFirstName() {
+        return firstName;
+    }
+    
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+    
+    // getEmail is already defined by getUsername() in UserDetails
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+    
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
+    // getUserId is already defined by getId()
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+    
+    // Static builder method and builder class implementation
+    public static UserBuilder builder() {
+        return new UserBuilder();
+    }
+    
+    public static class UserBuilder {
+        private UUID userId;
+        private String firstName;
+        private String lastName;
+        private String email;
+        private String password;
+        private String phoneNumber;
+        private LocalDate dateOfBirth;
+        private Role role;
+        private boolean active;
+        private boolean emailVerified;
+        private LocalDateTime createdAt;
+        private LocalDateTime lastLoginAt;
+        private LocalDateTime updatedAt;
+        
+        public UserBuilder userId(UUID userId) {
+            this.userId = userId;
+            return this;
+        }
+        
+        public UserBuilder firstName(String firstName) {
+            this.firstName = firstName;
+            return this;
+        }
+        
+        public UserBuilder lastName(String lastName) {
+            this.lastName = lastName;
+            return this;
+        }
+        
+        public UserBuilder email(String email) {
+            this.email = email;
+            return this;
+        }
+        
+        public UserBuilder password(String password) {
+            this.password = password;
+            return this;
+        }
+        
+        public UserBuilder phoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+            return this;
+        }
+        
+        public UserBuilder dateOfBirth(LocalDate dateOfBirth) {
+            this.dateOfBirth = dateOfBirth;
+            return this;
+        }
+        
+        public UserBuilder role(Role role) {
+            this.role = role;
+            return this;
+        }
+        
+        public UserBuilder active(boolean active) {
+            this.active = active;
+            return this;
+        }
+        
+        public UserBuilder emailVerified(boolean emailVerified) {
+            this.emailVerified = emailVerified;
+            return this;
+        }
+        
+        public UserBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+        
+        public UserBuilder lastLoginAt(LocalDateTime lastLoginAt) {
+            this.lastLoginAt = lastLoginAt;
+            return this;
+        }
+        
+        public UserBuilder updatedAt(LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+        
+        public User build() {
+            User user = new User();
+            user.userId = this.userId;
+            user.firstName = this.firstName;
+            user.lastName = this.lastName;
+            user.email = this.email;
+            user.password = this.password;
+            user.phoneNumber = this.phoneNumber;
+            user.dateOfBirth = this.dateOfBirth;
+            user.role = this.role;
+            user.active = this.active;
+            user.emailVerified = this.emailVerified;
+            user.createdAt = this.createdAt;
+            user.lastLoginAt = this.lastLoginAt;
+            user.updatedAt = this.updatedAt;
+            return user;
+        }
     }
 }

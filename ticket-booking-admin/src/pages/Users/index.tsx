@@ -82,9 +82,9 @@ const Users: React.FC = () => {
     switch (role) {
       case UserRole.ADMIN:
         return 'error';
-      case UserRole.STAFF:
+      case UserRole.ORGANIZER:
         return 'warning';
-      case UserRole.CUSTOMER:
+      case UserRole.USER:
       default:
         return 'success';
     }
