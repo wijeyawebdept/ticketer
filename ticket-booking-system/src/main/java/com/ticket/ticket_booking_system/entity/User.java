@@ -10,6 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -29,40 +30,53 @@ public class User implements UserDetails {
     @Column(name = "user_id", columnDefinition = "UUID")
     private UUID userId;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(length = 15)
+    @Column(name = "phone_number", length = 20)
     private String phoneNumber;
+    
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
 
-    @Column(nullable = false)
+    @Column(name = "active", nullable = false)
     private boolean active;
 
-    @Column(nullable = false)
+    @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
         active = true; // Default to active when user is created
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     public enum Role {
@@ -78,6 +92,8 @@ public class User implements UserDetails {
     public String getPassword() {
         return this.password;
     }
+    
+    // passwordHash methods removed
 
     @Override
     public String getUsername() {
@@ -113,9 +129,7 @@ public class User implements UserDetails {
         this.userId = id;
     }
     
-    public UUID getUserId() {
-        return userId;
-    }
+    // getUserId method removed to avoid duplication with getId()
     
     // Additional compatibility methods
     public Role getRole() {
@@ -144,5 +158,21 @@ public class User implements UserDetails {
     
     public LocalDateTime getLastLoginAt() {
         return lastLoginAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+    
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+    
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

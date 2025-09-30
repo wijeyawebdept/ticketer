@@ -1,11 +1,18 @@
 package com.ticket.ticket_booking_system.controller;
 
+import com.ticket.ticket_booking_system.config.JwtService;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -16,9 +23,13 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
     
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, AuthenticationManager authenticationManager, JwtService jwtService) {
         this.userService = userService;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -30,14 +41,35 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> loginUser(@RequestBody LoginRequest loginRequest) {
         try {
+            // Authenticate the user
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getEmail(),
+                    loginRequest.getPassword()
+                )
+            );
+            
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // Get user details
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
             
+            // Generate JWT token
+            String token = jwtService.generateToken(userDetails);
+            
+            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Login successful");
-            response.put("userId", user.getId());
-            response.put("role", user.getRole());
-            response.put("name", user.getFirstName() + " " + user.getLastName());
+            response.put("token", token);
+            response.put("user", Map.of(
+                "id", user.getId(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole(),
+                "email", user.getEmail()
+            ));
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
