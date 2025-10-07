@@ -1,15 +1,22 @@
 package com.ticket.ticket_booking_system.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.Map;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
-import java.time.LocalDateTime;
-import java.util.Map;
 
 @Entity
 @Table(name = "venues")
@@ -20,7 +27,7 @@ import java.util.Map;
 public class Venue {
 
     @Id
-    @Column(name = "venue_id", columnDefinition = "UUID")
+    @Column(name = "venue_id")
     @GeneratedValue(generator = "uuid2")
     @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
     private java.util.UUID venueId;
@@ -47,7 +54,7 @@ public class Venue {
     private Integer capacity;
     
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private Map<String, Object> seatingLayout;
 
     @Column(nullable = false)

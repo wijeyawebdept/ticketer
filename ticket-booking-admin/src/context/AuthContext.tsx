@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const isAdmin = React.useCallback((): boolean => {
-    return user !== null && user.role === UserRole.ADMIN;
+    return user !== null && (user.role === UserRole.ADMIN || user.role === 'ROLE_ADMIN');
   }, [user]);
 
   const contextValue = React.useMemo(

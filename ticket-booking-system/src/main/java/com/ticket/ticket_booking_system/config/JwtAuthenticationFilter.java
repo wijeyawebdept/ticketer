@@ -1,9 +1,7 @@
 package com.ticket.ticket_booking_system.config;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,7 +11,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -49,6 +50,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
             
             if (jwtService.isTokenValid(jwt, userDetails)) {
+                // Enhanced logging for debugging
+                System.out.println("========== JWT Authentication ==========");
+                System.out.println("User: " + userDetails.getUsername());
+                System.out.println("User authorities: " + userDetails.getAuthorities());
+                
+                // Extract and log role from JWT token
+                try {
+                    String roleFromToken = jwtService.extractRole(jwt);
+                    System.out.println("Role from JWT token: " + roleFromToken);
+                } catch (Exception e) {
+                    System.out.println("Error extracting role from token: " + e.getMessage());
+                }
+                
+                // Check URI being accessed
+                System.out.println("Request URI: " + request.getRequestURI());
+                System.out.println("Request method: " + request.getMethod());
+                System.out.println("======================================");
+                
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,

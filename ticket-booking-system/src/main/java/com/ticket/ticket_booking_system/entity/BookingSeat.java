@@ -1,16 +1,24 @@
 package com.ticket.ticket_booking_system.entity;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.GenericGenerator;
-
-import java.math.BigDecimal;
-import java.util.UUID;
 
 @Entity
 @Table(name = "booking_seats")
@@ -25,11 +33,11 @@ public class BookingSeat {
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(name = "booking_seat_id", columnDefinition = "UUID")
+    @Column(name = "booking_seat_id")
     private UUID bookingSeatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id", nullable = false, columnDefinition = "UUID")
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
     
     public void setBooking(Booking booking) {
@@ -37,7 +45,7 @@ public class BookingSeat {
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_id", nullable = false, columnDefinition = "UUID")
+    @JoinColumn(name = "seat_id", nullable = false)
     private Seat seat;
 
     @Column(nullable = false)

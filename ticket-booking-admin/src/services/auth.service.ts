@@ -35,6 +35,17 @@ class AuthService {
       localStorage.setItem('user_data', JSON.stringify({
         email: response.data.user.email
       }));
+      
+      // Debug the JWT token
+      try {
+        const decoded = jwt_decode<DecodedToken>(response.data.token);
+        console.log('🔑 JWT Token decoded:', decoded);
+        console.log('🧑 User from API response:', response.data.user);
+        console.log('🔐 Role from JWT:', decoded.role);
+        console.log('🔐 Role from API response:', response.data.user.role);
+      } catch (err) {
+        console.error('Error decoding JWT token:', err);
+      }
     }
     return response.data;
   }
@@ -90,7 +101,8 @@ class AuthService {
 
   isAdmin(): boolean {
     const user = this.getCurrentUser();
-    return user !== null && user.role === 'ADMIN';
+    // Check for both formats: with and without the ROLE_ prefix
+    return user !== null && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
   }
 }
 

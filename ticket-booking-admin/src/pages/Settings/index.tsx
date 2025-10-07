@@ -407,8 +407,14 @@ const Settings: React.FC = () => {
                 SelectProps={{
                   native: true,
                   inputProps: {
+                    id: 'default-currency-select',
                     'aria-label': 'Default Currency',
+                    'aria-labelledby': 'default-currency-label default-currency-select',
                   },
+                }}
+                InputLabelProps={{
+                  id: 'default-currency-label',
+                  htmlFor: 'default-currency-select'
                 }}
               >
                 <option value="USD">USD ($)</option>
@@ -431,8 +437,14 @@ const Settings: React.FC = () => {
                 SelectProps={{
                   native: true,
                   inputProps: {
+                    id: 'default-language-select',
                     'aria-label': 'Default Language',
+                    'aria-labelledby': 'default-language-label default-language-select',
                   },
+                }}
+                InputLabelProps={{
+                  id: 'default-language-label',
+                  htmlFor: 'default-language-select'
                 }}
               >
                 <option value="en">English</option>
@@ -455,8 +467,14 @@ const Settings: React.FC = () => {
                 SelectProps={{
                   native: true,
                   inputProps: {
+                    id: 'log-level-select',
                     'aria-label': 'Log Level',
+                    'aria-labelledby': 'log-level-label log-level-select',
                   },
+                }}
+                InputLabelProps={{
+                  id: 'log-level-label',
+                  htmlFor: 'log-level-select'
                 }}
               >
                 <option value="DEBUG">DEBUG</option>

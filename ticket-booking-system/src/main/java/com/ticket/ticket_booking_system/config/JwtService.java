@@ -1,18 +1,19 @@
 package com.ticket.ticket_booking_system.config;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
-
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
@@ -34,6 +35,10 @@ public class JwtService {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
+    
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
 
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
@@ -43,7 +48,23 @@ public class JwtService {
             Map<String, Object> extraClaims,
             UserDetails userDetails
     ) {
-        return buildToken(extraClaims, userDetails, jwtExpiration);
+        // Add role to claims
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+        
+        // Log the authorities to help debug
+        System.out.println("Generating token for user: " + userDetails.getUsername());
+        System.out.println("User authorities: " + userDetails.getAuthorities());
+        
+        // Extract roles from authorities - Keep the ROLE_ prefix as Spring Security expects it
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(authority -> authority.getAuthority())  // Keep the ROLE_ prefix
+                .orElse("ROLE_USER");
+        
+        claims.put("role", role);
+        System.out.println("Added role to JWT token: " + role);
+                
+        return buildToken(claims, userDetails, jwtExpiration);
     }
 
     public String generateRefreshToken(

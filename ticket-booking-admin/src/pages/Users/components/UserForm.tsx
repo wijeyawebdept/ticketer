@@ -43,7 +43,7 @@ interface ApiError {
 }
 
 const PHONE_REGEX = /^\d{10}$/;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
 // Helper function to handle API errors
 const handleApiError = (
@@ -102,7 +102,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
             .min(8, 'Password must be at least 8 characters')
             .matches(
               PASSWORD_REGEX,
-              'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+              'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)'
             ),
         phoneNumber: Yup.string()
           .matches(PHONE_REGEX, 'Phone number must be 10 digits'),
@@ -126,7 +126,21 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
               setErrors({ password: 'Password is required' });
               return;
             }
-            await UserService.createUser(userData as any); // Type assertion as any to resolve TS issue
+            
+            // Add debugging information
+            console.log('Password validation test:', PASSWORD_REGEX.test(userData.password));
+            console.log('Password length check:', userData.password.length >= 8);
+            console.log('Has uppercase:', /[A-Z]/.test(userData.password));
+            console.log('Has lowercase:', /[a-z]/.test(userData.password));
+            console.log('Has number:', /\d/.test(userData.password));
+            console.log('Has special char:', /[@$!%*?&#]/.test(userData.password));
+            
+            try {
+              await UserService.createUser(userData as any); // Type assertion as any to resolve TS issue
+            } catch (error: any) {
+              console.log('Detailed API error:', error?.response?.data);
+              throw error;
+            }
           }
           
           // Success handling
@@ -135,7 +149,12 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
         } catch (error) {
           // Error handling
           console.error(`Error ${user ? 'updating' : 'creating'} user:`, error);
+          console.error('Full error details:', error);
+          if ((error as any)?.response?.data) {
+            console.error('API error response:', (error as any).response.data);
+          }
           handleApiError(error as ApiError, setErrors, user ? 'update' : 'create');
+          alert(`Failed to ${user ? 'update' : 'create'} user. Check the browser console for details.`);
         } finally {
           setSubmitting(false);
         }

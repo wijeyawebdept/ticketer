@@ -14,8 +14,11 @@ export interface User {
 
 export enum UserRole {
   USER = 'USER',
+  ROLE_USER = 'ROLE_USER',
   ORGANIZER = 'ORGANIZER',
-  ADMIN = 'ADMIN'
+  ROLE_ORGANIZER = 'ROLE_ORGANIZER',
+  ADMIN = 'ADMIN',
+  ROLE_ADMIN = 'ROLE_ADMIN'
 }
 
 export interface UserCreateRequest {

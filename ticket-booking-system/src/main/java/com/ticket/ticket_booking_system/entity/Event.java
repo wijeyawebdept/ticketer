@@ -1,13 +1,24 @@
 package com.ticket.ticket_booking_system.entity;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "events")
@@ -18,7 +29,7 @@ import java.time.LocalDateTime;
 public class Event {
 
     @Id
-    @Column(name = "event_id", columnDefinition = "UUID")
+    @Column(name = "event_id")
     @GeneratedValue(generator = "uuid2")
     @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
     private java.util.UUID eventId;
@@ -30,7 +41,7 @@ public class Event {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_id", nullable = false, columnDefinition = "UUID")
+    @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
 
     @Column(nullable = false)
