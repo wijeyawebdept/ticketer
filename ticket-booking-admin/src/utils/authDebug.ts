@@ -1,5 +1,3 @@
-
-
 /**
  * Checks the current authentication state and logs debugging information
  */
@@ -54,7 +52,6 @@ export const clearAuth = () => {
  * Creates fake authentication data for testing (USE WITH CAUTION)
  */
 export const createTestAuthData = () => {
-  // This is a fake token and should NOT be used in production
   const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJyb2xlIjoiQURNSU4iLCJleHAiOjQ3Njc2Mzk5OTksImlhdCI6MTYwMDAwMDAwMH0.IU7IzRiSZ-GXisq0pVd8UCIPh_JXioxIkYK9h-jnKOg';
   const fakeUserData = JSON.stringify({
     email: 'test@example.com',
