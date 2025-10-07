@@ -41,11 +41,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = React.useCallback(async (email: string, password: string): Promise<void> => {
     try {
       const response = await AuthService.login({ email, password });
-      setUser({ 
-        id: response.user.id,
-        email: response.user.email,
-        role: response.user.role as UserRole 
-      });
+      
+      if (response.user) {
+        setUser({ 
+          id: response.user.id,
+          email: response.user.email,
+          role: response.user.role as UserRole 
+        });
+      } else if (response.id && response.role && response.email) {
+        // Handle case where response itself has the user properties
+        setUser({
+          id: response.id,
+          email: response.email,
+          role: response.role as UserRole
+        });
+      } else {
+        throw new Error('Invalid login response format');
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;

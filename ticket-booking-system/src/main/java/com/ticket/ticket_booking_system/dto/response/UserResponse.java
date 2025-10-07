@@ -1,12 +1,13 @@
 package com.ticket.ticket_booking_system.dto.response;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
@@ -18,6 +19,7 @@ public class UserResponse {
     private String lastName;
     private String email;
     private String phoneNumber;
+    private java.time.LocalDate dateOfBirth;
     private String role;
     private boolean active;
     private boolean emailVerified;
@@ -43,6 +45,10 @@ public class UserResponse {
     
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
     }
     
     public String getRole() {
@@ -70,13 +76,13 @@ public class UserResponse {
         return new UserResponseBuilder();
     }
     
-    // Define builder class manually since Lombok's generated builder isn't being recognized
     public static class UserResponseBuilder {
         private UUID id;
         private String firstName;
         private String lastName;
         private String email;
         private String phoneNumber;
+        private java.time.LocalDate dateOfBirth;
         private String role;
         private boolean active;
         private boolean emailVerified;
@@ -105,6 +111,11 @@ public class UserResponse {
         
         public UserResponseBuilder phoneNumber(String phoneNumber) {
             this.phoneNumber = phoneNumber;
+            return this;
+        }
+
+        public UserResponseBuilder dateOfBirth(LocalDate dateOfBirth) {
+            this.dateOfBirth = dateOfBirth;
             return this;
         }
         
@@ -140,6 +151,7 @@ public class UserResponse {
             response.lastName = this.lastName;
             response.email = this.email;
             response.phoneNumber = this.phoneNumber;
+            response.dateOfBirth = this.dateOfBirth;
             response.role = this.role;
             response.active = this.active;
             response.emailVerified = this.emailVerified;

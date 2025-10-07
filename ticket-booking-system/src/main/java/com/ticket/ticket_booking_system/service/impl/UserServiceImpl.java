@@ -1,5 +1,13 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
@@ -7,22 +15,13 @@ import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.UserService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
-// Removed RequiredArgsConstructor since we're implementing the constructor manually
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     
-    // Manual constructor since Lombok's RequiredArgsConstructor isn't being processed
     public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -37,7 +36,7 @@ public class UserServiceImpl implements UserService {
 
         // Validate and convert role string to enum
         User.Role role = User.Role.USER; // Default role
-        if (request.getRole() != null && !request.getRole().isEmpty()) {
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
             try {
                 role = User.Role.valueOf(request.getRole().toUpperCase());
             } catch (IllegalArgumentException e) {
@@ -51,6 +50,7 @@ public class UserServiceImpl implements UserService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
+                .dateOfBirth(request.getDateOfBirth())
                 .role(role)
                 .active(true)
                 .emailVerified(false)
@@ -114,7 +114,7 @@ public class UserServiceImpl implements UserService {
             user.setLastName(request.getLastName());
         }
         
-        if (request.getEmail() != null && !user.getUsername().equals(request.getEmail())) {
+        if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
             }
@@ -145,7 +145,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
         
-        user.setActive(!user.isAccountNonLocked());
+        user.setActive(!user.isActive());
         userRepository.save(user);
     }
 
@@ -186,10 +186,11 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .email(user.getUsername())
+                .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
+                .dateOfBirth(user.getDateOfBirth())
                 .role(user.getRole().name())
-                .active(user.isAccountNonLocked())
+                .active(user.isActive())
                 .emailVerified(user.isEmailVerified())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())

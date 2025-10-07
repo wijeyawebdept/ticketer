@@ -1,22 +1,44 @@
 import axios from './api';
 import jwt_decode from 'jwt-decode';
+import { UserRole } from '../types';
 
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+  role: string | UserRole;
+}
+
+// Modified to match the getCurrentUser return type
 export interface LoginResponse {
-  status: string;
-  message: string;
-  token: string;
-  user: {
+  id: string;
+  role: string;
+  email: string;
+  token?: string;
+  status?: string;
+  message?: string;
+  user?: {
     id: string;
     firstName: string;
     lastName: string;
     role: string;
     email: string;
   };
+}
+
+export interface RegisterResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
 }
 
 interface DecodedToken {
@@ -27,27 +49,71 @@ interface DecodedToken {
 }
 
 class AuthService {
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await axios.post<LoginResponse>('/api/auth/login', credentials);
-    if (response.data.token) {
-      localStorage.setItem('auth_token', response.data.token);
-      // Store user data in localStorage for later use
-      localStorage.setItem('user_data', JSON.stringify({
-        email: response.data.user.email
-      }));
-      
-      // Debug the JWT token
-      try {
-        const decoded = jwt_decode<DecodedToken>(response.data.token);
-        console.log('🔑 JWT Token decoded:', decoded);
-        console.log('🧑 User from API response:', response.data.user);
-        console.log('🔐 Role from JWT:', decoded.role);
-        console.log('🔐 Role from API response:', response.data.user.role);
-      } catch (err) {
-        console.error('Error decoding JWT token:', err);
-      }
+  async register(userData: RegisterRequest): Promise<RegisterResponse> {
+    try {
+      console.log('Registering user with endpoint: /api/auth/register');
+      const response = await axios.post<RegisterResponse>('/api/auth/register', userData);
+      console.log('Registration successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      console.error('Response status:', error.response?.status);
+      console.error('Response data:', error.response?.data);
+      throw error;
     }
-    return response.data;
+  }
+
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    try {
+      console.log('Logging in user with endpoint: /api/auth/login');
+      const response = await axios.post<LoginResponse>('/api/auth/login', credentials);
+      console.log('Login response:', response.status, response.statusText);
+      
+      if (response.data.token) {
+        localStorage.setItem('auth_token', response.data.token);
+        
+        // Store user data in localStorage for later use
+        if (response.data.user) {
+          localStorage.setItem('user_data', JSON.stringify({
+            email: response.data.user.email
+          }));
+        }
+      
+        // Debug the JWT token
+        try {
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          console.log('JWT Token decoded:', decoded);
+          console.log('User from API response:', response.data.user);
+          console.log('Role from JWT:', decoded.role);
+          if (response.data.user) {
+            console.log('Role from API response:', response.data.user.role);
+          }
+        } catch (err) {
+          console.error('Error decoding JWT token:', err);
+        }
+      }
+      
+      // Return a compatible LoginResponse object
+      if (response.data.user) {
+        return {
+          id: response.data.user.id,
+          role: response.data.user.role,
+          email: response.data.user.email,
+          token: response.data.token,
+          status: response.data.status,
+          message: response.data.message,
+          user: response.data.user
+        };
+      } else {
+        // Fallback if user is not present in response
+        return response.data;
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      console.error('Response status:', error.response?.status);
+      console.error('Response data:', error.response?.data);
+      throw error;
+    }
   }
 
   logout(): void {
@@ -55,7 +121,7 @@ class AuthService {
     localStorage.removeItem('user_data');
   }
 
-  getCurrentUser(): { id: string; role: string; email: string; } | null {
+  getCurrentUser(): LoginResponse | null {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
@@ -96,7 +162,14 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.getCurrentUser() !== null;
+    const token = localStorage.getItem('auth_token');
+    const user = this.getCurrentUser();
+    
+    // For debugging
+    console.log('Auth check - token exists:', !!token);
+    console.log('Auth check - valid user object:', !!user);
+    
+    return token !== null && user !== null;
   }
 
   isAdmin(): boolean {

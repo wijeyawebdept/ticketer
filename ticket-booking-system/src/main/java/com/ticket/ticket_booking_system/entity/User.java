@@ -36,8 +36,8 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @Column(name = "user_id")
-    private UUID userId;
+    @Column(name = "user_id", columnDefinition = "UUID")
+    private UUID id;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
@@ -62,10 +62,12 @@ public class User implements UserDetails {
     private Role role;
 
     @Column(name = "active", nullable = false)
-    private boolean active;
+    @Builder.Default
+    private boolean active = true;
 
     @Column(name = "email_verified", nullable = false)
-    private boolean emailVerified;
+    @Builder.Default
+    private boolean emailVerified = false;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -78,9 +80,15 @@ public class User implements UserDetails {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        active = true; // Default to active when user is created
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        if (!active) {
+            active = true; // Ensure active is true for new users
+        }
     }
     
     @PreUpdate
@@ -101,12 +109,10 @@ public class User implements UserDetails {
     public String getPassword() {
         return this.password;
     }
-    
-    // passwordHash methods removed
 
     @Override
     public String getUsername() {
-        return email;
+        return this.email;
     }
 
     @Override
@@ -116,7 +122,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return active;
+        return this.active;
     }
 
     @Override
@@ -126,133 +132,52 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active && emailVerified;
+        return this.active && this.emailVerified;
     }
     
-    // Add compatibility methods to support existing code
-    public UUID getId() {
-        return userId;
+    // Custom getter for email (since getUsername() returns email)
+    public String getEmail() {
+        return this.email;
     }
     
-    public void setId(UUID id) {
-        this.userId = id;
+    // Custom isActive method for clarity
+    public boolean isActive() {
+        return this.active;
     }
     
-    // Additional compatibility methods
-    public Role getRole() {
-        return role;
-    }
-    
-    public void setRole(Role role) {
-        this.role = role;
-    }
-    
-    // isActive is already defined by isAccountNonLocked()
+    // Custom setter for active to ensure consistency
     public void setActive(boolean active) {
         this.active = active;
     }
     
-    public boolean isEmailVerified() {
-        return emailVerified;
+    // Custom getter for ID (alias for getId())
+    public UUID getUserId() {
+        return this.id;
     }
     
-    public void setEmailVerified(boolean emailVerified) {
-        this.emailVerified = emailVerified;
-    }
-    
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    
-    public LocalDateTime getLastLoginAt() {
-        return lastLoginAt;
-    }
-    
-    public void setLastLoginAt(LocalDateTime lastLoginAt) {
-        this.lastLoginAt = lastLoginAt;
-    }
-    
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-    
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-    
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
-    
-    // Additional getter and setter methods
-    public String getFirstName() {
-        return firstName;
-    }
-    
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-    
-    public String getLastName() {
-        return lastName;
-    }
-    
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    
-    // getEmail is already defined by getUsername() in UserDetails
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-    
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
-    
-    public void setPassword(String password) {
-        this.password = password;
-    }
-    
-    // getUserId is already defined by getId()
+    // Custom setter for ID (alias for setId())
     public void setUserId(UUID userId) {
-        this.userId = userId;
+        this.id = userId;
     }
-    
-    // Static builder method and builder class implementation
-    public static UserBuilder builder() {
-        return new UserBuilder();
-    }
-    
+
+    // Builder class with proper defaults
     public static class UserBuilder {
-        private UUID userId;
+        private UUID id;
         private String firstName;
         private String lastName;
         private String email;
         private String password;
         private String phoneNumber;
         private LocalDate dateOfBirth;
-        private Role role;
-        private boolean active;
-        private boolean emailVerified;
+        private Role role = Role.USER; // Default role
+        private boolean active = true;
+        private boolean emailVerified = false;
         private LocalDateTime createdAt;
         private LocalDateTime lastLoginAt;
         private LocalDateTime updatedAt;
         
-        public UserBuilder userId(UUID userId) {
-            this.userId = userId;
+        public UserBuilder id(UUID id) {
+            this.id = id;
             return this;
         }
         
@@ -318,7 +243,7 @@ public class User implements UserDetails {
         
         public User build() {
             User user = new User();
-            user.userId = this.userId;
+            user.id = this.id;
             user.firstName = this.firstName;
             user.lastName = this.lastName;
             user.email = this.email;

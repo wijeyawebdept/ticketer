@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || '';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+console.log('API_URL:', process.env.REACT_APP_API_URL);
+console.log('Final API_URL being used:', API_URL);
+
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -25,7 +28,7 @@ axiosInstance.interceptors.request.use(
         const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
-        console.log('🔍 Decoded JWT payload:', JSON.parse(jsonPayload));
+        console.log('Decoded JWT payload:', JSON.parse(jsonPayload));
       } catch (e) {
         console.error('Error decoding JWT:', e);
       }
@@ -43,7 +46,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    console.error('📡 API Error:', {
+    console.error('API Error:', {
       status: error.response?.status,
       url: originalRequest?.url,
       method: originalRequest?.method,
@@ -59,7 +62,7 @@ axiosInstance.interceptors.response.use(
     }
     
     if (error.response?.status === 403) {
-      console.error('🔒 Authorization error: You do not have permission to access this resource.');
+      console.error('Authorization error: You do not have permission to access this resource.');
     }
     
     return Promise.reject(new Error(error.response?.data?.message || 'Request failed'));

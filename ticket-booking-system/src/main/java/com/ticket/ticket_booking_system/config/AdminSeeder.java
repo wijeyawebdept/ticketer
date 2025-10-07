@@ -1,14 +1,15 @@
 package com.ticket.ticket_booking_system.config;
 
-import com.ticket.ticket_booking_system.entity.User;
-import com.ticket.ticket_booking_system.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDate;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This component will run on application startup and create an admin user
@@ -61,6 +62,4 @@ public class AdminSeeder implements CommandLineRunner {
         log.info("Password: 1234");
         log.info("IMPORTANT: Please change this password immediately after first login!");
     }
-
-    // createTestUsers method removed
 }

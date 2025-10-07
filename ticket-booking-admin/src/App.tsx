@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/layout/AdminLayout';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import Users from './pages/Users';
@@ -12,6 +13,10 @@ import Venues from './pages/Venues';
 import Bookings from './pages/Bookings';
 import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
+
+// Lazy-loaded components
+const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
+const AuthTesterPage = lazy(() => import('./pages/AuthTester'));
 
 // Create theme
 const theme = createTheme({
@@ -46,8 +51,19 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            {/* Login route is still available but not used by default */}
+            {/* Public authentication routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/auth-debug" element={
+              <Suspense fallback={<div>Loading debug tools...</div>}>
+                <AuthDebugPage />
+              </Suspense>
+            } />
+            <Route path="/auth-tester" element={
+              <Suspense fallback={<div>Loading API tester...</div>}>
+                <AuthTesterPage />
+              </Suspense>
+            } />
             
             {/* Admin routes with AdminLayout - no authentication required temporarily */}
             <Route element={<ProtectedRoute />}>
@@ -62,9 +78,9 @@ function App() {
               </Route>
             </Route>
 
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Default redirect - changed to go to login first */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

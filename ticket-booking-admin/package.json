@@ -55,7 +55,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8081",
   "devDependencies": {
     "@types/jwt-decode": "^2.2.1",
     "@types/node": "^24.6.0",

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { Formik, Form, Field, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 // Add this for better type checking
@@ -33,8 +33,18 @@ interface LoginFormValues {
 
 const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  // Check for success message from registration
+  useEffect(() => {
+    const state = location.state as { message?: string } | undefined;
+    if (state?.message) {
+      setSuccessMessage(state.message);
+    }
+  }, [location]);
 
   const handleSubmit = async (
     values: LoginFormValues, 
@@ -42,10 +52,29 @@ const Login: React.FC = () => {
   ) => {
     try {
       setError(null);
+      console.log('Attempting login with:', { email: values.email });
+      
+      // Clear any existing tokens before login attempt
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      
       await login(values.email, values.password);
+      console.log('Login successful, token stored:', !!localStorage.getItem('auth_token'));
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      console.error('Response status:', err.response?.status);
+      console.error('Response data:', err.response?.data);
+      
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -67,6 +96,12 @@ const Login: React.FC = () => {
           <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
             Sign in
           </Typography>
+          
+          {successMessage && (
+            <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
+              {successMessage}
+            </Alert>
+          )}
           
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
@@ -121,6 +156,29 @@ const Login: React.FC = () => {
                 >
                   {isSubmitting ? <CircularProgress size={24} /> : 'Sign In'}
                 </Button>
+                
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="body2">
+                    Don't have an account?{' '}
+                    <Link to="/register" style={{ textDecoration: 'none' }}>
+                      Register here
+                    </Link>
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <Link to="/auth-debug" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    </Link>
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ textAlign: 'center', mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <Link to="/auth-tester" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    </Link>
+                  </Typography>
+                </Box>
               </Form>
               );
             }}

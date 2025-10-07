@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CircularProgress, Box } from '@mui/material';
 import { UserRole } from '../types';
@@ -9,8 +9,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
+  // Show loading spinner while checking auth status
   if (loading) {
     return (
       <Box
@@ -24,25 +26,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     );
   }
 
-  // TEMPORARY: Bypass authentication check completely
-  // Original authentication logic is commented out
-  // 
-  // const isAuthorized = () => {
-  //   if (!isAuthenticated()) {
-  //     return false;
-  //   }
-  //   
-  //   if (!requiredRole || !user) {
-  //     return true;
-  //   }
-  //   
-  //   return user.role === requiredRole;
-  // };
-  // 
-  // return isAuthorized() ? <Outlet /> : <Navigate to="/login" replace />;
-
-  // Always render the protected content
-  return <Outlet />;
+  // Check if user is authenticated and has required role (if specified)
+  const isAuthorized = () => {
+    if (!isAuthenticated()) {
+      console.log('User is not authenticated, redirecting to login');
+      return false;
+    }
+    
+    if (!requiredRole || !user) {
+      return true;
+    }
+    
+    // Support both formats: with and without ROLE_ prefix
+    return user.role === requiredRole || 
+           user.role === `ROLE_${requiredRole}` ||
+           `ROLE_${user.role}` === requiredRole;
+  };
+  
+  return isAuthorized() ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 export default ProtectedRoute;
