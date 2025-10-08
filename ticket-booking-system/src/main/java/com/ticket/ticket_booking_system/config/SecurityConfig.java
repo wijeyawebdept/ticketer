@@ -46,6 +46,8 @@ public class SecurityConfig {
                     "/h2-console/**", 
                     "/swagger-ui/**", 
                     "/v3/api-docs/**",
+                    "/uploads/**",
+                    "/uploads/profile-pictures/**",
                     "/error"
                 ).permitAll()
                 .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")

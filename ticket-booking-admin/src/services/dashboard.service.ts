@@ -1,5 +1,5 @@
 import api from './api';
-import { DashboardOverview, Analytics } from '../types';
+import { DashboardOverview } from '../types';
 
 class DashboardService {
   async getDashboardOverview(): Promise<DashboardOverview> {
@@ -7,29 +7,7 @@ class DashboardService {
     return response.data;
   }
 
-  async getAnalytics(period: string = 'week'): Promise<Analytics> {
-    const response = await api.get<Analytics>(`/api/admin/dashboard/analytics?period=${period}`);
-    return response.data;
-  }
 
-  async getRevenueChartData(
-    period: string = 'month',
-    startDate?: string,
-    endDate?: string
-  ): Promise<any> {
-    let url = `/api/admin/dashboard/revenue-chart?period=${period}`;
-    
-    if (startDate) {
-      url += `&startDate=${startDate}`;
-    }
-    
-    if (endDate) {
-      url += `&endDate=${endDate}`;
-    }
-    
-    const response = await api.get(url);
-    return response.data;
-  }
 
   async getRecentTransactions(count: number = 10): Promise<any> {
     const response = await api.get(`/api/admin/dashboard/recent-transactions?count=${count}`);

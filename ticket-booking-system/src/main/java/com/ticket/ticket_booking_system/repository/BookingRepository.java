@@ -1,21 +1,23 @@
 package com.ticket.ticket_booking_system.repository;
 
-import com.ticket.ticket_booking_system.entity.Booking;
-import com.ticket.ticket_booking_system.entity.Event;
-import com.ticket.ticket_booking_system.entity.User;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.ticket.ticket_booking_system.entity.Booking;
+import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.User;
+
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, UUID> {
+public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpecificationExecutor<Booking> {
     
     Page<Booking> findByUser(User user, Pageable pageable);
     

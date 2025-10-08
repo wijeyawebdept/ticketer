@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth status
@@ -26,24 +26,37 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     );
   }
 
-  // Check if user is authenticated and has required role (if specified)
-  const isAuthorized = () => {
-    if (!isAuthenticated()) {
-      console.log('User is not authenticated, redirecting to login');
-      return false;
+  // Check if user is authenticated
+  if (!isAuthenticated()) {
+    console.log('🚫 User is not authenticated, redirecting to login');
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check if user has required role (if specified)
+  if (requiredRole && user) {
+    const userRole = user.role;
+    const isAuthorized = 
+      userRole === requiredRole || 
+      userRole === `ROLE_${requiredRole}` ||
+      `ROLE_${userRole}` === requiredRole;
+    
+    if (!isAuthorized) {
+      console.log(`🚫 User role '${userRole}' does not have permission to access admin panel. Required role: '${requiredRole}'`);
+      console.log('🔄 Redirecting non-admin user back to login');
+      
+      // Clear authentication for non-admin users trying to access admin panel
+      logout();
+      
+      return <Navigate to="/login" state={{ 
+        from: location,
+        error: 'Access denied. Admin privileges required.' 
+      }} replace />;
     }
     
-    if (!requiredRole || !user) {
-      return true;
-    }
-    
-    // Support both formats: with and without ROLE_ prefix
-    return user.role === requiredRole || 
-           user.role === `ROLE_${requiredRole}` ||
-           `ROLE_${user.role}` === requiredRole;
-  };
+    console.log(`✅ User role '${userRole}' authorized for admin access`);
+  }
   
-  return isAuthorized() ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />;
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

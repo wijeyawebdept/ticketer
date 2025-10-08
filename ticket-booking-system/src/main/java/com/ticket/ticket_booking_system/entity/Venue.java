@@ -35,7 +35,7 @@ public class Venue {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)
@@ -44,7 +44,7 @@ public class Venue {
     @Column(nullable = false)
     private String city;
 
-    @Column(nullable = false, length = 2)
+    @Column(nullable = false, length = 50)
     private String state;
 
     @Column(nullable = false, length = 10)
@@ -52,6 +52,13 @@ public class Venue {
 
     @Column(nullable = false)
     private Integer capacity;
+    
+    @Column(name = "layout_type")
+    private String layoutType;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "seating_chart_config", columnDefinition = "jsonb")
+    private String seatingChartConfig;
     
     @JdbcTypeCode(SqlTypes.JSON)
     @Column

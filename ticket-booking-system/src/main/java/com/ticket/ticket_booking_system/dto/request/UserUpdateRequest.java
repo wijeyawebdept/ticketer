@@ -24,6 +24,9 @@ public class UserUpdateRequest {
     @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;
 
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password; // Add password field for updates
+
     @Pattern(regexp = "^\\d{10}$", message = "Phone number must be 10 digits")
     private String phoneNumber;
     
@@ -52,6 +55,14 @@ public class UserUpdateRequest {
         this.email = email;
     }
     
+    public String getPassword() {
+        return password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
     public String getPhoneNumber() {
         return phoneNumber;
     }
@@ -70,6 +81,7 @@ public class UserUpdateRequest {
         private String firstName;
         private String lastName;
         private String email;
+        private String password;
         private String phoneNumber;
         
         public UserUpdateRequestBuilder firstName(String firstName) {
@@ -87,6 +99,11 @@ public class UserUpdateRequest {
             return this;
         }
         
+        public UserUpdateRequestBuilder password(String password) {
+            this.password = password;
+            return this;
+        }
+        
         public UserUpdateRequestBuilder phoneNumber(String phoneNumber) {
             this.phoneNumber = phoneNumber;
             return this;
@@ -97,6 +114,7 @@ public class UserUpdateRequest {
             request.setFirstName(firstName);
             request.setLastName(lastName);
             request.setEmail(email);
+            request.setPassword(password);
             request.setPhoneNumber(phoneNumber);
             return request;
         }

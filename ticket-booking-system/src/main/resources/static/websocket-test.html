@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seat Management WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .connection-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+        }
+        input[type="text"], input[type="number"], select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .danger {
+            background-color: #dc3545;
+        }
+        .danger:hover {
+            background-color: #c82333;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-entry.seat-update {
+            color: #007bff;
+        }
+        .log-entry.hold-notification {
+            color: #28a745;
+        }
+        .log-entry.stats-update {
+            color: #ffc107;
+        }
+        .log-entry.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Seat Management WebSocket Test</h1>
+        
+        <div id="connectionStatus" class="connection-status disconnected">
+            WebSocket: Disconnected
+        </div>
+        
+        <div class="section">
+            <h3>Connection Settings</h3>
+            <input type="text" id="serverUrl" value="ws://localhost:8081/ws" placeholder="WebSocket URL">
+            <input type="text" id="eventId" value="" placeholder="Event ID (UUID)">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()" class="danger">Disconnect</button>
+        </div>
+        
+        <div class="section">
+            <h3>Seat Operations Test</h3>
+            <div>
+                <input type="text" id="seatId" placeholder="Seat ID (UUID)">
+                <label for="action">Seat Action:</label>
+                <select id="action">
+                    <option value="BLOCKED">Block Seat</option>
+                    <option value="UNBLOCKED">Unblock Seat</option>
+                    <option value="HELD">Hold Seat</option>
+                    <option value="RESERVED">Reserve Seat</option>
+                    <option value="RELEASED">Release Seat</option>
+                </select>
+                <button onclick="simulateSeatUpdate()">Simulate Update</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>WebSocket Log</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script>
+        let stompClient = null;
+        let connected = false;
+        let currentEventId = null;
+
+        function updateConnectionStatus(status) {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (status) {
+                statusDiv.textContent = 'WebSocket: Connected';
+                statusDiv.className = 'connection-status connected';
+                connected = true;
+            } else {
+                statusDiv.textContent = 'WebSocket: Disconnected';
+                statusDiv.className = 'connection-status disconnected';
+                connected = false;
+            }
+        }
+
+        function connect() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const eventId = document.getElementById('eventId').value;
+            
+            if (!eventId) {
+                addLogEntry('ERROR: Event ID is required', 'error');
+                return;
+            }
+            
+            currentEventId = eventId;
+            
+            const socket = new SockJS(serverUrl);
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function (frame) {
+                updateConnectionStatus(true);
+                addLogEntry('Connected to WebSocket: ' + frame, 'success');
+                
+                // Subscribe to seat updates for this event
+                stompClient.subscribe('/topic/events/' + eventId + '/seats', function (message) {
+                    const seatUpdate = JSON.parse(message.body);
+                    addLogEntry('SEAT UPDATE: ' + JSON.stringify(seatUpdate, null, 2), 'seat-update');
+                });
+                
+                // Subscribe to seat availability statistics
+                stompClient.subscribe('/topic/events/' + eventId + '/stats', function (message) {
+                    const stats = JSON.parse(message.body);
+                    addLogEntry('STATS UPDATE: ' + JSON.stringify(stats, null, 2), 'stats-update');
+                });
+                
+                // Subscribe to personal seat hold notifications (if user-specific)
+                stompClient.subscribe('/user/queue/seat-holds', function (message) {
+                    const notification = JSON.parse(message.body);
+                    addLogEntry('HOLD NOTIFICATION: ' + JSON.stringify(notification, null, 2), 'hold-notification');
+                });
+                
+            }, function (error) {
+                updateConnectionStatus(false);
+                addLogEntry('WebSocket connection error: ' + error, 'error');
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            updateConnectionStatus(false);
+            addLogEntry('Disconnected from WebSocket', 'info');
+        }
+
+        function simulateSeatUpdate() {
+            const seatId = document.getElementById('seatId').value;
+            const action = document.getElementById('action').value;
+            
+            if (!connected) {
+                addLogEntry('ERROR: Not connected to WebSocket', 'error');
+                return;
+            }
+            
+            if (!seatId) {
+                addLogEntry('ERROR: Seat ID is required', 'error');
+                return;
+            }
+            
+            // Simulate a seat update message
+            const mockSeatUpdate = {
+                seatId: seatId,
+                section: 'A',
+                rowNumber: '1',
+                seatNumber: '5',
+                isAvailable: action === 'RELEASED',
+                isBlocked: action === 'BLOCKED',
+                isHeld: action === 'HELD',
+                action: action,
+                timestamp: Date.now()
+            };
+            
+            addLogEntry('SIMULATED UPDATE: ' + JSON.stringify(mockSeatUpdate, null, 2), 'seat-update');
+        }
+
+        function addLogEntry(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-disconnect on page unload
+        window.addEventListener('beforeunload', function() {
+            if (connected) {
+                disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

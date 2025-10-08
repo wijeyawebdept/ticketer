@@ -1,0 +1,164 @@
+package com.ticket.ticket_booking_system.service.impl;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
+import com.ticket.ticket_booking_system.dto.response.BookingResponse;
+import com.ticket.ticket_booking_system.dto.response.EventResponse;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.TransactionRepository;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.VenueRepository;
+import com.ticket.ticket_booking_system.service.DashboardService;
+
+@Service
+public class DashboardServiceImpl implements DashboardService {
+
+    private final UserRepository userRepository;
+    private final EventRepository eventRepository;
+    private final BookingRepository bookingRepository;
+    private final TransactionRepository transactionRepository;
+    private final VenueRepository venueRepository;
+    
+    public DashboardServiceImpl(
+            UserRepository userRepository, 
+            EventRepository eventRepository, 
+            BookingRepository bookingRepository,
+            TransactionRepository transactionRepository,
+            VenueRepository venueRepository) {
+        this.userRepository = userRepository;
+        this.eventRepository = eventRepository;
+        this.bookingRepository = bookingRepository;
+        this.transactionRepository = transactionRepository;
+        this.venueRepository = venueRepository;
+    }
+
+    @Override
+    public Map<String, Object> getDashboardOverview() {
+        // Count all users
+        long totalUsers = userRepository.count();
+        
+        // Count active events
+        long totalEvents = eventRepository.count();
+        
+        // Count all bookings
+        long totalBookings = bookingRepository.count();
+        
+        // Calculate total revenue
+        BigDecimal totalRevenue = transactionRepository.calculateTotalRevenue();
+        
+        // Get bookings for the current month
+        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        long monthBookings = bookingRepository.countByCreatedAtAfter(startOfMonth);
+        
+        Map<String, Object> overview = new HashMap<>();
+        overview.put("totalUsers", totalUsers);
+        overview.put("totalEvents", totalEvents);
+        overview.put("totalBookings", totalBookings);
+        overview.put("totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO);
+        overview.put("monthBookings", monthBookings);
+        
+        return overview;
+    }
+
+    @Override
+    public Map<String, Object> getRecentTransactions(int count) {
+        List<Map<String, Object>> transactions = transactionRepository.findTop10ByOrderByCreatedAtDesc()
+                .stream()
+                .limit(count)
+                .map(transaction -> {
+                    Map<String, Object> transactionMap = new HashMap<>();
+                    transactionMap.put("transactionId", transaction.getId());
+                    transactionMap.put("amount", transaction.getAmount());
+                    transactionMap.put("status", transaction.getStatus());
+                    transactionMap.put("createdAt", transaction.getCreatedAt());
+                    
+                    // Add booking and event info if available
+                    if (transaction.getBooking() != null) {
+                        Map<String, Object> bookingMap = new HashMap<>();
+                        bookingMap.put("bookingId", transaction.getBooking().getId());
+                        
+                        if (transaction.getBooking().getEvent() != null) {
+                            Map<String, Object> eventMap = new HashMap<>();
+                            eventMap.put("eventId", transaction.getBooking().getEvent().getId());
+                            eventMap.put("name", transaction.getBooking().getEvent().getName());
+                            bookingMap.put("event", eventMap);
+                        }
+                        
+                        transactionMap.put("booking", bookingMap);
+                    }
+                    
+                    return transactionMap;
+                })
+                .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("transactions", transactions);
+        
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getUpcomingEvents(int count) {
+        List<Map<String, Object>> events = eventRepository.findByEventDateAfter(LocalDateTime.now(), 
+                PageRequest.of(0, count, Sort.by(Sort.Direction.ASC, "eventDate")))
+                .stream()
+                .map(event -> {
+                    Map<String, Object> eventMap = new HashMap<>();
+                    eventMap.put("eventId", event.getId());
+                    eventMap.put("name", event.getName());
+                    eventMap.put("eventDate", event.getEventDate());
+                    eventMap.put("status", event.getStatus());
+                    eventMap.put("description", event.getDescription());
+                    
+                    if (event.getVenue() != null) {
+                        Map<String, Object> venueMap = new HashMap<>();
+                        venueMap.put("venueId", event.getVenue().getId());
+                        venueMap.put("name", event.getVenue().getName());
+                        eventMap.put("venue", venueMap);
+                    }
+                    
+                    return eventMap;
+                })
+                .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("events", events);
+        
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getTopSellingEvents(int count) {
+        // This is a simplified implementation
+        List<Object[]> topEvents = bookingRepository.findTopSellingEvents(PageRequest.of(0, count));
+        
+        List<Map<String, Object>> events = topEvents.stream()
+                .map(row -> {
+                    Map<String, Object> eventMap = new HashMap<>();
+                    eventMap.put("eventId", row[0]);
+                    eventMap.put("name", row[1]);
+                    eventMap.put("totalBookings", row[2]);
+                    return eventMap;
+                })
+                .collect(Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("events", events);
+        
+        return result;
+    }
+}

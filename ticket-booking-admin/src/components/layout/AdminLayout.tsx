@@ -27,7 +27,9 @@ import {
   LocationOn as LocationOnIcon,
   Receipt as ReceiptIcon,
   Settings as SettingsIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  AccountCircle as AccountCircleIcon,
+  EventSeat as EventSeatIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -110,7 +112,9 @@ const AdminLayout: React.FC = () => {
     { text: 'Users', icon: <PersonIcon />, path: '/users' },
     { text: 'Events', icon: <EventIcon />, path: '/events' },
     { text: 'Venues', icon: <LocationOnIcon />, path: '/venues' },
+    { text: 'Seat Management', icon: <EventSeatIcon />, path: '/seats' },
     { text: 'Bookings', icon: <ReceiptIcon />, path: '/bookings' },
+    { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 

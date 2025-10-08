@@ -2,6 +2,8 @@ package com.ticket.ticket_booking_system.service.impl;
 
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -61,6 +63,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "users", key = "#id")
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
@@ -68,6 +71,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "users", key = "#email")
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
@@ -101,7 +105,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "users", allEntries = true)
     public UserResponse updateUser(UUID id, UserUpdateRequest request) {
+        System.out.println("🔄 Starting user update for ID: " + id);
+        System.out.println("📝 Update request: " + request);
+        
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
@@ -122,11 +130,28 @@ public class UserServiceImpl implements UserService {
             user.setEmailVerified(false); // Reset email verification status
         }
         
+        // FIX: Handle password updates with proper encoding
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            String rawPassword = request.getPassword();
+            System.out.println("🔐 Raw password provided for update: " + rawPassword);
+            
+            String encodedPassword = passwordEncoder.encode(rawPassword);
+            System.out.println("🔐 Password encoded successfully");
+            
+            // Verify the encoding works (for debugging)
+            boolean matches = passwordEncoder.matches(rawPassword, encodedPassword);
+            System.out.println("🔐 Password verification test: " + matches);
+            
+            user.setPassword(encodedPassword);
+            System.out.println("🔐 Password updated for user: " + user.getEmail());
+        }
+        
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
         User savedUser = userRepository.save(user);
+        System.out.println("✅ User update completed successfully");
         return mapUserToResponse(savedUser);
     }
 
@@ -147,6 +172,28 @@ public class UserServiceImpl implements UserService {
         
         user.setActive(!user.isActive());
         userRepository.save(user);
+    }
+    
+    @Override
+    @Transactional
+    public UserResponse activateUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
+        
+        user.setActive(true);
+        User savedUser = userRepository.save(user);
+        return mapUserToResponse(savedUser);
+    }
+    
+    @Override
+    @Transactional
+    public UserResponse deactivateUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
+        
+        user.setActive(false);
+        User savedUser = userRepository.save(user);
+        return mapUserToResponse(savedUser);
     }
 
     @Override

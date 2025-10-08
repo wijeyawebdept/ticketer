@@ -1,12 +1,13 @@
 package com.ticket.ticket_booking_system.service;
 
-import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
-import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
-import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.UUID;
+import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
+import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.UserResponse;
 
 public interface UserService {
     
@@ -27,6 +28,10 @@ public interface UserService {
     void deleteUser(UUID id);
     
     void toggleUserStatus(UUID id);
+    
+    UserResponse activateUser(UUID id);
+    
+    UserResponse deactivateUser(UUID id);
     
     void changeUserRole(UUID id, String role);
     

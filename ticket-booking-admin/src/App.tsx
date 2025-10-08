@@ -3,7 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleBasedRedirect from './components/RoleBasedRedirect';
 import AdminLayout from './components/layout/AdminLayout';
+import UserLayout from './components/layout/UserLayout';
+import OrganizerLayout from './components/layout/OrganizerLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +16,10 @@ import Venues from './pages/Venues';
 import Bookings from './pages/Bookings';
 import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+import SeatManagement from './pages/SeatManagement';
+import IntegrationTest from './pages/IntegrationTest';
+import { UserRole } from './types';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -54,6 +61,7 @@ function App() {
             {/* Public authentication routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/integration-test" element={<IntegrationTest />} />
             <Route path="/auth-debug" element={
               <Suspense fallback={<div>Loading debug tools...</div>}>
                 <AuthDebugPage />
@@ -65,8 +73,8 @@ function App() {
               </Suspense>
             } />
             
-            {/* Admin routes with AdminLayout - no authentication required temporarily */}
-            <Route element={<ProtectedRoute />}>
+            {/* Admin routes - ONLY for ADMIN users */}
+            <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
               <Route element={<AdminLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} />
@@ -74,12 +82,41 @@ function App() {
                 <Route path="/venues" element={<Venues />} />
                 <Route path="/bookings" element={<Bookings />} />
                 <Route path="/transactions" element={<Transactions />} />
+                <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
 
-            {/* Default redirect - changed to go to login first */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Organizer routes - ONLY for ORGANIZER users */}
+            <Route element={<ProtectedRoute requiredRole={UserRole.ORGANIZER} />}>
+              <Route element={<OrganizerLayout />}>
+                <Route path="/organizer/*" element={<Navigate to="/organizer/dashboard" replace />} />
+                <Route path="/organizer/dashboard" element={<Dashboard />} />
+                <Route path="/organizer/events" element={<Events />} />
+                <Route path="/organizer/venues" element={<Venues />} />
+                <Route path="/organizer/bookings" element={<Bookings />} />
+                <Route path="/organizer/seats" element={<SeatManagement isAdmin={false} />} />
+                <Route path="/organizer/profile" element={<Profile />} />
+                <Route path="/organizer/settings" element={<Settings />} />
+              </Route>
+            </Route>
+
+            {/* User routes - ONLY for USER users */}
+            <Route element={<ProtectedRoute requiredRole={UserRole.USER} />}>
+              <Route element={<UserLayout />}>
+                <Route path="/user/*" element={<Navigate to="/user/home" replace />} />
+                <Route path="/user/home" element={<Dashboard />} />
+                <Route path="/user/events" element={<Events />} />
+                <Route path="/user/bookings" element={<Bookings />} />
+                <Route path="/user/seats" element={<SeatManagement isAdmin={false} />} />
+                <Route path="/user/profile" element={<Profile />} />
+                <Route path="/user/settings" element={<Settings />} />
+              </Route>
+            </Route>
+
+            {/* Default redirect - use role-based routing */}
+            <Route path="/" element={<RoleBasedRedirect />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>

@@ -6,12 +6,7 @@ import {
   Typography,
   Card,
   CardContent,
-
   Divider,
-  FormControl,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   CircularProgress
 } from '@mui/material';
 import {
@@ -20,39 +15,17 @@ import {
   AttachMoney as MoneyIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
-import { Line, Bar } from 'react-chartjs-2';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  BarElement,
-  Title, 
-  Tooltip, 
-  Legend 
-} from 'chart.js';
 import { DashboardService } from '../../services';
-import { DashboardOverview, Analytics } from '../../types';
+import { DashboardOverview } from '../../types';
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const StatCard: React.FC<{
+interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
   color: string;
-}> = ({ title, value, icon, color }) => (
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
   <Card elevation={2}>
     <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Box>
@@ -79,41 +52,29 @@ const StatCard: React.FC<{
   </Card>
 );
 
+interface DashboardTransaction {
+  transactionId: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  booking?: { 
+    event?: { 
+      name: string;
+    };
+  };
+}
+
+interface DashboardEvent {
+  eventId: string;
+  name: string;
+  eventDate: string;
+  status: string;
+}
+
 const Dashboard: React.FC = () => {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  interface DashboardTransaction {
-    transactionId: string;
-    amount: number;
-    status: string;
-    createdAt: string;
-    booking?: { 
-      event?: { 
-        name: string;
-      };
-    };
-  }
-  
-  interface DashboardEvent {
-    eventId: string;
-    name: string;
-    eventDate: string;
-    status: string;
-  }
-
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
-  const [revenueData, setRevenueData] = useState<{
-    labels: string[];
-    datasets: {
-      label: string;
-      data: number[];
-      backgroundColor: string;
-      borderColor: string;
-      borderWidth: number;
-    }[];
-  } | null>(null);
-  const [period, setPeriod] = useState<string>('month');
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -124,14 +85,6 @@ const Dashboard: React.FC = () => {
         // Fetch dashboard overview
         const dashboardOverview = await DashboardService.getDashboardOverview();
         setOverview(dashboardOverview);
-        
-        // Fetch analytics for the selected period
-        const analyticsData = await DashboardService.getAnalytics(period);
-        setAnalytics(analyticsData);
-        
-        // Fetch revenue chart data
-        const revenueChartData = await DashboardService.getRevenueChartData(period);
-        setRevenueData(revenueChartData);
         
         // Fetch recent transactions
         const transactions = await DashboardService.getRecentTransactions(5);
@@ -148,11 +101,7 @@ const Dashboard: React.FC = () => {
     };
     
     fetchDashboardData();
-  }, [period]);
-  
-  const handlePeriodChange = (event: SelectChangeEvent) => {
-    setPeriod(event.target.value as string);
-  };
+  }, []);
   
   if (loading) {
     return (
@@ -163,7 +112,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
@@ -204,110 +153,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
       
-      {/* Revenue Chart */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Revenue</Typography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={period}
-                  onChange={handlePeriodChange}
-                  inputProps={{
-                    'aria-label': 'Period selector',
-                  }}
-                >
-                  <MenuItem value="week">Weekly</MenuItem>
-                  <MenuItem value="month">Monthly</MenuItem>
-                  <MenuItem value="year">Yearly</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-            <Divider sx={{ mb: 2 }} />
-            {revenueData && (
-              <Line
-                data={{
-                  labels: revenueData.labels || [],
-                  datasets: revenueData.datasets || [
-                    {
-                      label: 'Revenue',
-                      data: [],
-                      borderColor: '#2196F3',
-                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                      borderWidth: 1
-                    }
-                  ]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: 'top'
-                    }
-                  }
-                }}
-                height={300}
-              />
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Analytics */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>
-              {period.charAt(0).toUpperCase() + period.slice(1)} Analytics
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            {analytics && (
-              <Bar
-                data={{
-                  labels: ['Revenue', 'Bookings', 'New Users'],
-                  datasets: [
-                    {
-                      label: 'Analytics',
-                      data: [
-                        analytics.revenue || 0,
-                        analytics.bookingsCount || 0,
-                        analytics.newUsersCount || 0
-                      ],
-                      backgroundColor: [
-                        'rgba(233, 30, 99, 0.6)',
-                        'rgba(33, 150, 243, 0.6)',
-                        'rgba(76, 175, 80, 0.6)',
-                      ],
-                      borderColor: [
-                        'rgba(233, 30, 99, 1)',
-                        'rgba(33, 150, 243, 1)',
-                        'rgba(76, 175, 80, 1)',
-                      ],
-                      borderWidth: 1
-                    }
-                  ]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true
-                    }
-                  }
-                }}
-                height={250}
-              />
-            )}
-          </Paper>
-        </Grid>
-        
         {/* Recent Transactions */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2 }}>

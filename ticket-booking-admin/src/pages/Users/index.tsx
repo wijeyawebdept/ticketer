@@ -32,7 +32,12 @@ const Users: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      console.log('Starting to fetch users...');
       const data = await UserService.getAllUsers();
+      console.log('Users data received:', data);
+      console.log('Data type:', typeof data);
+      console.log('Is array?', Array.isArray(data));
+      console.log('Users count:', data?.length);
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -40,6 +45,14 @@ const Users: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Add this debugging effect to log when users state changes
+  useEffect(() => {
+    console.log('DataGrid receiving users:', users);
+    console.log('Users type:', typeof users);
+    console.log('Users is array:', Array.isArray(users));
+    console.log('Users length:', users?.length);
+  }, [users]);
 
   const handleCreateClick = () => {
     setSelectedUser(null);
@@ -152,20 +165,20 @@ const Users: React.FC = () => {
             </Box>
           ) : (
             <DataGrid
-                rows={users}
-                columns={columns}
-                initialState={{
-                  pagination: {
-                    paginationModel: {
-                      pageSize: 10,
-                    },
+              rows={users}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: {
+                    pageSize: 10,
                   },
-                }}
-                pageSizeOptions={[10, 25, 50]}
-                disableRowSelectionOnClick
-                autoHeight
-              />
-            )}
+                },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              autoHeight
+            />
+          )}
         </Box>
       </Paper>
 

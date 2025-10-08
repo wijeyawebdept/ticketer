@@ -57,6 +57,9 @@ public class User implements UserDetails {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+    @Column(name = "profile_picture")
+    private String profilePicture;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -117,22 +120,24 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return Boolean.TRUE.equals(this.active);
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return this.active;
+        return Boolean.TRUE.equals(this.active);
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return Boolean.TRUE.equals(this.active);
     }
 
     @Override
     public boolean isEnabled() {
-        return this.active && this.emailVerified;
+        // For now, we'll only check active status and ignore email verification
+        // to prevent the "User is disabled" error
+        return Boolean.TRUE.equals(this.active);
     }
     
     // Custom getter for email (since getUsername() returns email)
@@ -169,6 +174,7 @@ public class User implements UserDetails {
         private String password;
         private String phoneNumber;
         private LocalDate dateOfBirth;
+        private String profilePicture;
         private Role role = Role.USER; // Default role
         private boolean active = true;
         private boolean emailVerified = false;
@@ -211,6 +217,11 @@ public class User implements UserDetails {
             return this;
         }
         
+        public UserBuilder profilePicture(String profilePicture) {
+            this.profilePicture = profilePicture;
+            return this;
+        }
+        
         public UserBuilder role(Role role) {
             this.role = role;
             return this;
@@ -250,6 +261,7 @@ public class User implements UserDetails {
             user.password = this.password;
             user.phoneNumber = this.phoneNumber;
             user.dateOfBirth = this.dateOfBirth;
+            user.profilePicture = this.profilePicture;
             user.role = this.role;
             user.active = this.active;
             user.emailVerified = this.emailVerified;

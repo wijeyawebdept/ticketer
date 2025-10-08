@@ -77,10 +77,26 @@ public class AuthController {
             ));
             
             return ResponseEntity.ok(response);
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Account is disabled. Please contact administrator.");
+            response.put("error_code", "USER_DISABLED");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid email or password");
+            response.put("error_code", "INVALID_CREDENTIALS");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
-            response.put("message", "Invalid email or password: " + e.getMessage());
+            response.put("message", "Login failed: " + e.getMessage());
+            response.put("error_code", "AUTHENTICATION_ERROR");
+            response.put("error_details", e.getClass().getSimpleName());
             
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }

@@ -23,12 +23,11 @@ interface UserFormProps {
   onSuccess?: () => void;
 }
 
-// Combines properties of both request types to handle create and update
 interface UserFormValues {
   firstName: string;
   lastName: string;
   email: string;
-  password?: string; // Optional to allow for updates
+  password?: string;
   phoneNumber: string;
   role: UserRole;
 }
@@ -71,7 +70,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
         firstName: user?.firstName || '',
         lastName: user?.lastName || '',
         email: user?.email || '',
-        password: '', // Don't prefill password for security
+        password: '',
         phoneNumber: user?.phoneNumber || '',
         role: user?.role || UserRole.USER,
       }}
@@ -94,10 +93,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
               // If editing and no password entered, it's valid (keeping old password)
               if (!value || value === '') return true;
               
-              // Otherwise, validate the new password
               return value.length >= 8 && PASSWORD_REGEX.test(value);
             })
-          : Yup.string() // For new user, password is required
+          : Yup.string()
             .required('Password is required')
             .min(8, 'Password must be at least 8 characters')
             .matches(
@@ -111,17 +109,14 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
       })}
       onSubmit={async (values: UserFormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<UserFormValues>) => {
         try {
-          // If editing a user and password is empty, remove it from the values
           const userData = { ...values };
           if (user?.id && !userData.password) {
             delete userData.password;
           }
           
-          // Create or update user
           if (user?.id) {
             await UserService.updateUser(user.id, userData);
           } else {
-            // For creating a user, password is required
             if (!userData.password) {
               setErrors({ password: 'Password is required' });
               return;

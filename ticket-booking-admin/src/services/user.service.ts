@@ -1,10 +1,28 @@
 import api from './api';
 import { User, UserCreateRequest, UserUpdateRequest } from '../types';
 
+// Define the paginated response interface
+interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
 class UserService {
   async getAllUsers(): Promise<User[]> {
-    const response = await api.get<User[]>('/api/admin/users');
-    return response.data;
+    console.log('🔍 Fetching users from API...');
+    const response = await api.get<PaginatedResponse<User>>('/api/admin/users');
+    console.log('📊 Raw API response:', response.data);
+    console.log('👥 Users array from content:', response.data.content);
+    console.log('📈 Total elements:', response.data.totalElements);
+    
+    // Extract the users array from the paginated response
+    return response.data.content || [];
   }
 
   async getUserById(id: string): Promise<User> {

@@ -29,6 +29,19 @@ CREATE TABLE venues (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Connect to your database and run:
+ALTER TABLE venues 
+ADD COLUMN city VARCHAR(255) NOT NULL DEFAULT 'Unknown',
+ADD COLUMN state VARCHAR(50) NOT NULL DEFAULT 'Unknown',
+ADD COLUMN zip_code VARCHAR(10) NOT NULL DEFAULT '00000',
+ADD COLUMN seating_layout JSONB;
+
+-- Remove the default values after adding (optional)
+ALTER TABLE venues ALTER COLUMN description DROP DEFAULT;
+ALTER TABLE venues ALTER COLUMN city DROP DEFAULT;
+ALTER TABLE venues ALTER COLUMN state DROP DEFAULT;
+ALTER TABLE venues ALTER COLUMN zip_code DROP DEFAULT;
+
 -- Events table
 CREATE TABLE events (
     event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -110,6 +123,7 @@ CREATE TABLE transactions (
 -- Create indexes for performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_active ON users(active);
 CREATE INDEX idx_events_organizer ON events(organizer_id);
 CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_date ON events(event_date);

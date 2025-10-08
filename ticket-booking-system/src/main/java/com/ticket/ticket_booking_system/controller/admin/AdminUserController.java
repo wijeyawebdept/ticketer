@@ -91,6 +91,18 @@ public class AdminUserController {
         userService.toggleUserStatus(userId);
         return ResponseEntity.ok(Map.of("message", "User status toggled successfully"));
     }
+    
+    @PatchMapping("/{userId}/activate")
+    public ResponseEntity<UserResponse> activateUser(@PathVariable UUID userId) {
+        UserResponse user = userService.activateUser(userId);
+        return ResponseEntity.ok(user);
+    }
+    
+    @PatchMapping("/{userId}/deactivate")
+    public ResponseEntity<UserResponse> deactivateUser(@PathVariable UUID userId) {
+        UserResponse user = userService.deactivateUser(userId);
+        return ResponseEntity.ok(user);
+    }
 
     @PatchMapping("/{userId}/change-role")
     public ResponseEntity<Map<String, String>> changeUserRole(

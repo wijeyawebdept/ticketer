@@ -66,18 +66,30 @@ export enum EventStatus {
 }
 
 // Venue related types
+export enum VenueLayoutType {
+  THEATER = 'THEATER',
+  GENERAL_ADMISSION = 'GENERAL_ADMISSION', 
+  STADIUM = 'STADIUM',
+  CUSTOM = 'CUSTOM'
+}
+
 export interface Venue {
   venueId: string;
   name: string;
+  description: string;
   address: string;
+  city: string;
+  state: string;
+  zipCode: string;
   capacity: number;
   seatingArrangement: string;
+  layoutType: VenueLayoutType;
 }
 
 // Booking related types
 export interface Booking {
   id: string;
-  bookingId: string; // For backward compatibility
+  bookingId: string;
   user: User;
   event: Event;
   bookingDate: string;
@@ -125,19 +137,28 @@ export interface DashboardOverview {
   monthBookings: number;
 }
 
-export interface Analytics {
-  revenue: number;
-  bookingsCount: number;
-  newUsersCount: number;
+// Profile related types
+export interface ProfileDTO {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  profilePicture?: string;
+  role: string;
+  active: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt?: string;
+  updatedAt?: string;
 }
 
-export interface ChartData {
-  labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    backgroundColor: string;
-    borderColor: string;
-    borderWidth: number;
-  }[];
+export interface ProfileUpdateDTO {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  profilePicture?: string;
 }

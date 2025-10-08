@@ -5,6 +5,7 @@ import EventService from './event.service';
 import BookingService from './booking.service';
 import TransactionService from './transaction.service';
 import { VenueService } from './venue.service';
+import { profileService } from './profile.service';
 
 export {
   AuthService,
@@ -13,5 +14,6 @@ export {
   EventService,
   BookingService,
   TransactionService,
-  VenueService
+  VenueService,
+  profileService
 };
