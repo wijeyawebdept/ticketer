@@ -901,6 +901,15 @@ const SeatingArrangement: React.FC = () => {
           <Button 
             variant="contained" 
             onClick={() => {
+              // Save the updated seat data to the main seating layout
+              if (selectedSeat) {
+                setSeatingLayout(prev => ({
+                  ...prev,
+                  seats: prev.seats.map(seat => 
+                    seat.id === selectedSeat.id ? selectedSeat : seat
+                  )
+                }));
+              }
               setOpenSeatDialog(false);
             }}
           >

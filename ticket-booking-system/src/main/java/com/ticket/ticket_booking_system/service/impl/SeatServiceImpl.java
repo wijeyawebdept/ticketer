@@ -10,40 +10,57 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Seat;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
+import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.SeatService;
 import com.ticket.ticket_booking_system.service.SeatWebSocketService;
 
 @Service
 public class SeatServiceImpl implements SeatService {
-    
+
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final SeatWebSocketService webSocketService;
-    
-    public SeatServiceImpl(SeatRepository seatRepository, EventRepository eventRepository, SeatWebSocketService webSocketService) {
+    private final UserRepository userRepository;
+
+    public SeatServiceImpl(SeatRepository seatRepository, EventRepository eventRepository,
+            SeatWebSocketService webSocketService, UserRepository userRepository) {
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.webSocketService = webSocketService;
+        this.userRepository = userRepository;
     }
-    
+
     @Override
     @Transactional
     public void generateSeatsForEvent(UUID venueId, UUID eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "eventId", eventId.toString()));
-        
+
         List<Seat> baseSeats = seatRepository.findByVenue_VenueIdAndEventIsNull(venueId);
         for (Seat base : baseSeats) {
+            // Determine status for the status field
+            String dbStatus = "AVAILABLE";
+            if (Boolean.TRUE.equals(base.getIsBlocked())) {
+                dbStatus = "RESERVED";
+            } else if (Boolean.FALSE.equals(base.getIsAvailable())) {
+                dbStatus = "RESERVED";
+            }
+
             Seat copy = Seat.builder()
                     .venue(base.getVenue())
                     .event(event)
                     .section(base.getSection())
                     .rowNumber(base.getRowNumber())
+                    .row(base.getRow() != null ? base.getRow() : base.getRowNumber()) // Populate row field for database
+                                                                                      // compatibility
                     .seatNumber(base.getSeatNumber())
                     .seatType(base.getSeatType())
+                    .status(dbStatus) // Populate the status field for database compatibility
                     .price(base.getPrice())
                     .isAvailable(true)
                     .isBlocked(false)
@@ -51,65 +68,69 @@ public class SeatServiceImpl implements SeatService {
             seatRepository.save(copy);
         }
     }
-    
+
     @Override
     public List<Seat> getSeatsByEvent(UUID eventId) {
         return seatRepository.findByEvent_EventId(eventId);
     }
-    
+
     @Override
     public List<Seat> getAvailableSeatsByEvent(UUID eventId) {
         return seatRepository.findAvailableSeatsByEventId(eventId);
     }
-    
+
     @Override
     @Transactional
     public void toggleBlock(UUID seatId, boolean block) {
         Seat seat = getSeatById(seatId);
         seat.setIsBlocked(block);
+        // Update status field for database compatibility
+        if (block) {
+            seat.setStatus("RESERVED");
+        } else {
+            seat.setStatus("AVAILABLE");
+        }
         seatRepository.save(seat);
-        
+
         // Notify WebSocket subscribers
         webSocketService.notifySeatUpdate(
-            seat.getEvent().getEventId(), 
-            seat, 
-            block ? "BLOCKED" : "UNBLOCKED"
-        );
+                seat.getEvent().getEventId(),
+                seat,
+                block ? "RESERVED" : "UNBLOCKED");
     }
-    
+
     @Override
     @Transactional
     public void holdSeats(List<UUID> seatIds, UUID userId, int holdDurationMinutes) {
         List<Seat> seats = seatRepository.findAllById(seatIds);
         LocalDateTime holdExpiry = LocalDateTime.now().plusMinutes(holdDurationMinutes);
-        
+
         for (Seat seat : seats) {
             if (!seat.isAvailableForBooking()) {
                 throw new IllegalStateException("Seat not available for booking: " + seat.getSeatNumber());
             }
             seat.setHoldExpiresAt(holdExpiry);
             seat.setHeldByUser(userId);
-            
+            // Update status field for database compatibility
+            seat.setStatus("HELD");
+
             // Notify WebSocket subscribers about seat hold
             webSocketService.notifySeatUpdate(
-                seat.getEvent().getEventId(), 
-                seat, 
-                "HELD"
-            );
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "HELD");
         }
         seatRepository.saveAll(seats);
-        
+
         // Notify the specific user about their hold
-        SeatWebSocketService.SeatHoldNotification notification = 
-            new SeatWebSocketService.SeatHoldNotification(
+        SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
                 seats.get(0).getEvent().getEventId(),
                 "Seats held for " + holdDurationMinutes + " minutes",
                 "HOLD_CONFIRMED",
-                holdExpiry.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            );
+                holdExpiry.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
         webSocketService.notifyUserSeatHold(userId, seats.get(0).getEvent().getEventId(), notification);
     }
-    
+
     @Override
     @Transactional
     public void reserveSeats(List<UUID> seatIds) {
@@ -121,17 +142,18 @@ public class SeatServiceImpl implements SeatService {
             seat.setIsAvailable(false);
             seat.setHoldExpiresAt(null);
             seat.setHeldByUser(null);
-            
+            // Update status field for database compatibility
+            seat.setStatus("RESERVED");
+
             // Notify WebSocket subscribers about seat reservation
             webSocketService.notifySeatUpdate(
-                seat.getEvent().getEventId(), 
-                seat, 
-                "RESERVED"
-            );
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "RESERVED");
         }
         seatRepository.saveAll(seats);
     }
-    
+
     @Override
     @Transactional
     public void releaseSeatHolds(UUID userId) {
@@ -140,53 +162,56 @@ public class SeatServiceImpl implements SeatService {
             if (userId.equals(seat.getHeldByUser())) {
                 seat.setHoldExpiresAt(null);
                 seat.setHeldByUser(null);
+                // Update status field for database compatibility
+                if (Boolean.TRUE.equals(seat.getIsBlocked())) {
+                    seat.setStatus("RESERVED");
+                } else {
+                    seat.setStatus("AVAILABLE");
+                }
             }
         }
         seatRepository.saveAll(seats);
     }
-    
+
     @Override
     @Transactional
     @Scheduled(fixedRate = 60000) // Run every minute
     public void releaseExpiredHolds() {
         // Find expired holds before releasing them to notify users
         List<Seat> expiredSeats = seatRepository.findExpiredHolds(LocalDateTime.now());
-        
+
         // Release expired holds
         seatRepository.releaseExpiredHolds(LocalDateTime.now());
-        
+
         // Notify WebSocket subscribers about released seats
         for (Seat seat : expiredSeats) {
             webSocketService.notifySeatUpdate(
-                seat.getEvent().getEventId(), 
-                seat, 
-                "RELEASED"
-            );
-            
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "RELEASED");
+
             // Notify the user who held the seat
             if (seat.getHeldByUser() != null) {
-                SeatWebSocketService.SeatHoldNotification notification = 
-                    new SeatWebSocketService.SeatHoldNotification(
+                SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
                         seat.getEvent().getEventId(),
                         "Your seat hold has expired",
                         "HOLD_EXPIRED",
-                        0
-                    );
+                        0);
                 webSocketService.notifyUserSeatHold(seat.getHeldByUser(), seat.getEvent().getEventId(), notification);
             }
         }
     }
-    
+
     @Override
     public Seat getSeatById(UUID seatId) {
         return seatRepository.findById(seatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat", "seatId", seatId.toString()));
     }
-    
+
     @Override
     public SeatAvailabilityStats getAvailabilityStats(UUID eventId) {
         List<Seat> allSeats = seatRepository.findByEvent_EventId(eventId);
-        
+
         long totalSeats = allSeats.size();
         long availableSeats = allSeats.stream()
                 .mapToLong(seat -> seat.isAvailableForBooking() ? 1 : 0)
@@ -200,7 +225,50 @@ public class SeatServiceImpl implements SeatService {
         long blockedSeats = allSeats.stream()
                 .mapToLong(seat -> Boolean.TRUE.equals(seat.getIsBlocked()) ? 1 : 0)
                 .sum();
-        
+
         return new SeatAvailabilityStats(totalSeats, availableSeats, bookedSeats, heldSeats, blockedSeats);
+    }
+
+    /**
+     * Get or create a default event for venue-level seats
+     */
+    private Event getOrCreateDefaultEvent(Venue venue) {
+        // Try to find an existing default event for this venue
+        org.springframework.data.domain.Page<Event> defaultEventsPage = eventRepository.findByVenue(venue,
+                org.springframework.data.domain.PageRequest.of(0, 100));
+        List<Event> defaultEvents = defaultEventsPage.getContent();
+        for (Event event : defaultEvents) {
+            if ("Default Template Event".equals(event.getName())) {
+                return event;
+            }
+        }
+
+        // If no default event exists, create one
+        // First, try to get an admin user to be the organizer
+        User adminUser = userRepository.findByEmail("admin@ticketbooking.com")
+                .orElse(null);
+        if (adminUser == null) {
+            // If no admin user exists, get the first user
+            List<User> users = userRepository.findAll();
+            if (!users.isEmpty()) {
+                adminUser = users.get(0);
+            }
+        }
+
+        // Create the default event
+        Event defaultEvent = Event.builder()
+                .name("Default Template Event")
+                .description("Template event for venue-level seat management")
+                .venue(venue)
+                .startDateTime(LocalDateTime.now().plusYears(1)) // Set to future date
+                .endDateTime(LocalDateTime.now().plusYears(1).plusHours(2)) // 2 hours duration
+                .basePrice(java.math.BigDecimal.ZERO)
+                .totalCapacity(venue.getCapacity())
+                .availableSeats(venue.getCapacity())
+                .status(Event.EventStatus.DRAFT)
+                .organizer(adminUser)
+                .build();
+
+        return eventRepository.save(defaultEvent);
     }
 }

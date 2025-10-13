@@ -120,7 +120,7 @@
                 <input type="text" id="seatId" placeholder="Seat ID (UUID)">
                 <label for="action">Seat Action:</label>
                 <select id="action">
-                    <option value="BLOCKED">Block Seat</option>
+                    <option value="RESERVED">Block Seat</option>
                     <option value="UNBLOCKED">Unblock Seat</option>
                     <option value="HELD">Hold Seat</option>
                     <option value="RESERVED">Reserve Seat</option>
@@ -228,7 +228,7 @@
                 rowNumber: '1',
                 seatNumber: '5',
                 isAvailable: action === 'RELEASED',
-                isBlocked: action === 'BLOCKED',
+                isBlocked: action === 'RESERVED',
                 isHeld: action === 'HELD',
                 action: action,
                 timestamp: Date.now()
