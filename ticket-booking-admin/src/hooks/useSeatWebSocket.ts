@@ -1,131 +1,107 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Seat, SeatUpdateMessage, SeatHoldNotification, SeatAvailabilityStats } from '../services/seat.service';
-import seatWebSocketService, { WebSocketCallbacks } from '../services/websocket.service';
 
-export interface UseSeatWebSocketResult {
-  isConnected: boolean;
-  seats: Seat[];
-  stats: SeatAvailabilityStats | null;
-  notifications: SeatHoldNotification[];
-  connect: (eventId: string) => Promise<void>;
-  disconnect: () => void;
-  updateSeatLocally: (seatUpdate: SeatUpdateMessage) => void;
-  clearNotifications: () => void;
-  connectionError: string | null;
+interface SeatStatus {
+  seatId: string;
+  status: 'available' | 'reserved' | 'unavailable';
+  timestamp: number;
 }
 
-export const useSeatWebSocket = (initialSeats: Seat[] = []): UseSeatWebSocketResult => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [seats, setSeats] = useState<Seat[]>(initialSeats);
-  const [stats, setStats] = useState<SeatAvailabilityStats | null>(null);
-  const [notifications, setNotifications] = useState<SeatHoldNotification[]>([]);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+// Mock WebSocket service for demonstration
+// In a real implementation, this would connect to your backend WebSocket server
+class MockWebSocketService {
+  private listeners: Array<(data: SeatStatus) => void> = [];
+  private isConnected = false;
 
-  // Update local seat state based on WebSocket message
-  const updateSeatLocally = useCallback((seatUpdate: SeatUpdateMessage) => {
-    setSeats(prevSeats => {
-      return prevSeats.map(seat => {
-        if (seat.seatId === seatUpdate.seatId) {
-          return {
-            ...seat,
-            isAvailable: seatUpdate.isAvailable,
-            isBlocked: seatUpdate.isBlocked,
-            holdExpiresAt: seatUpdate.isHeld ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : undefined,
-            heldByUser: seatUpdate.isHeld ? 'current_user' : undefined // This should be set properly based on auth context
-          };
-        }
-        return seat;
+  connect(venueId: string): void {
+    this.isConnected = true;
+    console.log(`Connected to WebSocket for venue: ${venueId}`);
+    
+    // Simulate real-time updates
+    setInterval(() => {
+      if (Math.random() > 0.95) { // 5% chance of update
+        const rows = 'ABCDEFGHIJ';
+        const row = rows[Math.floor(Math.random() * rows.length)];
+        const number = Math.floor(Math.random() * 10) + 1;
+        const seatId = `${row}${number}`;
+        const statuses: ('available' | 'reserved' | 'unavailable')[] = ['available', 'reserved', 'unavailable'];
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+        
+        this.notifyListeners({
+          seatId,
+          status,
+          timestamp: Date.now()
+        });
+      }
+    }, 3000);
+  }
+
+  disconnect(): void {
+    this.isConnected = false;
+    this.listeners = [];
+    console.log('Disconnected from WebSocket');
+  }
+
+  subscribe(listener: (data: SeatStatus) => void): void {
+    this.listeners.push(listener);
+  }
+
+  unsubscribe(listener: (data: SeatStatus) => void): void {
+    this.listeners = this.listeners.filter(l => l !== listener);
+  }
+
+  updateSeat(seatId: string, status: 'available' | 'reserved' | 'unavailable'): void {
+    if (this.isConnected) {
+      this.notifyListeners({
+        seatId,
+        status,
+        timestamp: Date.now()
       });
-    });
-  }, []);
+    }
+  }
 
-  // Connect to WebSocket
-  const connect = useCallback(async (eventId: string): Promise<void> => {
-    try {
-      setConnectionError(null);
-      
-      const callbacks: WebSocketCallbacks = {
-        onConnect: () => {
-          console.log('WebSocket connected for event:', eventId);
-          setIsConnected(true);
-          setConnectionError(null);
-        },
-        
-        onDisconnect: () => {
-          console.log('WebSocket disconnected');
-          setIsConnected(false);
-        },
-        
-        onError: (error) => {
-          console.error('WebSocket error:', error);
-          setConnectionError('WebSocket connection failed. Please try again.');
-          setIsConnected(false);
-        },
-        
-        onSeatUpdate: (seatUpdate: SeatUpdateMessage) => {
-          console.log('Received seat update:', seatUpdate);
-          updateSeatLocally(seatUpdate);
-        },
-        
-        onStatsUpdate: (statsUpdate: SeatAvailabilityStats) => {
-          console.log('Received stats update:', statsUpdate);
-          setStats(statsUpdate);
-        },
-        
-        onHoldNotification: (notification: SeatHoldNotification) => {
-          console.log('Received hold notification:', notification);
-          setNotifications(prev => [...prev, notification]);
-          
-          // Auto-remove notification after 5 seconds
-          setTimeout(() => {
-            setNotifications(prev => prev.filter(n => n !== notification));
-          }, 5000);
-        }
+  private notifyListeners(data: SeatStatus): void {
+    this.listeners.forEach(listener => listener(data));
+  }
+}
+
+const mockWebSocketService = new MockWebSocketService();
+
+export const useSeatWebSocket = (venueId: string) => {
+  const [seats, setSeats] = useState<Record<string, SeatStatus>>({});
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Connect to WebSocket when venueId changes
+  useEffect(() => {
+    if (venueId) {
+      mockWebSocketService.connect(venueId);
+      setIsConnected(true);
+
+      // Subscribe to seat updates
+      const handleSeatUpdate = (data: SeatStatus) => {
+        setSeats(prev => ({
+          ...prev,
+          [data.seatId]: data
+        }));
       };
 
-      await seatWebSocketService.connect(eventId, callbacks);
-    } catch (error) {
-      console.error('Failed to connect to WebSocket:', error);
-      setConnectionError('Failed to connect to real-time updates.');
-      throw error;
+      mockWebSocketService.subscribe(handleSeatUpdate);
+
+      return () => {
+        mockWebSocketService.unsubscribe(handleSeatUpdate);
+        mockWebSocketService.disconnect();
+        setIsConnected(false);
+      };
     }
-  }, [updateSeatLocally]);
+  }, [venueId]);
 
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
-    seatWebSocketService.disconnect();
-    setIsConnected(false);
-    setConnectionError(null);
+  // Function to update seat status
+  const updateSeatStatus = useCallback((seatId: string, status: 'available' | 'reserved' | 'unavailable') => {
+    mockWebSocketService.updateSeat(seatId, status);
   }, []);
-
-  // Clear notifications
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  // Update seats when initialSeats prop changes
-  useEffect(() => {
-    setSeats(initialSeats);
-  }, [initialSeats]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
 
   return {
-    isConnected,
     seats,
-    stats,
-    notifications,
-    connect,
-    disconnect,
-    updateSeatLocally,
-    clearNotifications,
-    connectionError
+    isConnected,
+    updateSeatStatus
   };
 };
-
-export default useSeatWebSocket;

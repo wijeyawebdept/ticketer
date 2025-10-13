@@ -10,30 +10,38 @@ import {
   CircularProgress,
   IconButton
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, EventSeat as EventSeatIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
 import VenueForm from './components/VenueForm';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const VenuesPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Determine if user is admin based on URL path or user role
+  const isAdmin = location.pathname.includes('/admin/') || (user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN');
+  
   // Load venues when component mounts
   useEffect(() => {
     fetchVenues();
-  }, []);
+  }, [isAdmin]);
 
   // Fetch all venues from the API
   const fetchVenues = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await VenueService.getAllVenues();
+      const data = await VenueService.getAllVenues(isAdmin);
       setVenues(data);
     } catch (error) {
       console.error('Error fetching venues:', error);
@@ -65,12 +73,22 @@ const VenuesPage = () => {
   const handleDeleteVenue = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this venue?')) {
       try {
-        await VenueService.deleteVenue(id);
+        await VenueService.deleteVenue(id, isAdmin);
         fetchVenues(); // Refresh the list
       } catch (error) {
         console.error('Error deleting venue:', error);
         setError('Failed to delete venue. Please try again.');
       }
+    }
+  };
+
+  // Handle seating arrangement
+  const handleSeatingArrangement = (venue: Venue) => {
+    // Use different paths for admin and organizer
+    if (isAdmin) {
+      navigate(`/venues/${venue.id}/seating`);
+    } else {
+      navigate(`/organizer/venues/${venue.id}/seating`);
     }
   };
 
@@ -103,8 +121,8 @@ const VenuesPage = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1,
-      minWidth: 100,
+      flex: 1.5,
+      minWidth: 150,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
@@ -112,8 +130,17 @@ const VenuesPage = () => {
             onClick={() => handleEditVenue(params.row)}
             size="small"
             color="primary"
+            sx={{ mr: 1 }}
           >
             <EditIcon />
+          </IconButton>
+          <IconButton
+            onClick={() => handleSeatingArrangement(params.row)}
+            size="small"
+            color="secondary"
+            sx={{ mr: 1 }}
+          >
+            <EventSeatIcon />
           </IconButton>
           <IconButton
             onClick={() => handleDeleteVenue(params.row.id)}

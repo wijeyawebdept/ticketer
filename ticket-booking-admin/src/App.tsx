@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import Users from './pages/Users';
 import Venues from './pages/Venues';
+import SeatingArrangement from './pages/Venues/components/SeatingArrangement';
 import Bookings from './pages/Bookings';
 import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
@@ -175,6 +176,7 @@ function App() {
                 <Route path="/events" element={<Events />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/venues" element={<Venues />} />
+                <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/bookings" element={<Bookings />} />
                 <Route path="/transactions" element={<Transactions />} />
                 <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
@@ -190,6 +192,7 @@ function App() {
                 <Route path="/organizer/dashboard" element={<Dashboard />} />
                 <Route path="/organizer/events" element={<Events />} />
                 <Route path="/organizer/venues" element={<Venues />} />
+                <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={false} />} />
                 <Route path="/organizer/profile" element={<Profile />} />

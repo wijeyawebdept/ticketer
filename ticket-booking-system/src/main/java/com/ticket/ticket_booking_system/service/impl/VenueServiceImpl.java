@@ -20,46 +20,46 @@ import com.ticket.ticket_booking_system.service.VenueService;
 
 @Service
 public class VenueServiceImpl implements VenueService {
-    
+
     private final VenueRepository venueRepository;
     private final SeatRepository seatRepository;
-    
+
     public VenueServiceImpl(VenueRepository venueRepository, SeatRepository seatRepository) {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
     }
-    
+
     @Override
     public List<Venue> getAllVenues() {
         return venueRepository.findAll();
     }
-    
+
     @Override
     public Venue getVenueById(UUID venueId) {
         return venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venue", "venueId", venueId.toString()));
     }
-    
+
     @Override
     @Transactional
     public Venue createVenue(Venue venue) {
         venue.setCreatedAt(LocalDateTime.now());
         venue.setUpdatedAt(LocalDateTime.now());
         Venue savedVenue = venueRepository.save(venue);
-        
+
         // Generate seats from configuration if provided
         if (venue.getSeatingChartConfig() != null && !venue.getSeatingChartConfig().trim().isEmpty()) {
             generateSeatsFromConfig(savedVenue);
         }
-        
+
         return savedVenue;
     }
-    
+
     @Override
     @Transactional
     public Venue updateVenue(UUID venueId, Venue venueDetails) {
         Venue venue = getVenueById(venueId);
-        
+
         venue.setName(venueDetails.getName());
         venue.setDescription(venueDetails.getDescription());
         venue.setAddress(venueDetails.getAddress());
@@ -71,32 +71,41 @@ public class VenueServiceImpl implements VenueService {
         venue.setSeatingChartConfig(venueDetails.getSeatingChartConfig());
         venue.setSeatingLayout(venueDetails.getSeatingLayout());
         venue.setUpdatedAt(LocalDateTime.now());
-        
+
         return venueRepository.save(venue);
     }
-    
+
     @Override
     @Transactional
     public void deleteVenue(UUID venueId) {
         Venue venue = getVenueById(venueId);
         venueRepository.delete(venue);
     }
-    
+
     @Override
     public List<Venue> searchVenuesByName(String name) {
         return venueRepository.findByNameContainingIgnoreCase(name);
     }
-    
+
     @Override
     public List<Venue> findVenuesByCityAndState(String city, String state) {
         return venueRepository.findByCityAndState(city, state);
     }
-    
+
     @Override
     public List<Venue> findVenuesByMinimumCapacity(int minCapacity) {
         return venueRepository.findByMinimumCapacity(minCapacity);
     }
-    
+
+    @Override
+    @Transactional
+    public Venue updateSeatingLayout(UUID venueId, Map<String, Object> seatingLayout) {
+        Venue venue = getVenueById(venueId);
+        venue.setSeatingLayout(seatingLayout);
+        venue.setUpdatedAt(LocalDateTime.now());
+        return venueRepository.save(venue);
+    }
+
     /**
      * Generate seats from venue seating chart configuration
      */
@@ -104,9 +113,10 @@ public class VenueServiceImpl implements VenueService {
     private void generateSeatsFromConfig(Venue venue) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, Object> config = objectMapper.readValue(venue.getSeatingChartConfig(), 
-                    new TypeReference<Map<String, Object>>() {});
-            
+            Map<String, Object> config = objectMapper.readValue(venue.getSeatingChartConfig(),
+                    new TypeReference<Map<String, Object>>() {
+                    });
+
             Map<String, Object> sections = (Map<String, Object>) config.get("sections");
 
             for (String sectionName : sections.keySet()) {

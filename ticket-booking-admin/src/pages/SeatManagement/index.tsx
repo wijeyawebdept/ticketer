@@ -55,14 +55,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   // WebSocket integration
   const {
     isConnected: wsConnected,
-    seats: wsSeats,
-    stats,
-    notifications,
-    connect: connectWS,
-    disconnect: disconnectWS,
-    clearNotifications,
-    connectionError
-  } = useSeatWebSocket(seats);
+    seats: wsSeats
+  } = useSeatWebSocket(eventId || '');
 
   // Load seats for an event
   const loadSeats = async (targetEventId: string) => {
@@ -77,12 +71,6 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     try {
       const eventSeats = await SeatService.getSeatsByEvent(targetEventId);
       setSeats(eventSeats);
-      
-      // Connect to WebSocket for real-time updates
-      if (!wsConnected) {
-        await connectWS(targetEventId);
-      }
-      
       setSuccess(`Loaded ${eventSeats.length} seats for event`);
     } catch (err: any) {
       setError(err.message || 'Failed to load seats');
@@ -185,7 +173,19 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   }, {} as Record<string, Record<string, Seat[]>>);
 
   // Use WebSocket seats if available
-  const displaySeats = wsSeats.length > 0 ? wsSeats : seats;
+  const displaySeats = Object.keys(wsSeats).length > 0 ? 
+    seats.map(seat => {
+      const wsSeat = wsSeats[seat.seatId];
+      if (wsSeat) {
+        // Update seat status based on WebSocket data
+        return {
+          ...seat,
+          isAvailable: wsSeat.status === 'available',
+          isBlocked: wsSeat.status === 'unavailable'
+        };
+      }
+      return seat;
+    }) : seats;
 
   useEffect(() => {
     if (propEventId) {
@@ -205,9 +205,9 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       </Typography>
 
       {/* Connection Status */}
-      {connectionError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          WebSocket Error: {connectionError}
+      {!wsConnected && eventId && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          WebSocket connection not established. Real-time updates unavailable.
         </Alert>
       )}
 
@@ -266,198 +266,150 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Statistics */}
-      {stats && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Real-time Statistics
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item>
-                <Chip 
-                  label={`Total: ${stats.totalSeats}`} 
-                  icon={<Chair />} 
-                  variant="outlined" 
-                />
-              </Grid>
-              <Grid item>
-                <Chip 
-                  label={`Available: ${stats.availableSeats}`} 
-                  icon={<EventSeat />} 
-                  color="success" 
-                />
-              </Grid>
-              <Grid item>
-                <Chip 
-                  label={`Booked: ${stats.bookedSeats}`} 
-                  icon={<CheckCircle />} 
-                  color="default" 
-                />
-              </Grid>
-              <Grid item>
-                <Chip 
-                  label={`Held: ${stats.heldSeats}`} 
-                  icon={<Schedule />} 
-                  color="warning" 
-                />
-              </Grid>
-              <Grid item>
-                <Chip 
-                  label={`Blocked: ${stats.blockedSeats}`} 
-                  icon={<Block />} 
-                  color="error" 
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Action Buttons */}
-      {displaySeats.length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Actions ({selectedSeats.length} seats selected)
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item>
-                <Button
-                  variant="contained"
-                  color="warning"
-                  onClick={holdSeats}
-                  disabled={selectedSeats.length === 0}
-                  startIcon={<Schedule />}
-                >
-                  Hold Seats (15 min)
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={reserveSeats}
-                  disabled={selectedSeats.length === 0}
-                  startIcon={<CheckCircle />}
-                >
-                  Reserve Seats
-                </Button>
-              </Grid>
-              <Grid item>
-                <Button
-                  variant="outlined"
-                  onClick={() => setSelectedSeats([])}
-                  disabled={selectedSeats.length === 0}
-                >
-                  Clear Selection
-                </Button>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Seat Map */}
-      {Object.keys(groupedSeats).map(section => (
-        <Card key={section} sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Section {section}
-            </Typography>
-            {Object.keys(groupedSeats[section])
-              .sort()
-              .map(row => (
-                <Box key={row} sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Row {row}
-                  </Typography>
-                  <Grid container spacing={1}>
-                    {groupedSeats[section][row]
-                      .sort((a, b) => parseInt(a.seatNumber) - parseInt(b.seatNumber))
-                      .map(seat => (
-                        <Grid item key={seat.seatId}>
-                          <Tooltip
-                            title={`
-                              Seat ${seat.seatNumber} - LKR ${seat.price}
-                              ${seat.isBlocked ? ' (BLOCKED)' : ''}
-                              ${!seat.isAvailable ? ' (BOOKED)' : ''}
-                              ${seat.holdExpiresAt ? ` (HELD until ${new Date(seat.holdExpiresAt).toLocaleTimeString()})` : ''}
-                            `}
-                          >
-                            <IconButton
-                              onClick={() => {
-                                if (adminMode && (seat.isBlocked || seat.isAvailable)) {
-                                  toggleSeatBlock(seat.seatId, seat.isBlocked);
-                                } else if (seat.isAvailable && !seat.isBlocked) {
-                                  toggleSeatSelection(seat.seatId);
-                                }
-                              }}
-                              sx={{
-                                color: getSeatColor(seat),
-                                border: selectedSeats.includes(seat.seatId) ? '2px solid #2196f3' : 'none',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(0,0,0,0.1)'
-                                }
-                              }}
-                              disabled={
-                                Boolean((!seat.isAvailable && !seat.isBlocked) || 
-                                (seat.holdExpiresAt && new Date(seat.holdExpiresAt) > new Date() && !selectedSeats.includes(seat.seatId)))
-                              }
-                            >
-                              {getSeatIcon(seat)}
-                            </IconButton>
-                          </Tooltip>
-                        </Grid>
-                      ))}
-                  </Grid>
-                </Box>
-              ))}
-          </CardContent>
-        </Card>
-      ))}
-
-      {/* Legend */}
       {displaySeats.length > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Legend
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <EventSeat sx={{ color: '#4caf50' }} />
-                  <Typography>Available</Typography>
-                </Box>
+        <>
+          {/* Action Buttons */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Actions ({selectedSeats.length} seats selected)
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    onClick={holdSeats}
+                    disabled={selectedSeats.length === 0}
+                    startIcon={<Schedule />}
+                  >
+                    Hold Seats (15 min)
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={reserveSeats}
+                    disabled={selectedSeats.length === 0}
+                    startIcon={<CheckCircle />}
+                  >
+                    Reserve Seats
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setSelectedSeats([])}
+                    disabled={selectedSeats.length === 0}
+                  >
+                    Clear Selection
+                  </Button>
+                </Grid>
               </Grid>
-              <Grid item>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <EventSeat sx={{ color: '#2196f3' }} />
-                  <Typography>Selected</Typography>
-                </Box>
+            </CardContent>
+          </Card>
+
+          {Object.keys(groupedSeats).map(section => (
+            <Card key={section} sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Section {section}
+                </Typography>
+                {Object.keys(groupedSeats[section])
+                  .sort()
+                  .map(row => (
+                    <Box key={row} sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Row {row}
+                      </Typography>
+                      <Grid container spacing={1}>
+                        {groupedSeats[section][row]
+                          .sort((a, b) => parseInt(a.seatNumber) - parseInt(b.seatNumber))
+                          .map(seat => (
+                            <Grid item key={seat.seatId}>
+                              <Tooltip
+                                title={`
+                                  Seat ${seat.seatNumber} - LKR ${seat.price}
+                                  ${seat.isBlocked ? ' (BLOCKED)' : ''}
+                                  ${!seat.isAvailable ? ' (BOOKED)' : ''}
+                                  ${seat.holdExpiresAt ? ` (HELD until ${new Date(seat.holdExpiresAt).toLocaleTimeString()})` : ''}
+                                `}
+                              >
+                                <IconButton
+                                  onClick={() => {
+                                    if (adminMode && (seat.isBlocked || seat.isAvailable)) {
+                                      toggleSeatBlock(seat.seatId, seat.isBlocked);
+                                    } else if (seat.isAvailable && !seat.isBlocked) {
+                                      toggleSeatSelection(seat.seatId);
+                                    }
+                                  }}
+                                  sx={{
+                                    color: getSeatColor(seat),
+                                    border: selectedSeats.includes(seat.seatId) ? '2px solid #2196f3' : 'none',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(0,0,0,0.1)'
+                                    }
+                                  }}
+                                  disabled={
+                                    Boolean((!seat.isAvailable && !seat.isBlocked) || 
+                                    (seat.holdExpiresAt && new Date(seat.holdExpiresAt) > new Date() && !selectedSeats.includes(seat.seatId)))
+                                  }
+                                >
+                                  {getSeatIcon(seat)}
+                                </IconButton>
+                              </Tooltip>
+                            </Grid>
+                          ))}
+                      </Grid>
+                    </Box>
+                  ))}
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Legend */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Legend
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <EventSeat sx={{ color: '#4caf50' }} />
+                    <Typography>Available</Typography>
+                  </Box>
+                </Grid>
+                <Grid item>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <EventSeat sx={{ color: '#2196f3' }} />
+                    <Typography>Selected</Typography>
+                  </Box>
+                </Grid>
+                <Grid item>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Schedule sx={{ color: '#ff9800' }} />
+                    <Typography>Held</Typography>
+                  </Box>
+                </Grid>
+                <Grid item>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <CheckCircle sx={{ color: '#9e9e9e' }} />
+                    <Typography>Booked</Typography>
+                  </Box>
+                </Grid>
+                <Grid item>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Block sx={{ color: '#f44336' }} />
+                    <Typography>Blocked</Typography>
+                  </Box>
+                </Grid>
               </Grid>
-              <Grid item>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Schedule sx={{ color: '#ff9800' }} />
-                  <Typography>Held</Typography>
-                </Box>
-              </Grid>
-              <Grid item>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <CheckCircle sx={{ color: '#9e9e9e' }} />
-                  <Typography>Booked</Typography>
-                </Box>
-              </Grid>
-              <Grid item>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Block sx={{ color: '#f44336' }} />
-                  <Typography>Blocked</Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Success/Error Messages */}
@@ -480,23 +432,6 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           {error}
         </Alert>
       </Snackbar>
-
-      {/* Notifications */}
-      {notifications.map((notification, index) => (
-        <Snackbar
-          key={index}
-          open={true}
-          autoHideDuration={5000}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert 
-            severity={notification.type === 'HOLD_EXPIRED' ? 'warning' : 'info'}
-            onClose={clearNotifications}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      ))}
     </Box>
   );
 };

@@ -9,7 +9,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Alert
 } from '@mui/material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
@@ -20,6 +21,7 @@ interface VenueFormProps {
   venue?: Venue | null;
   onClose?: () => void;
   onSuccess?: () => void;
+  isAdmin?: boolean;
 }
 
 interface FormValues {
@@ -76,7 +78,7 @@ const validationSchema = Yup.object({
     })
 });
 
-const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
+const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess, isAdmin = true }) => {
   const initialValues: FormValues = {
     name: venue?.name || '',
     description: venue?.description || '',
@@ -118,10 +120,10 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
 
           if (venue?.id) {
             // Update existing venue
-            await VenueService.updateVenue(venue.id, venueData);
+            await VenueService.updateVenue(venue.id, venueData, isAdmin);
           } else {
             // Create new venue
-            await VenueService.createVenue(venueData);
+            await VenueService.createVenue(venueData, isAdmin);
           }
 
           resetForm();
@@ -143,6 +145,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>Venue Information</Typography>
           <Divider sx={{ mb: 3 }} />
+
+          {venue?.id && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              After saving, you can configure seating arrangements for this venue in the separate seating management page.
+            </Alert>
+          )}
 
           <Grid container spacing={2}>
             <Grid item xs={12}>
@@ -292,25 +300,27 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 />
               </Grid>
             )}
-          </Grid>
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button
-              onClick={onClose}
-              disabled={isSubmitting}
-              variant="outlined"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              variant="contained"
-              color="primary"
-            >
-              {getButtonText(isSubmitting, Boolean(venue?.id))}
-            </Button>
-          </Box>
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+                <Button
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  variant="outlined"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  variant="contained"
+                  color="primary"
+                >
+                  {getButtonText(isSubmitting, !!venue?.id)}
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       )}
     </Formik>
