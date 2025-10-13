@@ -156,7 +156,7 @@ const Profile: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+        <CircularProgress size={60} thickness={4} />
       </Box>
     );
   }
@@ -178,20 +178,33 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
         My Profile
       </Typography>
 
       <Grid container spacing={3}>
         {/* Profile Picture Section */}
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
+          <Card 
+            sx={{ 
+              borderRadius: 3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center', p: 4 }}>
               <Box position="relative" display="inline-block">
                 <Avatar
                   src={profile.profilePicture ? `http://localhost:8081/${profile.profilePicture}` : undefined}
-                  sx={{ width: 150, height: 150, margin: 'auto', fontSize: '3rem' }}
+                  sx={{ 
+                    width: 150, 
+                    height: 150, 
+                    margin: 'auto', 
+                    fontSize: '3rem',
+                    border: '4px solid rgba(25, 118, 210, 0.2)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                  }}
                 >
                   {profile.firstName?.[0]}{profile.lastName?.[0]}
                 </Avatar>
@@ -211,21 +224,24 @@ const Profile: React.FC = () => {
                       right: 0,
                       bgcolor: 'primary.main',
                       color: 'white',
-                      '&:hover': { bgcolor: 'primary.dark' }
+                      '&:hover': { bgcolor: 'primary.dark' },
+                      width: 48,
+                      height: 48,
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
                     }}
                     disabled={uploading}
                   >
-                    {uploading ? <CircularProgress size={20} /> : <PhotoCamera />}
+                    {uploading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : <PhotoCamera />}
                   </IconButton>
                 </label>
               </Box>
-              <Typography variant="h6" sx={{ mt: 2 }}>
+              <Typography variant="h5" sx={{ mt: 3, fontWeight: 600 }}>
                 {profile.firstName} {profile.lastName}
               </Typography>
               <Chip 
                 label={profile.role.replace('ROLE_', '')} 
                 color={getRoleColor(profile.role) as any} 
-                sx={{ mt: 1 }} 
+                sx={{ mt: 2, fontWeight: 600, fontSize: '1rem' }} 
               />
             </CardContent>
           </Card>
@@ -233,17 +249,32 @@ const Profile: React.FC = () => {
 
         {/* Profile Information Section */}
         <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">
+          <Card 
+            sx={{ 
+              borderRadius: 3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2' }}>
                   Profile Information
                 </Typography>
                 {!editing ? (
                   <Button
                     startIcon={<Edit />}
-                    variant="outlined"
+                    variant="contained"
                     onClick={() => setEditing(true)}
+                    sx={{
+                      borderRadius: 2,
+                      padding: '8px 16px',
+                      fontWeight: 600,
+                      boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                      '&:hover': {
+                        boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                      }
+                    }}
                   >
                     Edit Profile
                   </Button>
@@ -252,6 +283,11 @@ const Profile: React.FC = () => {
                     startIcon={<Cancel />}
                     variant="outlined"
                     onClick={() => setEditing(false)}
+                    sx={{
+                      borderRadius: 2,
+                      padding: '8px 16px',
+                      fontWeight: 600
+                    }}
                   >
                     Cancel
                   </Button>
@@ -262,10 +298,10 @@ const Profile: React.FC = () => {
 
               {/* User ID (Non-editable) */}
               <Box mb={3}>
-                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                   User ID (Read-only)
                 </Typography>
-                <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
+                <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1.5, borderRadius: 2 }}>
                   {profile.userId}
                 </Typography>
               </Box>
@@ -290,6 +326,7 @@ const Profile: React.FC = () => {
                             error={touched.firstName && Boolean(errors.firstName)}
                             helperText={touched.firstName && errors.firstName as string}
                             required
+                            sx={{ borderRadius: 2 }}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -303,6 +340,7 @@ const Profile: React.FC = () => {
                             error={touched.lastName && Boolean(errors.lastName)}
                             helperText={touched.lastName && errors.lastName as string}
                             required
+                            sx={{ borderRadius: 2 }}
                           />
                         </Grid>
                         <Grid item xs={12}>
@@ -317,6 +355,7 @@ const Profile: React.FC = () => {
                             error={touched.email && Boolean(errors.email)}
                             helperText={touched.email && errors.email as string}
                             required
+                            sx={{ borderRadius: 2 }}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -329,6 +368,7 @@ const Profile: React.FC = () => {
                             onBlur={handleBlur}
                             error={touched.phoneNumber && Boolean(errors.phoneNumber)}
                             helperText={touched.phoneNumber && errors.phoneNumber as string}
+                            sx={{ borderRadius: 2 }}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -343,6 +383,7 @@ const Profile: React.FC = () => {
                             onBlur={handleBlur}
                             error={touched.dateOfBirth && Boolean(errors.dateOfBirth)}
                             helperText={touched.dateOfBirth && errors.dateOfBirth as string}
+                            sx={{ borderRadius: 2 }}
                           />
                         </Grid>
                         <Grid item xs={12}>
@@ -350,6 +391,11 @@ const Profile: React.FC = () => {
                             <Button
                               variant="outlined"
                               onClick={() => setEditing(false)}
+                              sx={{
+                                borderRadius: 2,
+                                padding: '8px 16px',
+                                fontWeight: 600
+                              }}
                             >
                               Cancel
                             </Button>
@@ -358,6 +404,15 @@ const Profile: React.FC = () => {
                               variant="contained"
                               startIcon={<Save />}
                               disabled={isSubmitting}
+                              sx={{
+                                borderRadius: 2,
+                                padding: '8px 16px',
+                                fontWeight: 600,
+                                boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                                '&:hover': {
+                                  boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                                }
+                              }}
                             >
                               {isSubmitting ? 'Saving...' : 'Save Changes'}
                             </Button>
@@ -370,44 +425,44 @@ const Profile: React.FC = () => {
               ) : (
                 <Grid container spacing={3}>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       First Name
                     </Typography>
-                    <Typography variant="body1">{profile.firstName}</Typography>
+                    <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{profile.firstName}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       Last Name
                     </Typography>
-                    <Typography variant="body1">{profile.lastName}</Typography>
+                    <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{profile.lastName}</Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       Email
                     </Typography>
-                    <Typography variant="body1">{profile.email}</Typography>
+                    <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{profile.email}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       Phone Number
                     </Typography>
-                    <Typography variant="body1">{profile.phoneNumber || 'Not set'}</Typography>
+                    <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{profile.phoneNumber || 'Not set'}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       Date of Birth
                     </Typography>
-                    <Typography variant="body1">{formatDisplayDate(profile.dateOfBirth)}</Typography>
+                    <Typography variant="body1" sx={{ fontSize: '1.1rem' }}>{formatDisplayDate(profile.dateOfBirth)}</Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
                       Account Information
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ mb: 1 }}>
                       Account created: {new Date(profile.createdAt).toLocaleDateString()}
                     </Typography>
                     {profile.lastLoginAt && (
-                      <Typography variant="body2">
+                      <Typography variant="body2" sx={{ mb: 1 }}>
                         Last login: {new Date(profile.lastLoginAt).toLocaleDateString()}
                       </Typography>
                     )}
@@ -428,7 +483,7 @@ const Profile: React.FC = () => {
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ fontWeight: 500 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

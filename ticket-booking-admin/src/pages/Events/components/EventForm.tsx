@@ -1,63 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Grid, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  FormHelperText,
+import {
+  Box,
   Typography,
+  TextField,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Grid,
   Divider,
-  CircularProgress
+  IconButton,
+  CircularProgress,
+  Paper,
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import {
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  CloudUpload as CloudUploadIcon,
+} from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { EventService, VenueService } from '../../../services';
-import { Event, EventStatus, Venue } from '../../../types';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { Event, Venue, EventStatus, VenueLayoutType, TicketCategory } from '../../../types';
+import { EventService } from '../../../services';
+import { VenueService } from '../../../services';
 
-// Image preview
-const ImagePreview = ({ src, alt }: { src: string, alt: string }) => {
-  return (
-    <Box sx={{ mt: 2, mb: 2 }}>
-      <img 
-        src={src} 
-        alt={alt} 
-        style={{ 
-          maxWidth: '100%', 
-          maxHeight: '200px', 
-          objectFit: 'contain',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          padding: '4px'
-        }} 
-      />
-    </Box>
-  );
-};
-
-interface EventFormProps {
-  event?: Event;
-  onClose?: () => void;
-  onSuccess?: () => void;
-}
-
-// Form values interface used for the event form
+// Define the form values type
 interface FormValues {
   name: string;
   description: string;
-  eventDate: Date;
+  startDateTime: Date;
+  endDateTime: Date;
   venueId: string;
   category: string;
   basePrice: number;
-  ticketsAvailable: number;
+  totalCapacity: number;
   status: EventStatus;
-  imageFile?: File | null;
+  imageFile: File | null;
+  ticketCategories: TicketCategory[]; // Added ticket categories
+}
+
+interface EventFormProps {
+  event?: Event;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
 interface ApiError {
@@ -78,15 +68,31 @@ const handleApiError = (
   if (error.response?.data) {
     const backendErrors = error.response.data;
     if (backendErrors.message) {
-      setErrors({ name: backendErrors.message });
+      // Handle general error message
     }
     if (backendErrors.errors) {
       setErrors(backendErrors.errors as any);
     }
   } else {
-    setErrors({ name: `Failed to ${action} event. Please try again.` });
+    // Handle generic error
   }
 };
+
+// Image preview component
+const ImagePreview: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
+  <Box mt={2} textAlign="center">
+    <img 
+      src={src} 
+      alt={alt} 
+      style={{ 
+        maxWidth: '100%', 
+        maxHeight: '200px',
+        borderRadius: '8px',
+        border: '1px solid #ddd'
+      }} 
+    />
+  </Box>
+);
 
 const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -134,18 +140,32 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
     }
   };
 
+  // Helper function to get nested field errors
+  const getError = (errors: any, path: string) => {
+    return path.split('.').reduce((obj, key) => obj && obj[key], errors);
+  };
+
+  // Helper function to get nested field touched status
+  const getTouched = (touched: any, path: string) => {
+    return path.split('.').reduce((obj, key) => obj && obj[key], touched);
+  };
+
   return (
     <Formik
       initialValues={{
         name: event?.name || '',
         description: event?.description || '',
-        eventDate: event?.eventDate ? new Date(event.eventDate) : new Date(),
-        venueId: event?.venue?.venueId || '',
+        startDateTime: event?.eventDate ? new Date(event.eventDate) : new Date(),
+        endDateTime: event?.eventDate ? new Date(event.eventDate) : new Date(),
+        venueId: event?.venue?.id || '',
         category: event?.category || '',
         basePrice: event?.basePrice || 0,
-        ticketsAvailable: event?.ticketsAvailable || 100,
+        totalCapacity: event?.ticketsAvailable || 100,
         status: event?.status || EventStatus.DRAFT,
-        imageFile: null
+        imageFile: null,
+        ticketCategories: event?.ticketCategories && event.ticketCategories.length > 0 
+          ? event.ticketCategories 
+          : [{ categoryName: '', price: 0, capacity: 0 }] // Initialize with one empty category
       }}
       validationSchema={Yup.object({
         name: Yup.string()
@@ -155,30 +175,53 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         description: Yup.string()
           .required('Event description is required')
           .min(10, 'Description must be at least 10 characters'),
-        eventDate: Yup.date()
-          .required('Event date is required')
-          .min(new Date(), 'Event date cannot be in the past'),
+        startDateTime: Yup.date()
+          .required('Start date and time is required')
+          .min(new Date(), 'Start date and time cannot be in the past'),
+        endDateTime: Yup.date()
+          .required('End date and time is required')
+          .min(Yup.ref('startDateTime'), 'End date and time must be after start date and time'),
         venueId: Yup.string()
           .required('Venue is required'),
         category: Yup.string()
-          .required('Category is required'),
+          .required('Category is required')
+          .oneOf(Object.values(VenueLayoutType), 'Please select a valid category'),
         basePrice: Yup.number()
           .required('Base price is required')
           .min(0, 'Base price cannot be negative'),
-        ticketsAvailable: Yup.number()
-          .required('Number of tickets is required')
-          .min(1, 'At least 1 ticket must be available')
+        totalCapacity: Yup.number()
+          .required('Total capacity is required')
+          .min(1, 'At least 1 ticket must be available'),
+        ticketCategories: Yup.array().of(
+          Yup.object().shape({
+            categoryName: Yup.string()
+              .required('Category name is required')
+              .min(1, 'Category name is required'),
+            price: Yup.number()
+              .required('Price is required')
+              .min(0, 'Price must be 0 or greater'),
+            capacity: Yup.number()
+              .required('Capacity is required')
+              .min(1, 'Capacity must be at least 1')
+          })
+        ).required('At least one ticket category is required')
+        .min(1, 'At least one ticket category is required')
       })}
       onSubmit={async (values: FormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<FormValues>) => {
         try {
           setUploading(true);
-          const eventData = { ...values };
+          const eventData: any = { ...values };
           delete eventData.imageFile;
           
           // Convert Date to ISO string for API
           const eventDataForApi = {
             ...eventData,
-            eventDate: eventData.eventDate.toISOString()
+            startDateTime: eventData.startDateTime.toISOString(),
+            endDateTime: eventData.endDateTime.toISOString(),
+            ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
+              ...category,
+              price: Number(category.price) // Ensure price is a number
+            }))
           };
           
           let savedEvent;
@@ -194,7 +237,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           // Upload the image if one is selected
           if (selectedImage && savedEvent.id) {
             const formData = new FormData();
-            formData.append('image', selectedImage);
+            formData.append('file', selectedImage);
             await EventService.uploadEventImage(savedEvent.id, formData);
           }
           
@@ -254,11 +297,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DateTimePicker
-                  label="Event Date & Time"
-                  value={values.eventDate}
+                  label="Start Date & Time"
+                  value={values.startDateTime}
                   onChange={(newValue) => {
                     if (newValue) {
-                      setFieldValue('eventDate', newValue);
+                      setFieldValue('startDateTime', newValue);
                     }
                   }}
                   slotProps={{
@@ -266,8 +309,31 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                       fullWidth: true,
                       margin: 'normal',
                       required: true,
-                      error: touched.eventDate && Boolean(errors.eventDate),
-                      helperText: touched.eventDate && errors.eventDate ? errors.eventDate as string : undefined
+                      error: touched.startDateTime && Boolean(errors.startDateTime),
+                      helperText: touched.startDateTime && errors.startDateTime ? errors.startDateTime as string : undefined
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DateTimePicker
+                  label="End Date & Time"
+                  value={values.endDateTime}
+                  onChange={(newValue) => {
+                    if (newValue) {
+                      setFieldValue('endDateTime', newValue);
+                    }
+                  }}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      margin: 'normal',
+                      required: true,
+                      error: touched.endDateTime && Boolean(errors.endDateTime),
+                      helperText: touched.endDateTime && errors.endDateTime ? errors.endDateTime as string : undefined
                     }
                   }}
                 />
@@ -300,7 +366,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     </MenuItem>
                   ) : (
                     venues.map((venue) => (
-                      <MenuItem key={venue.venueId} value={venue.venueId}>
+                      <MenuItem key={venue.id} value={venue.id}>
                         {venue.name} ({venue.address})
                       </MenuItem>
                     ))
@@ -313,20 +379,33 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                id="category"
-                name="category"
-                label="Category"
-                value={values.category}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.category && Boolean(errors.category)}
-                helperText={touched.category && errors.category ? errors.category as string : undefined}
-                variant="outlined"
+              <FormControl 
+                fullWidth 
+                variant="outlined" 
                 margin="normal"
+                error={touched.category && Boolean(errors.category)}
                 required
-              />
+              >
+                <InputLabel id="category-label">Category</InputLabel>
+                <Select
+                  labelId="category-label"
+                  id="category"
+                  name="category"
+                  value={values.category}
+                  onChange={(e) => {
+                    setFieldValue('category', e.target.value);
+                  }}
+                  label="Category"
+                >
+                  <MenuItem value={VenueLayoutType.THEATER}>Theater</MenuItem>
+                  <MenuItem value={VenueLayoutType.GENERAL_ADMISSION}>General Admission</MenuItem>
+                  <MenuItem value={VenueLayoutType.STADIUM}>Stadium</MenuItem>
+                  <MenuItem value={VenueLayoutType.CUSTOM}>Custom</MenuItem>
+                </Select>
+                {touched.category && errors.category && (
+                  <FormHelperText>{errors.category as string}</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
             
             <Grid item xs={12} sm={6}>
@@ -363,7 +442,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 fullWidth
                 id="basePrice"
                 name="basePrice"
-                label="Base Price"
+                label="Base Price (LKR)"
                 type="number"
                 value={values.basePrice}
                 onChange={handleChange}
@@ -373,7 +452,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 variant="outlined"
                 margin="normal"
                 InputProps={{
-                  startAdornment: <Typography variant="body2">$</Typography>,
+                  startAdornment: <Typography variant="body2">LKR</Typography>,
                 }}
                 required
               />
@@ -382,19 +461,159 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                id="ticketsAvailable"
-                name="ticketsAvailable"
-                label="Tickets Available"
+                id="totalCapacity"
+                name="totalCapacity"
+                label="Total Capacity"
                 type="number"
-                value={values.ticketsAvailable}
+                value={values.totalCapacity}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                error={touched.ticketsAvailable && Boolean(errors.ticketsAvailable)}
-                helperText={touched.ticketsAvailable && errors.ticketsAvailable ? errors.ticketsAvailable as string : undefined}
+                error={touched.totalCapacity && Boolean(errors.totalCapacity)}
+                helperText={touched.totalCapacity && errors.totalCapacity ? errors.totalCapacity as string : undefined}
                 variant="outlined"
                 margin="normal"
                 required
               />
+            </Grid>
+            
+            {/* Ticket Categories Section */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>Ticket Categories</Typography>
+              <Divider sx={{ mb: 3 }} />
+              
+              {values.ticketCategories.map((category, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1">
+                        Category {index + 1}
+                        {values.ticketCategories.length > 1 && (
+                          <IconButton 
+                            onClick={() => {
+                              const newCategories = [...values.ticketCategories];
+                              newCategories.splice(index, 1);
+                              setFieldValue('ticketCategories', newCategories);
+                            }}
+                            size="small"
+                            sx={{ ml: 1 }}
+                          >
+                            <RemoveIcon />
+                          </IconButton>
+                        )}
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        name={`ticketCategories[${index}].categoryName`}
+                        label="Category Name"
+                        value={category.categoryName}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={
+                          getTouched(touched, `ticketCategories[${index}].categoryName`) && 
+                          Boolean(getError(errors, `ticketCategories[${index}].categoryName`))
+                        }
+                        helperText={
+                          getTouched(touched, `ticketCategories[${index}].categoryName`) && 
+                          getError(errors, `ticketCategories[${index}].categoryName`) ? 
+                          getError(errors, `ticketCategories[${index}].categoryName`) as string : 
+                          undefined
+                        }
+                        variant="outlined"
+                        margin="normal"
+                        required
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        name={`ticketCategories[${index}].price`}
+                        label="Price (LKR)"
+                        type="number"
+                        value={category.price}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={
+                          getTouched(touched, `ticketCategories[${index}].price`) && 
+                          Boolean(getError(errors, `ticketCategories[${index}].price`))
+                        }
+                        helperText={
+                          getTouched(touched, `ticketCategories[${index}].price`) && 
+                          getError(errors, `ticketCategories[${index}].price`) ? 
+                          getError(errors, `ticketCategories[${index}].price`) as string : 
+                          undefined
+                        }
+                        variant="outlined"
+                        margin="normal"
+                        InputProps={{
+                          startAdornment: <Typography variant="body2">LKR</Typography>,
+                        }}
+                        required
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        name={`ticketCategories[${index}].capacity`}
+                        label="Capacity"
+                        type="number"
+                        value={category.capacity}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={
+                          getTouched(touched, `ticketCategories[${index}].capacity`) && 
+                          Boolean(getError(errors, `ticketCategories[${index}].capacity`))
+                        }
+                        helperText={
+                          getTouched(touched, `ticketCategories[${index}].capacity`) && 
+                          getError(errors, `ticketCategories[${index}].capacity`) ? 
+                          getError(errors, `ticketCategories[${index}].capacity`) as string : 
+                          undefined
+                        }
+                        variant="outlined"
+                        margin="normal"
+                        required
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        name={`ticketCategories[${index}].description`}
+                        label="Description (Optional)"
+                        value={category.description || ''}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        variant="outlined"
+                        margin="normal"
+                        multiline
+                        rows={2}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              ))}
+              
+              <Button
+                type="button"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  const newCategories = [...values.ticketCategories, { categoryName: '', price: 0, capacity: 0 }];
+                  setFieldValue('ticketCategories', newCategories);
+                }}
+                sx={{ mt: 1 }}
+              >
+                Add Another Category
+              </Button>
+              
+              {typeof errors.ticketCategories === 'string' && (
+                <FormHelperText error>{errors.ticketCategories}</FormHelperText>
+              )}
             </Grid>
             
             <Grid item xs={12}>
@@ -405,6 +624,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
               <Button
                 variant="outlined"
                 component="label"
+                startIcon={<CloudUploadIcon />}
               >
                 Upload Image
                 <input

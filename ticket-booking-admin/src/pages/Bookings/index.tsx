@@ -97,7 +97,7 @@ const Bookings: React.FC = () => {
     }},
     { field: 'ticketCount', headerName: 'Tickets', width: 100 },
     { field: 'totalAmount', headerName: 'Amount', width: 120, valueFormatter: (params) => {
-      return `$${params.value}`;
+      return `LKR ${params.value}`;
     }},
     { field: 'bookingDate', headerName: 'Booking Date', width: 150, valueFormatter: (params) => {
       return new Date(params.value as string).toLocaleDateString();
@@ -112,6 +112,7 @@ const Bookings: React.FC = () => {
           color={getStatusChipColor(params.value as BookingStatus)} 
           variant="outlined" 
           size="small" 
+          sx={{ fontWeight: 500 }}
         />
       )
     },
@@ -126,11 +127,32 @@ const Bookings: React.FC = () => {
         
         return (
           <Box>
-            <IconButton onClick={() => handleViewDetails(booking)}>
+            <IconButton 
+              onClick={() => handleViewDetails(booking)}
+              size="small"
+              color="primary"
+              sx={{
+                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                },
+                mr: 1
+              }}
+            >
               <VisibilityIcon />
             </IconButton>
             {canCancel && (
-              <IconButton onClick={() => handleCancelClick(booking)}>
+              <IconButton 
+                onClick={() => handleCancelClick(booking)}
+                size="small"
+                color="error"
+                sx={{
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                  }
+                }}
+              >
                 <CancelIcon />
               </IconButton>
             )}
@@ -144,13 +166,20 @@ const Bookings: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4">Booking Management</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Booking Management</Typography>
         </Grid>
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
+          <Paper 
+            sx={{ 
+              p: 2,
+              borderRadius: 3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}
+          >
             {loading ? (
               <Box display="flex" justifyContent="center" p={3}>
-                <CircularProgress />
+                <CircularProgress size={40} thickness={4} />
               </Box>
             ) : (
               <DataGrid
@@ -166,6 +195,18 @@ const Bookings: React.FC = () => {
                 pageSizeOptions={[10, 25, 50]}
                 disableRowSelectionOnClick
                 autoHeight
+                sx={{
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                    borderRadius: '8px 8px 0 0',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid rgba(0,0,0,0.05)',
+                  },
+                  '& .MuiDataGrid-row:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                  },
+                }}
               />
             )}
           </Paper>
@@ -174,7 +215,7 @@ const Bookings: React.FC = () => {
 
       {/* Booking Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onClose={handleDetailsDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>Booking Details</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>Booking Details</DialogTitle>
         <DialogContent>
           {selectedBooking && (
             <Box sx={{ pt: 2 }}>
@@ -190,6 +231,7 @@ const Bookings: React.FC = () => {
                     color={getStatusChipColor(selectedBooking.status)} 
                     variant="outlined" 
                     size="small" 
+                    sx={{ fontWeight: 500 }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -218,7 +260,7 @@ const Bookings: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Total Amount</Typography>
-                  <Typography variant="body1">${selectedBooking.totalAmount}</Typography>
+                  <Typography variant="body1">LKR {selectedBooking.totalAmount}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Booking Date</Typography>
@@ -231,12 +273,22 @@ const Bookings: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDetailsDialogClose}>Close</Button>
+          <Button 
+            onClick={handleDetailsDialogClose}
+            sx={{ fontWeight: 500 }}
+          >
+            Close
+          </Button>
           {(selectedBooking?.status === BookingStatus.CONFIRMED || selectedBooking?.status === BookingStatus.PENDING) && (
-            <Button variant="contained" color="error" onClick={() => {
-              handleDetailsDialogClose();
-              setIsCancelDialogOpen(true);
-            }}>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={() => {
+                handleDetailsDialogClose();
+                setIsCancelDialogOpen(true);
+              }}
+              sx={{ fontWeight: 500 }}
+            >
               Cancel Booking
             </Button>
           )}
@@ -245,15 +297,25 @@ const Bookings: React.FC = () => {
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={isCancelDialogOpen} onClose={handleCancelDialogClose}>
-        <DialogTitle>Cancel Booking</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Cancel Booking</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to cancel this booking? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelDialogClose}>No, Keep Booking</Button>
-          <Button variant="contained" color="error" onClick={handleCancelConfirm}>
+          <Button 
+            onClick={handleCancelDialogClose}
+            sx={{ fontWeight: 500 }}
+          >
+            No, Keep Booking
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleCancelConfirm}
+            sx={{ fontWeight: 500 }}
+          >
             Yes, Cancel Booking
           </Button>
         </DialogActions>

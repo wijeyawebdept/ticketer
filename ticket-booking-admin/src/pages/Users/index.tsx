@@ -117,6 +117,7 @@ const Users: React.FC = () => {
           color={getRoleChipColor(params.value as UserRole)} 
           variant="outlined" 
           size="small" 
+          sx={{ fontWeight: 500 }}
         />
       )
     },
@@ -127,10 +128,31 @@ const Users: React.FC = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <IconButton onClick={() => handleEditClick(params.row as User)}>
+          <IconButton
+            onClick={() => handleEditClick(params.row as User)}
+            size="small"
+            color="primary"
+            sx={{
+              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+              },
+              mr: 1
+            }}
+          >
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDeleteClick(params.row as User)}>
+          <IconButton
+            onClick={() => handleDeleteClick(params.row as User)}
+            size="small"
+            color="error"
+            sx={{
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+              }
+            }}
+          >
             <DeleteIcon />
           </IconButton>
         </Box>
@@ -146,22 +168,38 @@ const Users: React.FC = () => {
         alignItems: 'center',
         mb: 3 
       }}>
-        <Typography variant="h4">User Management</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>User Management</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateClick}
+          sx={{
+            borderRadius: 2,
+            padding: '8px 16px',
+            fontWeight: 600,
+            boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+            '&:hover': {
+              boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+            }
+          }}
         >
           Add New User
         </Button>
       </Box>
       
-      <Paper sx={{ p: 2 }}>
+      <Paper 
+        sx={{ 
+          p: 2,
+          borderRadius: 3,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(0,0,0,0.05)'
+        }}
+      >
         <Box sx={{ height: '70vh' }}>
           {loading ? (
             <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
+              <CircularProgress size={40} thickness={4} />
             </Box>
           ) : (
             <DataGrid
@@ -177,6 +215,18 @@ const Users: React.FC = () => {
               pageSizeOptions={[10, 25, 50]}
               disableRowSelectionOnClick
               autoHeight
+              sx={{
+                '& .MuiDataGrid-columnHeaders': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                  borderRadius: '8px 8px 0 0',
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: '1px solid rgba(0,0,0,0.05)',
+                },
+                '& .MuiDataGrid-row:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                },
+              }}
             />
           )}
         </Box>
@@ -184,7 +234,7 @@ const Users: React.FC = () => {
 
       {/* User Form Dialog */}
       <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>
           {selectedUser ? 'Edit User' : 'Create New User'}
           <IconButton
             aria-label="close"
@@ -214,15 +264,25 @@ const Users: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onClose={handleDeleteDialogClose}>
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Delete User</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete the user "{selectedUser?.firstName} {selectedUser?.lastName}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm}>
+          <Button 
+            onClick={handleDeleteDialogClose}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleDeleteConfirm}
+            sx={{ fontWeight: 500 }}
+          >
             Delete
           </Button>
         </DialogActions>

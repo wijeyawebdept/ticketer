@@ -149,6 +149,7 @@ public class AdminVenueController {
         response.setState(venue.getState());
         response.setZipCode(venue.getZipCode());
         response.setCapacity(venue.getCapacity());
+        response.setLayoutType(venue.getLayoutType());
         response.setSeatingLayout(venue.getSeatingLayout());
         response.setCreatedAt(venue.getCreatedAt());
         response.setUpdatedAt(venue.getUpdatedAt());

@@ -23,7 +23,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    
+
     public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -36,15 +36,8 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
         }
 
-        // Validate and convert role string to enum
-        User.Role role = User.Role.USER; // Default role
-        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
-            try {
-                role = User.Role.valueOf(request.getRole().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid role: " + request.getRole());
-            }
-        }
+        // Always set role to USER for new registrations
+        User.Role role = User.Role.USER;
 
         User user = User.builder()
                 .firstName(request.getFirstName())
@@ -53,6 +46,7 @@ public class UserServiceImpl implements UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
+                .profilePicture(request.getProfilePicture())
                 .role(role)
                 .active(true)
                 .emailVerified(false)
@@ -92,14 +86,15 @@ public class UserServiceImpl implements UserService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid role: " + role);
         }
-        
+
         return userRepository.findByRole(userRole, pageable)
                 .map(this::mapUserToResponse);
     }
 
     @Override
     public Page<UserResponse> searchUsers(String query, Pageable pageable) {
-        return userRepository.findByFirstNameContainingOrLastNameContainingOrEmailContaining(query, query, query, pageable)
+        return userRepository
+                .findByFirstNameContainingOrLastNameContainingOrEmailContaining(query, query, query, pageable)
                 .map(this::mapUserToResponse);
     }
 
@@ -109,7 +104,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateUser(UUID id, UserUpdateRequest request) {
         System.out.println("🔄 Starting user update for ID: " + id);
         System.out.println("📝 Update request: " + request);
-        
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
@@ -117,11 +112,11 @@ public class UserServiceImpl implements UserService {
         if (request.getFirstName() != null) {
             user.setFirstName(request.getFirstName());
         }
-        
+
         if (request.getLastName() != null) {
             user.setLastName(request.getLastName());
         }
-        
+
         if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
@@ -129,23 +124,23 @@ public class UserServiceImpl implements UserService {
             user.setEmail(request.getEmail());
             user.setEmailVerified(false); // Reset email verification status
         }
-        
+
         // FIX: Handle password updates with proper encoding
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
             String rawPassword = request.getPassword();
             System.out.println("🔐 Raw password provided for update: " + rawPassword);
-            
+
             String encodedPassword = passwordEncoder.encode(rawPassword);
             System.out.println("🔐 Password encoded successfully");
-            
+
             // Verify the encoding works (for debugging)
             boolean matches = passwordEncoder.matches(rawPassword, encodedPassword);
             System.out.println("🔐 Password verification test: " + matches);
-            
+
             user.setPassword(encodedPassword);
             System.out.println("🔐 Password updated for user: " + user.getEmail());
         }
-        
+
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
@@ -169,28 +164,28 @@ public class UserServiceImpl implements UserService {
     public void toggleUserStatus(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
-        
+
         user.setActive(!user.isActive());
         userRepository.save(user);
     }
-    
+
     @Override
     @Transactional
     public UserResponse activateUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
-        
+
         user.setActive(true);
         User savedUser = userRepository.save(user);
         return mapUserToResponse(savedUser);
     }
-    
+
     @Override
     @Transactional
     public UserResponse deactivateUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
-        
+
         user.setActive(false);
         User savedUser = userRepository.save(user);
         return mapUserToResponse(savedUser);
@@ -201,14 +196,14 @@ public class UserServiceImpl implements UserService {
     public void changeUserRole(UUID id, String roleName) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
-        
+
         User.Role role;
         try {
             role = User.Role.valueOf(roleName.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid role: " + roleName);
         }
-        
+
         user.setRole(role);
         userRepository.save(user);
     }
@@ -218,7 +213,7 @@ public class UserServiceImpl implements UserService {
     public void resetPassword(UUID id, String newPassword) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
-        
+
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }

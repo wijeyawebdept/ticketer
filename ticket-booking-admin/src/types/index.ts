@@ -40,6 +40,13 @@ export interface UserUpdateRequest {
 }
 
 // Event related types
+export interface TicketCategory {
+  categoryName: string;
+  description?: string;
+  price: number;
+  capacity: number;
+}
+
 export interface Event {
   id: string;
   eventId: string; // For backward compatibility
@@ -56,6 +63,7 @@ export interface Event {
   basePrice: number;
   ticketsAvailable: number;
   ticketPrice: number;
+  ticketCategories?: TicketCategory[]; // Added ticket categories
 }
 
 export enum EventStatus {
@@ -74,7 +82,7 @@ export enum VenueLayoutType {
 }
 
 export interface Venue {
-  venueId: string;
+  id: string;
   name: string;
   description: string;
   address: string;
@@ -82,8 +90,10 @@ export interface Venue {
   state: string;
   zipCode: string;
   capacity: number;
-  seatingArrangement: string;
   layoutType: VenueLayoutType;
+  seatingLayout?: { [key: string]: any };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Booking related types

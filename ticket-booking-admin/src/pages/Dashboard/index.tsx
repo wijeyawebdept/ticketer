@@ -7,13 +7,28 @@ import {
   Card,
   CardContent,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Chip,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  LinearProgress
 } from '@mui/material';
 import {
   People as PeopleIcon,
   Event as EventIcon,
   AttachMoney as MoneyIcon,
-  CalendarToday as CalendarIcon
+  CalendarToday as CalendarIcon,
+  CheckCircle as CheckCircleIcon,
+  AccessTime as AccessTimeIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  EventAvailable as EventAvailableIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
+  ConfirmationNumber as ConfirmationNumberIcon
 } from '@mui/icons-material';
 import { DashboardService } from '../../services';
 import { DashboardOverview } from '../../types';
@@ -23,31 +38,58 @@ interface StatCardProps {
   value: string | number;
   icon: React.ReactNode;
   color: string;
+  trend?: number; // Changed from string to number for dynamic trends
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
-  <Card elevation={2}>
-    <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Box>
-        <Typography variant="subtitle2" color="text.secondary">
-          {title}
-        </Typography>
-        <Typography variant="h4">
-          {value}
-        </Typography>
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend }) => (
+  <Card 
+    elevation={3} 
+    sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      borderRadius: 3,
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%)',
+      border: '1px solid rgba(0,0,0,0.05)',
+      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+      '&:hover': {
+        transform: 'translateY(-5px)',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+      }
+    }}
+  >
+    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+        <Box
+          sx={{
+            backgroundColor: color,
+            borderRadius: '16px',
+            p: 2,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+          }}
+        >
+          {icon}
+        </Box>
+        {trend !== undefined && (
+          <Chip
+            icon={trend >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+            label={`${trend >= 0 ? '+' : ''}${trend.toFixed(2)}%`}
+            size="small"
+            color={trend >= 0 ? 'success' : 'error'}
+            variant="outlined"
+            sx={{ fontWeight: 600 }}
+          />
+        )}
       </Box>
-      <Box
-        sx={{
-          backgroundColor: color,
-          borderRadius: '50%',
-          p: 2,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        {icon}
-      </Box>
+      <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 1, color: '#333' }}>
+        {value}
+      </Typography>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 500 }}>
+        {title}
+      </Typography>
     </CardContent>
   </Card>
 );
@@ -71,10 +113,19 @@ interface DashboardEvent {
   status: string;
 }
 
+// Interface for trend data
+interface TrendData {
+  userGrowthTrend: number;
+  revenueTrend: number;
+  bookingTrend: number;
+  eventTrend: number;
+}
+
 const Dashboard: React.FC = () => {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
+  const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -93,6 +144,10 @@ const Dashboard: React.FC = () => {
         // Fetch upcoming events
         const events = await DashboardService.getUpcomingEvents(5);
         setUpcomingEvents(events.events || []);
+        
+        // Fetch trend data
+        const trends = await DashboardService.getTrendData();
+        setTrendData(trends);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -106,16 +161,21 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="80vh">
-        <CircularProgress />
+        <CircularProgress size={60} thickness={4} />
       </Box>
     );
   }
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h3" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>
+          Dashboard
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+          Welcome back! Here's what's happening today.
+        </Typography>
+      </Box>
       
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -123,32 +183,36 @@ const Dashboard: React.FC = () => {
           <StatCard
             title="Total Users"
             value={overview?.totalUsers || 0}
-            icon={<PeopleIcon sx={{ color: 'white' }} />}
+            icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#4CAF50"
+            trend={trendData?.userGrowthTrend}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Active Events"
             value={overview?.activeEventsCount || 0}
-            icon={<EventIcon sx={{ color: 'white' }} />}
+            icon={<EventIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#2196F3"
+            trend={trendData?.eventTrend}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Monthly Bookings"
             value={overview?.monthBookings || 0}
-            icon={<CalendarIcon sx={{ color: 'white' }} />}
+            icon={<CalendarIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#FF9800"
+            trend={trendData?.bookingTrend}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Revenue"
-            value={`$${overview?.totalRevenue || 0}`}
-            icon={<MoneyIcon sx={{ color: 'white' }} />}
+            value={`LKR ${overview?.totalRevenue?.toLocaleString() || 0}`}
+            icon={<MoneyIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#E91E63"
+            trend={trendData?.revenueTrend}
           />
         </Grid>
       </Grid>
@@ -156,98 +220,158 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3}>
         {/* Recent Transactions */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Recent Transactions
-            </Typography>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 3, 
+              height: '100%',
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Recent Transactions
+              </Typography>
+              <Chip label="Live" color="success" size="small" />
+            </Box>
             <Divider sx={{ mb: 2 }} />
             {recentTransactions.length > 0 ? (
-              <Box>
+              <List>
                 {recentTransactions.map((transaction, index) => (
-                  <Box
-                    key={transaction.transactionId || index}
-                    sx={{
-                      p: 1,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      borderBottom: index !== recentTransactions.length - 1 ? '1px solid #eee' : 'none'
+                  <ListItem 
+                    key={transaction.transactionId || index} 
+                    sx={{ 
+                      py: 2, 
+                      borderRadius: 2,
+                      mb: 1,
+                      backgroundColor: 'white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        backgroundColor: '#f8f9fa',
+                      }
                     }}
                   >
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {transaction.booking?.event?.name || 'Unknown Event'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(transaction.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        color={transaction.status === 'COMPLETED' ? 'success.main' : 'warning.main'}
+                    <ListItemAvatar>
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: transaction.status === 'COMPLETED' ? 'success.light' : 'warning.light',
+                          width: 48,
+                          height: 48
+                        }}
                       >
-                        ${transaction.amount}
+                        {transaction.status === 'COMPLETED' ? <CheckCircleIcon /> : <AccessTimeIcon />}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                          {transaction.booking?.event?.name || 'Unknown Event'}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(transaction.createdAt).toLocaleDateString()}
+                        </Typography>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <Typography
+                        variant="h6"
+                        color={transaction.status === 'COMPLETED' ? 'success.main' : 'warning.main'}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        LKR {transaction.amount?.toLocaleString() || 0}
                       </Typography>
-                    </Box>
-                  </Box>
+                    </ListItemSecondaryAction>
+                  </ListItem>
                 ))}
-              </Box>
+              </List>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                No recent transactions
-              </Typography>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No recent transactions
+                </Typography>
+              </Box>
             )}
           </Paper>
         </Grid>
         
         {/* Upcoming Events */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Upcoming Events
-            </Typography>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 3, 
+              height: '100%',
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Upcoming Events
+              </Typography>
+              <Chip label="Soon" color="primary" size="small" />
+            </Box>
             <Divider sx={{ mb: 2 }} />
             {upcomingEvents.length > 0 ? (
-              <Box>
+              <List>
                 {upcomingEvents.map((event, index) => (
-                  <Box
-                    key={event.eventId || index}
-                    sx={{
-                      p: 1,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      borderBottom: index !== upcomingEvents.length - 1 ? '1px solid #eee' : 'none'
+                  <ListItem 
+                    key={event.eventId || index} 
+                    sx={{ 
+                      py: 2, 
+                      borderRadius: 2,
+                      mb: 1,
+                      backgroundColor: 'white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        backgroundColor: '#f8f9fa',
+                      }
                     }}
                   >
-                    <Box>
-                      <Typography variant="subtitle2">
-                        {event.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(event.eventDate).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          backgroundColor: event.status === 'PUBLISHED' ? 'success.light' : 'warning.light',
-                          color: event.status === 'PUBLISHED' ? 'success.dark' : 'warning.dark',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1
+                    <ListItemAvatar>
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: event.status === 'PUBLISHED' ? 'success.light' : 'warning.light',
+                          width: 48,
+                          height: 48
                         }}
                       >
-                        {event.status}
-                      </Typography>
-                    </Box>
-                  </Box>
+                        {event.status === 'PUBLISHED' ? <EventAvailableIcon /> : <AccessTimeIcon />}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                          {event.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(event.eventDate).toLocaleDateString()}
+                        </Typography>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <Chip
+                        label={event.status}
+                        size="small"
+                        color={event.status === 'PUBLISHED' ? 'success' : 'warning'}
+                        variant="outlined"
+                        sx={{ fontWeight: 600 }}
+                      />
+                    </ListItemSecondaryAction>
+                  </ListItem>
                 ))}
-              </Box>
+              </List>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                No upcoming events
-              </Typography>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No upcoming events
+                </Typography>
+              </Box>
             )}
           </Paper>
         </Grid>

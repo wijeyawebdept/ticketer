@@ -30,7 +30,6 @@ interface FormValues {
   state: string;
   zipCode: string;
   capacity: number;
-  seatingArrangement: string;
   layoutType: string;
   customLayoutType: string;
 }
@@ -63,8 +62,6 @@ const validationSchema = Yup.object({
     .required('Capacity is required')
     .min(1, 'Capacity must be at least 1')
     .max(1000000, 'Capacity must be less than 1,000,000'),
-  seatingArrangement: Yup.string()
-    .required('Seating arrangement is required'),
   layoutType: Yup.string()
     .required('Layout type is required')
     .oneOf(Object.values(VenueLayoutType), 'Please select a valid layout type'),
@@ -88,7 +85,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
     state: venue?.state || '',
     zipCode: venue?.zipCode || '',
     capacity: venue?.capacity || 0,
-    seatingArrangement: venue?.seatingArrangement || '',
     layoutType: venue?.layoutType || '',
     customLayoutType: ''
   };
@@ -117,13 +113,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
             state: values.state,
             zipCode: values.zipCode,
             capacity: values.capacity,
-            seatingArrangement: values.seatingArrangement,
             layoutType: finalLayoutType as VenueLayoutType
           };
 
-          if (venue?.venueId) {
+          if (venue?.id) {
             // Update existing venue
-            await VenueService.updateVenue(venue.venueId, venueData);
+            await VenueService.updateVenue(venue.id, venueData);
           } else {
             // Create new venue
             await VenueService.createVenue(venueData);
@@ -253,23 +248,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Seating Arrangement"
-                name="seatingArrangement"
-                multiline
-                rows={3}
-                value={values.seatingArrangement}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.seatingArrangement && Boolean(errors.seatingArrangement)}
-                helperText={touched.seatingArrangement && errors.seatingArrangement ? errors.seatingArrangement as string : undefined}
-                placeholder="Describe the seating arrangement (e.g., 'Theater-style with center aisle', 'Round tables for 8', etc.)"
-                required
-              />
-            </Grid>
-
-            <Grid item xs={12}>
               <FormControl 
                 fullWidth 
                 error={touched.layoutType && Boolean(errors.layoutType)}
@@ -330,7 +308,7 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
               variant="contained"
               color="primary"
             >
-              {getButtonText(isSubmitting, Boolean(venue?.venueId))}
+              {getButtonText(isSubmitting, Boolean(venue?.id))}
             </Button>
           </Box>
         </Box>

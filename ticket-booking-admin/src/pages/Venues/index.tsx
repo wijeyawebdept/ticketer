@@ -83,6 +83,12 @@ const VenuesPage = () => {
       minWidth: 150,
     },
     {
+      field: 'description',
+      headerName: 'Description',
+      flex: 2,
+      minWidth: 200,
+    },
+    {
       field: 'address',
       headerName: 'Address',
       flex: 2,
@@ -93,12 +99,6 @@ const VenuesPage = () => {
       headerName: 'Capacity',
       flex: 1,
       minWidth: 100,
-    },
-    {
-      field: 'seatingArrangement',
-      headerName: 'Seating Arrangement',
-      flex: 1,
-      minWidth: 150,
     },
     {
       field: 'actions',
@@ -116,7 +116,7 @@ const VenuesPage = () => {
             <EditIcon />
           </IconButton>
           <IconButton
-            onClick={() => handleDeleteVenue(params.row.venueId)}
+            onClick={() => handleDeleteVenue(params.row.id)}
             size="small"
             color="error"
           >
@@ -157,7 +157,7 @@ const VenuesPage = () => {
             <DataGrid
               rows={venues}
               columns={columns}
-              getRowId={(row) => row.venueId}
+              getRowId={(row) => row.id}
               pageSizeOptions={[5, 10, 25]}
               initialState={{
                 pagination: { paginationModel: { pageSize: 10 } },

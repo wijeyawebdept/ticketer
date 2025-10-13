@@ -181,13 +181,34 @@ const Settings: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
         Settings
       </Typography>
 
-      <Paper sx={{ width: '100%', mt: 2 }}>
+      <Paper 
+        sx={{ 
+          width: '100%', 
+          mt: 2,
+          borderRadius: 3,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(0,0,0,0.05)'
+        }}
+      >
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="settings tabs">
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange} 
+            aria-label="settings tabs"
+            sx={{
+              '& .MuiTab-root': {
+                fontWeight: 500,
+                fontSize: '1rem'
+              },
+              '& .Mui-selected': {
+                color: '#1976d2'
+              }
+            }}
+          >
             <Tab label="Account" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
             <Tab label="Notifications" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
             <Tab label="Security" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
@@ -210,6 +231,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -221,6 +243,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -233,6 +256,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -244,6 +268,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -252,6 +277,15 @@ const Settings: React.FC = () => {
                 color="primary" 
                 onClick={handleSaveAccount}
                 disabled={saving}
+                sx={{
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                  }
+                }}
               >
                 {saving ? <CircularProgress size={24} /> : 'Save Changes'}
               </Button>
@@ -320,6 +354,15 @@ const Settings: React.FC = () => {
                 color="primary" 
                 onClick={handleSaveNotifications}
                 disabled={saving}
+                sx={{
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                  }
+                }}
               >
                 {saving ? <CircularProgress size={24} /> : 'Save Preferences'}
               </Button>
@@ -334,7 +377,7 @@ const Settings: React.FC = () => {
             {error && <Grid item xs={12}><Alert severity="error">{error}</Alert></Grid>}
 
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
                 Change Password
               </Typography>
             </Grid>
@@ -348,6 +391,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -360,6 +404,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -372,6 +417,7 @@ const Settings: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 margin="normal"
+                sx={{ borderRadius: 2 }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -380,6 +426,15 @@ const Settings: React.FC = () => {
                 color="primary" 
                 onClick={handleSaveSecurity}
                 disabled={saving}
+                sx={{
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                  }
+                }}
               >
                 {saving ? <CircularProgress size={24} /> : 'Update Password'}
               </Button>
@@ -409,11 +464,13 @@ const Settings: React.FC = () => {
                     'aria-label': 'Default Currency',
                   },
                 }}
+                sx={{ borderRadius: 2 }}
               >
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
                 <option value="GBP">GBP (£)</option>
                 <option value="JPY">JPY (¥)</option>
+                <option value="LKR">LKR (Rs)</option>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -432,6 +489,7 @@ const Settings: React.FC = () => {
                     'aria-label': 'Default Language',
                   },
                 }}
+                sx={{ borderRadius: 2 }}
               >
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
@@ -455,6 +513,7 @@ const Settings: React.FC = () => {
                     'aria-label': 'Log Level',
                   },
                 }}
+                sx={{ borderRadius: 2 }}
               >
                 <option value="DEBUG">DEBUG</option>
                 <option value="INFO">INFO</option>
@@ -485,6 +544,15 @@ const Settings: React.FC = () => {
                 color="primary" 
                 onClick={handleSaveSystem}
                 disabled={saving}
+                sx={{
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                  }
+                }}
               >
                 {saving ? <CircularProgress size={24} /> : 'Save System Settings'}
               </Button>

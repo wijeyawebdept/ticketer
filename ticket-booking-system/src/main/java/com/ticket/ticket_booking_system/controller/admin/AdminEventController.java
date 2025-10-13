@@ -1,5 +1,8 @@
 package com.ticket.ticket_booking_system.controller.admin;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ticket.ticket_booking_system.dto.request.EventCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.EventUpdateRequest;
@@ -33,7 +37,7 @@ import jakarta.validation.Valid;
 public class AdminEventController {
 
     private final EventService eventService;
-    
+
     public AdminEventController(EventService eventService) {
         this.eventService = eventService;
     }
@@ -50,9 +54,9 @@ public class AdminEventController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String query,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        
+
         Page<EventResponse> events;
-        
+
         if (category != null && !category.isEmpty()) {
             events = eventService.getEventsByCategory(category, pageable);
         } else if (query != null && !query.isEmpty()) {
@@ -60,7 +64,7 @@ public class AdminEventController {
         } else {
             events = eventService.getAllEvents(pageable);
         }
-        
+
         return ResponseEntity.ok(events);
     }
 
@@ -74,7 +78,7 @@ public class AdminEventController {
     public ResponseEntity<EventResponse> updateEvent(
             @PathVariable UUID eventId,
             @Valid @RequestBody EventUpdateRequest request) {
-        
+
         EventResponse updatedEvent = eventService.updateEvent(eventId, request);
         return ResponseEntity.ok(updatedEvent);
     }
@@ -89,30 +93,44 @@ public class AdminEventController {
     public ResponseEntity<EventResponse> changeEventStatus(
             @PathVariable UUID eventId,
             @RequestParam String status) {
-        
+
         EventResponse event = eventService.changeEventStatus(eventId, status);
         return ResponseEntity.ok(event);
     }
-    
+
     @GetMapping("/upcoming")
     public ResponseEntity<Page<EventResponse>> getUpcomingEvents(
             @PageableDefault(size = 20, sort = "startDateTime") Pageable pageable) {
         Page<EventResponse> events = eventService.getUpcomingEvents(pageable);
         return ResponseEntity.ok(events);
     }
-    
+
     @GetMapping("/past")
     public ResponseEntity<Page<EventResponse>> getPastEvents(
             @PageableDefault(size = 20, sort = "startDateTime") Pageable pageable) {
         Page<EventResponse> events = eventService.getPastEvents(pageable);
         return ResponseEntity.ok(events);
     }
-    
+
     @GetMapping("/by-organizer/{organizerId}")
     public ResponseEntity<Page<EventResponse>> getEventsByOrganizer(
             @PathVariable UUID organizerId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         Page<EventResponse> events = eventService.getEventsByOrganizer(organizerId, pageable);
         return ResponseEntity.ok(events);
+    }
+
+    @PostMapping("/{eventId}/image")
+    public ResponseEntity<Map<String, String>> uploadEventImage(
+            @PathVariable UUID eventId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        String imageUrl = eventService.uploadEventImage(eventId, file);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Event image uploaded successfully");
+        response.put("imageUrl", imageUrl);
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -17,7 +17,7 @@ import com.ticket.ticket_booking_system.service.DashboardService;
 public class AdminDashboardController {
 
     private final DashboardService dashboardService;
-    
+
     public AdminDashboardController(DashboardService dashboardService) {
         this.dashboardService = dashboardService;
     }
@@ -37,28 +37,33 @@ public class AdminDashboardController {
             @RequestParam(defaultValue = "month") String period,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        
+
         return ResponseEntity.ok(dashboardService.getRevenueChartData(period, startDate, endDate));
     }
 
     @GetMapping("/recent-transactions")
     public ResponseEntity<Map<String, Object>> getRecentTransactions(
             @RequestParam(defaultValue = "10") int count) {
-        
+
         return ResponseEntity.ok(dashboardService.getRecentTransactions(count));
     }
 
     @GetMapping("/upcoming-events")
     public ResponseEntity<Map<String, Object>> getUpcomingEvents(
             @RequestParam(defaultValue = "5") int count) {
-        
+
         return ResponseEntity.ok(dashboardService.getUpcomingEvents(count));
     }
 
     @GetMapping("/top-selling-events")
     public ResponseEntity<Map<String, Object>> getTopSellingEvents(
             @RequestParam(defaultValue = "5") int count) {
-        
+
         return ResponseEntity.ok(dashboardService.getTopSellingEvents(count));
+    }
+
+    @GetMapping("/trends")
+    public ResponseEntity<Map<String, Object>> getTrendData() {
+        return ResponseEntity.ok(dashboardService.getTrendData());
     }
 }

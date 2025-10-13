@@ -13,6 +13,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
+  profilePicture?: string;
   role: string | UserRole;
 }
 

@@ -8,18 +8,26 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  FormHelperText
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Formik, Form, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { AuthService } from '../../services';
 import { RegisterRequest } from '../../services/auth.service';
 import { UserRole } from '../../types';
+
+// Extend the RegisterRequest interface to include new fields
+interface ExtendedRegisterRequest extends Omit<RegisterRequest, 'role'> {
+  dateOfBirth?: string;
+  profilePicture?: string;
+  role?: string | UserRole;
+}
 
 const validationSchema = Yup.object({
   firstName: Yup.string()
@@ -42,26 +50,46 @@ const validationSchema = Yup.object({
     ),
   phoneNumber: Yup.string()
     .matches(/^\d{10}$/, 'Phone number must be 10 digits'),
-  role: Yup.string()
-    .required('Role is required'),
+  dateOfBirth: Yup.date()
+    .nullable()
+    .max(new Date(), 'Date of birth cannot be in the future')
+    .test('age', 'You must be at least 13 years old', function(value) {
+      if (!value) return true; // Allow empty values
+      const today = new Date();
+      const birthDate = new Date(value);
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        return age - 1 >= 13;
+      }
+      return age >= 13;
+    }),
 });
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const handleSubmit = async (
-    values: RegisterRequest,
-    { setSubmitting }: FormikHelpers<RegisterRequest>
+    values: ExtendedRegisterRequest,
+    { setSubmitting }: FormikHelpers<ExtendedRegisterRequest>
   ) => {
     try {
       setError(null);
       
-      // Ensure role is sent as a string value
+      // Ensure role is set to USER by default
       const formData = {
         ...values,
-        // Convert enum to string if necessary
-        role: typeof values.role === 'string' ? values.role : String(values.role)
+        role: UserRole.USER // Set default role to USER
       };
       
       await AuthService.register(formData);
@@ -110,12 +138,13 @@ const Register: React.FC = () => {
               email: '',
               password: '',
               phoneNumber: '',
+              dateOfBirth: '',
               role: UserRole.USER,
             }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
           >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
+            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
               <Form style={{ width: '100%' }} onSubmit={handleSubmit}>
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
                   <Box sx={{ flex: 1 }}>
@@ -169,7 +198,7 @@ const Register: React.FC = () => {
                   id="password"
                   name="password"
                   label="Password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={values.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -177,6 +206,20 @@ const Register: React.FC = () => {
                   helperText={touched.password && errors.password as string}
                   margin="normal"
                   required
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
 
                 <TextField
@@ -192,28 +235,22 @@ const Register: React.FC = () => {
                   margin="normal"
                 />
 
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="role-label">Role</InputLabel>
-                  <Select
-                    labelId="role-label"
-                    id="role"
-                    name="role"
-                    value={values.role}
-                    onChange={(e) => {
-                      // Handle the Select change manually
-                      setFieldValue('role', e.target.value);
-                    }}
-                    onBlur={handleBlur}
-                    error={touched.role && Boolean(errors.role)}
-                    label="Role"
-                  >
-                    <MenuItem value={UserRole.USER}>User</MenuItem>
-                    <MenuItem value={UserRole.ORGANIZER}>Organizer</MenuItem>
-                  </Select>
-                  {touched.role && errors.role && (
-                    <FormHelperText error>{errors.role as string}</FormHelperText>
-                  )}
-                </FormControl>
+                <TextField
+                  fullWidth
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  label="Date of Birth"
+                  type="date"
+                  value={values.dateOfBirth}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.dateOfBirth && Boolean(errors.dateOfBirth)}
+                  helperText={touched.dateOfBirth && errors.dateOfBirth as string}
+                  margin="normal"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
                 
                 <Button
                   type="submit"

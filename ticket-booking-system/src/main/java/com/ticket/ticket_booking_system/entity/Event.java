@@ -2,6 +2,7 @@ package com.ticket.ticket_booking_system.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; // Added import
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany; // Added import
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -75,6 +77,10 @@ public class Event {
     @JoinColumn(name = "organizer_id")
     private User organizer;
 
+    // Added ticket categories relationship
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    private List<TicketCategory> ticketCategories;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -91,12 +97,12 @@ public class Event {
     public enum EventStatus {
         DRAFT, PUBLISHED, CANCELLED, COMPLETED
     }
-    
+
     // Add compatibility methods to support existing code
     public java.util.UUID getId() {
         return eventId;
     }
-    
+
     public void setId(java.util.UUID id) {
         this.eventId = id;
     }

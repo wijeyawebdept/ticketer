@@ -379,7 +379,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                         <Grid item key={seat.seatId}>
                           <Tooltip
                             title={`
-                              Seat ${seat.seatNumber} - $${seat.price}
+                              Seat ${seat.seatNumber} - LKR ${seat.price}
                               ${seat.isBlocked ? ' (BLOCKED)' : ''}
                               ${!seat.isAvailable ? ' (BOOKED)' : ''}
                               ${seat.holdExpiresAt ? ` (HELD until ${new Date(seat.holdExpiresAt).toLocaleTimeString()})` : ''}

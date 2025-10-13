@@ -36,6 +36,8 @@ public class VenueCreateRequest {
     @Positive(message = "Capacity must be positive")
     private Integer capacity;
     
+    private String layoutType;
+    
     private Map<String, Object> seatingLayout;
     
     // Constructors

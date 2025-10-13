@@ -21,6 +21,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @org.springframework.context.annotation.Primary
@@ -34,43 +42,44 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public Map<String, Object> getDashboardOverview() {
         Map<String, Object> overview = new HashMap<>();
-        
+
         LocalDateTime today = LocalDate.now().atStartOfDay();
         LocalDateTime weekStart = today.minusDays(7);
         LocalDateTime monthStart = today.withDayOfMonth(1);
-        
+
         // Total revenue
         BigDecimal totalRevenue = transactionRepository.findTotalRevenue();
         overview.put("totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO);
-        
+
         // Total users
         long totalUsers = userRepository.count();
         overview.put("totalUsers", totalUsers);
-        
+
         // Active events count
-        List<Event> activeEvents = eventRepository.findByStatus(Event.EventStatus.PUBLISHED, PageRequest.of(0, 1000)).getContent();
+        List<Event> activeEvents = eventRepository.findByStatus(Event.EventStatus.PUBLISHED, PageRequest.of(0, 1000))
+                .getContent();
         overview.put("activeEventsCount", activeEvents.size());
-        
+
         // Bookings stats
         Long todayBookings = bookingRepository.countTodayBookings(today);
         overview.put("todayBookings", todayBookings != null ? todayBookings : 0);
-        
+
         Long weekBookings = bookingRepository.countBookingsBetweenDates(weekStart, today);
         overview.put("weekBookings", weekBookings != null ? weekBookings : 0);
-        
+
         Long monthBookings = bookingRepository.countBookingsBetweenDates(monthStart, today);
         overview.put("monthBookings", monthBookings != null ? monthBookings : 0);
-        
+
         return overview;
     }
 
     @Override
     public Map<String, Object> getAnalyticsByPeriod(String period) {
         Map<String, Object> analytics = new HashMap<>();
-        
+
         LocalDateTime endDate = LocalDateTime.now();
         LocalDateTime startDate;
-        
+
         // Determine time range based on period
         switch (period.toLowerCase()) {
             case "day":
@@ -88,34 +97,34 @@ public class DashboardServiceImpl implements DashboardService {
             default:
                 startDate = endDate.minusWeeks(1); // Default to week
         }
-        
+
         // Revenue for the period
         BigDecimal periodRevenue = transactionRepository.findRevenueForPeriod(startDate, endDate);
         analytics.put("revenue", periodRevenue != null ? periodRevenue : BigDecimal.ZERO);
-        
+
         // Bookings for the period
         Long bookingsCount = bookingRepository.countBookingsBetweenDates(startDate, endDate);
         analytics.put("bookingsCount", bookingsCount != null ? bookingsCount : 0);
-        
+
         // User growth (simplified - just count users created in the period)
         List<User> newUsers = userRepository.findAll().stream()
                 .filter(user -> user.getCreatedAt() != null && user.getCreatedAt().isAfter(startDate))
                 .collect(Collectors.toList());
         analytics.put("newUsersCount", newUsers.size());
-        
+
         return analytics;
     }
 
     @Override
     public Map<String, Object> getRevenueChartData(String period, String startDateStr, String endDateStr) {
         Map<String, Object> chartData = new HashMap<>();
-        
-        LocalDateTime endDate = endDateStr != null 
-            ? LocalDate.parse(endDateStr).atTime(LocalTime.MAX) 
-            : LocalDateTime.now();
-            
+
+        LocalDateTime endDate = endDateStr != null
+                ? LocalDate.parse(endDateStr).atTime(LocalTime.MAX)
+                : LocalDateTime.now();
+
         LocalDateTime startDate;
-        
+
         if (startDateStr != null) {
             startDate = LocalDate.parse(startDateStr).atStartOfDay();
         } else {
@@ -137,10 +146,10 @@ public class DashboardServiceImpl implements DashboardService {
                     startDate = endDate.minusMonths(1); // Default
             }
         }
-        
+
         // Get all transactions in the period
         List<Transaction> transactions = transactionRepository.findByDateRange(startDate, endDate);
-        
+
         // Format data for chart
         DateTimeFormatter formatter;
         if (period.equalsIgnoreCase("day")) {
@@ -152,41 +161,41 @@ public class DashboardServiceImpl implements DashboardService {
         } else {
             formatter = DateTimeFormatter.ofPattern("MMM-yy");
         }
-        
+
         Map<String, BigDecimal> revenueByPeriod = new LinkedHashMap<>();
-        
+
         // Organize transactions by date
         transactions.forEach(transaction -> {
             String key = transaction.getCreatedAt().format(formatter);
             BigDecimal currentAmount = revenueByPeriod.getOrDefault(key, BigDecimal.ZERO);
-            
-            if (transaction.getType() == Transaction.TransactionType.PAYMENT && 
-                transaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
+
+            if (transaction.getType() == Transaction.TransactionType.PAYMENT &&
+                    transaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
                 revenueByPeriod.put(key, currentAmount.add(transaction.getAmount()));
-            } else if (transaction.getType() == Transaction.TransactionType.REFUND && 
-                       transaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
+            } else if (transaction.getType() == Transaction.TransactionType.REFUND &&
+                    transaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
                 revenueByPeriod.put(key, currentAmount.subtract(transaction.getAmount()));
             }
         });
-        
+
         List<String> labels = new ArrayList<>(revenueByPeriod.keySet());
         List<BigDecimal> data = new ArrayList<>(revenueByPeriod.values());
-        
+
         chartData.put("labels", labels);
         chartData.put("data", data);
         chartData.put("period", period);
-        
+
         return chartData;
     }
 
     @Override
     public Map<String, Object> getRecentTransactions(int count) {
         Map<String, Object> result = new HashMap<>();
-        
+
         List<Transaction> transactions = transactionRepository.findAll(
                 PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .getContent();
-        
+
         result.put("transactions", transactions);
         return result;
     }
@@ -194,11 +203,11 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public Map<String, Object> getUpcomingEvents(int count) {
         Map<String, Object> result = new HashMap<>();
-        
+
         List<Event> upcomingEvents = eventRepository.findUpcomingEvents(
-                LocalDateTime.now(), 
+                LocalDateTime.now(),
                 PageRequest.of(0, count));
-        
+
         result.put("upcomingEvents", upcomingEvents);
         return result;
     }
@@ -206,11 +215,91 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public Map<String, Object> getTopSellingEvents(int count) {
         Map<String, Object> result = new HashMap<>();
-        
-        List<Event> topEvents = eventRepository.findTopSellingEvents(
-                PageRequest.of(0, count));
-        
-        result.put("topSellingEvents", topEvents);
+
+        PageRequest pageRequest = PageRequest.of(0, count);
+        List<Event> topEvents = eventRepository.findTopSellingEvents(pageRequest);
+
+        result.put("events", topEvents);
         return result;
+    }
+
+    @Override
+    public Map<String, Object> getTrendData() {
+        Map<String, Object> trendData = new HashMap<>();
+
+        // Calculate trends by comparing current period with previous period
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneWeekAgo = now.minusWeeks(1);
+        LocalDateTime twoWeeksAgo = now.minusWeeks(2);
+        LocalDateTime oneMonthAgo = now.minusMonths(1);
+        LocalDateTime twoMonthsAgo = now.minusMonths(2);
+
+        // User growth trend (week over week)
+        long currentWeekUsers = userRepository.findAll().stream()
+                .filter(user -> user.getCreatedAt() != null &&
+                        user.getCreatedAt().isAfter(oneWeekAgo))
+                .count();
+
+        long previousWeekUsers = userRepository.findAll().stream()
+                .filter(user -> user.getCreatedAt() != null &&
+                        user.getCreatedAt().isAfter(twoWeeksAgo) &&
+                        user.getCreatedAt().isBefore(oneWeekAgo))
+                .count();
+
+        double userGrowthTrend = previousWeekUsers > 0
+                ? ((double) (currentWeekUsers - previousWeekUsers) / previousWeekUsers) * 100
+                : 0;
+
+        trendData.put("userGrowthTrend", Math.round(userGrowthTrend * 100.0) / 100.0);
+
+        // Revenue trend (month over month)
+        BigDecimal currentMonthRevenue = transactionRepository.findRevenueForPeriod(
+                oneMonthAgo, now);
+        BigDecimal previousMonthRevenue = transactionRepository.findRevenueForPeriod(
+                twoMonthsAgo, oneMonthAgo);
+
+        double revenueTrend = previousMonthRevenue != null && previousMonthRevenue.compareTo(BigDecimal.ZERO) > 0
+                ? ((currentMonthRevenue.subtract(previousMonthRevenue))
+                        .divide(previousMonthRevenue, 4, BigDecimal.ROUND_HALF_UP))
+                        .multiply(BigDecimal.valueOf(100)).doubleValue()
+                : 0;
+
+        trendData.put("revenueTrend", Math.round(revenueTrend * 100.0) / 100.0);
+
+        // Booking trend (week over week)
+        Long currentWeekBookings = bookingRepository.countBookingsBetweenDates(
+                oneWeekAgo, now);
+        Long previousWeekBookings = bookingRepository.countBookingsBetweenDates(
+                twoWeeksAgo, oneWeekAgo);
+
+        double bookingTrend = previousWeekBookings != null && previousWeekBookings > 0
+                ? ((double) (currentWeekBookings - previousWeekBookings) / previousWeekBookings) * 100
+                : 0;
+
+        trendData.put("bookingTrend", Math.round(bookingTrend * 100.0) / 100.0);
+
+        // Event trend (month over month)
+        long currentMonthEvents = eventRepository.findByStatus(
+                Event.EventStatus.PUBLISHED, PageRequest.of(0, 1000))
+                .getContent().stream()
+                .filter(event -> event.getCreatedAt() != null &&
+                        event.getCreatedAt().isAfter(oneMonthAgo))
+                .count();
+
+        long previousMonthEvents = eventRepository.findByStatus(
+                Event.EventStatus.PUBLISHED, PageRequest.of(0, 1000))
+                .getContent().stream()
+                .filter(event -> event.getCreatedAt() != null &&
+                        event.getCreatedAt().isAfter(twoMonthsAgo) &&
+                        event.getCreatedAt().isBefore(oneMonthAgo))
+                .count();
+
+        double eventTrend = previousMonthEvents > 0
+                ? ((double) (currentMonthEvents - previousMonthEvents) / previousMonthEvents) * 100
+                : 0;
+
+        trendData.put("eventTrend", Math.round(eventTrend * 100.0) / 100.0);
+
+        return trendData;
     }
 }

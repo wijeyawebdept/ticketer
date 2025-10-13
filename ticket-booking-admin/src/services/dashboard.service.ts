@@ -7,8 +7,6 @@ class DashboardService {
     return response.data;
   }
 
-
-
   async getRecentTransactions(count: number = 10): Promise<any> {
     const response = await api.get(`/api/admin/dashboard/recent-transactions?count=${count}`);
     return response.data;
@@ -21,6 +19,11 @@ class DashboardService {
 
   async getTopSellingEvents(count: number = 5): Promise<any> {
     const response = await api.get(`/api/admin/dashboard/top-selling-events?count=${count}`);
+    return response.data;
+  }
+
+  async getTrendData(): Promise<any> {
+    const response = await api.get('/api/admin/dashboard/trends');
     return response.data;
   }
 }

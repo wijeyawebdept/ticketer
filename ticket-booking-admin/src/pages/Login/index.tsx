@@ -7,8 +7,15 @@ import {
   Container,
   Paper,
   Alert,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Link as MuiLink
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import { Formik, Form, Field, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -34,6 +41,7 @@ interface LoginFormValues {
 const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -45,6 +53,14 @@ const Login: React.FC = () => {
       setSuccessMessage(state.message);
     }
   }, [location]);
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const handleSubmit = async (
     values: LoginFormValues, 
@@ -68,7 +84,12 @@ const Login: React.FC = () => {
       
       let errorMessage = 'Login failed. Please try again.';
       
-      if (err.response?.data?.message) {
+      // Handle specific error cases
+      if (err.response?.status === 401) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Account not activated. Please contact administrator.';
+      } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
         errorMessage = `Error: ${err.message}`;
@@ -78,6 +99,11 @@ const Login: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    // For now, we'll show an alert since we don't have a full implementation
+    alert('Forgot password functionality would be implemented here. In a real application, this would send a password reset link to your email.');
   };
 
   return (
@@ -139,10 +165,24 @@ const Login: React.FC = () => {
                     id="password"
                     name="password"
                     label="Password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     variant="outlined"
                     error={touched.password && Boolean(errors.password)}
                     helperText={touched.password && errors.password}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleClickShowPassword}
+                            onMouseDown={handleMouseDownPassword}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Box>
                 
@@ -156,6 +196,17 @@ const Login: React.FC = () => {
                 >
                   {isSubmitting ? <CircularProgress size={24} /> : 'Sign In'}
                 </Button>
+                
+                <Box sx={{ textAlign: 'right', mt: 1 }}>
+                  <MuiLink 
+                    component="button" 
+                    variant="body2" 
+                    onClick={handleForgotPassword}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    Forgot password?
+                  </MuiLink>
+                </Box>
                 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
                   <Typography variant="body2">

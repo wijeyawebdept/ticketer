@@ -82,7 +82,7 @@ const Transactions: React.FC = () => {
       headerName: 'Amount', 
       width: 120, 
       valueFormatter: (params) => {
-        return `$${params.value}`;
+        return `LKR ${params.value}`;
       }
     },
     { 
@@ -108,6 +108,7 @@ const Transactions: React.FC = () => {
           color={getStatusChipColor(params.value as TransactionStatus)} 
           variant="outlined" 
           size="small" 
+          sx={{ fontWeight: 500 }}
         />
       )
     },
@@ -117,7 +118,17 @@ const Transactions: React.FC = () => {
       width: 100,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <IconButton onClick={() => handleViewDetails(params.row as Transaction)}>
+        <IconButton 
+          onClick={() => handleViewDetails(params.row as Transaction)}
+          size="small"
+          color="primary"
+          sx={{
+            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+            '&:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.2)',
+            }
+          }}
+        >
           <VisibilityIcon />
         </IconButton>
       ),
@@ -128,13 +139,20 @@ const Transactions: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4">Transaction History</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Transaction History</Typography>
         </Grid>
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
+          <Paper 
+            sx={{ 
+              p: 2,
+              borderRadius: 3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}
+          >
             {loading ? (
               <Box display="flex" justifyContent="center" p={3}>
-                <CircularProgress />
+                <CircularProgress size={40} thickness={4} />
               </Box>
             ) : (
               <DataGrid
@@ -150,6 +168,18 @@ const Transactions: React.FC = () => {
                 pageSizeOptions={[10, 25, 50]}
                 disableRowSelectionOnClick
                 autoHeight
+                sx={{
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                    borderRadius: '8px 8px 0 0',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid rgba(0,0,0,0.05)',
+                  },
+                  '& .MuiDataGrid-row:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                  },
+                }}
               />
             )}
           </Paper>
@@ -158,7 +188,7 @@ const Transactions: React.FC = () => {
 
       {/* Transaction Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onClose={handleDetailsDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>Transaction Details</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>Transaction Details</DialogTitle>
         <DialogContent>
           {selectedTransaction && (
             <Box sx={{ pt: 2 }}>
@@ -174,6 +204,7 @@ const Transactions: React.FC = () => {
                     color={getStatusChipColor(selectedTransaction.status)} 
                     variant="outlined" 
                     size="small" 
+                    sx={{ fontWeight: 500 }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -194,7 +225,7 @@ const Transactions: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Amount</Typography>
-                  <Typography variant="body1">${selectedTransaction.amount}</Typography>
+                  <Typography variant="body1">LKR {selectedTransaction.amount}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Payment Method</Typography>
@@ -223,7 +254,12 @@ const Transactions: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDetailsDialogClose}>Close</Button>
+          <Button 
+            onClick={handleDetailsDialogClose}
+            sx={{ fontWeight: 500 }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

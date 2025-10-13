@@ -1,30 +1,35 @@
 import api from './api';
-import { Event } from '../types';
+import { Event, TicketCategory } from '../types';
 
+// Updated interface to include ticket categories
 interface EventCreateRequest {
   name: string;
   description: string;
-  eventDate: string;
+  startDateTime: string;
+  endDateTime: string;
   venueId: string;
-  category: string;
   basePrice: number;
+  totalCapacity: number;
   imageUrl?: string;
+  ticketCategories?: TicketCategory[]; // Added ticket categories
 }
 
 interface EventUpdateRequest {
   name?: string;
   description?: string;
-  eventDate?: string;
+  startDateTime?: string;
+  endDateTime?: string;
   venueId?: string;
-  category?: string;
   basePrice?: number;
-  imageUrl?: string;
+  totalCapacity?: number;
   status?: string;
+  imageUrl?: string;
 }
 
 class EventService {
-  async getAllEvents(): Promise<Event[]> {
-    const response = await api.get<Event[]>('/api/admin/events');
+  async getAllEvents(): Promise<any> {
+    const response = await api.get<any>('/api/admin/events');
+    // Return the full response so the caller can handle Page responses
     return response.data;
   }
 
@@ -51,7 +56,7 @@ class EventService {
     const response = await api.patch<Event>(`/api/admin/events/${id}/status`, { status });
     return response.data;
   }
-
+  
   async uploadEventImage(id: string, formData: FormData): Promise<string> {
     const response = await api.post<{ imageUrl: string }>(
       `/api/admin/events/${id}/image`,
@@ -66,5 +71,4 @@ class EventService {
   }
 }
 
-const eventService = new EventService();
-export default eventService;
+export default new EventService();

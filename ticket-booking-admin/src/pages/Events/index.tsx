@@ -11,11 +11,12 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
+  Chip
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { EventService } from '../../services';
-import { Event } from '../../types';
+import { Event, EventStatus } from '../../types';
 import EventForm from './components/EventForm';
 
 const Events: React.FC = () => {
@@ -32,8 +33,37 @@ const Events: React.FC = () => {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const data = await EventService.getAllEvents();
-      setEvents(data);
+      const response: any = await EventService.getAllEvents();
+      
+      // Handle Page response from backend
+      let eventsData: any[] = [];
+      if (response && response.content) {
+        // It's a Page response, extract the content array
+        eventsData = response.content;
+      } else if (Array.isArray(response)) {
+        // It's already an array
+        eventsData = response;
+      } else {
+        eventsData = [];
+      }
+      
+      // Map backend response to frontend Event type
+      const mappedEvents = eventsData.map((event: any) => ({
+        ...event,
+        id: event.id || event.eventId, // Ensure id exists
+        eventId: event.eventId || event.id, // For backward compatibility
+        eventDate: event.startDateTime || event.eventDate, // Map startDateTime to eventDate
+        ticketsAvailable: event.availableSeats !== undefined ? event.availableSeats : (event.ticketsAvailable || 0), // Map availableSeats to ticketsAvailable
+        ticketPrice: event.basePrice !== undefined ? event.basePrice : (event.ticketPrice || 0), // Map basePrice to ticketPrice
+        // Map organizer to createdBy for frontend compatibility
+        createdBy: event.organizer || event.createdBy,
+        venue: event.venue ? {
+          ...event.venue,
+          layoutType: event.venue.layoutType || 'THEATER' // Ensure layoutType exists
+        } : undefined
+      }));
+      
+      setEvents(mappedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -80,16 +110,87 @@ const Events: React.FC = () => {
     }
   };
 
+  const getStatusChipColor = (status: EventStatus) => {
+    switch (status) {
+      case EventStatus.PUBLISHED:
+        return 'success';
+      case EventStatus.DRAFT:
+        return 'warning';
+      case EventStatus.CANCELLED:
+        return 'error';
+      case EventStatus.COMPLETED:
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
+
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Event Name', flex: 1 },
-    { field: 'venue', headerName: 'Venue', flex: 1 },
-    { field: 'eventDate', headerName: 'Date', flex: 1, valueFormatter: (params) => {
-      return new Date(params.value as string).toLocaleDateString();
-    }},
-    { field: 'ticketsAvailable', headerName: 'Available Tickets', flex: 1 },
-    { field: 'ticketPrice', headerName: 'Price', flex: 1, valueFormatter: (params) => {
-      return `$${params.value}`;
-    }},
+    { 
+      field: 'venue', 
+      headerName: 'Venue', 
+      flex: 1,
+      valueFormatter: (params) => {
+        // Handle both frontend Event type and backend response format
+        if (params.value && typeof params.value === 'object') {
+          return params.value.name || 'N/A';
+        }
+        return 'N/A';
+      }
+    },
+    { 
+      field: 'startDateTime', 
+      headerName: 'Start Date', 
+      flex: 1, 
+      valueFormatter: (params) => {
+        if (params.value) {
+          return new Date(params.value as string).toLocaleDateString();
+        }
+        return 'N/A';
+      }
+    },
+    { 
+      field: 'endDateTime', 
+      headerName: 'End Date', 
+      flex: 1, 
+      valueFormatter: (params) => {
+        if (params.value) {
+          return new Date(params.value as string).toLocaleDateString();
+        }
+        return 'N/A';
+      }
+    },
+    { 
+      field: 'availableSeats', 
+      headerName: 'Available Seats', 
+      flex: 1,
+      valueFormatter: (params) => {
+        return params.value || 0;
+      }
+    },
+    { 
+      field: 'basePrice', 
+      headerName: 'Price (LKR)', 
+      flex: 1, 
+      valueFormatter: (params) => {
+        return `LKR ${params.value || 0}`;
+      }
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip 
+          label={params.value} 
+          color={getStatusChipColor(params.value as EventStatus)} 
+          variant="outlined" 
+          size="small" 
+          sx={{ fontWeight: 500 }}
+        />
+      )
+    },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -97,10 +198,31 @@ const Events: React.FC = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <IconButton onClick={() => handleEditClick(params.row as Event)}>
+          <IconButton
+            onClick={() => handleEditClick(params.row as Event)}
+            size="small"
+            color="primary"
+            sx={{
+              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+              },
+              mr: 1
+            }}
+          >
             <EditIcon />
           </IconButton>
-          <IconButton onClick={() => handleDeleteClick(params.row as Event)}>
+          <IconButton
+            onClick={() => handleDeleteClick(params.row as Event)}
+            size="small"
+            color="error"
+            sx={{
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+              }
+            }}
+          >
             <DeleteIcon />
           </IconButton>
         </Box>
@@ -112,21 +234,37 @@ const Events: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4">Event Management</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Event Management</Typography>
           <Button
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
             onClick={handleCreateClick}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+              }
+            }}
           >
             Add New Event
           </Button>
         </Grid>
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
+          <Paper 
+            sx={{ 
+              p: 2,
+              borderRadius: 3,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }}
+          >
             {loading ? (
               <Box display="flex" justifyContent="center" p={3}>
-                <CircularProgress />
+                <CircularProgress size={40} thickness={4} />
               </Box>
             ) : (
               <DataGrid
@@ -142,6 +280,18 @@ const Events: React.FC = () => {
                 pageSizeOptions={[10, 25, 50]}
                 disableRowSelectionOnClick
                 autoHeight
+                sx={{
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                    borderRadius: '8px 8px 0 0',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid rgba(0,0,0,0.05)',
+                  },
+                  '& .MuiDataGrid-row:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                  },
+                }}
               />
             )}
           </Paper>
@@ -150,7 +300,7 @@ const Events: React.FC = () => {
 
       {/* Event Form Dialog */}
       <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>
           {selectedEvent ? 'Edit Event' : 'Create New Event'}
           <IconButton
             aria-label="close"
@@ -180,15 +330,25 @@ const Events: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onClose={handleDeleteDialogClose}>
-        <DialogTitle>Delete Event</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Delete Event</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete the event "{selectedEvent?.name}"? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm}>
+          <Button 
+            onClick={handleDeleteDialogClose}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleDeleteConfirm}
+            sx={{ fontWeight: 500 }}
+          >
             Delete
           </Button>
         </DialogActions>
