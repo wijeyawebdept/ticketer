@@ -36,6 +36,7 @@ import {
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
+import ConfirmDialog from '../ConfirmDialog';
 
 const drawerWidth = 240;
 
@@ -92,6 +93,7 @@ const AdminLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -123,8 +125,17 @@ const AdminLayout: React.FC = () => {
   };
 
   const handleLogout = () => {
+    setLogoutConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutConfirmOpen(false);
     logout();
     navigate('/login');
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutConfirmOpen(false);
   };
 
   const menuItems = [
@@ -260,6 +271,15 @@ const AdminLayout: React.FC = () => {
         <DrawerHeader />
         <Outlet />
       </Main>
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        title="Confirm Logout"
+        content="Are you sure you want to logout?"
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        confirmText="Logout"
+        cancelText="Cancel"
+      />
     </Box>
   );
 };
