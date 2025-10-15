@@ -177,8 +177,9 @@ ORDER BY tc.table_name;
 
 select * from users;
 select * from venues;
-select * from events;
 select * from seats;
 select * from bookings;
 select * from booking_seats;
 select * from transactions;
+select * from ticket_categories;
+select * from events;
