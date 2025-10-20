@@ -3,6 +3,7 @@ package com.ticket.ticket_booking_system.service;
 import java.util.List;
 import java.util.UUID;
 
+import com.ticket.ticket_booking_system.dto.response.SeatResponse;
 import com.ticket.ticket_booking_system.entity.Seat;
 
 public interface SeatService {
@@ -16,6 +17,11 @@ public interface SeatService {
      * Get all seats for an event
      */
     List<Seat> getSeatsByEvent(UUID eventId);
+    
+    /**
+     * Get all seats for an event as DTOs (no lazy loading issues)
+     */
+    List<SeatResponse> getSeatsByEventAsResponse(UUID eventId);
     
     /**
      * Get available seats for an event

@@ -2,14 +2,10 @@ import axiosInstance from './api';
 
 export interface Seat {
   seatId: string;
-  venue: {
-    venueId: string;
-    venueName: string;
-  };
-  event: {
-    eventId: string;
-    eventName: string;
-  };
+  venueId: string;
+  venueName: string;
+  eventId: string;
+  eventName: string;
   section: string;
   rowNumber: string;
   seatNumber: string;
@@ -19,6 +15,7 @@ export interface Seat {
   isBlocked: boolean;
   holdExpiresAt?: string;
   heldByUser?: string;
+  createdAt?: string;
 }
 
 export interface SeatAvailabilityStats {
@@ -67,27 +64,23 @@ export interface HoldSeatsRequest {
   holdDurationMinutes?: number;
 }
 
-export interface ReserveSeatsRequest {
-  seatIds: string[];
-}
-
 // API Service for Seat Management
 export const SeatService = {
   // Get all seats for an event
   getSeatsByEvent: async (eventId: string): Promise<Seat[]> => {
-    const response = await axiosInstance.get<Seat[]>(`/api/seats/event/${eventId}`);
+    const response = await axiosInstance.get<Seat[]>(`/api/seats?eventId=${eventId}`);
     return response.data;
   },
 
   // Get available seats for an event
   getAvailableSeatsByEvent: async (eventId: string): Promise<Seat[]> => {
-    const response = await axiosInstance.get<Seat[]>(`/api/seats/event/${eventId}/available`);
+    const response = await axiosInstance.get<Seat[]>(`/api/seats/available?eventId=${eventId}`);
     return response.data;
   },
 
   // Get seat availability statistics
   getAvailabilityStats: async (eventId: string): Promise<SeatAvailabilityStats> => {
-    const response = await axiosInstance.get<SeatAvailabilityStats>(`/api/seats/event/${eventId}/stats`);
+    const response = await axiosInstance.get<SeatAvailabilityStats>(`/api/seats/stats?eventId=${eventId}`);
     return response.data;
   },
 
@@ -99,7 +92,7 @@ export const SeatService = {
 
   // Admin: Block/unblock a seat
   toggleSeatBlock: async (seatId: string, block: boolean): Promise<void> => {
-    await axiosInstance.put(`/api/seats/${seatId}/block`, { block });
+    await axiosInstance.put(`/api/seats/${seatId}/block?block=${block}`);
   },
 
   // User: Hold seats temporarily
@@ -108,13 +101,18 @@ export const SeatService = {
   },
 
   // User: Reserve held seats
-  reserveSeats: async (request: ReserveSeatsRequest): Promise<void> => {
-    await axiosInstance.post('/api/seats/reserve', request);
+  reserveSeats: async (seatIds: string[]): Promise<void> => {
+    await axiosInstance.post('/api/seats/reserve', seatIds);
   },
 
   // User: Release user's seat holds
   releaseSeatHolds: async (userId: string): Promise<void> => {
-    await axiosInstance.delete(`/api/seats/release/${userId}`);
+    await axiosInstance.post(`/api/seats/release-holds?userId=${userId}`);
+  },
+
+  // Admin: Generate seats for an event from venue layout
+  generateSeatsForEvent: async (venueId: string, eventId: string): Promise<void> => {
+    await axiosInstance.post(`/api/seats/generate?venueId=${venueId}&eventId=${eventId}`);
   },
 };
 

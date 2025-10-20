@@ -25,7 +25,7 @@ import * as Yup from 'yup';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { Event, Venue, EventStatus, VenueLayoutType, TicketCategory } from '../../../types';
+import { Event, Venue, EventStatus, TicketCategory } from '../../../types';
 import { EventService } from '../../../services';
 import { VenueService } from '../../../services';
 
@@ -155,10 +155,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       initialValues={{
         name: event?.name || '',
         description: event?.description || '',
-        startDateTime: event?.eventDate ? new Date(event.eventDate) : new Date(),
-        endDateTime: event?.eventDate ? new Date(event.eventDate) : new Date(),
+        startDateTime: event?.startDateTime ? new Date(event.startDateTime) : new Date(),
+        endDateTime: event?.endDateTime ? new Date(event.endDateTime) : new Date(new Date().setHours(new Date().getHours() + 2)),
         venueId: event?.venue?.id || '',
-        category: event?.category || '',
+        category: '', // Remove category requirement since backend doesn't support it
         basePrice: event?.basePrice || 0,
         totalCapacity: event?.ticketsAvailable || 100,
         status: event?.status || EventStatus.DRAFT,
@@ -177,15 +177,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           .min(10, 'Description must be at least 10 characters'),
         startDateTime: Yup.date()
           .required('Start date and time is required')
-          .min(new Date(), 'Start date and time cannot be in the past'),
+          .min(new Date(new Date().setDate(new Date().getDate() - 1)), 'Start date and time cannot be in the past'),
         endDateTime: Yup.date()
           .required('End date and time is required')
           .min(Yup.ref('startDateTime'), 'End date and time must be after start date and time'),
         venueId: Yup.string()
           .required('Venue is required'),
         category: Yup.string()
-          .required('Category is required')
-          .oneOf(Object.values(VenueLayoutType), 'Please select a valid category'),
+          .optional(), // Made category optional since backend doesn't support it
         basePrice: Yup.number()
           .required('Base price is required')
           .min(0, 'Base price cannot be negative'),
@@ -355,7 +354,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                   name="venueId"
                   value={values.venueId}
                   onChange={(e) => {
-                    setFieldValue('venueId', e.target.value);
+                    const selectedVenueId = e.target.value;
+                    setFieldValue('venueId', selectedVenueId);
+                    
+                    // Auto-populate total capacity from selected venue
+                    const selectedVenue = venues.find(v => v.id === selectedVenueId);
+                    if (selectedVenue) {
+                      setFieldValue('totalCapacity', selectedVenue.capacity);
+                    }
                   }}
                   label="Venue"
                   disabled={venueLoading}
@@ -379,34 +385,40 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <FormControl 
-                fullWidth 
-                variant="outlined" 
+              <TextField
+                fullWidth
+                id="venueAddress"
+                name="venueAddress"
+                label="Venue Address"
+                value={values.venueId ? venues.find(v => v.id === values.venueId)?.address || '' : ''}
+                variant="outlined"
                 margin="normal"
-                error={touched.category && Boolean(errors.category)}
-                required
-              >
-                <InputLabel id="category-label">Category</InputLabel>
-                <Select
-                  labelId="category-label"
-                  id="category"
-                  name="category"
-                  value={values.category}
-                  onChange={(e) => {
-                    setFieldValue('category', e.target.value);
-                  }}
-                  label="Category"
-                >
-                  <MenuItem value={VenueLayoutType.THEATER}>Theater</MenuItem>
-                  <MenuItem value={VenueLayoutType.GENERAL_ADMISSION}>General Admission</MenuItem>
-                  <MenuItem value={VenueLayoutType.STADIUM}>Stadium</MenuItem>
-                  <MenuItem value={VenueLayoutType.CUSTOM}>Custom</MenuItem>
-                </Select>
-                {touched.category && errors.category && (
-                  <FormHelperText>{errors.category as string}</FormHelperText>
-                )}
-              </FormControl>
+                disabled
+                helperText="Automatically filled from selected venue"
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
             </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                id="venueCapacity"
+                name="venueCapacity"
+                label="Venue Capacity"
+                value={values.venueId ? venues.find(v => v.id === values.venueId)?.capacity || '' : ''}
+                variant="outlined"
+                margin="normal"
+                disabled
+                helperText="Automatically filled from selected venue"
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
+            </Grid>
+            
+            {/* Category field removed since backend doesn't support event categories */}
             
             <Grid item xs={12} sm={6}>
               <FormControl 

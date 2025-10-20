@@ -30,6 +30,8 @@ public class UserUpdateRequest {
     @Pattern(regexp = "^\\d{10}$", message = "Phone number must be 10 digits")
     private String phoneNumber;
     
+    private String role; // Add role field for updates
+    
     // Manual getter methods for compatibility
     public String getFirstName() {
         return firstName;
@@ -71,6 +73,14 @@ public class UserUpdateRequest {
         this.phoneNumber = phoneNumber;
     }
     
+    public String getRole() {
+        return role;
+    }
+    
+    public void setRole(String role) {
+        this.role = role;
+    }
+    
     // Static builder method for compatibility
     public static UserUpdateRequestBuilder builder() {
         return new UserUpdateRequestBuilder();
@@ -83,6 +93,7 @@ public class UserUpdateRequest {
         private String email;
         private String password;
         private String phoneNumber;
+        private String role;
         
         public UserUpdateRequestBuilder firstName(String firstName) {
             this.firstName = firstName;
@@ -109,6 +120,11 @@ public class UserUpdateRequest {
             return this;
         }
         
+        public UserUpdateRequestBuilder role(String role) {
+            this.role = role;
+            return this;
+        }
+        
         public UserUpdateRequest build() {
             UserUpdateRequest request = new UserUpdateRequest();
             request.setFirstName(firstName);
@@ -116,6 +132,7 @@ public class UserUpdateRequest {
             request.setEmail(email);
             request.setPassword(password);
             request.setPhoneNumber(phoneNumber);
+            request.setRole(role);
             return request;
         }
     }

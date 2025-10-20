@@ -110,6 +110,14 @@ public class VenueCreateRequest {
         this.capacity = capacity;
     }
     
+    public String getLayoutType() {
+        return layoutType;
+    }
+    
+    public void setLayoutType(String layoutType) {
+        this.layoutType = layoutType;
+    }
+    
     public Map<String, Object> getSeatingLayout() {
         return seatingLayout;
     }

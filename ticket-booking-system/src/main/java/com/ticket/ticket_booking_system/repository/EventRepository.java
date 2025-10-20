@@ -27,7 +27,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     List<Event> findByStartDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT e FROM Event e WHERE e.startDateTime >= :now AND e.status = 'PUBLISHED' ORDER BY e.startDateTime ASC")
-    List<Event> findUpcomingEvents(LocalDateTime now, Pageable pageable);
+    List<Event> findUpcomingEvents(LocalDateTime now);
 
     @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e GROUP BY e ORDER BY COUNT(b) DESC")
     List<Event> findTopSellingEvents(Pageable pageable);

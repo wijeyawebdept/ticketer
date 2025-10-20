@@ -145,6 +145,19 @@ public class UserServiceImpl implements UserService {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
+        // Handle role updates
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            try {
+                User.Role newRole = User.Role.valueOf(request.getRole().toUpperCase());
+                if (user.getRole() != newRole) {
+                    user.setRole(newRole);
+                    System.out.println("🔄 Role updated from " + user.getRole() + " to " + newRole);
+                }
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid role: " + request.getRole());
+            }
+        }
+
         User savedUser = userRepository.save(user);
         System.out.println("✅ User update completed successfully");
         return mapUserToResponse(savedUser);

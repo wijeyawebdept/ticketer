@@ -109,7 +109,8 @@ interface DashboardTransaction {
 interface DashboardEvent {
   eventId: string;
   name: string;
-  eventDate: string;
+  startDateTime: string; // Changed from eventDate to match backend
+  endDateTime: string;   // Added to match backend
   status: string;
 }
 
@@ -350,7 +351,7 @@ const Dashboard: React.FC = () => {
                       }
                       secondary={
                         <Typography variant="body2" color="text.secondary">
-                          {new Date(event.eventDate).toLocaleDateString()}
+                          {new Date(event.startDateTime).toLocaleDateString()}
                         </Typography>
                       }
                     />

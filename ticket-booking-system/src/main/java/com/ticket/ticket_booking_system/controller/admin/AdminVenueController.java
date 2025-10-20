@@ -169,6 +169,7 @@ public class AdminVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
+        venue.setLayoutType(request.getLayoutType());
         venue.setSeatingLayout(request.getSeatingLayout());
         return venue;
     }
@@ -186,7 +187,18 @@ public class AdminVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
+        venue.setLayoutType(request.getLayoutType());
         venue.setSeatingLayout(request.getSeatingLayout());
         return venue;
+    }
+    
+    /**
+     * Generate template seats for a venue - Admin only
+     * Useful for venues that were created without seating configuration
+     */
+    @PostMapping("/{id}/generate-seats")
+    public ResponseEntity<String> generateSeatsForVenue(@PathVariable UUID id) {
+        int seatsGenerated = venueService.generateSeatsForVenue(id);
+        return ResponseEntity.ok(seatsGenerated + " template seats generated for venue");
     }
 }

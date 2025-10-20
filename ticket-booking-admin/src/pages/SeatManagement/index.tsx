@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -6,24 +6,15 @@ import {
   Typography,
   Button,
   Grid,
-  Chip,
   Alert,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   Badge,
   Snackbar,
   Tooltip,
-  IconButton,
-  Switch,
-  FormControlLabel
+  IconButton
 } from '@mui/material';
 import {
   EventSeat,
-  Chair,
   Block,
   CheckCircle,
   Schedule,
@@ -32,8 +23,11 @@ import {
   Refresh,
   AdminPanelSettings
 } from '@mui/icons-material';
-import { Seat, SeatService, SeatAvailabilityStats } from '../../services/seat.service';
+import { Seat, SeatService } from '../../services/seat.service';
 import { useSeatWebSocket } from '../../hooks/useSeatWebSocket';
+import EventService from '../../services/event.service';
+import { Event } from '../../types';
+import EventDropdown from '../../components/EventDropdown';
 
 interface SeatManagementProps {
   eventId?: string;
@@ -45,12 +39,12 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   isAdmin = false 
 }) => {
   const [eventId, setEventId] = useState<string>(propEventId || '');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [adminMode, setAdminMode] = useState(false);
 
   // WebSocket integration
   const {
@@ -58,8 +52,20 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     seats: wsSeats
   } = useSeatWebSocket(eventId || '');
 
+  // Handle event selection from dropdown
+  const handleEventChange = (event: Event | null) => {
+    setSelectedEvent(event);
+    if (event) {
+      setEventId(event.id);
+      loadSeats(event.id);
+    } else {
+      setEventId('');
+      setSeats([]);
+    }
+  };
+
   // Load seats for an event
-  const loadSeats = async (targetEventId: string) => {
+  const loadSeats = useCallback(async (targetEventId: string) => {
     if (!targetEventId) {
       setError('Please select an event');
       return;
@@ -69,7 +75,22 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     setError(null);
 
     try {
-      const eventSeats = await SeatService.getSeatsByEvent(targetEventId);
+      // First, try to get existing seats
+      let eventSeats = await SeatService.getSeatsByEvent(targetEventId);
+      
+      // If no seats exist, generate them from the venue layout
+      if (eventSeats.length === 0) {
+        if (selectedEvent && selectedEvent.venue) {
+          setSuccess('No seats found. Generating seats from venue layout...');
+          await SeatService.generateSeatsForEvent(selectedEvent.venue.id, targetEventId);
+          // Fetch the newly generated seats
+          eventSeats = await SeatService.getSeatsByEvent(targetEventId);
+        } else {
+          setError('Cannot generate seats: Event does not have a venue assigned');
+          return;
+        }
+      }
+      
       setSeats(eventSeats);
       setSuccess(`Loaded ${eventSeats.length} seats for event`);
     } catch (err: any) {
@@ -77,7 +98,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedEvent]);
 
   // Hold selected seats
   const holdSeats = async () => {
@@ -106,9 +127,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     }
 
     try {
-      await SeatService.reserveSeats({
-        seatIds: selectedSeats
-      });
+      await SeatService.reserveSeats(selectedSeats);
       setSuccess(`Reserved ${selectedSeats.length} seats successfully`);
       setSelectedSeats([]);
     } catch (err: any) {
@@ -118,7 +137,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
   // Toggle seat blocking (admin only)
   const toggleSeatBlock = async (seatId: string, currentlyBlocked: boolean) => {
-    if (!isAdmin && !adminMode) {
+    if (!isAdmin) {
       setError('Admin privileges required');
       return;
     }
@@ -196,12 +215,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        🎫 Seat Management
-        <Badge color="secondary" variant="dot" invisible={!wsConnected}>
-          <IconButton>
-            {wsConnected ? <Wifi color="success" /> : <WifiOff color="error" />}
-          </IconButton>
-        </Badge>
+        Seat Management
       </Typography>
 
       {/* Connection Status */}
@@ -218,15 +232,9 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
             <Box display="flex" alignItems="center" gap={2}>
               <AdminPanelSettings color="primary" />
               <Typography variant="h6">Admin Controls</Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={adminMode}
-                    onChange={(e) => setAdminMode(e.target.checked)}
-                  />
-                }
-                label="Admin Mode"
-              />
+              <Typography variant="body2" color="text.secondary">
+                Admin privileges are active. You can block/unblock seats by clicking on them.
+              </Typography>
             </Box>
           </CardContent>
         </Card>
@@ -235,34 +243,18 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       {/* Event Selection */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Event ID</InputLabel>
-                <Select
-                  value={eventId}
-                  onChange={(e: SelectChangeEvent) => setEventId(e.target.value)}
-                  disabled={loading}
-                >
-                  <MenuItem value="">Select Event...</MenuItem>
-                  {/* You can populate this with actual events */}
-                  <MenuItem value="550e8400-e29b-41d4-a716-446655440001">Sample Event 1</MenuItem>
-                  <MenuItem value="550e8400-e29b-41d4-a716-446655440002">Sample Event 2</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Button
-                variant="contained"
-                onClick={() => loadSeats(eventId)}
-                disabled={loading || !eventId}
-                startIcon={loading ? <CircularProgress size={20} /> : <Refresh />}
-                fullWidth
-              >
-                Load Seats
-              </Button>
-            </Grid>
-          </Grid>
+          <Typography variant="h6" gutterBottom>
+            Select Event
+          </Typography>
+          <EventDropdown
+            value={selectedEvent}
+            onChange={handleEventChange}
+            placeholder="Search and select an event to manage seats..."
+            showRefreshButton={true}
+            onRefresh={() => {
+              // The EventDropdown handles its own refresh
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -339,7 +331,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                               >
                                 <IconButton
                                   onClick={() => {
-                                    if (adminMode && (seat.isBlocked || seat.isAvailable)) {
+                                    if (isAdmin && (seat.isBlocked || seat.isAvailable)) {
                                       toggleSeatBlock(seat.seatId, seat.isBlocked);
                                     } else if (seat.isAvailable && !seat.isBlocked) {
                                       toggleSeatSelection(seat.seatId);

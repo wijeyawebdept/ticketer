@@ -51,4 +51,32 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event = :event AND s.isAvailable = true AND s.isBlocked = false")
     Long countAvailableSeats(Event event);
+    
+    // Delete all seats for an event
+    @Modifying
+    @Query("DELETE FROM Seat s WHERE s.event.eventId = :eventId")
+    void deleteByEventId(@Param("eventId") UUID eventId);
+    
+    // Delete template seats for a venue (where event is null)
+    @Modifying
+    @Query("DELETE FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
+    void deleteByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
+    
+    // Find template seats for a venue (where event is null)
+    @Query("SELECT s FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
+    List<Seat> findByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
+    
+    // Count template seats for a venue (where event is null)
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
+    long countByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
+    
+    // Count all seats for a venue (including both template and event-specific seats)
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.venue = :venue")
+    long countByVenue(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
+    
+    // Delete all seats for a venue (including both template and event-specific seats)
+    @Modifying
+    @Query("DELETE FROM Seat s WHERE s.venue = :venue")
+    void deleteByVenue(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
 }
+ 

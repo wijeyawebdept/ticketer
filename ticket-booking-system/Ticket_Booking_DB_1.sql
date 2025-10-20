@@ -175,6 +175,8 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
     AND tc.table_schema = 'public'
 ORDER BY tc.table_name;
 
+
+
 select * from users;
 select * from venues;
 select * from seats;
@@ -183,3 +185,25 @@ select * from booking_seats;
 select * from transactions;
 select * from ticket_categories;
 select * from events;
+
+
+
+-- Check what columns exist in the events table
+SELECT column_name 
+FROM information_schema.columns 
+WHERE table_name = 'events' 
+ORDER BY ordinal_position;
+
+
+
+-- Check venue capacity vs actual template seats count
+SELECT 
+    v.venue_id,
+    v.name as venue_name,
+    v.capacity as declared_capacity,
+    COUNT(s.seat_id) as actual_template_seats,
+    (COUNT(s.seat_id) - v.capacity) as difference
+FROM venues v
+LEFT JOIN seats s ON s.venue_id = v.venue_id AND s.event_id IS NULL
+GROUP BY v.venue_id, v.name, v.capacity
+ORDER BY difference DESC;

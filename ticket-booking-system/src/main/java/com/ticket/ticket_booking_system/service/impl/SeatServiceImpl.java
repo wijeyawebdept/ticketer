@@ -4,10 +4,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ticket.ticket_booking_system.dto.response.SeatResponse;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
@@ -16,33 +19,66 @@ import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.VenueRepository;
 import com.ticket.ticket_booking_system.service.SeatService;
 import com.ticket.ticket_booking_system.service.SeatWebSocketService;
 
 @Service
 public class SeatServiceImpl implements SeatService {
 
+    private static final Logger logger = LoggerFactory.getLogger(SeatServiceImpl.class);
+
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final SeatWebSocketService webSocketService;
     private final UserRepository userRepository;
+    private final VenueRepository venueRepository;
 
     public SeatServiceImpl(SeatRepository seatRepository, EventRepository eventRepository,
-            SeatWebSocketService webSocketService, UserRepository userRepository) {
+            SeatWebSocketService webSocketService, UserRepository userRepository,
+            VenueRepository venueRepository) {
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.webSocketService = webSocketService;
         this.userRepository = userRepository;
+        this.venueRepository = venueRepository;
     }
 
     @Override
     @Transactional
     public void generateSeatsForEvent(UUID venueId, UUID eventId) {
+        logger.info("🎫 Generating seats for eventId: {} from venueId: {}", eventId, venueId);
+
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "eventId", eventId.toString()));
 
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue", "venueId", venueId.toString()));
+
+        logger.info("📍 Found event: {} (ID: {})", event.getName(), event.getEventId());
+        logger.info("🏟️ Venue: {} with capacity: {}", venue.getName(), venue.getCapacity());
+
         List<Seat> baseSeats = seatRepository.findByVenue_VenueIdAndEventIsNull(venueId);
-        for (Seat base : baseSeats) {
+        logger.info("🪑 Found {} template seats for venue {}", baseSeats.size(), venueId);
+
+        if (baseSeats.isEmpty()) {
+            logger.warn("⚠️ No template seats found for venue {}. Cannot generate seats for event.", venueId);
+            return;
+        }
+
+        // Enforce venue capacity limit
+        int maxSeatsToCreate = venue.getCapacity();
+        int seatsToCreate = Math.min(baseSeats.size(), maxSeatsToCreate);
+
+        if (baseSeats.size() > maxSeatsToCreate) {
+            logger.warn("⚠️ Template seats ({}) exceed venue capacity ({}). Limiting to capacity.",
+                    baseSeats.size(), maxSeatsToCreate);
+        }
+
+        int seatsCreated = 0;
+        for (int i = 0; i < seatsToCreate; i++) {
+            Seat base = baseSeats.get(i);
+
             // Determine status for the status field
             String dbStatus = "AVAILABLE";
             if (Boolean.TRUE.equals(base.getIsBlocked())) {
@@ -66,7 +102,11 @@ public class SeatServiceImpl implements SeatService {
                     .isBlocked(false)
                     .build();
             seatRepository.save(copy);
+            seatsCreated++;
         }
+
+        logger.info("✅ Successfully created {} seats for event {} ({}) - Venue capacity: {}",
+                seatsCreated, event.getName(), eventId, venue.getCapacity());
     }
 
     @Override
@@ -75,8 +115,43 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<SeatResponse> getSeatsByEventAsResponse(UUID eventId) {
+        logger.info("🔍 Fetching seats for eventId: {}", eventId);
+        List<Seat> seats = seatRepository.findByEvent_EventId(eventId);
+        logger.info("📊 Found {} seats for event {}", seats.size(), eventId);
+        return seats.stream()
+                .map(this::convertToResponse)
+                .toList();
+    }
+
+    @Override
     public List<Seat> getAvailableSeatsByEvent(UUID eventId) {
         return seatRepository.findAvailableSeatsByEventId(eventId);
+    }
+
+    /**
+     * Convert Seat entity to SeatResponse DTO
+     * This avoids lazy loading issues with Venue and Event
+     */
+    private SeatResponse convertToResponse(Seat seat) {
+        return SeatResponse.builder()
+                .seatId(seat.getSeatId())
+                .venueId(seat.getVenue() != null ? seat.getVenue().getVenueId() : null)
+                .venueName(seat.getVenue() != null ? seat.getVenue().getName() : null)
+                .eventId(seat.getEvent() != null ? seat.getEvent().getEventId() : null)
+                .eventName(seat.getEvent() != null ? seat.getEvent().getName() : null)
+                .section(seat.getSection())
+                .rowNumber(seat.getRowNumber())
+                .seatNumber(seat.getSeatNumber())
+                .seatType(seat.getSeatType())
+                .price(seat.getPrice())
+                .isAvailable(seat.getIsAvailable())
+                .isBlocked(seat.getIsBlocked())
+                .holdExpiresAt(seat.getHoldExpiresAt())
+                .heldByUser(seat.getHeldByUser())
+                .createdAt(seat.getCreatedAt() != null ? seat.getCreatedAt().toLocalDateTime() : null)
+                .build();
     }
 
     @Override

@@ -33,7 +33,24 @@ export const VenueService = {
   // Delete venue
   deleteVenue: async (id: string, isAdmin: boolean = true): Promise<void> => {
     const endpoint = isAdmin ? `/api/admin/venues/${id}` : `/api/organizer/venues/${id}`;
-    await api.delete(endpoint);
+    
+    try {
+      console.log('Deleting venue at endpoint:', endpoint);
+      await api.delete(endpoint);
+    } catch (error: any) {
+      console.error('VenueService.deleteVenue error:', error);
+      
+      // Re-throw with more context
+      if (error.response?.status === 500) {
+        throw new Error('500: Internal server error - venue may have associated data preventing deletion');
+      } else if (error.response?.status === 403) {
+        throw new Error('403: Forbidden - insufficient permissions');
+      } else if (error.response?.status === 404) {
+        throw new Error('404: Venue not found');
+      } else {
+        throw new Error(error.message || 'Failed to delete venue');
+      }
+    }
   },
 
   // Get seating arrangement for a venue

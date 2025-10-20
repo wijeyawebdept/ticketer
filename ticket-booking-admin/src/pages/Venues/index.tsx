@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Button, 
@@ -8,15 +8,18 @@ import {
   DialogTitle,
   DialogContent,
   CircularProgress,
-  IconButton
+  IconButton,
+  Tooltip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, EventSeat as EventSeatIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
 import VenueForm from './components/VenueForm';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmationDialog, { ConfirmationMessages } from '../../components/ConfirmationDialog';
+import { ToastService } from '../../services/toast.service';
 
 const VenuesPage = () => {
   const navigate = useNavigate();
@@ -26,30 +29,46 @@ const VenuesPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [generatingSeats, setGeneratingSeats] = useState<string | null>(null);
+  
+  // Confirmation dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [generateSeatsDialogOpen, setGenerateSeatsDialogOpen] = useState<boolean>(false);
+  const [venueToDelete, setVenueToDelete] = useState<Venue | null>(null);
+  const [venueForSeats, setVenueForSeats] = useState<Venue | null>(null);
 
   // Determine if user is admin based on URL path or user role
   const isAdmin = location.pathname.includes('/admin/') || (user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN');
   
-  // Load venues when component mounts
-  useEffect(() => {
-    fetchVenues();
-  }, [isAdmin]);
-
   // Fetch all venues from the API
-  const fetchVenues = async () => {
+  const fetchVenues = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await VenueService.getAllVenues(isAdmin);
-      setVenues(data);
+      console.log('Fetched venues:', data);
+      
+      // Validate venue data
+      const validatedVenues = data.map((venue: any) => {
+        if (!venue.name || venue.name.trim() === '') {
+          console.warn('Invalid venue name found:', venue);
+          return { ...venue, name: 'Unnamed Venue' };
+        }
+        return venue;
+      });
+      
+      setVenues(validatedVenues);
     } catch (error) {
       console.error('Error fetching venues:', error);
-      setError('Failed to load venues. Please try again later.');
+      ToastService.error('Failed to load venues. Please try again later.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
+
+  // Load venues when component mounts
+  useEffect(() => {
+    fetchVenues();
+  }, [fetchVenues]);
 
   // Handle form close
   const handleFormClose = () => {
@@ -69,16 +88,54 @@ const VenuesPage = () => {
     setOpenForm(true);
   };
 
-  // Handle delete venue
-  const handleDeleteVenue = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this venue?')) {
-      try {
-        await VenueService.deleteVenue(id, isAdmin);
-        fetchVenues(); // Refresh the list
-      } catch (error) {
-        console.error('Error deleting venue:', error);
-        setError('Failed to delete venue. Please try again.');
+  // Handle delete venue - open confirmation dialog
+  const handleDeleteVenue = (venue: Venue) => {
+    console.log('Delete venue clicked for:', {
+      id: venue.id,
+      name: venue.name,
+      description: venue.description,
+      address: venue.address
+    });
+    
+    setVenueToDelete(venue);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm delete venue
+  const confirmDeleteVenue = async () => {
+    if (!venueToDelete) return;
+    
+    const toastId = ToastService.loading(`Deleting venue "${venueToDelete.name}"...`);
+    
+    try {
+      console.log('Attempting to delete venue:', {
+        id: venueToDelete.id,
+        name: venueToDelete.name,
+        isAdmin: isAdmin
+      });
+      
+      await VenueService.deleteVenue(venueToDelete.id, isAdmin);
+      ToastService.updateSuccess(toastId, `Venue "${venueToDelete.name}" has been deleted successfully!`);
+      setDeleteDialogOpen(false);
+      setVenueToDelete(null);
+      fetchVenues(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error deleting venue:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = `Failed to delete venue "${venueToDelete.name}". `;
+      
+      if (error.message?.includes('500')) {
+        errorMessage += 'Server error occurred. This venue may have associated events or bookings that prevent deletion.';
+      } else if (error.message?.includes('403')) {
+        errorMessage += 'You do not have permission to delete this venue.';
+      } else if (error.message?.includes('404')) {
+        errorMessage += 'Venue not found.';
+      } else {
+        errorMessage += 'Please try again.';
       }
+      
+      ToastService.updateError(toastId, errorMessage);
     }
   };
 
@@ -89,6 +146,49 @@ const VenuesPage = () => {
       navigate(`/venues/${venue.id}/seating`);
     } else {
       navigate(`/organizer/venues/${venue.id}/seating`);
+    }
+  };
+
+  // Handle generate seats for venue - open confirmation dialog
+  const handleGenerateSeats = (venue: Venue) => {
+    setVenueForSeats(venue);
+    setGenerateSeatsDialogOpen(true);
+  };
+
+  // Confirm generate seats
+  const confirmGenerateSeats = async () => {
+    if (!venueForSeats) return;
+    
+    const toastId = ToastService.loading(`Generating template seats for "${venueForSeats.name}"...`);
+    setGeneratingSeats(venueForSeats.id);
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await fetch(`http://localhost:8081/api/admin/venues/${venueForSeats.id}/generate-seats`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate seats');
+      }
+      
+      const result = await response.text();
+      ToastService.updateSuccess(toastId, result);
+      setGenerateSeatsDialogOpen(false);
+      setVenueForSeats(null);
+    } catch (error) {
+      console.error('Error generating seats:', error);
+      ToastService.updateError(toastId, `Failed to generate seats for "${venueForSeats.name}". Please try again.`);
+    } finally {
+      setGeneratingSeats(null);
     }
   };
 
@@ -121,34 +221,55 @@ const VenuesPage = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1.5,
-      minWidth: 150,
+      flex: 2,
+      minWidth: 200,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <IconButton
-            onClick={() => handleEditVenue(params.row)}
-            size="small"
-            color="primary"
-            sx={{ mr: 1 }}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            onClick={() => handleSeatingArrangement(params.row)}
-            size="small"
-            color="secondary"
-            sx={{ mr: 1 }}
-          >
-            <EventSeatIcon />
-          </IconButton>
-          <IconButton
-            onClick={() => handleDeleteVenue(params.row.id)}
-            size="small"
-            color="error"
-          >
-            <DeleteIcon />
-          </IconButton>
+          <Tooltip title="Edit Venue">
+            <IconButton
+              onClick={() => handleEditVenue(params.row)}
+              size="small"
+              color="primary"
+              sx={{ mr: 1 }}
+            >
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Seating Arrangement">
+            <IconButton
+              onClick={() => handleSeatingArrangement(params.row)}
+              size="small"
+              color="secondary"
+              sx={{ mr: 1 }}
+            >
+              <EventSeatIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Generate Template Seats">
+            <IconButton
+              onClick={() => handleGenerateSeats(params.row)}
+              size="small"
+              color="success"
+              disabled={generatingSeats === params.row.id}
+              sx={{ mr: 1 }}
+            >
+              {generatingSeats === params.row.id ? (
+                <CircularProgress size={20} />
+              ) : (
+                <AutoAwesomeIcon />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete Venue">
+            <IconButton
+              onClick={() => handleDeleteVenue(params.row)}
+              size="small"
+              color="error"
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
       ),
     },
@@ -167,12 +288,6 @@ const VenuesPage = () => {
           Add New Venue
         </Button>
       </Box>
-
-      {error && (
-        <Box mb={2}>
-          <Typography color="error">{error}</Typography>
-        </Box>
-      )}
 
       <Paper>
         <Box height={500} width="100%">
@@ -212,6 +327,34 @@ const VenuesPage = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        title={ConfirmationMessages.DELETE_VENUE.title}
+        message={`Are you sure you want to delete "${venueToDelete?.name}"? This action cannot be undone and will also delete all associated template seats.`}
+        confirmText={ConfirmationMessages.DELETE_VENUE.confirmText}
+        variant={ConfirmationMessages.DELETE_VENUE.variant}
+        onConfirm={confirmDeleteVenue}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setVenueToDelete(null);
+        }}
+      />
+
+      {/* Generate Seats Confirmation Dialog */}
+      <ConfirmationDialog
+        open={generateSeatsDialogOpen}
+        title={ConfirmationMessages.GENERATE_SEATS.title}
+        message={`This will generate ${venueForSeats?.capacity || 0} template seats for "${venueForSeats?.name}". Any existing template seats will be replaced. Continue?`}
+        confirmText={ConfirmationMessages.GENERATE_SEATS.confirmText}
+        variant={ConfirmationMessages.GENERATE_SEATS.variant}
+        onConfirm={confirmGenerateSeats}
+        onCancel={() => {
+          setGenerateSeatsDialogOpen(false);
+          setVenueForSeats(null);
+        }}
+      />
     </Box>
   );
 };

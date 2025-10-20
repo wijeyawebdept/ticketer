@@ -87,9 +87,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess, isAdmi
     state: venue?.state || '',
     zipCode: venue?.zipCode || '',
     capacity: venue?.capacity || 0,
-    layoutType: venue?.layoutType || '',
+    layoutType: venue?.layoutType || VenueLayoutType.THEATER, // Default to THEATER instead of empty string
     customLayoutType: ''
   };
+
+  console.log('VenueForm - Editing venue:', venue);
+  console.log('VenueForm - Initial layoutType:', initialValues.layoutType);
 
   const getButtonText = (isSubmitting: boolean, isEditing: boolean): string => {
     if (isSubmitting) return 'Saving...';
@@ -268,8 +271,12 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess, isAdmi
                   name="layoutType"
                   value={values.layoutType}
                   label="Layout Type"
-                  onChange={(event) => setFieldValue('layoutType', event.target.value)}
+                  onChange={(event) => {
+                    console.log('Layout Type changed to:', event.target.value);
+                    setFieldValue('layoutType', event.target.value);
+                  }}
                   onBlur={handleBlur}
+                  displayEmpty
                 >
                   <MenuItem value={VenueLayoutType.THEATER}>Theater</MenuItem>
                   <MenuItem value={VenueLayoutType.GENERAL_ADMISSION}>General Admission</MenuItem>

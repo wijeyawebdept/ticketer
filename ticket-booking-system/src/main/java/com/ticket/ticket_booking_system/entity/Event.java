@@ -36,41 +36,51 @@ public class Event {
     @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
     private java.util.UUID eventId;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
     private String name;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_id", nullable = false)
+    @JoinColumn(name = "venue_id")
     private Venue venue;
 
-    @Column(nullable = false)
+    @Column(name = "start_date_time", nullable = false)
     private LocalDateTime startDateTime;
 
-    @Column(nullable = false)
+    @Column(name = "end_date_time")
     private LocalDateTime endDateTime;
 
-    @Column(nullable = false)
+    @Column(name = "venue_name", length = 255)
+    private String venueName;
+
+    @Column(name = "venue_address", columnDefinition = "TEXT")
+    private String venueAddress;
+
+    @Column(length = 100)
+    private String category;
+
+    @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice;
 
-    @Column(nullable = false)
+    @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;
 
-    @Column(nullable = false)
+    @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventStatus status;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(length = 255)
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

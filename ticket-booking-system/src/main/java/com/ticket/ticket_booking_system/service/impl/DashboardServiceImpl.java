@@ -205,8 +205,12 @@ public class DashboardServiceImpl implements DashboardService {
         Map<String, Object> result = new HashMap<>();
 
         List<Event> upcomingEvents = eventRepository.findUpcomingEvents(
-                LocalDateTime.now(),
-                PageRequest.of(0, count));
+                LocalDateTime.now());
+
+        // Limit the results to the requested count
+        if (upcomingEvents.size() > count) {
+            upcomingEvents = upcomingEvents.subList(0, count);
+        }
 
         result.put("upcomingEvents", upcomingEvents);
         return result;

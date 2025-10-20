@@ -26,4 +26,7 @@ public interface VenueService {
 
     // New method for seating arrangement management
     Venue updateSeatingLayout(UUID venueId, Map<String, Object> seatingLayout);
+    
+    // Generate template seats for a venue
+    int generateSeatsForVenue(UUID venueId);
 }

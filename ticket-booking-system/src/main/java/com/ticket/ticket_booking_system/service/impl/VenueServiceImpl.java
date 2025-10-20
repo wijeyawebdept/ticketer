@@ -2,6 +2,7 @@ package com.ticket.ticket_booking_system.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -57,15 +58,27 @@ public class VenueServiceImpl implements VenueService {
     @Override
     @Transactional
     public Venue createVenue(Venue venue) {
+        System.out.println("=== CREATE VENUE START ===");
+        System.out.println("Venue Name: " + venue.getName());
+        System.out.println("Venue Capacity: " + venue.getCapacity());
+
         venue.setCreatedAt(LocalDateTime.now());
         venue.setUpdatedAt(LocalDateTime.now());
         Venue savedVenue = venueRepository.save(venue);
 
+        System.out.println("Venue saved with ID: " + savedVenue.getVenueId());
+
         // Generate seats from configuration if provided
         if (venue.getSeatingChartConfig() != null && !venue.getSeatingChartConfig().trim().isEmpty()) {
+            System.out.println("Generating seats from custom seating chart config...");
             generateSeatsFromConfig(savedVenue);
+        } else {
+            // Auto-generate seats based on capacity if no seating config provided
+            System.out.println("Auto-generating seats based on capacity...");
+            generateSeatsForVenue(savedVenue.getVenueId());
         }
 
+        System.out.println("=== CREATE VENUE COMPLETE ===");
         return savedVenue;
     }
 
@@ -92,8 +105,185 @@ public class VenueServiceImpl implements VenueService {
     @Override
     @Transactional
     public void deleteVenue(UUID venueId) {
+        System.out.println("=== DELETE VENUE START ===");
+        System.out.println("Venue ID: " + venueId);
+
+        try {
+            Venue venue = getVenueById(venueId);
+            System.out.println("Venue Name: " + venue.getName());
+
+            // Check if there are any events using this venue
+            List<Event> eventsUsingVenue = eventRepository.findByVenue(venue, PageRequest.of(0, Integer.MAX_VALUE))
+                    .getContent();
+            if (!eventsUsingVenue.isEmpty()) {
+                System.out.println("Found " + eventsUsingVenue.size() + " events using this venue:");
+                for (Event event : eventsUsingVenue) {
+                    System.out.println("  - Event: " + event.getName() + " (ID: " + event.getEventId() + ")");
+                }
+
+                // Set venue to null for all events using this venue
+                for (Event event : eventsUsingVenue) {
+                    event.setVenue(null);
+                    eventRepository.save(event);
+                }
+                System.out.println("Set venue to null for all associated events");
+            }
+
+            // First, delete all seats associated with this venue (both template and event
+            // seats)
+            // This includes:
+            // 1. Template seats (event_id IS NULL)
+            // 2. Event-specific seats that reference this venue
+            long templateSeatsCount = seatRepository.countByVenueAndEventIsNull(venue);
+            long totalSeatsCount = seatRepository.countByVenue(venue);
+
+            System.out.println("Deleting " + templateSeatsCount + " template seats...");
+            System.out.println("Deleting " + (totalSeatsCount - templateSeatsCount) + " event-specific seats...");
+
+            // Delete all seats for this venue
+            seatRepository.deleteByVenue(venue);
+
+            System.out.println("All seats deleted successfully");
+
+            // Now delete the venue itself
+            venueRepository.delete(venue);
+
+            System.out.println("✅ Venue deleted successfully");
+            System.out.println("=== DELETE VENUE COMPLETE ===");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting venue: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to delete venue: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public int generateSeatsForVenue(UUID venueId) {
         Venue venue = getVenueById(venueId);
-        venueRepository.delete(venue);
+
+        System.out.println("=== GENERATE SEATS FOR VENUE ===");
+        System.out.println("Venue ID: " + venueId);
+        System.out.println("Venue Name: " + venue.getName());
+        System.out.println("Venue Capacity: " + venue.getCapacity());
+
+        // Delete any existing template seats for this venue (event_id IS NULL)
+        seatRepository.deleteByVenueAndEventIsNull(venue);
+
+        // Generate default grid layout if no seating chart config exists
+        if (venue.getSeatingChartConfig() == null || venue.getSeatingChartConfig().trim().isEmpty()) {
+            // Calculate rows and columns based on venue capacity
+            // Ensure we have a valid capacity - if null or zero, throw an error
+            if (venue.getCapacity() == null || venue.getCapacity() <= 0) {
+                throw new IllegalStateException(
+                        "Venue capacity must be set before generating seats. Current capacity: " + venue.getCapacity());
+            }
+            int capacity = venue.getCapacity();
+            System.out.println("Generating " + capacity + " seats...");
+
+            // Calculate optimal grid dimensions
+            // Prefer 15 seats per row (cinema standard), adjust rows accordingly
+            int seatsPerRow = 15;
+            int rows = (int) Math.ceil((double) capacity / seatsPerRow);
+
+            // Limit to maximum 26 rows (A-Z)
+            if (rows > 26) {
+                rows = 26;
+                seatsPerRow = (int) Math.ceil((double) capacity / rows);
+            }
+
+            BigDecimal defaultPrice = BigDecimal.valueOf(50.00);
+
+            // Create seating layout JSON structure
+            List<Map<String, Object>> seatsJson = new ArrayList<>();
+            int seatsCreated = 0;
+            int remainingSeats = capacity;
+
+            for (int i = 0; i < rows && remainingSeats > 0; i++) {
+                char rowLabel = (char) ('A' + i);
+                int seatsInThisRow = Math.min(seatsPerRow, remainingSeats);
+
+                for (int col = 1; col <= seatsInThisRow; col++) {
+                    // Create seat record in database
+                    Seat seat = Seat.builder()
+                            .venue(venue)
+                            .event(null) // Template seats have NO event
+                            .section("General")
+                            .rowNumber(String.valueOf(rowLabel))
+                            .row(String.valueOf(rowLabel))
+                            .seatNumber(String.valueOf(col))
+                            .seatType("REGULAR")
+                            .status("AVAILABLE")
+                            .price(defaultPrice)
+                            .isAvailable(true)
+                            .isBlocked(false)
+                            .build();
+                    seatRepository.save(seat);
+
+                    // Add to JSON structure for seating_layout
+                    Map<String, Object> seatJson = new HashMap<>();
+                    seatJson.put("row", String.valueOf(rowLabel));
+                    seatJson.put("number", String.valueOf(col));
+                    seatJson.put("status", "available");
+                    seatJson.put("section", "General");
+                    seatJson.put("price", defaultPrice.doubleValue());
+                    seatsJson.add(seatJson);
+
+                    seatsCreated++;
+                    remainingSeats--;
+                }
+            }
+
+            // Create and save seating_layout JSON
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                Map<String, Object> seatingLayout = new HashMap<>();
+                seatingLayout.put("rows", rows);
+                seatingLayout.put("columns", seatsPerRow); // Changed from "cols" to "columns" to match frontend
+                seatingLayout.put("seats", seatsJson);
+
+                // Set seating layout as Map (will be auto-converted to JSONB by Hibernate)
+                venue.setSeatingLayout(seatingLayout);
+
+                // Create and save seating_chart_config JSON
+                Map<String, Object> chartConfig = new HashMap<>();
+                Map<String, Object> sections = new HashMap<>();
+                Map<String, Object> generalSection = new HashMap<>();
+
+                List<String> rowLabels = new ArrayList<>();
+                for (int i = 0; i < rows; i++) {
+                    rowLabels.add(String.valueOf((char) ('A' + i)));
+                }
+
+                generalSection.put("rows", rowLabels);
+                generalSection.put("cols", seatsPerRow);
+                generalSection.put("price", defaultPrice.doubleValue());
+                sections.put("General", generalSection);
+                chartConfig.put("sections", sections);
+
+                String chartConfigJson = objectMapper.writeValueAsString(chartConfig);
+                venue.setSeatingChartConfig(chartConfigJson);
+
+                // Save the venue with updated JSON fields
+                venueRepository.save(venue);
+
+                System.out
+                        .println("✅ Successfully generated " + seatsCreated + " seats for venue capacity: " + capacity);
+                System.out.println("✅ Grid dimensions: " + rows + " rows × " + seatsPerRow + " columns");
+                System.out.println("✅ Saved seating layout and chart config to venue");
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to save seating layout JSON: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            System.out.println("=== GENERATE SEATS COMPLETE ===");
+            return seatsCreated;
+        } else {
+            // Generate seats from the existing seating chart config
+            generateSeatsFromConfig(venue);
+            return (int) seatRepository.countByVenueAndEventIsNull(venue);
+        }
     }
 
     @Override
@@ -375,7 +565,7 @@ public class VenueServiceImpl implements VenueService {
                     for (int col = 1; col <= cols; col++) {
                         Seat seat = Seat.builder()
                                 .venue(venue)
-                                .event(getOrCreateDefaultEvent(venue)) // Use default event for venue-level seats
+                                .event(null) // Template seats have NO event - they are copied when events are created
                                 .section(sectionName)
                                 .rowNumber(row)
                                 .row(row) // Also populate the row field for database compatibility

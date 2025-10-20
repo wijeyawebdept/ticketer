@@ -14,13 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.dto.response.SeatResponse;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.service.SeatService;
 import com.ticket.ticket_booking_system.service.SeatService.SeatAvailabilityStats;
 
-/**
- * REST Controller for seat management
- * Provides endpoints for seat layout, availability, and booking operations
+/*
+REST Controller for seat management
+Provides endpoints for seat layout, availability, and booking operations
  */
 @RestController
 @RequestMapping("/api/seats")
@@ -32,13 +33,13 @@ public class SeatController {
         this.seatService = seatService;
     }
     
-    /**
-     * Get all seats for an event (public endpoint for seat map display)
-     * GET /api/seats?eventId={eventId}
+    /*
+    Get all seats for an event (public endpoint for seat map display)
+    GET /api/seats?eventId={eventId}
      */
     @GetMapping
-    public ResponseEntity<List<Seat>> getSeats(@RequestParam UUID eventId) {
-        List<Seat> seats = seatService.getSeatsByEvent(eventId);
+    public ResponseEntity<List<SeatResponse>> getSeats(@RequestParam UUID eventId) {
+        List<SeatResponse> seats = seatService.getSeatsByEventAsResponse(eventId);
         return ResponseEntity.ok(seats);
     }
     

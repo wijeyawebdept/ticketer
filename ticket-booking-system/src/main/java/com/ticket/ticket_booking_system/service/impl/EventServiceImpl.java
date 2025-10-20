@@ -1,14 +1,12 @@
 package com.ticket.ticket_booking_system.service.impl;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.ArrayList; // Added import
+import java.util.ArrayList;
 import java.util.List; // Added import
-import java.util.UUID;
-import java.util.stream.Collectors; // Added import
+import java.util.UUID; // Added import
+import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page; // Added import
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,20 +16,20 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ticket.ticket_booking_system.dto.request.EventCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.EventUpdateRequest;
-import com.ticket.ticket_booking_system.dto.request.TicketCategoryRequest; // Added import
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
-import com.ticket.ticket_booking_system.dto.response.TicketCategoryResponse; // Added import
-import com.ticket.ticket_booking_system.dto.response.VenueBasicResponse;
+import com.ticket.ticket_booking_system.dto.response.TicketCategoryResponse;
+import com.ticket.ticket_booking_system.dto.response.VenueBasicResponse; // Added import
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.TicketCategory; // Added import
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
-import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.exception.ResourceNotFoundException; // Added import
 import com.ticket.ticket_booking_system.repository.EventRepository;
-import com.ticket.ticket_booking_system.repository.TicketCategoryRepository; // Added import
+import com.ticket.ticket_booking_system.repository.SeatRepository;
+import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
-import com.ticket.ticket_booking_system.service.EventService;
+import com.ticket.ticket_booking_system.service.EventService; // Added import
 import com.ticket.ticket_booking_system.service.FileUploadService;
 
 import lombok.RequiredArgsConstructor;
@@ -45,10 +43,15 @@ public class EventServiceImpl implements EventService {
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
+    private final SeatRepository seatRepository; // Added repository for seat deletion
 
     @Override
     @Transactional
     public EventResponse createEvent(EventCreateRequest request) {
+        System.out.println("=== CREATE EVENT START ===");
+        System.out.println("Event Name: " + request.getName());
+        System.out.println("Venue ID: " + request.getVenueId());
+
         // Get current authenticated user as organizer
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User organizer = userRepository.findByEmail(authentication.getName())
@@ -58,11 +61,16 @@ public class EventServiceImpl implements EventService {
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new ResourceNotFoundException("Venue", "id", request.getVenueId().toString()));
 
-        // Build event entity
+        System.out.println("Venue found: " + venue.getName() + " (Capacity: " + venue.getCapacity() + ")");
+
+        // Build event entity - automatically populate venue name and address from the
+        // selected venue
         Event event = Event.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .venue(venue)
+                .venueName(venue.getName()) // Auto-populate from selected venue
+                .venueAddress(venue.getAddress()) // Auto-populate from selected venue
                 .startDateTime(request.getStartDateTime())
                 .endDateTime(request.getEndDateTime())
                 .basePrice(request.getBasePrice())
@@ -74,6 +82,10 @@ public class EventServiceImpl implements EventService {
                 .build();
 
         Event savedEvent = eventRepository.save(event);
+        System.out.println("Event saved with ID: " + savedEvent.getEventId());
+
+        // Copy template seats from venue to this event
+        copyVenueSeatsToEvent(venue, savedEvent);
 
         // Handle ticket categories if provided
         if (request.getTicketCategories() != null && !request.getTicketCategories().isEmpty()) {
@@ -91,6 +103,7 @@ public class EventServiceImpl implements EventService {
             ticketCategoryRepository.saveAll(ticketCategories);
         }
 
+        System.out.println("=== CREATE EVENT COMPLETE ===");
         return mapEventToResponse(savedEvent);
     }
 
@@ -146,6 +159,9 @@ public class EventServiceImpl implements EventService {
             Venue venue = venueRepository.findById(request.getVenueId())
                     .orElseThrow(() -> new ResourceNotFoundException("Venue", "id", request.getVenueId().toString()));
             event.setVenue(venue);
+            // Auto-populate venue name and address when venue is changed
+            event.setVenueName(venue.getName());
+            event.setVenueAddress(venue.getAddress());
         }
 
         if (request.getStartDateTime() != null) {
@@ -190,8 +206,11 @@ public class EventServiceImpl implements EventService {
         if (!eventRepository.existsById(id)) {
             throw new ResourceNotFoundException("Event", "id", id.toString());
         }
-        // Delete associated ticket categories first
+        // Delete associated seats first
+        seatRepository.deleteByEventId(id);
+        // Delete associated ticket categories
         ticketCategoryRepository.deleteByEventId(id);
+        // Finally, delete the event
         eventRepository.deleteById(id);
     }
 
@@ -302,5 +321,49 @@ public class EventServiceImpl implements EventService {
                 .updatedAt(event.getUpdatedAt())
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .build();
+    }
+
+    /**
+     * Copy template seats from venue to event
+     * This creates event-specific seat records based on the venue's template seats
+     */
+    private void copyVenueSeatsToEvent(Venue venue, Event event) {
+        System.out.println("=== COPY VENUE SEATS TO EVENT ===");
+        System.out.println("Venue ID: " + venue.getVenueId());
+        System.out.println("Event ID: " + event.getEventId());
+
+        // Find all template seats for this venue (where event IS NULL)
+        List<com.ticket.ticket_booking_system.entity.Seat> templateSeats = seatRepository
+                .findByVenueAndEventIsNull(venue);
+
+        System.out.println("Found " + templateSeats.size() + " template seats to copy");
+
+        if (templateSeats.isEmpty()) {
+            System.out.println("⚠️ WARNING: No template seats found for venue. Event will have no seats!");
+            return;
+        }
+
+        // Create new seat records for the event by copying template seats
+        List<com.ticket.ticket_booking_system.entity.Seat> eventSeats = templateSeats.stream()
+                .map(templateSeat -> com.ticket.ticket_booking_system.entity.Seat.builder()
+                        .venue(venue)
+                        .event(event) // Assign to this event
+                        .section(templateSeat.getSection())
+                        .rowNumber(templateSeat.getRowNumber())
+                        .row(templateSeat.getRow())
+                        .seatNumber(templateSeat.getSeatNumber())
+                        .seatType(templateSeat.getSeatType())
+                        .status("AVAILABLE") // All seats start as available
+                        .price(templateSeat.getPrice())
+                        .isAvailable(true)
+                        .isBlocked(false)
+                        .build())
+                .collect(Collectors.toList());
+
+        // Save all event seats
+        seatRepository.saveAll(eventSeats);
+
+        System.out.println("✅ Successfully copied " + eventSeats.size() + " seats to event");
+        System.out.println("=== COPY SEATS COMPLETE ===");
     }
 }

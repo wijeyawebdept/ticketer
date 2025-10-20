@@ -11,9 +11,23 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
-  Chip
+  Chip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Close as CloseIcon,
+  MoreVert as MoreVertIcon,
+  CheckCircle as CheckCircleIcon,
+  AccessTime as AccessTimeIcon,
+  Cancel as CancelIcon,
+  EventAvailable as EventAvailableIcon
+} from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { EventService } from '../../services';
 import { Event, EventStatus } from '../../types';
@@ -25,6 +39,8 @@ const Events: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [contextMenuEvent, setContextMenuEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -44,26 +60,11 @@ const Events: React.FC = () => {
         // It's already an array
         eventsData = response;
       } else {
+        // Handle unexpected response format
         eventsData = [];
       }
       
-      // Map backend response to frontend Event type
-      const mappedEvents = eventsData.map((event: any) => ({
-        ...event,
-        id: event.id || event.eventId, // Ensure id exists
-        eventId: event.eventId || event.id, // For backward compatibility
-        eventDate: event.startDateTime || event.eventDate, // Map startDateTime to eventDate
-        ticketsAvailable: event.availableSeats !== undefined ? event.availableSeats : (event.ticketsAvailable || 0), // Map availableSeats to ticketsAvailable
-        ticketPrice: event.basePrice !== undefined ? event.basePrice : (event.ticketPrice || 0), // Map basePrice to ticketPrice
-        // Map organizer to createdBy for frontend compatibility
-        createdBy: event.organizer || event.createdBy,
-        venue: event.venue ? {
-          ...event.venue,
-          layoutType: event.venue.layoutType || 'THEATER' // Ensure layoutType exists
-        } : undefined
-      }));
-      
-      setEvents(mappedEvents);
+      setEvents(eventsData);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -84,6 +85,29 @@ const Events: React.FC = () => {
   const handleDeleteClick = (event: Event) => {
     setSelectedEvent(event);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleContextMenuClick = (event: React.MouseEvent<HTMLElement>, rowEvent: Event) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setContextMenuEvent(rowEvent);
+  };
+
+  const handleContextMenuClose = () => {
+    setAnchorEl(null);
+    setContextMenuEvent(null);
+  };
+
+  const handleChangeStatus = async (status: EventStatus) => {
+    if (!contextMenuEvent) return;
+    
+    try {
+      await EventService.changeEventStatus(contextMenuEvent.id, status);
+      fetchEvents(); // Refresh the events list
+      handleContextMenuClose();
+    } catch (error) {
+      console.error('Error changing event status:', error);
+    }
   };
 
   const handleDialogClose = () => {
@@ -199,6 +223,20 @@ const Events: React.FC = () => {
       renderCell: (params: GridRenderCellParams) => (
         <Box>
           <IconButton
+            onClick={(e) => handleContextMenuClick(e, params.row as Event)}
+            size="small"
+            color="primary"
+            sx={{
+              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+              },
+              mr: 1
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+          <IconButton
             onClick={() => handleEditClick(params.row as Event)}
             size="small"
             color="primary"
@@ -297,6 +335,38 @@ const Events: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Status Change Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleContextMenuClose}
+      >
+        <MenuItem onClick={() => handleChangeStatus(EventStatus.DRAFT)}>
+          <ListItemIcon>
+            <AccessTimeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Mark as Draft</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleChangeStatus(EventStatus.PUBLISHED)}>
+          <ListItemIcon>
+            <CheckCircleIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Publish Event</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleChangeStatus(EventStatus.CANCELLED)}>
+          <ListItemIcon>
+            <CancelIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Cancel Event</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleChangeStatus(EventStatus.COMPLETED)}>
+          <ListItemIcon>
+            <EventAvailableIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Mark as Completed</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Event Form Dialog */}
       <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>

@@ -53,7 +53,7 @@ class EventService {
   }
 
   async changeEventStatus(id: string, status: string): Promise<Event> {
-    const response = await api.patch<Event>(`/api/admin/events/${id}/status`, { status });
+    const response = await api.patch<Event>(`/api/admin/events/${id}/change-status?status=${status}`);
     return response.data;
   }
   

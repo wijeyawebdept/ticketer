@@ -241,7 +241,7 @@ const Bookings: React.FC = () => {
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Event Date</Typography>
                   <Typography variant="body1">
-                    {selectedBooking.event?.eventDate ? new Date(selectedBooking.event.eventDate).toLocaleString() : 'N/A'}
+                    {selectedBooking.event?.startDateTime ? new Date(selectedBooking.event.startDateTime).toLocaleString() : 'N/A'}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>

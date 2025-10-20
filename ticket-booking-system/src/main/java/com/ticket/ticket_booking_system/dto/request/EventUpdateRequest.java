@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Positive;
 
 public class EventUpdateRequest {
@@ -12,10 +11,10 @@ public class EventUpdateRequest {
     private String name;
     private String description;
     
-    @Future(message = "Start date must be in the future")
+    // No @Future validation for updates - events can be edited even if dates are in the past
     private LocalDateTime startDateTime;
     
-    @Future(message = "End date must be in the future")
+    // No @Future validation for updates - events can be edited even if dates are in the past
     private LocalDateTime endDateTime;
     
     private UUID venueId;
