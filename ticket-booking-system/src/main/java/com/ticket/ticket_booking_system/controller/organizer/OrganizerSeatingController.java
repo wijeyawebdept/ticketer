@@ -22,7 +22,7 @@ import com.ticket.ticket_booking_system.service.VenueService;
  */
 @RestController
 @RequestMapping("/api/organizer/venues/{venueId}/seating")
-@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER')")
+@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER') or hasAuthority('ROLE_SUPER_ADMIN')")
 public class OrganizerSeatingController {
 
     private final VenueService venueService;

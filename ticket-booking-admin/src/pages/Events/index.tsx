@@ -20,7 +20,7 @@ import {
 import { 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Delete as DeleteIcon, 
+  DeleteSweep as DeleteSweepIcon, 
   Close as CloseIcon,
   MoreVert as MoreVertIcon,
   CheckCircle as CheckCircleIcon,
@@ -253,15 +253,16 @@ const Events: React.FC = () => {
           <IconButton
             onClick={() => handleDeleteClick(params.row as Event)}
             size="small"
-            color="error"
+            color="warning"
             sx={{
-              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              backgroundColor: 'rgba(255, 152, 0, 0.1)',
               '&:hover': {
-                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                backgroundColor: 'rgba(255, 152, 0, 0.2)',
               }
             }}
+            title="Move to Recycle Bin"
           >
-            <DeleteIcon />
+            <DeleteSweepIcon />
           </IconButton>
         </Box>
       ),
@@ -400,10 +401,10 @@ const Events: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onClose={handleDeleteDialogClose}>
-        <DialogTitle sx={{ fontWeight: 600 }}>Delete Event</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Move Event to Recycle Bin</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the event "{selectedEvent?.name}"? This action cannot be undone.
+            Are you sure you want to move the event "{selectedEvent?.name}" to the recycle bin? You can restore it later from the recycle bin.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -415,11 +416,11 @@ const Events: React.FC = () => {
           </Button>
           <Button 
             variant="contained" 
-            color="error" 
+            color="warning" 
             onClick={handleDeleteConfirm}
             sx={{ fontWeight: 500 }}
           >
-            Delete
+            Move to Recycle Bin
           </Button>
         </DialogActions>
       </Dialog>

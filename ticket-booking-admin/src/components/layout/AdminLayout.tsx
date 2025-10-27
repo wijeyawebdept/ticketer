@@ -31,7 +31,8 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
-  EventSeat as EventSeatIcon
+  EventSeat as EventSeatIcon,
+  RestoreFromTrash as RecycleBinIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -145,6 +146,7 @@ const AdminLayout: React.FC = () => {
     { text: 'Venues', icon: <LocationOnIcon />, path: '/venues' },
     { text: 'Seat Management', icon: <EventSeatIcon />, path: '/seats' },
     { text: 'Bookings', icon: <ReceiptIcon />, path: '/bookings' },
+    { text: 'Recycle Bin', icon: <RecycleBinIcon />, path: '/recycle-bin' },
     { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
@@ -164,7 +166,7 @@ const AdminLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Ticket Booking Admin
+            Ticket Booking Admin Panel
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "User Profile"}>

@@ -31,6 +31,7 @@ import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
 import com.ticket.ticket_booking_system.service.EventService; // Added import
 import com.ticket.ticket_booking_system.service.FileUploadService;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +45,7 @@ public class EventServiceImpl implements EventService {
     private final FileUploadService fileUploadService;
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
     private final SeatRepository seatRepository; // Added repository for seat deletion
+    private final RecycleBinService recycleBinService; // Added for soft delete
 
     @Override
     @Transactional
@@ -198,6 +200,32 @@ public class EventServiceImpl implements EventService {
 
         Event savedEvent = eventRepository.save(event);
         return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteEvent(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id.toString()));
+        
+        // Get current authenticated admin
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User deletedBy = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Current user not found"));
+        
+        // Move to recycle bin
+        recycleBinService.moveToRecycleBin(
+                "EVENT",
+                event.getEventId(),
+                event.getName(),
+                event,
+                deletedBy,
+                "Event soft deleted by " + deletedBy.getEmail()
+        );
+        
+        // Mark as deleted (soft delete)
+        event.setIsDeleted(true);
+        eventRepository.save(event);
     }
 
     @Override

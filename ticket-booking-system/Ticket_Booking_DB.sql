@@ -185,10 +185,12 @@ select * from booking_seats;
 select * from transactions;
 select * from ticket_categories;
 select * from events;
+select * from roles;
+select * from admins;
+select * from recycle_bin;
+select * from organizers;
 
-
-
--- Check what columns exist in the events table
+-- Check what columns exist in the tables
 SELECT column_name 
 FROM information_schema.columns 
 WHERE table_name = 'events' 

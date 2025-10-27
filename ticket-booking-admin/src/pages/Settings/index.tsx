@@ -15,6 +15,8 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
+import RoleManagement from './RoleManagement';
+import { UserRole } from '../../types';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -45,6 +47,9 @@ const Settings: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.ROLE_ADMIN ||
+                  user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
+
   // Form states
   const [accountSettings, setAccountSettings] = useState({
     email: user?.email || '',
@@ -65,12 +70,13 @@ const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
-  const [systemSettings, setSystemSettings] = useState({
-    defaultCurrency: 'LKR',
-    defaultLanguage: 'en',
-    enableMaintenance: false,
-    logLevel: 'INFO'
-  });
+    const [systemSettings, setSystemSettings] = useState({
+      defaultCurrency: 'LKR',
+      defaultLanguage: 'en',
+      enableMaintenance: false,
+      logLevel: 'INFO',
+      themeMode: 'light'
+    });
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -213,6 +219,7 @@ const Settings: React.FC = () => {
             <Tab label="Notifications" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
             <Tab label="Security" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
             <Tab label="System" id="settings-tab-3" aria-controls="settings-tabpanel-3" />
+            {isAdmin && <Tab label="Roles" id="settings-tab-4" aria-controls="settings-tabpanel-4" />}
           </Tabs>
         </Box>
 
@@ -538,6 +545,22 @@ const Settings: React.FC = () => {
               </Typography>
             </Grid>
             <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={systemSettings.themeMode === 'dark'}
+                    onChange={handleSystemChange}
+                    name="themeMode"
+                    color="primary"
+                  />
+                }
+                label="Dark Mode"
+              />
+              <Typography variant="body2" color="textSecondary">
+                Enable dark mode for the application interface
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
               <Button 
                 variant="contained" 
@@ -559,6 +582,13 @@ const Settings: React.FC = () => {
             </Grid>
           </Grid>
         </TabPanel>
+
+        {/* Role Management */}
+        {isAdmin && (
+          <TabPanel value={activeTab} index={4}>
+            <RoleManagement />
+          </TabPanel>
+        )}
       </Paper>
     </Box>
   );

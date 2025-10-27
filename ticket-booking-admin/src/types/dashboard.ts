@@ -6,4 +6,8 @@ export interface DashboardOverview {
   todayBookings: number;
   weekBookings: number;
   monthBookings: number;
+  // SUPER_ADMIN exclusive fields
+  superAdminCount?: number;
+  adminCount?: number;
+  organizerCount?: number;
 }

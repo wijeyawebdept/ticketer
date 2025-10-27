@@ -25,6 +25,8 @@ public interface EventService {
 
     EventResponse updateEvent(UUID id, EventUpdateRequest request);
 
+    void softDeleteEvent(UUID id);
+
     void deleteEvent(UUID id);
 
     EventResponse changeEventStatus(UUID id, String status);

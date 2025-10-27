@@ -33,7 +33,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/events")
-@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER')")
 public class AdminEventController {
 
     private final EventService eventService;
@@ -84,7 +84,15 @@ public class AdminEventController {
     }
 
     @DeleteMapping("/{eventId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> deleteEvent(@PathVariable UUID eventId) {
+        eventService.softDeleteEvent(eventId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{eventId}/permanent")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Void> permanentlyDeleteEvent(@PathVariable UUID eventId) {
         eventService.deleteEvent(eventId);
         return ResponseEntity.noContent().build();
     }

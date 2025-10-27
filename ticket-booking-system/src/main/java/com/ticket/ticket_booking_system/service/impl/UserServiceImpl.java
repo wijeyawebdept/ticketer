@@ -6,6 +6,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,20 +15,41 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.Role;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.repository.RoleRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.UserService;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RecycleBinService recycleBinService;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(
+            UserRepository userRepository, 
+            RoleRepository roleRepository,
+            AdminRepository adminRepository,
+            OrganizerRepository organizerRepository,
+            PasswordEncoder passwordEncoder,
+            RecycleBinService recycleBinService) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.adminRepository = adminRepository;
+        this.organizerRepository = organizerRepository;
         this.passwordEncoder = passwordEncoder;
+        this.recycleBinService = recycleBinService;
     }
 
     @Override
@@ -36,8 +59,21 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
         }
 
-        // Always set role to USER for new registrations
-        User.Role role = User.Role.USER;
+        // Determine role - use provided role or default to USER
+        String roleName = (request.getRole() != null && !request.getRole().trim().isEmpty()) 
+                ? request.getRole().toUpperCase() 
+                : "USER";
+        
+        // Try to find role entity from roles table
+        Role roleEntity = roleRepository.findByRoleName(roleName).orElse(null);
+        User.Role enumRole = User.Role.USER;
+        
+        try {
+            enumRole = User.Role.valueOf(roleName);
+        } catch (IllegalArgumentException e) {
+            // If role doesn't exist as enum, use USER as default
+            System.out.println("⚠️ Role " + roleName + " not found in enum, defaulting to USER");
+        }
 
         User user = User.builder()
                 .firstName(request.getFirstName())
@@ -47,13 +83,56 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
                 .profilePicture(request.getProfilePicture())
-                .role(role)
+                .role(enumRole)
+                .roleEntity(roleEntity)
                 .active(true)
                 .emailVerified(false)
                 .build();
 
         User savedUser = userRepository.save(user);
+        System.out.println("✅ User created with ID: " + savedUser.getId() + ", Role: " + roleName);
+
+        // Create corresponding Admin or Organizer record based on role
+        createRoleSpecificRecord(savedUser, roleName);
+
         return mapUserToResponse(savedUser);
+    }
+
+    /**
+     * Creates Admin or Organizer record based on user role
+     */
+    private void createRoleSpecificRecord(User user, String roleName) {
+        // Check if role is ADMIN or SUPER_ADMIN (both should create admin records)
+        if ("ADMIN".equals(roleName) || "SUPER_ADMIN".equals(roleName) || roleName.contains("ADMIN")) {
+            // Create Admin record
+            boolean isSuperAdmin = "SUPER_ADMIN".equals(roleName);
+            
+            Admin admin = Admin.builder()
+                    .user(user)
+                    .accessLevel(isSuperAdmin ? Admin.AccessLevel.SUPER : Admin.AccessLevel.STANDARD)
+                    .canDeleteUsers(isSuperAdmin)
+                    .canModifySystemSettings(isSuperAdmin)
+                    .position(isSuperAdmin ? "Super Administrator" : "Administrator")
+                    .department("Administration")
+                    .build();
+            
+            adminRepository.save(admin);
+            System.out.println("✅ Admin record created for user: " + user.getEmail() + " with access level: " + admin.getAccessLevel());
+            
+        } else if ("ORGANIZER".equals(roleName) || roleName.contains("ORGANIZER")) {
+            // Create Organizer record
+            Organizer organizer = Organizer.builder()
+                    .user(user)
+                    .organizationName(user.getFirstName() + " " + user.getLastName())
+                    .isVerified(false)
+                    .isEmployee(false)
+                    .canCreateEmployees(true)
+                    .build();
+            
+            organizerRepository.save(organizer);
+            System.out.println("✅ Organizer record created for user: " + user.getEmail());
+        }
+        // USER role doesn't need additional record
     }
 
     @Override
@@ -146,12 +225,26 @@ public class UserServiceImpl implements UserService {
         }
 
         // Handle role updates
+        String oldRoleName = (user.getRoleEntity() != null) ? user.getRoleEntity().getRoleName() : user.getRole().name();
+        String newRoleName = null;
+        
         if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
             try {
-                User.Role newRole = User.Role.valueOf(request.getRole().toUpperCase());
-                if (user.getRole() != newRole) {
-                    user.setRole(newRole);
-                    System.out.println("🔄 Role updated from " + user.getRole() + " to " + newRole);
+                newRoleName = request.getRole().toUpperCase();
+                
+                // First, try to find the role in the roles table
+                Role roleEntity = roleRepository.findByRoleName(newRoleName).orElse(null);
+                
+                if (roleEntity != null) {
+                    // Use the role entity from the roles table
+                    user.setRoleEntity(roleEntity);
+                    System.out.println("🔄 Role entity updated to: " + roleEntity.getRoleName());
+                } else {
+                    // Fall back to enum if role not found in roles table
+                    User.Role enumRole = User.Role.valueOf(newRoleName);
+                    user.setRole(enumRole);
+                    user.setRoleEntity(null);
+                    System.out.println("🔄 Role enum updated to: " + enumRole);
                 }
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid role: " + request.getRole());
@@ -159,8 +252,65 @@ public class UserServiceImpl implements UserService {
         }
 
         User savedUser = userRepository.save(user);
+        
+        // Handle role-specific record changes if role was updated
+        if (newRoleName != null && !oldRoleName.equals(newRoleName)) {
+            handleRoleChange(savedUser, oldRoleName, newRoleName);
+        }
+        
         System.out.println("✅ User update completed successfully");
         return mapUserToResponse(savedUser);
+    }
+
+    /**
+     * Handles Admin/Organizer record changes when user role is updated
+     */
+    private void handleRoleChange(User user, String oldRoleName, String newRoleName) {
+        System.out.println("🔄 Handling role change from " + oldRoleName + " to " + newRoleName);
+        
+        // Remove old role-specific record
+        if (oldRoleName.contains("ADMIN") || oldRoleName.equals("SUPER_ADMIN")) {
+            adminRepository.findByUser_Id(user.getId()).ifPresent(admin -> {
+                adminRepository.delete(admin);
+                System.out.println("🗑️ Deleted Admin record for user: " + user.getEmail());
+            });
+        } else if (oldRoleName.contains("ORGANIZER")) {
+            organizerRepository.findByUser_Id(user.getId()).ifPresent(organizer -> {
+                organizerRepository.delete(organizer);
+                System.out.println("🗑️ Deleted Organizer record for user: " + user.getEmail());
+            });
+        }
+        
+        // Create new role-specific record
+        createRoleSpecificRecord(user, newRoleName);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
+        
+        // Get current authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User deletedBy = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Current user not found"));
+        
+        // Move to recycle bin
+        recycleBinService.moveToRecycleBin(
+            "USER",
+            user.getId(),
+            user.getFirstName() + " " + user.getLastName(),
+            user,
+            deletedBy,
+            "User soft deleted by " + deletedBy.getEmail()
+        );
+        
+        // Deactivate the user instead of deleting
+        user.setActive(false);
+        userRepository.save(user);
+        
+        System.out.println("✅ User " + user.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
     }
 
     @Override
@@ -237,6 +387,9 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapUserToResponse(User user) {
+        // Use roleEntity if available, otherwise fall back to enum role
+        String roleName = (user.getRoleEntity() != null) ? user.getRoleEntity().getRoleName() : user.getRole().name();
+        
         return UserResponse.builder()
                 .id(user.getId())
                 .firstName(user.getFirstName())
@@ -244,7 +397,7 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .dateOfBirth(user.getDateOfBirth())
-                .role(user.getRole().name())
+                .role(roleName)
                 .active(user.isActive())
                 .emailVerified(user.isEmailVerified())
                 .createdAt(user.getCreatedAt())

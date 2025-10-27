@@ -25,6 +25,8 @@ public interface UserService {
     
     UserResponse updateUser(UUID id, UserUpdateRequest request);
     
+    void softDeleteUser(UUID id);
+    
     void deleteUser(UUID id);
     
     void toggleUserStatus(UUID id);

@@ -15,11 +15,11 @@ interface PaginatedResponse<T> {
 
 class UserService {
   async getAllUsers(): Promise<User[]> {
-    console.log('🔍 Fetching users from API...');
+    console.log(' Fetching users from API...');
     const response = await api.get<PaginatedResponse<User>>('/api/admin/users');
-    console.log('📊 Raw API response:', response.data);
-    console.log('👥 Users array from content:', response.data.content);
-    console.log('📈 Total elements:', response.data.totalElements);
+    console.log(' Raw API response:', response.data);
+    console.log(' Users array from content:', response.data.content);
+    console.log(' Total elements:', response.data.totalElements);
     
     // Extract the users array from the paginated response
     return response.data.content || [];

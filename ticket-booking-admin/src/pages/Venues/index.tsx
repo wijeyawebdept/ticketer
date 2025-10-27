@@ -11,7 +11,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
@@ -38,7 +38,12 @@ const VenuesPage = () => {
   const [venueForSeats, setVenueForSeats] = useState<Venue | null>(null);
 
   // Determine if user is admin based on URL path or user role
-  const isAdmin = location.pathname.includes('/admin/') || (user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN');
+  const isAdmin = location.pathname.includes('/admin/') || (
+    user?.role === 'ADMIN' || 
+    user?.role === 'ROLE_ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'ROLE_SUPER_ADMIN'
+  );
   
   // Fetch all venues from the API
   const fetchVenues = useCallback(async () => {
@@ -261,13 +266,13 @@ const VenuesPage = () => {
               )}
             </IconButton>
           </Tooltip>
-          <Tooltip title="Delete Venue">
+          <Tooltip title="Move to Recycle Bin">
             <IconButton
               onClick={() => handleDeleteVenue(params.row)}
               size="small"
-              color="error"
+              color="warning"
             >
-              <DeleteIcon />
+              <DeleteSweepIcon />
             </IconButton>
           </Tooltip>
         </Box>
@@ -332,7 +337,7 @@ const VenuesPage = () => {
       <ConfirmationDialog
         open={deleteDialogOpen}
         title={ConfirmationMessages.DELETE_VENUE.title}
-        message={`Are you sure you want to delete "${venueToDelete?.name}"? This action cannot be undone and will also delete all associated template seats.`}
+        message={`Are you sure you want to move "${venueToDelete?.name}" to the recycle bin? You can restore it later from the recycle bin.`}
         confirmText={ConfirmationMessages.DELETE_VENUE.confirmText}
         variant={ConfirmationMessages.DELETE_VENUE.variant}
         onConfirm={confirmDeleteVenue}

@@ -30,7 +30,7 @@ import jakarta.validation.Valid;
  */
 @RestController
 @RequestMapping("/api/organizer/venues")
-@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER')")
+@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER') or hasAuthority('ROLE_SUPER_ADMIN')")
 public class OrganizerVenueController {
 
     private final VenueService venueService;

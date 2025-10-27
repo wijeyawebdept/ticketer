@@ -16,6 +16,8 @@ public interface VenueService {
 
     Venue updateVenue(UUID venueId, Venue venue);
 
+    void softDeleteVenue(UUID venueId);
+
     void deleteVenue(UUID venueId);
 
     List<Venue> searchVenuesByName(String name);

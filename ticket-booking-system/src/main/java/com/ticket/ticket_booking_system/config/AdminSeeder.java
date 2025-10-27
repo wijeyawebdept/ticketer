@@ -6,7 +6,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 public class AdminSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     
-    public AdminSeeder(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AdminSeeder(UserRepository userRepository, AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -55,7 +59,19 @@ public class AdminSeeder implements CommandLineRunner {
                 .active(true)
                 .build();
 
-        userRepository.save(admin);
+        User savedAdmin = userRepository.save(admin);
+        
+        // Create Admin record
+        Admin adminRecord = Admin.builder()
+                .user(savedAdmin)
+                .accessLevel(Admin.AccessLevel.STANDARD)
+                .canDeleteUsers(false)
+                .canModifySystemSettings(false)
+                .position("Administrator")
+                .department("Administration")
+                .build();
+        
+        adminRepository.save(adminRecord);
         
         log.info("Default admin user created successfully!");
         log.info("Email: {}", adminEmail);

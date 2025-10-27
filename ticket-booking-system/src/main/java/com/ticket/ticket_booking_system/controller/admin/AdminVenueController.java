@@ -30,7 +30,7 @@ import jakarta.validation.Valid;
  */
 @RestController
 @RequestMapping("/api/admin/venues")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 public class AdminVenueController {
     
     private final VenueService venueService;
@@ -85,11 +85,23 @@ public class AdminVenueController {
     }
     
     /**
-     * Delete venue - Admin only
-     * Allows admins to remove venues from the system
+     * Delete venue - Admin only (Soft Delete)
+     * Moves venue to recycle bin instead of permanently deleting
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> deleteVenue(@PathVariable UUID id) {
+        venueService.softDeleteVenue(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Permanently delete venue - Super Admin only
+     * Removes venue from database permanently
+     */
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Void> permanentlyDeleteVenue(@PathVariable UUID id) {
         venueService.deleteVenue(id);
         return ResponseEntity.noContent().build();
     }

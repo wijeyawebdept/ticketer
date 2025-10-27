@@ -15,7 +15,9 @@ import {
   ListItemText,
   ListItemAvatar,
   ListItemSecondaryAction,
-  LinearProgress
+  LinearProgress,
+  Alert,
+  AlertTitle
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -28,10 +30,13 @@ import {
   TrendingDown as TrendingDownIcon,
   EventAvailable as EventAvailableIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
-  ConfirmationNumber as ConfirmationNumberIcon
+  ConfirmationNumber as ConfirmationNumberIcon,
+  Security as SecurityIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon
 } from '@mui/icons-material';
 import { DashboardService } from '../../services';
 import { DashboardOverview } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface StatCardProps {
   title: string;
@@ -128,6 +133,7 @@ const Dashboard: React.FC = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const { isSuperAdmin } = useAuth();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -217,6 +223,64 @@ const Dashboard: React.FC = () => {
           />
         </Grid>
       </Grid>
+      
+      {/* SUPER_ADMIN Exclusive Section - System Overview */}
+      {isSuperAdmin() && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12}>
+            <Alert 
+              severity="info" 
+              icon={<AdminPanelSettingsIcon />}
+              sx={{ 
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                '& .MuiAlert-icon': {
+                  color: 'white'
+                }
+              }}
+            >
+              <AlertTitle sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+              SUPER ADMIN Dashboard
+              </AlertTitle>
+              You have exclusive access to system-wide controls and advanced features.
+            </Alert>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Super Admins"
+              value={overview?.superAdminCount || 0}
+              icon={<SecurityIcon sx={{ color: 'white', fontSize: 32 }} />}
+              color="#9C27B0"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Total Admins"
+              value={overview?.adminCount || 0}
+              icon={<AdminPanelSettingsIcon sx={{ color: 'white', fontSize: 32 }} />}
+              color="#673AB7"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Organizers"
+              value={overview?.organizerCount || 0}
+              icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
+              color="#3F51B5"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="System Health"
+              value="Excellent"
+              icon={<CheckCircleIcon sx={{ color: 'white', fontSize: 32 }} />}
+              color="#00C853"
+            />
+          </Grid>
+        </Grid>
+      )}
       
       <Grid container spacing={3}>
         {/* Recent Transactions */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   TextField, 
@@ -14,8 +14,9 @@ import {
 } from '@mui/material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { UserService } from '../../../services';
-import { User, UserRole } from '../../../types';
+import { UserService, RoleService } from '../../../services';
+import { User, UserRole, Role } from '../../../types';
+import { useAuth } from '../../../context/AuthContext';
 
 interface UserFormProps {
   user?: User;
@@ -64,6 +65,40 @@ const handleApiError = (
 };
 
 const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(true);
+  const { isSuperAdmin } = useAuth();
+
+  // Fetch available roles on component mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const roles = await RoleService.getAllRoles();
+        // Filter only active roles
+        let activeRoles = roles.filter(role => role.isActive);
+        
+        // If the current user is not a SUPER_ADMIN, exclude SUPER_ADMIN role from the list
+        if (!isSuperAdmin()) {
+          activeRoles = activeRoles.filter(role => 
+            role.roleName !== UserRole.SUPER_ADMIN && 
+            role.roleName !== 'SUPER_ADMIN'
+          );
+        }
+        
+        setAvailableRoles(activeRoles);
+      } catch (error) {
+        console.error('Failed to fetch roles:', error);
+        // Fallback to default roles if fetch fails
+        setAvailableRoles([]);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, [isSuperAdmin]);
+
   return (
     <Formik
       initialValues={{
@@ -260,10 +295,24 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                   }}
                   label="Role"
                   required
+                  disabled={loadingRoles}
                 >
-                  <MenuItem value={UserRole.USER}>User</MenuItem>
-                  <MenuItem value={UserRole.ORGANIZER}>Organizer</MenuItem>
-                  <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                  {loadingRoles ? (
+                    <MenuItem disabled>Loading roles...</MenuItem>
+                  ) : availableRoles.length > 0 ? (
+                    availableRoles.map((role) => (
+                      <MenuItem key={role.roleId} value={role.roleName}>
+                        {role.roleName.replace(/_/g, ' ')}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    // Fallback to default roles if no roles are fetched
+                    <>
+                      <MenuItem value={UserRole.USER}>User</MenuItem>
+                      <MenuItem value={UserRole.ORGANIZER}>Organizer</MenuItem>
+                      <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                    </>
+                  )}
                 </Select>
                 {touched.role && errors.role && (
                   <FormHelperText>{errors.role as string}</FormHelperText>

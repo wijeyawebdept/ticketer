@@ -122,22 +122,22 @@ export default ConfirmationDialog;
 // Predefined confirmation messages
 export const ConfirmationMessages = {
   DELETE_VENUE: {
-    title: 'Delete Venue',
-    message: 'Are you sure you want to delete this venue? This will also delete all associated seats and cannot be undone.',
-    confirmText: 'Delete Venue',
-    variant: 'danger' as const,
+    title: 'Move Venue to Recycle Bin',
+    message: 'Are you sure you want to move this venue to the recycle bin? You can restore it later from the recycle bin.',
+    confirmText: 'Move to Recycle Bin',
+    variant: 'warning' as const,
   },
   DELETE_EVENT: {
-    title: 'Delete Event',
-    message: 'Are you sure you want to delete this event? This action cannot be undone.',
-    confirmText: 'Delete Event',
-    variant: 'danger' as const,
+    title: 'Move Event to Recycle Bin',
+    message: 'Are you sure you want to move this event to the recycle bin? You can restore it later from the recycle bin.',
+    confirmText: 'Move to Recycle Bin',
+    variant: 'warning' as const,
   },
   DELETE_USER: {
-    title: 'Delete User',
-    message: 'Are you sure you want to delete this user account? This action cannot be undone.',
-    confirmText: 'Delete User',
-    variant: 'danger' as const,
+    title: 'Move User to Recycle Bin',
+    message: 'Are you sure you want to move this user account to the recycle bin? You can restore it later from the recycle bin.',
+    confirmText: 'Move to Recycle Bin',
+    variant: 'warning' as const,
   },
   CANCEL_BOOKING: {
     title: 'Cancel Booking',

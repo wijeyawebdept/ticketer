@@ -22,6 +22,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import SeatManagement from './pages/SeatManagement';
 import IntegrationTest from './pages/IntegrationTest';
+import RecycleBin from './pages/RecycleBin';
 import { UserRole } from './types';
 
 // Lazy-loaded components
@@ -184,6 +185,7 @@ function App() {
                 <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/recycle-bin" element={<RecycleBin />} />
               </Route>
             </Route>
 

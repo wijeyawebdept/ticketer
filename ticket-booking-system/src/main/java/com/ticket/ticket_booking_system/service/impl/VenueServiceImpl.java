@@ -26,7 +26,11 @@ import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.VenueService;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class VenueServiceImpl implements VenueService {
@@ -35,13 +39,15 @@ public class VenueServiceImpl implements VenueService {
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final RecycleBinService recycleBinService;
 
     public VenueServiceImpl(VenueRepository venueRepository, SeatRepository seatRepository,
-            EventRepository eventRepository, UserRepository userRepository) {
+            EventRepository eventRepository, UserRepository userRepository, RecycleBinService recycleBinService) {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.recycleBinService = recycleBinService;
     }
 
     @Override
@@ -100,6 +106,31 @@ public class VenueServiceImpl implements VenueService {
         venue.setUpdatedAt(LocalDateTime.now());
 
         return venueRepository.save(venue);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteVenue(UUID venueId) {
+        Venue venue = getVenueById(venueId);
+        
+        // Get current authenticated admin
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User deletedBy = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Current user not found"));
+        
+        // Move to recycle bin
+        recycleBinService.moveToRecycleBin(
+                "VENUE",
+                venue.getVenueId(),
+                venue.getName(),
+                venue,
+                deletedBy,
+                "Venue soft deleted by " + deletedBy.getEmail()
+        );
+        
+        // Mark as deleted (soft delete)
+        venue.setIsDeleted(true);
+        venueRepository.save(venue);
     }
 
     @Override

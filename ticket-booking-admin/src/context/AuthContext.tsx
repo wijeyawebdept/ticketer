@@ -9,6 +9,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
+  isSuperAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,7 +75,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const isAdmin = React.useCallback((): boolean => {
-    return user !== null && (user.role === UserRole.ADMIN || user.role === 'ROLE_ADMIN');
+    return user !== null && (
+      user.role === UserRole.ADMIN || 
+      user.role === 'ROLE_ADMIN' ||
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === 'ROLE_SUPER_ADMIN'
+    );
+  }, [user]);
+
+  const isSuperAdmin = React.useCallback((): boolean => {
+    return user !== null && (
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === 'ROLE_SUPER_ADMIN'
+    );
   }, [user]);
 
   const contextValue = React.useMemo(
@@ -85,8 +98,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       isAuthenticated,
       isAdmin,
+      isSuperAdmin,
     }),
-    [user, loading, login, logout, isAuthenticated, isAdmin]
+    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin]
   );
 
   return (

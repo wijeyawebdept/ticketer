@@ -64,6 +64,10 @@ public class Venue {
     @Column
     private Map<String, Object> seatingLayout;
 
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

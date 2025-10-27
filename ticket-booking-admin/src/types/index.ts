@@ -18,7 +18,9 @@ export enum UserRole {
   ORGANIZER = 'ORGANIZER',
   ROLE_ORGANIZER = 'ROLE_ORGANIZER',
   ADMIN = 'ADMIN',
-  ROLE_ADMIN = 'ROLE_ADMIN'
+  ROLE_ADMIN = 'ROLE_ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ROLE_SUPER_ADMIN = 'ROLE_SUPER_ADMIN'
 }
 
 export interface UserCreateRequest {
@@ -146,6 +148,10 @@ export interface DashboardOverview {
   todayBookings: number;
   weekBookings: number;
   monthBookings: number;
+  // SUPER_ADMIN exclusive fields
+  superAdminCount?: number;
+  adminCount?: number;
+  organizerCount?: number;
 }
 
 // Profile related types
@@ -172,4 +178,21 @@ export interface ProfileUpdateDTO {
   phoneNumber?: string;
   dateOfBirth?: string;
   profilePicture?: string;
+}
+
+// Role Management types
+export interface Role {
+  roleId: string;
+  roleName: string;
+  roleDescription: string;
+  isSystemRole: boolean;
+  canManageUsers: boolean;
+  canManageEvents: boolean;
+  canManageVenues: boolean;
+  canManageBookings: boolean;
+  canViewReports: boolean;
+  canManageRoles: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

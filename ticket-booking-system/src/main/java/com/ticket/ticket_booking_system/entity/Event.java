@@ -74,6 +74,10 @@ public class Event {
     @Column(nullable = false)
     private EventStatus status;
 
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

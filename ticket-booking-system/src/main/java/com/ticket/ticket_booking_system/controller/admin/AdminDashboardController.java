@@ -13,7 +13,7 @@ import com.ticket.ticket_booking_system.service.DashboardService;
 
 @RestController
 @RequestMapping("/api/admin/dashboard")
-@PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('ADMIN') or hasAuthority('ROLE_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 public class AdminDashboardController {
 
     private final DashboardService dashboardService;

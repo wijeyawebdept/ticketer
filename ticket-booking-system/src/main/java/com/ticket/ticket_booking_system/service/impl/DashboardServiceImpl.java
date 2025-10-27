@@ -1,5 +1,23 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.entity.User;
@@ -8,26 +26,8 @@ import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.TransactionRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.DashboardService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,6 +69,27 @@ public class DashboardServiceImpl implements DashboardService {
 
         Long monthBookings = bookingRepository.countBookingsBetweenDates(monthStart, today);
         overview.put("monthBookings", monthBookings != null ? monthBookings : 0);
+
+        // SUPER_ADMIN exclusive fields - Role counts
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("SUPER_ADMIN"))) {
+            
+            long superAdminCount = userRepository.findAll().stream()
+                    .filter(user -> user.getRole() == User.Role.SUPER_ADMIN)
+                    .count();
+            overview.put("superAdminCount", superAdminCount);
+            
+            long adminCount = userRepository.findAll().stream()
+                    .filter(user -> user.getRole() == User.Role.ADMIN)
+                    .count();
+            overview.put("adminCount", adminCount);
+            
+            long organizerCount = userRepository.findAll().stream()
+                    .filter(user -> user.getRole() == User.Role.ORGANIZER)
+                    .count();
+            overview.put("organizerCount", organizerCount);
+        }
 
         return overview;
     }

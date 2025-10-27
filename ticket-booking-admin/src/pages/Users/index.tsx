@@ -12,11 +12,12 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, Close as CloseIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { UserService } from '../../services';
 import { User, UserRole } from '../../types';
 import UserForm from './components/UserForm';
+import { useAuth } from '../../context/AuthContext';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,12 +25,9 @@ const Users: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const { isSuperAdmin } = useAuth();
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = React.useCallback(async () => {
     setLoading(true);
     try {
       console.log('Starting to fetch users...');
@@ -38,13 +36,28 @@ const Users: React.FC = () => {
       console.log('Data type:', typeof data);
       console.log('Is array?', Array.isArray(data));
       console.log('Users count:', data?.length);
-      setUsers(data);
+      
+      // Filter out SUPER_ADMIN users if the current user is not a SUPER_ADMIN
+      let filteredUsers = data;
+      if (!isSuperAdmin()) {
+        filteredUsers = data.filter(user => 
+          user.role !== UserRole.SUPER_ADMIN && 
+          user.role !== UserRole.ROLE_SUPER_ADMIN
+        );
+        console.log('Filtered users (excluding SUPER_ADMIN):', filteredUsers);
+      }
+      
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   // Add this debugging effect to log when users state changes
   useEffect(() => {
@@ -93,11 +106,17 @@ const Users: React.FC = () => {
 
   const getRoleChipColor = (role: UserRole) => {
     switch (role) {
+      case UserRole.SUPER_ADMIN:
+      case UserRole.ROLE_SUPER_ADMIN:
+        return 'secondary'; // Purple for SUPER_ADMIN
       case UserRole.ADMIN:
+      case UserRole.ROLE_ADMIN:
         return 'error';
       case UserRole.ORGANIZER:
+      case UserRole.ROLE_ORGANIZER:
         return 'warning';
       case UserRole.USER:
+      case UserRole.ROLE_USER:
       default:
         return 'success';
     }
@@ -145,15 +164,16 @@ const Users: React.FC = () => {
           <IconButton
             onClick={() => handleDeleteClick(params.row as User)}
             size="small"
-            color="error"
+            color="warning"
             sx={{
-              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              backgroundColor: 'rgba(255, 152, 0, 0.1)',
               '&:hover': {
-                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                backgroundColor: 'rgba(255, 152, 0, 0.2)',
               }
             }}
+            title="Move to Recycle Bin"
           >
-            <DeleteIcon />
+            <DeleteSweepIcon />
           </IconButton>
         </Box>
       ),
@@ -264,10 +284,10 @@ const Users: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onClose={handleDeleteDialogClose}>
-        <DialogTitle sx={{ fontWeight: 600 }}>Delete User</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Move User to Recycle Bin</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the user "{selectedUser?.firstName} {selectedUser?.lastName}"? This action cannot be undone.
+            Are you sure you want to move the user "{selectedUser?.firstName} {selectedUser?.lastName}" to the recycle bin? You can restore it later from the recycle bin.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -279,11 +299,11 @@ const Users: React.FC = () => {
           </Button>
           <Button 
             variant="contained" 
-            color="error" 
+            color="warning" 
             onClick={handleDeleteConfirm}
             sx={{ fontWeight: 500 }}
           >
-            Delete
+            Move to Recycle Bin
           </Button>
         </DialogActions>
       </Dialog>

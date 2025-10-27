@@ -27,10 +27,10 @@ const IntegrationTest: React.FC = () => {
       // Try to get stats for a test event ID
       const testEventId = '550e8400-e29b-41d4-a716-446655440001';
       await SeatService.getAvailabilityStats(testEventId);
-      setApiResult(`✅ API connected successfully on port 8081`);
+      setApiResult(`API connected successfully on port 8081`);
       setApiStatus('success');
     } catch (error: any) {
-      setApiResult(`❌ API connection failed: ${error.message}`);
+      setApiResult(`API connection failed: ${error.message}`);
       setApiStatus('error');
     }
   };
@@ -44,22 +44,22 @@ const IntegrationTest: React.FC = () => {
       await seatWebSocketService.connect(testEventId, {
         onConnect: () => {
           setWsStatus('connected');
-          setWsMessages(prev => [...prev, '✅ WebSocket connected successfully']);
+          setWsMessages(prev => [...prev, 'WebSocket connected successfully']);
         },
         onSeatUpdate: (update) => {
-          setWsMessages(prev => [...prev, `🪑 Seat update: ${update.action} for seat ${update.seatNumber}`]);
+          setWsMessages(prev => [...prev, `Seat update: ${update.action} for seat ${update.seatNumber}`]);
         },
         onStatsUpdate: (stats) => {
-          setWsMessages(prev => [...prev, `📊 Stats: ${stats.availableSeats}/${stats.totalSeats} available`]);
+          setWsMessages(prev => [...prev, `Stats: ${stats.availableSeats}/${stats.totalSeats} available`]);
         },
         onError: (error) => {
           setWsStatus('error');
-          setWsMessages(prev => [...prev, `❌ WebSocket error: ${error}`]);
+          setWsMessages(prev => [...prev, `WebSocket error: ${error}`]);
         }
       });
     } catch (error: any) {
       setWsStatus('error');
-      setWsMessages(prev => [...prev, `❌ WebSocket connection failed: ${error.message}`]);
+      setWsMessages(prev => [...prev, `WebSocket connection failed: ${error.message}`]);
     }
   };
 
@@ -103,7 +103,7 @@ const IntegrationTest: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        🔗 Frontend-Backend Integration Test
+        Frontend-Backend Integration Test
       </Typography>
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -195,7 +195,7 @@ const IntegrationTest: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                🎯 Integration Status
+                Integration Status
               </Typography>
               
               <Grid container spacing={2}>
@@ -224,7 +224,7 @@ const IntegrationTest: React.FC = () => {
               
               {apiStatus === 'success' && wsStatus === 'connected' && (
                 <Alert severity="success" sx={{ mt: 2 }}>
-                  🎉 <strong>Integration Successful!</strong> Your frontend is now connected to the backend with real-time capabilities.
+                  <strong>Integration Successful!</strong> Your frontend is now connected to the backend with real-time capabilities.
                   <br />
                   <br />
                   <strong>Next Steps:</strong>
@@ -239,7 +239,7 @@ const IntegrationTest: React.FC = () => {
               
               {(apiStatus === 'error' || wsStatus === 'error') && (
                 <Alert severity="error" sx={{ mt: 2 }}>
-                  ❌ <strong>Integration Issues Detected</strong>
+                  <strong>Integration Issues Detected</strong>
                   <br />
                   <br />
                   <strong>Troubleshooting:</strong>
