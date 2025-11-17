@@ -193,7 +193,7 @@ select * from organizers;
 -- Check what columns exist in the tables
 SELECT column_name 
 FROM information_schema.columns 
-WHERE table_name = 'events' 
+WHERE table_name = 'venues' 
 ORDER BY ordinal_position;
 
 
