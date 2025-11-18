@@ -1,0 +1,240 @@
+package com.ticket.ticket_booking_system.service.impl;
+
+import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
+import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.AdminResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.AdminManagementService;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+public class AdminManagementServiceImpl implements AdminManagementService {
+
+    private final AdminRepository adminRepository;
+    private final UserRepository userRepository;
+    private final OrganizerRepository organizerRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final RecycleBinService recycleBinService;
+
+    public AdminManagementServiceImpl(
+            AdminRepository adminRepository,
+            UserRepository userRepository,
+            OrganizerRepository organizerRepository,
+            PasswordEncoder passwordEncoder,
+            RecycleBinService recycleBinService) {
+        this.adminRepository = adminRepository;
+        this.userRepository = userRepository;
+        this.organizerRepository = organizerRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.recycleBinService = recycleBinService;
+    }
+
+    @Override
+    @Transactional
+    public AdminResponse createAdmin(AdminCreateRequest request) {
+        // Check if email already exists in any table
+        if (userRepository.existsByEmail(request.getEmail()) ||
+            adminRepository.existsByEmail(request.getEmail()) ||
+            organizerRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+        }
+
+        // Parse role enum
+        Admin.Role role;
+        try {
+            role = Admin.Role.valueOf(request.getRole());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid role: " + request.getRole() + ". Must be ADMIN or SUPER_ADMIN");
+        }
+
+        // Create admin entity
+        Admin admin = Admin.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
+                .role(role)
+                .active(true)
+                .emailVerified(false)
+                .build();
+
+        Admin savedAdmin = adminRepository.save(admin);
+        System.out.println("Admin created with ID: " + savedAdmin.getAdminId() + ", Role: " + role);
+
+        return mapAdminToResponse(savedAdmin);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdminResponse> getAllAdmins(Pageable pageable) {
+        Page<Admin> admins = adminRepository.findByActiveTrue(pageable);
+        return admins.map(this::mapAdminToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminResponse getAdminById(UUID adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+        return mapAdminToResponse(admin);
+    }
+
+    @Override
+    @Transactional
+    public AdminResponse updateAdmin(UUID adminId, AdminUpdateRequest request) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+
+        // Update fields if provided
+        if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
+            admin.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null && !request.getLastName().trim().isEmpty()) {
+            admin.setLastName(request.getLastName());
+        }
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            // Check if new email is already in use by another admin
+            if (!admin.getEmail().equals(request.getEmail()) &&
+                (userRepository.existsByEmail(request.getEmail()) ||
+                 adminRepository.existsByEmail(request.getEmail()) ||
+                 organizerRepository.existsByEmail(request.getEmail()))) {
+                throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+            }
+            admin.setEmail(request.getEmail());
+        }
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            admin.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            admin.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            try {
+                Admin.Role role = Admin.Role.valueOf(request.getRole());
+                admin.setRole(role);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid role: " + request.getRole());
+            }
+        }
+
+        Admin updatedAdmin = adminRepository.save(admin);
+        System.out.println("Admin updated: " + updatedAdmin.getAdminId());
+
+        return mapAdminToResponse(updatedAdmin);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteAdmin(UUID adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+
+        // Get current authenticated user - check all tables
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String authenticatedEmail = authentication.getName();
+
+        // Create a temporary User object for the authenticated user
+        User deletedBy = findAuthenticatedUser(authenticatedEmail);
+
+        // Move to recycle bin
+        recycleBinService.moveToRecycleBin(
+            "ADMIN",
+            admin.getAdminId(),
+            admin.getFirstName() + " " + admin.getLastName(),
+            admin,
+            deletedBy,
+            "Admin soft deleted by " + deletedBy.getEmail()
+        );
+
+        // Deactivate the admin instead of deleting
+        admin.setActive(false);
+        adminRepository.save(admin);
+
+        System.out.println("Admin " + admin.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public AdminResponse toggleAdminStatus(UUID adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+
+        admin.setActive(!admin.isActive());
+        Admin updatedAdmin = adminRepository.save(admin);
+
+        System.out.println("Admin " + updatedAdmin.getEmail() + " status toggled to: " + updatedAdmin.isActive());
+
+        return mapAdminToResponse(updatedAdmin);
+    }
+
+    /**
+     * Helper method to find authenticated user across all tables
+     */
+    private User findAuthenticatedUser(String email) {
+        // Try users table first
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            return user;
+        }
+
+        // Check admins table
+        Admin admin = adminRepository.findByEmail(email).orElse(null);
+        if (admin != null) {
+            // Create temporary User object
+            User tempUser = new User();
+            tempUser.setId(admin.getAdminId());
+            tempUser.setEmail(admin.getEmail());
+            tempUser.setFirstName(admin.getFirstName());
+            tempUser.setLastName(admin.getLastName());
+            return tempUser;
+        }
+
+        // Check organizers table
+        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+        if (organizer != null) {
+            // Create temporary User object
+            User tempUser = new User();
+            tempUser.setId(organizer.getOrganizerId());
+            tempUser.setEmail(organizer.getEmail());
+            tempUser.setFirstName(organizer.getFirstName());
+            tempUser.setLastName(organizer.getLastName());
+            return tempUser;
+        }
+
+        throw new IllegalStateException("Current authenticated user not found in any table");
+    }
+
+    /**
+     * Map Admin entity to AdminResponse DTO
+     */
+    private AdminResponse mapAdminToResponse(Admin admin) {
+        return AdminResponse.builder()
+                .adminId(admin.getAdminId())
+                .firstName(admin.getFirstName())
+                .lastName(admin.getLastName())
+                .email(admin.getEmail())
+                .phoneNumber(admin.getPhoneNumber())
+                .role(admin.getRole().name())
+                .active(admin.isActive())
+                .emailVerified(admin.isEmailVerified())
+                .createdAt(admin.getCreatedAt())
+                .lastLoginAt(admin.getLastLoginAt())
+                .build();
+    }
+}

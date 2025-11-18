@@ -142,6 +142,8 @@ const AdminLayout: React.FC = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Users', icon: <PersonIcon />, path: '/users' },
+    { text: 'Admins', icon: <PersonIcon color="error" />, path: '/admins' },
+    { text: 'Organizers', icon: <PersonIcon color="warning" />, path: '/organizers' },
     { text: 'Events', icon: <EventIcon />, path: '/events' },
     { text: 'Venues', icon: <LocationOnIcon />, path: '/venues' },
     { text: 'Seat Management', icon: <EventSeatIcon />, path: '/seats' },

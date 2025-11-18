@@ -1,17 +1,18 @@
 package com.ticket.ticket_booking_system.repository;
 
-import com.ticket.ticket_booking_system.entity.Event;
-import com.ticket.ticket_booking_system.entity.User;
-import com.ticket.ticket_booking_system.entity.Venue;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.Venue;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
@@ -33,9 +34,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     List<Event> findTopSellingEvents(Pageable pageable);
 
     // Add JOIN FETCH queries to avoid LazyInitializationException
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc")
+    // Changed to LEFT JOIN FETCH for organizer to include events created by ADMIN/SUPER_ADMIN (organizer_id = NULL)
+    // Filter out soft-deleted events (is_deleted = false)
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.isDeleted = false")
     Page<Event> findAllWithVenueAndOrganizerAndTicketCategories(Pageable pageable);
 
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer")
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer AND e.isDeleted = false")
     Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(User organizer, Pageable pageable);
 }

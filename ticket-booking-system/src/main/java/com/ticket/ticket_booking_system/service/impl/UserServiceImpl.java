@@ -72,7 +72,7 @@ public class UserServiceImpl implements UserService {
             enumRole = User.Role.valueOf(roleName);
         } catch (IllegalArgumentException e) {
             // If role doesn't exist as enum, use USER as default
-            System.out.println("⚠️ Role " + roleName + " not found in enum, defaulting to USER");
+            System.out.println("Role " + roleName + " not found in enum, defaulting to USER");
         }
 
         User user = User.builder()
@@ -90,7 +90,7 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         User savedUser = userRepository.save(user);
-        System.out.println("✅ User created with ID: " + savedUser.getId() + ", Role: " + roleName);
+        System.out.println("User created with ID: " + savedUser.getId() + ", Role: " + roleName);
 
         // Create corresponding Admin or Organizer record based on role
         createRoleSpecificRecord(savedUser, roleName);
@@ -99,40 +99,14 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * Creates Admin or Organizer record based on user role
+     * No longer needed - Admin and Organizer are separate tables with their own authentication.
+     * Users table only contains role="USER"
      */
     private void createRoleSpecificRecord(User user, String roleName) {
-        // Check if role is ADMIN or SUPER_ADMIN (both should create admin records)
-        if ("ADMIN".equals(roleName) || "SUPER_ADMIN".equals(roleName) || roleName.contains("ADMIN")) {
-            // Create Admin record
-            boolean isSuperAdmin = "SUPER_ADMIN".equals(roleName);
-            
-            Admin admin = Admin.builder()
-                    .user(user)
-                    .accessLevel(isSuperAdmin ? Admin.AccessLevel.SUPER : Admin.AccessLevel.STANDARD)
-                    .canDeleteUsers(isSuperAdmin)
-                    .canModifySystemSettings(isSuperAdmin)
-                    .position(isSuperAdmin ? "Super Administrator" : "Administrator")
-                    .department("Administration")
-                    .build();
-            
-            adminRepository.save(admin);
-            System.out.println("✅ Admin record created for user: " + user.getEmail() + " with access level: " + admin.getAccessLevel());
-            
-        } else if ("ORGANIZER".equals(roleName) || roleName.contains("ORGANIZER")) {
-            // Create Organizer record
-            Organizer organizer = Organizer.builder()
-                    .user(user)
-                    .organizationName(user.getFirstName() + " " + user.getLastName())
-                    .isVerified(false)
-                    .isEmployee(false)
-                    .canCreateEmployees(true)
-                    .build();
-            
-            organizerRepository.save(organizer);
-            System.out.println("✅ Organizer record created for user: " + user.getEmail());
-        }
-        // USER role doesn't need additional record
+        // After migration, users table only contains USER role
+        // Admins and Organizers are created directly in their respective tables
+        // This method is kept for backward compatibility but does nothing
+        System.out.println("ℹcreateRoleSpecificRecord called but no action needed - separate tables architecture");
     }
 
     @Override
@@ -146,14 +120,31 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = "users", key = "#email")
     public UserResponse getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
-        return mapUserToResponse(user);
+        // Check users table first
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            return mapUserToResponse(user);
+        }
+        
+        // Check admins table
+        Admin admin = adminRepository.findByEmail(email).orElse(null);
+        if (admin != null) {
+            return mapAdminToResponse(admin);
+        }
+        
+        // Check organizers table
+        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+        if (organizer != null) {
+            return mapOrganizerToResponse(organizer);
+        }
+        
+        throw new ResourceNotFoundException("User", "email", email);
     }
 
     @Override
     public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        // Only return active users (exclude soft-deleted users in recycle bin)
+        return userRepository.findByActiveTrue(pageable)
                 .map(this::mapUserToResponse);
     }
 
@@ -181,8 +172,8 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @CacheEvict(value = "users", allEntries = true)
     public UserResponse updateUser(UUID id, UserUpdateRequest request) {
-        System.out.println("🔄 Starting user update for ID: " + id);
-        System.out.println("📝 Update request: " + request);
+        System.out.println("Starting user update for ID: " + id);
+        System.out.println("Update request: " + request);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
@@ -207,17 +198,17 @@ public class UserServiceImpl implements UserService {
         // FIX: Handle password updates with proper encoding
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
             String rawPassword = request.getPassword();
-            System.out.println("🔐 Raw password provided for update: " + rawPassword);
+            System.out.println("Raw password provided for update: " + rawPassword);
 
             String encodedPassword = passwordEncoder.encode(rawPassword);
-            System.out.println("🔐 Password encoded successfully");
+            System.out.println("Password encoded successfully");
 
             // Verify the encoding works (for debugging)
             boolean matches = passwordEncoder.matches(rawPassword, encodedPassword);
-            System.out.println("🔐 Password verification test: " + matches);
+            System.out.println("Password verification test: " + matches);
 
             user.setPassword(encodedPassword);
-            System.out.println("🔐 Password updated for user: " + user.getEmail());
+            System.out.println("Password updated for user: " + user.getEmail());
         }
 
         if (request.getPhoneNumber() != null) {
@@ -238,13 +229,13 @@ public class UserServiceImpl implements UserService {
                 if (roleEntity != null) {
                     // Use the role entity from the roles table
                     user.setRoleEntity(roleEntity);
-                    System.out.println("🔄 Role entity updated to: " + roleEntity.getRoleName());
+                    System.out.println("Role entity updated to: " + roleEntity.getRoleName());
                 } else {
                     // Fall back to enum if role not found in roles table
                     User.Role enumRole = User.Role.valueOf(newRoleName);
                     user.setRole(enumRole);
                     user.setRoleEntity(null);
-                    System.out.println("🔄 Role enum updated to: " + enumRole);
+                    System.out.println("Role enum updated to: " + enumRole);
                 }
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid role: " + request.getRole());
@@ -258,31 +249,21 @@ public class UserServiceImpl implements UserService {
             handleRoleChange(savedUser, oldRoleName, newRoleName);
         }
         
-        System.out.println("✅ User update completed successfully");
+        System.out.println("User update completed successfully");
         return mapUserToResponse(savedUser);
     }
 
     /**
-     * Handles Admin/Organizer record changes when user role is updated
+     * No longer needed - Admin, Organizer, and User are completely separate tables.
+     * Role changes between USER/ADMIN/ORGANIZER would require creating entries in different tables.
      */
     private void handleRoleChange(User user, String oldRoleName, String newRoleName) {
-        System.out.println("🔄 Handling role change from " + oldRoleName + " to " + newRoleName);
-        
-        // Remove old role-specific record
-        if (oldRoleName.contains("ADMIN") || oldRoleName.equals("SUPER_ADMIN")) {
-            adminRepository.findByUser_Id(user.getId()).ifPresent(admin -> {
-                adminRepository.delete(admin);
-                System.out.println("🗑️ Deleted Admin record for user: " + user.getEmail());
-            });
-        } else if (oldRoleName.contains("ORGANIZER")) {
-            organizerRepository.findByUser_Id(user.getId()).ifPresent(organizer -> {
-                organizerRepository.delete(organizer);
-                System.out.println("🗑️ Deleted Organizer record for user: " + user.getEmail());
-            });
-        }
-        
-        // Create new role-specific record
-        createRoleSpecificRecord(user, newRoleName);
+        System.out.println("Role change requested but not supported - separate tables architecture");
+        System.out.println("Users table only contains USER role");
+        System.out.println("To change roles, create a new entry in the target table (admins/organizers)");
+        // After migration, this functionality is not supported
+        // Users can only be USER role
+        // To make someone an admin or organizer, create a new record in those tables
     }
 
     @Override
@@ -291,10 +272,39 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
         
-        // Get current authenticated user
+        // Get current authenticated user - check all tables
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User deletedBy = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Current user not found"));
+        String authenticatedEmail = authentication.getName();
+        
+        // Try to find authenticated user in any of the tables
+        User deletedBy = userRepository.findByEmail(authenticatedEmail).orElse(null);
+        
+        // If not found in users table, create a temporary User object for the recycle bin
+        if (deletedBy == null) {
+            // Check if it's an admin
+            Admin admin = adminRepository.findByEmail(authenticatedEmail).orElse(null);
+            if (admin != null) {
+                // Create a temporary User object to pass to recycle bin
+                deletedBy = new User();
+                deletedBy.setId(admin.getAdminId());
+                deletedBy.setEmail(admin.getEmail());
+                deletedBy.setFirstName(admin.getFirstName());
+                deletedBy.setLastName(admin.getLastName());
+            } else {
+                // Check if it's an organizer
+                Organizer organizer = organizerRepository.findByEmail(authenticatedEmail).orElse(null);
+                if (organizer != null) {
+                    // Create a temporary User object to pass to recycle bin
+                    deletedBy = new User();
+                    deletedBy.setId(organizer.getOrganizerId());
+                    deletedBy.setEmail(organizer.getEmail());
+                    deletedBy.setFirstName(organizer.getFirstName());
+                    deletedBy.setLastName(organizer.getLastName());
+                } else {
+                    throw new IllegalStateException("Current authenticated user not found in any table");
+                }
+            }
+        }
         
         // Move to recycle bin
         recycleBinService.moveToRecycleBin(
@@ -310,7 +320,7 @@ public class UserServiceImpl implements UserService {
         user.setActive(false);
         userRepository.save(user);
         
-        System.out.println("✅ User " + user.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
+        System.out.println("User " + user.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
     }
 
     @Override
@@ -402,6 +412,38 @@ public class UserServiceImpl implements UserService {
                 .emailVerified(user.isEmailVerified())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
+                .build();
+    }
+    
+    private UserResponse mapAdminToResponse(Admin admin) {
+        return UserResponse.builder()
+                .id(admin.getAdminId())
+                .firstName(admin.getFirstName())
+                .lastName(admin.getLastName())
+                .email(admin.getEmail())
+                .phoneNumber(admin.getPhoneNumber())
+                .dateOfBirth(admin.getDateOfBirth())
+                .role(admin.getRole().name())
+                .active(admin.isActive())
+                .emailVerified(admin.isEmailVerified())
+                .createdAt(admin.getCreatedAt())
+                .lastLoginAt(admin.getLastLoginAt())
+                .build();
+    }
+    
+    private UserResponse mapOrganizerToResponse(Organizer organizer) {
+        return UserResponse.builder()
+                .id(organizer.getOrganizerId())
+                .firstName(organizer.getFirstName())
+                .lastName(organizer.getLastName())
+                .email(organizer.getEmail())
+                .phoneNumber(organizer.getPhoneNumber())
+                .dateOfBirth(organizer.getDateOfBirth())
+                .role(organizer.getRole().name())
+                .active(organizer.isActive())
+                .emailVerified(organizer.isEmailVerified())
+                .createdAt(organizer.getCreatedAt())
+                .lastLoginAt(organizer.getLastLoginAt())
                 .build();
     }
 }

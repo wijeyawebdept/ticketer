@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List; // Added import
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,6 +44,7 @@ public class Event {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id")
     private Venue venue;
@@ -87,11 +90,22 @@ public class Event {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    // Organizer reference - now points to Organizer table directly
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_id")
-    private User organizer;
+    private Organizer organizer;
+
+    // Creator reference - can be User, Admin, or Organizer
+    // Store the UUID and type separately since creator can be from different tables
+    @Column(name = "created_by_user_id")
+    private java.util.UUID createdByUserId;
+    
+    @Column(name = "created_by_type", length = 20)
+    private String createdByType; // "USER", "ADMIN", "SUPER_ADMIN", "ORGANIZER"
 
     // Added ticket categories relationship
+    @JsonIgnore
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     private List<TicketCategory> ticketCategories;
 

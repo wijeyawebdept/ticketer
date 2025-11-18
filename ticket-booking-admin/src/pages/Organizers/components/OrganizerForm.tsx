@@ -9,63 +9,45 @@ import {
 } from '@mui/material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { UserService } from '../../../services';
-import { User, UserRole } from '../../../types';
+import api from '../../../services/api';
 
-interface UserFormProps {
-  user?: User;
+interface Organizer {
+  organizerId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  organizationName?: string;
+}
+
+interface OrganizerFormProps {
+  organizer?: Organizer;
   onClose?: () => void;
   onSuccess?: () => void;
 }
 
-interface UserFormValues {
+interface OrganizerFormValues {
   firstName: string;
   lastName: string;
   email: string;
   password?: string;
   phoneNumber: string;
-}
-
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-      errors?: Record<string, string>;
-    }
-  }
+  organizationName: string;
 }
 
 const PHONE_REGEX = /^\d{10}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
-// Helper function to handle API errors
-const handleApiError = (
-  error: ApiError, 
-  setErrors: (errors: Record<string, string>) => void,
-  action: 'create' | 'update'
-) => {
-  if (error.response?.data) {
-    const backendErrors = error.response.data;
-    if (backendErrors.message) {
-      setErrors({ email: backendErrors.message });
-    }
-    if (backendErrors.errors) {
-      setErrors(backendErrors.errors as any);
-    }
-  } else {
-    setErrors({ email: `Failed to ${action} user. Please try again.` });
-  }
-};
-
-const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
+const OrganizerForm: React.FC<OrganizerFormProps> = ({ organizer, onClose, onSuccess }) => {
   return (
     <Formik
       initialValues={{
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
+        firstName: organizer?.firstName || '',
+        lastName: organizer?.lastName || '',
+        email: organizer?.email || '',
         password: '',
-        phoneNumber: user?.phoneNumber || '',
+        phoneNumber: organizer?.phoneNumber || '',
+        organizationName: organizer?.organizationName || '',
       }}
       validationSchema={Yup.object({
         firstName: Yup.string()
@@ -80,12 +62,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
           .required('Email is required')
           .email('Invalid email address')
           .max(100, 'Email must not exceed 100 characters'),
-        password: user 
-          ? Yup.string() // When editing, password is optional
+        password: organizer 
+          ? Yup.string()
             .test('password-validation', 'Invalid password format', value => {
-              // If editing and no password entered, it's valid (keeping old password)
               if (!value || value === '') return true;
-              
               return value.length >= 8 && PASSWORD_REGEX.test(value);
             })
           : Yup.string()
@@ -97,58 +77,45 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
             ),
         phoneNumber: Yup.string()
           .matches(PHONE_REGEX, 'Phone number must be 10 digits'),
+        organizationName: Yup.string()
+          .required('Organization name is required')
+          .min(2, 'Organization name must be at least 2 characters')
+          .max(255, 'Organization name must be less than 255 characters'),
       })}
-      onSubmit={async (values: UserFormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<UserFormValues>) => {
+      onSubmit={async (values: OrganizerFormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<OrganizerFormValues>) => {
         try {
-          const userData = { ...values, role: UserRole.USER };
-          if (user?.id && !userData.password) {
-            delete userData.password;
+          const organizerData = { ...values };
+          if (organizer?.organizerId && !organizerData.password) {
+            delete organizerData.password;
           }
           
-          if (user?.id) {
-            await UserService.updateUser(user.id, userData);
+          if (organizer?.organizerId) {
+            await api.put(`/api/admin/organizers/${organizer.organizerId}`, organizerData);
           } else {
-            if (!userData.password) {
+            if (!organizerData.password) {
               setErrors({ password: 'Password is required' });
               return;
             }
-            
-            // Add debugging information
-            console.log('Password validation test:', PASSWORD_REGEX.test(userData.password));
-            console.log('Password length check:', userData.password.length >= 8);
-            console.log('Has uppercase:', /[A-Z]/.test(userData.password));
-            console.log('Has lowercase:', /[a-z]/.test(userData.password));
-            console.log('Has number:', /\d/.test(userData.password));
-            console.log('Has special char:', /[@$!%*?&#]/.test(userData.password));
-            
-            try {
-              await UserService.createUser(userData as any); // Type assertion as any to resolve TS issue
-            } catch (error: any) {
-              console.log('Detailed API error:', error?.response?.data);
-              throw error;
-            }
+            await api.post('/api/admin/organizers', organizerData);
           }
           
-          // Success handling
           resetForm();
           if (onSuccess) onSuccess();
-        } catch (error) {
-          // Error handling
-          console.error(`Error ${user ? 'updating' : 'creating'} user:`, error);
-          console.error('Full error details:', error);
-          if ((error as any)?.response?.data) {
-            console.error('API error response:', (error as any).response.data);
+        } catch (error: any) {
+          console.error(`Error ${organizer ? 'updating' : 'creating'} organizer:`, error);
+          if (error?.response?.data?.message) {
+            setErrors({ email: error.response.data.message });
+          } else {
+            setErrors({ email: `Failed to ${organizer ? 'update' : 'create'} organizer. Please try again.` });
           }
-          handleApiError(error as ApiError, setErrors, user ? 'update' : 'create');
-          alert(`Failed to ${user ? 'update' : 'create'} user. Check the browser console for details.`);
         } finally {
           setSubmitting(false);
         }
       }}
     >
-      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
+      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>User Information</Typography>
+          <Typography variant="h6" sx={{ mb: 2, color: '#ed6c02' }}>Organizer Information</Typography>
           <Divider sx={{ mb: 3 }} />
           
           <Grid container spacing={2}>
@@ -162,12 +129,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.firstName && Boolean(errors.firstName)}
-                helperText={touched.firstName && errors.firstName ? errors.firstName as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.firstName && errors.firstName ? String(errors.firstName) : ''}
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -178,12 +143,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.lastName && Boolean(errors.lastName)}
-                helperText={touched.lastName && errors.lastName ? errors.lastName as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.lastName && errors.lastName ? String(errors.lastName) : ''}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -195,29 +158,26 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.email && Boolean(errors.email)}
-                helperText={touched.email && errors.email ? errors.email as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.email && errors.email ? String(errors.email) : ''}
+                disabled={!!organizer}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 id="password"
                 name="password"
-                label={user ? "Password (leave blank to keep current)" : "Password"}
+                label={organizer ? "New Password (leave blank to keep current)" : "Password"}
                 type="password"
                 value={values.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.password && Boolean(errors.password)}
-                helperText={touched.password && errors.password ? errors.password as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required={!user}
+                helperText={touched.password && errors.password ? String(errors.password) : ''}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -228,36 +188,48 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.phoneNumber && Boolean(errors.phoneNumber)}
-                helperText={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber as string : undefined}
-                variant="outlined"
-                margin="normal"
+                helperText={touched.phoneNumber && errors.phoneNumber ? String(errors.phoneNumber) : ''}
+                placeholder="1234567890"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                id="organizationName"
+                name="organizationName"
+                label="Organization Name"
+                value={values.organizationName}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.organizationName && Boolean(errors.organizationName)}
+                helperText={touched.organizationName && errors.organizationName ? String(errors.organizationName) : ''}
               />
             </Grid>
           </Grid>
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              type="button"
-              variant="outlined"
-              color="secondary"
+          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button 
               onClick={onClose}
-              sx={{ mr: 1 }}
+              variant="outlined"
+              color="inherit"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
-              color="primary"
+              color="warning"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting ? 'Saving...' : (organizer ? 'Update Organizer' : 'Create Organizer')}
             </Button>
           </Box>
         </Box>
       )}
     </Formik>
   );
-}
+};
 
-export default UserForm;
+export default OrganizerForm;

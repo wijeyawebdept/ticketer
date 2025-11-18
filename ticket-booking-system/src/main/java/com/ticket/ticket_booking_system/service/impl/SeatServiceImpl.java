@@ -11,11 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.response.SeatResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Seat;
-import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -32,22 +33,24 @@ public class SeatServiceImpl implements SeatService {
     private final EventRepository eventRepository;
     private final SeatWebSocketService webSocketService;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
     private final VenueRepository venueRepository;
 
     public SeatServiceImpl(SeatRepository seatRepository, EventRepository eventRepository,
             SeatWebSocketService webSocketService, UserRepository userRepository,
-            VenueRepository venueRepository) {
+            AdminRepository adminRepository, VenueRepository venueRepository) {
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.webSocketService = webSocketService;
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
         this.venueRepository = venueRepository;
     }
 
     @Override
     @Transactional
     public void generateSeatsForEvent(UUID venueId, UUID eventId) {
-        logger.info("🎫 Generating seats for eventId: {} from venueId: {}", eventId, venueId);
+        logger.info("Generating seats for eventId: {} from venueId: {}", eventId, venueId);
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "eventId", eventId.toString()));
@@ -55,14 +58,13 @@ public class SeatServiceImpl implements SeatService {
         Venue venue = venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venue", "venueId", venueId.toString()));
 
-        logger.info("📍 Found event: {} (ID: {})", event.getName(), event.getEventId());
-        logger.info("🏟️ Venue: {} with capacity: {}", venue.getName(), venue.getCapacity());
+        logger.info("Found event: {} (ID: {})", event.getName(), event.getEventId());
+        logger.info("Venue: {} with capacity: {}", venue.getName(), venue.getCapacity());
 
         List<Seat> baseSeats = seatRepository.findByVenue_VenueIdAndEventIsNull(venueId);
-        logger.info("🪑 Found {} template seats for venue {}", baseSeats.size(), venueId);
-
+        logger.info("Found {} template seats for venue {}", baseSeats.size(), venueId);
         if (baseSeats.isEmpty()) {
-            logger.warn("⚠️ No template seats found for venue {}. Cannot generate seats for event.", venueId);
+            logger.warn("No template seats found for venue {}. Cannot generate seats for event.", venueId);
             return;
         }
 
@@ -71,7 +73,7 @@ public class SeatServiceImpl implements SeatService {
         int seatsToCreate = Math.min(baseSeats.size(), maxSeatsToCreate);
 
         if (baseSeats.size() > maxSeatsToCreate) {
-            logger.warn("⚠️ Template seats ({}) exceed venue capacity ({}). Limiting to capacity.",
+            logger.warn("Template seats ({}) exceed venue capacity ({}). Limiting to capacity.",
                     baseSeats.size(), maxSeatsToCreate);
         }
 
@@ -105,7 +107,7 @@ public class SeatServiceImpl implements SeatService {
             seatsCreated++;
         }
 
-        logger.info("✅ Successfully created {} seats for event {} ({}) - Venue capacity: {}",
+        logger.info("Successfully created {} seats for event {} ({}) - Venue capacity: {}",
                 seatsCreated, event.getName(), eventId, venue.getCapacity());
     }
 
@@ -117,9 +119,9 @@ public class SeatServiceImpl implements SeatService {
     @Override
     @Transactional(readOnly = true)
     public List<SeatResponse> getSeatsByEventAsResponse(UUID eventId) {
-        logger.info("🔍 Fetching seats for eventId: {}", eventId);
+        logger.info("Fetching seats for eventId: {}", eventId);
         List<Seat> seats = seatRepository.findByEvent_EventId(eventId);
-        logger.info("📊 Found {} seats for event {}", seats.size(), eventId);
+        logger.info("Found {} seats for event {}", seats.size(), eventId);
         return seats.stream()
                 .map(this::convertToResponse)
                 .toList();
@@ -319,15 +321,16 @@ public class SeatServiceImpl implements SeatService {
         }
 
         // If no default event exists, create one
-        // First, try to get an admin user to be the organizer
-        User adminUser = userRepository.findByEmail("admin@ticketbooking.com")
-                .orElse(null);
-        if (adminUser == null) {
-            // If no admin user exists, get the first user
-            List<User> users = userRepository.findAll();
-            if (!users.isEmpty()) {
-                adminUser = users.get(0);
-            }
+        // Try to get an admin to be the creator (organizer is null for admin-created events)
+        Admin admin = adminRepository.findByEmail("admin@ticketbooking.com")
+                .orElseGet(() -> adminRepository.findByActiveTrue().stream().findFirst().orElse(null));
+        
+        UUID createdByUserId = null;
+        String createdByType = null;
+        
+        if (admin != null) {
+            createdByUserId = admin.getAdminId();
+            createdByType = admin.getRole().name();
         }
 
         // Create the default event
@@ -341,7 +344,9 @@ public class SeatServiceImpl implements SeatService {
                 .totalCapacity(venue.getCapacity())
                 .availableSeats(venue.getCapacity())
                 .status(Event.EventStatus.DRAFT)
-                .organizer(adminUser)
+                .organizer(null) // Admin-created events don't have an organizer
+                .createdByUserId(createdByUserId) // Track creator ID
+                .createdByType(createdByType) // Track creator type
                 .build();
 
         return eventRepository.save(defaultEvent);

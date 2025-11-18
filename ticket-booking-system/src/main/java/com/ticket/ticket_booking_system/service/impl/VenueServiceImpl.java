@@ -17,15 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
+import com.ticket.ticket_booking_system.service.EventService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.VenueService;
 
@@ -39,20 +44,29 @@ public class VenueServiceImpl implements VenueService {
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
     private final RecycleBinService recycleBinService;
+    private final EventService eventService;
 
     public VenueServiceImpl(VenueRepository venueRepository, SeatRepository seatRepository,
-            EventRepository eventRepository, UserRepository userRepository, RecycleBinService recycleBinService) {
+            EventRepository eventRepository, UserRepository userRepository, 
+            AdminRepository adminRepository, OrganizerRepository organizerRepository,
+            RecycleBinService recycleBinService, EventService eventService) {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
+        this.organizerRepository = organizerRepository;
         this.recycleBinService = recycleBinService;
+        this.eventService = eventService;
     }
 
     @Override
     public List<Venue> getAllVenues() {
-        return venueRepository.findAll();
+        // Only return active venues (exclude soft-deleted venues in recycle bin)
+        return venueRepository.findAllActive();
     }
 
     @Override
@@ -64,7 +78,7 @@ public class VenueServiceImpl implements VenueService {
     @Override
     @Transactional
     public Venue createVenue(Venue venue) {
-        System.out.println("=== CREATE VENUE START ===");
+        System.out.println("CREATE VENUE START");
         System.out.println("Venue Name: " + venue.getName());
         System.out.println("Venue Capacity: " + venue.getCapacity());
 
@@ -84,7 +98,7 @@ public class VenueServiceImpl implements VenueService {
             generateSeatsForVenue(savedVenue.getVenueId());
         }
 
-        System.out.println("=== CREATE VENUE COMPLETE ===");
+        System.out.println("CREATE VENUE COMPLETE");
         return savedVenue;
     }
 
@@ -113,12 +127,73 @@ public class VenueServiceImpl implements VenueService {
     public void softDeleteVenue(UUID venueId) {
         Venue venue = getVenueById(venueId);
         
-        // Get current authenticated admin
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User deletedBy = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Current user not found"));
+        System.out.println("SOFT DELETE VENUE START");
+        System.out.println("Venue ID: " + venueId);
+        System.out.println("Venue Name: " + venue.getName());
         
-        // Move to recycle bin
+        // Get current authenticated user - check all tables
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String authenticatedEmail = authentication.getName();
+        
+        // Try to find authenticated user in any of the tables
+        User deletedBy = userRepository.findByEmail(authenticatedEmail).orElse(null);
+        
+        // If not found in users table, create a temporary User object for the recycle bin
+        if (deletedBy == null) {
+            // Check if it's an admin
+            Admin admin = adminRepository.findByEmail(authenticatedEmail).orElse(null);
+            if (admin != null) {
+                // Create a temporary User object to pass to recycle bin
+                deletedBy = new User();
+                deletedBy.setId(admin.getAdminId());
+                deletedBy.setEmail(admin.getEmail());
+                deletedBy.setFirstName(admin.getFirstName());
+                deletedBy.setLastName(admin.getLastName());
+            } else {
+                // Check if it's an organizer
+                Organizer organizer = organizerRepository.findByEmail(authenticatedEmail).orElse(null);
+                if (organizer != null) {
+                    // Create a temporary User object to pass to recycle bin
+                    deletedBy = new User();
+                    deletedBy.setId(organizer.getOrganizerId());
+                    deletedBy.setEmail(organizer.getEmail());
+                    deletedBy.setFirstName(organizer.getFirstName());
+                    deletedBy.setLastName(organizer.getLastName());
+                } else {
+                    throw new IllegalStateException("Current authenticated user not found in any table");
+                }
+            }
+        }
+        
+        // First, soft delete all events associated with this venue
+        // Note: Event soft delete will also handle event-specific seats
+        List<Event> eventsUsingVenue = eventRepository.findByVenue(venue, PageRequest.of(0, Integer.MAX_VALUE))
+                .getContent();
+        
+        if (!eventsUsingVenue.isEmpty()) {
+            System.out.println("Found " + eventsUsingVenue.size() + " events using this venue - soft deleting them...");
+            for (Event event : eventsUsingVenue) {
+                System.out.println("  - Soft deleting event: " + event.getName() + " (ID: " + event.getEventId() + ")");
+                try {
+                    eventService.softDeleteEvent(event.getEventId());
+                } catch (Exception e) {
+                    System.err.println("Warning: Failed to soft delete event " + event.getEventId() + ": " + e.getMessage());
+                    // Continue with other events even if one fails
+                }
+            }
+            System.out.println("All associated events soft deleted");
+        } else {
+            System.out.println("No events associated with this venue");
+        }
+        
+        // Note: Template seats (event_id IS NULL) remain in database but venue is marked as deleted
+        // Template seats will be cleaned up when venue is permanently deleted or restored
+        long templateSeatsCount = seatRepository.countByVenueAndEventIsNull(venue);
+        if (templateSeatsCount > 0) {
+            System.out.println(templateSeatsCount + " template seats remain (will be removed on permanent delete)");
+        }
+        
+        // Move venue to recycle bin
         recycleBinService.moveToRecycleBin(
                 "VENUE",
                 venue.getVenueId(),
@@ -128,64 +203,64 @@ public class VenueServiceImpl implements VenueService {
                 "Venue soft deleted by " + deletedBy.getEmail()
         );
         
-        // Mark as deleted (soft delete)
+        // Mark venue as deleted (soft delete)
         venue.setIsDeleted(true);
         venueRepository.save(venue);
+        
+        System.out.println("Venue soft deleted successfully");
+        System.out.println("SOFT DELETE VENUE COMPLETE");
     }
 
     @Override
     @Transactional
     public void deleteVenue(UUID venueId) {
-        System.out.println("=== DELETE VENUE START ===");
+        System.out.println("PERMANENT DELETE VENUE START");
         System.out.println("Venue ID: " + venueId);
 
         try {
             Venue venue = getVenueById(venueId);
             System.out.println("Venue Name: " + venue.getName());
 
-            // Check if there are any events using this venue
+            // First, permanently delete all events using this venue
             List<Event> eventsUsingVenue = eventRepository.findByVenue(venue, PageRequest.of(0, Integer.MAX_VALUE))
                     .getContent();
+            
             if (!eventsUsingVenue.isEmpty()) {
-                System.out.println("Found " + eventsUsingVenue.size() + " events using this venue:");
+                System.out.println("Found " + eventsUsingVenue.size() + " events using this venue - permanently deleting them...");
                 for (Event event : eventsUsingVenue) {
-                    System.out.println("  - Event: " + event.getName() + " (ID: " + event.getEventId() + ")");
+                    System.out.println("  - Permanently deleting event: " + event.getName() + " (ID: " + event.getEventId() + ")");
+                    try {
+                        // Permanently delete the event (this will also delete associated seats, bookings, etc.)
+                        eventService.deleteEvent(event.getEventId());
+                    } catch (Exception e) {
+                        System.err.println("Warning: Failed to delete event " + event.getEventId() + ": " + e.getMessage());
+                        // Continue with other events even if one fails
+                    }
                 }
-
-                // Set venue to null for all events using this venue
-                for (Event event : eventsUsingVenue) {
-                    event.setVenue(null);
-                    eventRepository.save(event);
-                }
-                System.out.println("Set venue to null for all associated events");
+                System.out.println("All associated events permanently deleted");
+            } else {
+                System.out.println("No events associated with this venue");
             }
 
-            // First, delete all seats associated with this venue (both template and event
-            // seats)
-            // This includes:
-            // 1. Template seats (event_id IS NULL)
-            // 2. Event-specific seats that reference this venue
+            // Delete all template seats for this venue (event_id IS NULL)
+            // Event-specific seats should already be deleted by eventService.deleteEvent()
             long templateSeatsCount = seatRepository.countByVenueAndEventIsNull(venue);
-            long totalSeatsCount = seatRepository.countByVenue(venue);
-
-            System.out.println("Deleting " + templateSeatsCount + " template seats...");
-            System.out.println("Deleting " + (totalSeatsCount - templateSeatsCount) + " event-specific seats...");
-
-            // Delete all seats for this venue
-            seatRepository.deleteByVenue(venue);
-
-            System.out.println("All seats deleted successfully");
+            if (templateSeatsCount > 0) {
+                System.out.println("Deleting " + templateSeatsCount + " template seats...");
+                seatRepository.deleteByVenueAndEventIsNull(venue);
+                System.out.println("Template seats deleted successfully");
+            }
 
             // Now delete the venue itself
             venueRepository.delete(venue);
 
-            System.out.println("✅ Venue deleted successfully");
-            System.out.println("=== DELETE VENUE COMPLETE ===");
+            System.out.println("Venue permanently deleted successfully");
+            System.out.println("PERMANENT DELETE VENUE COMPLETE");
 
         } catch (Exception e) {
-            System.err.println("❌ Error deleting venue: " + e.getMessage());
+            System.err.println("Error permanently deleting venue: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to delete venue: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to permanently delete venue: " + e.getMessage(), e);
         }
     }
 
@@ -300,15 +375,15 @@ public class VenueServiceImpl implements VenueService {
                 venueRepository.save(venue);
 
                 System.out
-                        .println("✅ Successfully generated " + seatsCreated + " seats for venue capacity: " + capacity);
-                System.out.println("✅ Grid dimensions: " + rows + " rows × " + seatsPerRow + " columns");
-                System.out.println("✅ Saved seating layout and chart config to venue");
+                        .println("Successfully generated " + seatsCreated + " seats for venue capacity: " + capacity);
+                System.out.println("Grid dimensions: " + rows + " rows × " + seatsPerRow + " columns");
+                System.out.println("Saved seating layout and chart config to venue");
             } catch (Exception e) {
-                System.err.println("⚠️ Failed to save seating layout JSON: " + e.getMessage());
+                System.err.println("Failed to save seating layout JSON: " + e.getMessage());
                 e.printStackTrace();
             }
 
-            System.out.println("=== GENERATE SEATS COMPLETE ===");
+            System.out.println("GENERATE SEATS COMPLETE");
             return seatsCreated;
         } else {
             // Generate seats from the existing seating chart config
@@ -335,7 +410,7 @@ public class VenueServiceImpl implements VenueService {
     @Override
     @Transactional
     public Venue updateSeatingLayout(UUID venueId, Map<String, Object> seatingLayout) {
-        System.out.println("=== UPDATE SEATING LAYOUT START ===");
+        System.out.println("UPDATE SEATING LAYOUT START");
         System.out.println("Venue ID: " + venueId);
         System.out.println("Seating Layout: " + seatingLayout);
 
@@ -348,7 +423,7 @@ public class VenueServiceImpl implements VenueService {
 
         Venue savedVenue = venueRepository.save(venue);
 
-        System.out.println("=== UPDATE SEATING LAYOUT END ===");
+        System.out.println("UPDATE SEATING LAYOUT END");
         return savedVenue;
     }
 
@@ -358,7 +433,7 @@ public class VenueServiceImpl implements VenueService {
     @SuppressWarnings("unchecked")
     private void updateIndividualSeatRecords(Venue venue, Map<String, Object> seatingLayout) {
         try {
-            System.out.println("=== UPDATING INDIVIDUAL SEAT RECORDS ===");
+            System.out.println("UPDATING INDIVIDUAL SEAT RECORDS");
             System.out.println("Venue ID: " + venue.getVenueId());
 
             // Get existing seats for this venue
@@ -422,7 +497,7 @@ public class VenueServiceImpl implements VenueService {
                 System.out.println("No seats found in layout or invalid format");
             }
 
-            System.out.println("=== FINISHED UPDATING INDIVIDUAL SEAT RECORDS ===");
+            System.out.println("FINISHED UPDATING INDIVIDUAL SEAT RECORDS");
         } catch (Exception e) {
             // Log the error but don't fail the entire operation
             System.err.println("Failed to update individual seat records: " + e.getMessage());
@@ -630,15 +705,16 @@ public class VenueServiceImpl implements VenueService {
         }
 
         // If no default event exists, create one
-        // First, try to get an admin user to be the organizer
-        User adminUser = userRepository.findByEmail("admin@ticketbooking.com")
-                .orElse(null);
-        if (adminUser == null) {
-            // If no admin user exists, get the first user
-            List<User> users = userRepository.findAll();
-            if (!users.isEmpty()) {
-                adminUser = users.get(0);
-            }
+        // Try to get an admin to be the creator (organizer is null for admin-created events)
+        Admin admin = adminRepository.findByEmail("admin@ticketbooking.com")
+                .orElseGet(() -> adminRepository.findByActiveTrue().stream().findFirst().orElse(null));
+        
+        UUID createdByUserId = null;
+        String createdByType = null;
+        
+        if (admin != null) {
+            createdByUserId = admin.getAdminId();
+            createdByType = admin.getRole().name();
         }
 
         // Create the default event
@@ -652,7 +728,9 @@ public class VenueServiceImpl implements VenueService {
                 .totalCapacity(venue.getCapacity())
                 .availableSeats(venue.getCapacity())
                 .status(Event.EventStatus.DRAFT)
-                .organizer(adminUser)
+                .organizer(null) // Admin-created events don't have an organizer
+                .createdByUserId(createdByUserId) // Track creator ID
+                .createdByType(createdByType) // Track creator type
                 .build();
 
         return eventRepository.save(defaultEvent);

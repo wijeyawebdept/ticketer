@@ -3,69 +3,58 @@ import {
   Box, 
   TextField, 
   Button, 
-  Grid,
+  Grid, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem,
   Typography,
   Divider
 } from '@mui/material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { UserService } from '../../../services';
-import { User, UserRole } from '../../../types';
+import { useAuth } from '../../../context/AuthContext';
+import api from '../../../services/api';
 
-interface UserFormProps {
-  user?: User;
+interface Admin {
+  adminId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  role: 'ADMIN' | 'SUPER_ADMIN';
+}
+
+interface AdminFormProps {
+  admin?: Admin;
   onClose?: () => void;
   onSuccess?: () => void;
 }
 
-interface UserFormValues {
+interface AdminFormValues {
   firstName: string;
   lastName: string;
   email: string;
   password?: string;
   phoneNumber: string;
-}
-
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-      errors?: Record<string, string>;
-    }
-  }
+  role: 'ADMIN' | 'SUPER_ADMIN';
 }
 
 const PHONE_REGEX = /^\d{10}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
-// Helper function to handle API errors
-const handleApiError = (
-  error: ApiError, 
-  setErrors: (errors: Record<string, string>) => void,
-  action: 'create' | 'update'
-) => {
-  if (error.response?.data) {
-    const backendErrors = error.response.data;
-    if (backendErrors.message) {
-      setErrors({ email: backendErrors.message });
-    }
-    if (backendErrors.errors) {
-      setErrors(backendErrors.errors as any);
-    }
-  } else {
-    setErrors({ email: `Failed to ${action} user. Please try again.` });
-  }
-};
+const AdminForm: React.FC<AdminFormProps> = ({ admin, onClose, onSuccess }) => {
+  const { isSuperAdmin } = useAuth();
 
-const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
   return (
     <Formik
       initialValues={{
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
+        firstName: admin?.firstName || '',
+        lastName: admin?.lastName || '',
+        email: admin?.email || '',
         password: '',
-        phoneNumber: user?.phoneNumber || '',
+        phoneNumber: admin?.phoneNumber || '',
+        role: admin?.role || 'ADMIN',
       }}
       validationSchema={Yup.object({
         firstName: Yup.string()
@@ -80,12 +69,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
           .required('Email is required')
           .email('Invalid email address')
           .max(100, 'Email must not exceed 100 characters'),
-        password: user 
-          ? Yup.string() // When editing, password is optional
+        password: admin 
+          ? Yup.string()
             .test('password-validation', 'Invalid password format', value => {
-              // If editing and no password entered, it's valid (keeping old password)
               if (!value || value === '') return true;
-              
               return value.length >= 8 && PASSWORD_REGEX.test(value);
             })
           : Yup.string()
@@ -97,58 +84,43 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
             ),
         phoneNumber: Yup.string()
           .matches(PHONE_REGEX, 'Phone number must be 10 digits'),
+        role: Yup.string()
+          .required('Role is required'),
       })}
-      onSubmit={async (values: UserFormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<UserFormValues>) => {
+      onSubmit={async (values: AdminFormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<AdminFormValues>) => {
         try {
-          const userData = { ...values, role: UserRole.USER };
-          if (user?.id && !userData.password) {
-            delete userData.password;
+          const adminData = { ...values };
+          if (admin?.adminId && !adminData.password) {
+            delete adminData.password;
           }
           
-          if (user?.id) {
-            await UserService.updateUser(user.id, userData);
+          if (admin?.adminId) {
+            await api.put(`/api/admin/admins/${admin.adminId}`, adminData);
           } else {
-            if (!userData.password) {
+            if (!adminData.password) {
               setErrors({ password: 'Password is required' });
               return;
             }
-            
-            // Add debugging information
-            console.log('Password validation test:', PASSWORD_REGEX.test(userData.password));
-            console.log('Password length check:', userData.password.length >= 8);
-            console.log('Has uppercase:', /[A-Z]/.test(userData.password));
-            console.log('Has lowercase:', /[a-z]/.test(userData.password));
-            console.log('Has number:', /\d/.test(userData.password));
-            console.log('Has special char:', /[@$!%*?&#]/.test(userData.password));
-            
-            try {
-              await UserService.createUser(userData as any); // Type assertion as any to resolve TS issue
-            } catch (error: any) {
-              console.log('Detailed API error:', error?.response?.data);
-              throw error;
-            }
+            await api.post('/api/admin/admins', adminData);
           }
           
-          // Success handling
           resetForm();
           if (onSuccess) onSuccess();
-        } catch (error) {
-          // Error handling
-          console.error(`Error ${user ? 'updating' : 'creating'} user:`, error);
-          console.error('Full error details:', error);
-          if ((error as any)?.response?.data) {
-            console.error('API error response:', (error as any).response.data);
+        } catch (error: any) {
+          console.error(`Error ${admin ? 'updating' : 'creating'} admin:`, error);
+          if (error?.response?.data?.message) {
+            setErrors({ email: error.response.data.message });
+          } else {
+            setErrors({ email: `Failed to ${admin ? 'update' : 'create'} admin. Please try again.` });
           }
-          handleApiError(error as ApiError, setErrors, user ? 'update' : 'create');
-          alert(`Failed to ${user ? 'update' : 'create'} user. Check the browser console for details.`);
         } finally {
           setSubmitting(false);
         }
       }}
     >
-      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
+      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>User Information</Typography>
+          <Typography variant="h6" sx={{ mb: 2, color: '#d32f2f' }}>Admin Information</Typography>
           <Divider sx={{ mb: 3 }} />
           
           <Grid container spacing={2}>
@@ -162,12 +134,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.firstName && Boolean(errors.firstName)}
-                helperText={touched.firstName && errors.firstName ? errors.firstName as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.firstName && errors.firstName ? String(errors.firstName) : ''}
               />
             </Grid>
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -178,12 +148,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.lastName && Boolean(errors.lastName)}
-                helperText={touched.lastName && errors.lastName ? errors.lastName as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.lastName && errors.lastName ? String(errors.lastName) : ''}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -195,29 +163,26 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.email && Boolean(errors.email)}
-                helperText={touched.email && errors.email ? errors.email as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required
+                helperText={touched.email && errors.email ? String(errors.email) : ''}
+                disabled={!!admin}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 id="password"
                 name="password"
-                label={user ? "Password (leave blank to keep current)" : "Password"}
+                label={admin ? "New Password (leave blank to keep current)" : "Password"}
                 type="password"
                 value={values.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.password && Boolean(errors.password)}
-                helperText={touched.password && errors.password ? errors.password as string : undefined}
-                variant="outlined"
-                margin="normal"
-                required={!user}
+                helperText={touched.password && errors.password ? String(errors.password) : ''}
               />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -228,36 +193,66 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.phoneNumber && Boolean(errors.phoneNumber)}
-                helperText={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber as string : undefined}
-                variant="outlined"
-                margin="normal"
+                helperText={touched.phoneNumber && errors.phoneNumber ? String(errors.phoneNumber) : ''}
+                placeholder="1234567890"
               />
             </Grid>
+
+            {isSuperAdmin() && (
+              <Grid item xs={12}>
+                <FormControl fullWidth error={touched.role && Boolean(errors.role)}>
+                  <InputLabel id="role-label">Role</InputLabel>
+                  <Select
+                    labelId="role-label"
+                    id="role"
+                    name="role"
+                    value={values.role}
+                    onChange={(e) => {
+                      handleChange({
+                        target: {
+                          name: 'role',
+                          value: e.target.value
+                        }
+                      } as any);
+                    }}
+                    onBlur={handleBlur}
+                    label="Role"
+                  >
+                    <MenuItem value="ADMIN">Admin</MenuItem>
+                    <MenuItem value="SUPER_ADMIN">Super Admin</MenuItem>
+                  </Select>
+                  {touched.role && errors.role && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {String(errors.role)}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+            )}
           </Grid>
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              type="button"
-              variant="outlined"
-              color="secondary"
+          <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button 
               onClick={onClose}
-              sx={{ mr: 1 }}
+              variant="outlined"
+              color="inherit"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
-              color="primary"
+              color="error"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting ? 'Saving...' : (admin ? 'Update Admin' : 'Create Admin')}
             </Button>
           </Box>
         </Box>
       )}
     </Formik>
   );
-}
+};
 
-export default UserForm;
+export default AdminForm;

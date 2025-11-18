@@ -45,8 +45,16 @@ public class AdminEventController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<EventResponse> createEvent(@Valid @RequestBody EventCreateRequest request) {
-        EventResponse createdEvent = eventService.createEvent(request);
-        return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
+        try {
+            System.out.println("=== AdminEventController: Creating event ===");
+            EventResponse createdEvent = eventService.createEvent(request);
+            return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating event: " + e.getClass().getName());
+            System.err.println("❌ ERROR message: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping

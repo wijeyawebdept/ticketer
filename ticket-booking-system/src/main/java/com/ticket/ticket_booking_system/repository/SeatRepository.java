@@ -78,5 +78,10 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     @Modifying
     @Query("DELETE FROM Seat s WHERE s.venue = :venue")
     void deleteByVenue(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
+    
+    // Delete all seats for a venue by venue ID (for permanent delete from recycle bin)
+    @Modifying
+    @Query("DELETE FROM Seat s WHERE s.venue.venueId = :venueId")
+    void deleteByVenueId(@Param("venueId") UUID venueId);
 }
  

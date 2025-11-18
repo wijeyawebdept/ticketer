@@ -23,6 +23,6 @@ public class PasswordEncoderUtil {
         
         // Test verification
         boolean matches = passwordEncoder.matches(rawPassword, encodedPassword);
-        System.out.println("\nVerification Test: " + (matches ? "✅ SUCCESS" : "❌ FAILED"));
+        System.out.println("\nVerification Test: " + (matches ? "SUCCESS" : "FAILED"));
     }
 }

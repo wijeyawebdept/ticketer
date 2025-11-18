@@ -8,6 +8,7 @@ import {
   TextField,
   Typography,
   Alert,
+  Paper,
 } from '@mui/material';
 import recycleBinService, { SoftDeleteRequest } from '../services/recycle-bin.service';
 
@@ -67,17 +68,25 @@ const SoftDeleteDialog: React.FC<SoftDeleteDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Confirm Deletion</DialogTitle>
-      <DialogContent>
+      <DialogTitle sx={{ backgroundColor: '#ed6c02', color: 'white', pb: 2 }}>
+        Move to Recycle Bin
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
         <Alert severity="warning" sx={{ mb: 2 }}>
-          This item will be moved to the recycle bin. You can restore it later if needed.
+          <strong>Are you sure?</strong> This item will be moved to the recycle bin. It will become inactive but can be restored later if needed.
         </Alert>
         
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Type: <strong>{entityType}</strong>
-          <br />
-          Name: <strong>{entityName}</strong>
+        <Typography variant="body1" sx={{ mb: 1, fontWeight: 600 }}>
+          Item Details:
         </Typography>
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: '#f5f5f5' }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Type:</strong> {entityType}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Name:</strong> {entityName}
+          </Typography>
+        </Paper>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

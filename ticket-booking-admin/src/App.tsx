@@ -14,6 +14,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import Users from './pages/Users';
+import Admins from './pages/Admins';
+import Organizers from './pages/Organizers';
 import Venues from './pages/Venues';
 import SeatingArrangement from './pages/Venues/components/SeatingArrangement';
 import Bookings from './pages/Bookings';
@@ -178,6 +180,8 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/users" element={<Users />} />
+                <Route path="/admins" element={<Admins />} />
+                <Route path="/organizers" element={<Organizers />} />
                 <Route path="/venues" element={<Venues />} />
                 <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/bookings" element={<Bookings />} />

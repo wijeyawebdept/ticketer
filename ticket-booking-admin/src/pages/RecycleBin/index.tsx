@@ -230,19 +230,25 @@ const RecycleBin: React.FC = () => {
 
       {!isSuperAdmin && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          <strong>Limited Access:</strong> Only Super Admins can permanently delete items from the recycle bin. You can restore items to make them active again.
+          <Typography variant="body2" component="span">
+            <strong>Limited Access:</strong> Only Super Admins can permanently delete items from the recycle bin. You can restore items to make them active again.
+          </Typography>
         </Alert>
       )}
 
       {isSuperAdmin && items.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          <strong>Super Admin Access:</strong> You can restore items to make them active again, or permanently delete them from the database. Use permanent deletion with caution.
+          <Typography variant="body2" component="span">
+            <strong>Super Admin Access:</strong> You can restore items to make them active again, or permanently delete them from the database. Use permanent deletion with caution.
+          </Typography>
         </Alert>
       )}
 
       {isSuperAdmin && items.length === 0 && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          <strong>clean:</strong> Recycle bin is empty. No items to restore or delete.
+          <Typography variant="body2" component="span">
+            <strong>Clean:</strong> Recycle bin is empty. No items to restore or delete.
+          </Typography>
         </Alert>
       )}
 
@@ -370,8 +376,13 @@ const RecycleBin: React.FC = () => {
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Alert severity="error" sx={{ mb: 2 }}>
-              <strong>⚠️ WARNING:</strong> This action cannot be undone. The item will be permanently deleted from the database.
+              <Typography variant="body2" component="span">
+                <strong>WARNING:</strong> This action cannot be undone. The item will be permanently deleted from the database.
+              </Typography>
             </Alert>
+            <Typography variant="h6" sx={{ mb: 1, color: '#d32f2f' }}>
+              Are you absolutely sure?
+            </Typography>
             <Typography variant="body1" sx={{ mb: 1 }}>
               You are about to permanently delete:
             </Typography>
@@ -427,8 +438,10 @@ const RecycleBin: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              ✅ This will restore the item and make it active again in the system.
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2" component="span">
+                <strong>Confirm Restore:</strong> This will restore the item and make it active again in the system.
+              </Typography>
             </Alert>
             <Typography variant="body1" sx={{ mb: 1 }}>
               You are about to restore:
@@ -479,7 +492,9 @@ const RecycleBin: React.FC = () => {
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Alert severity="error" sx={{ mb: 2 }}>
-              <strong>🚨 CRITICAL WARNING:</strong> This action cannot be undone! All items will be permanently deleted from the database.
+              <Typography variant="body2" component="span">
+                <strong>CRITICAL WARNING:</strong> This action cannot be undone! All items will be permanently deleted from the database.
+              </Typography>
             </Alert>
             <Typography variant="h6" sx={{ mb: 2, color: '#d32f2f' }}>
               Are you absolutely sure?
