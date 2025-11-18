@@ -14,11 +14,13 @@ import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.RecycleBin;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.RecycleBinRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
@@ -33,6 +35,7 @@ public class RecycleBinService {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
     private final VenueRepository venueRepository;
     private final SeatRepository seatRepository;
@@ -44,6 +47,7 @@ public class RecycleBinService {
             UserRepository userRepository,
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
+            OrganizerEmployeeRepository organizerEmployeeRepository,
             EventRepository eventRepository,
             VenueRepository venueRepository,
             SeatRepository seatRepository,
@@ -52,6 +56,7 @@ public class RecycleBinService {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
+        this.organizerEmployeeRepository = organizerEmployeeRepository;
         this.eventRepository = eventRepository;
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
@@ -126,6 +131,10 @@ public class RecycleBinService {
                 organizerRepository.deleteById(entityId);
                 System.out.println("Organizer permanently deleted: " + entityId);
                 break;
+            case "ORGANIZER_EMPLOYEE":
+                organizerEmployeeRepository.deleteById(entityId);
+                System.out.println("Organizer Employee permanently deleted: " + entityId);
+                break;
             case "EVENT":
                 // Delete associated seats first to avoid foreign key constraint violation
                 System.out.println("Deleting seats for event: " + entityId);
@@ -170,6 +179,9 @@ public class RecycleBinService {
                     break;
                 case "ORGANIZER":
                     restoreOrganizer(recycleBin);
+                    break;
+                case "ORGANIZER_EMPLOYEE":
+                    restoreOrganizerEmployee(recycleBin);
                     break;
                 case "EVENT":
                     restoreEvent(recycleBin);
@@ -222,6 +234,17 @@ public class RecycleBinService {
         organizerRepository.save(organizer);
         
         System.out.println("Organizer " + organizer.getEmail() + " restored from recycle bin");
+    }
+
+    private void restoreOrganizerEmployee(RecycleBin recycleBin) throws JsonProcessingException {
+        OrganizerEmployee employee = organizerEmployeeRepository.findById(recycleBin.getEntityId())
+                .orElseThrow(() -> new RuntimeException("Organizer Employee not found: " + recycleBin.getEntityId()));
+        
+        // Reactivate the employee
+        employee.setActive(true);
+        organizerEmployeeRepository.save(employee);
+        
+        System.out.println("Organizer Employee " + employee.getEmail() + " restored from recycle bin");
     }
 
     private void restoreEvent(RecycleBin recycleBin) throws JsonProcessingException {
@@ -282,6 +305,14 @@ public class RecycleBinService {
                             System.out.println("Organizer permanently deleted: " + entityId);
                         } else {
                             System.out.println("Organizer not found (already deleted): " + entityId);
+                        }
+                        break;
+                    case "ORGANIZER_EMPLOYEE":
+                        if (organizerEmployeeRepository.existsById(entityId)) {
+                            organizerEmployeeRepository.deleteById(entityId);
+                            System.out.println("Organizer Employee permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Organizer Employee not found (already deleted): " + entityId);
                         }
                         break;
                     case "EVENT":

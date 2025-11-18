@@ -144,6 +144,7 @@ const AdminLayout: React.FC = () => {
     { text: 'Users', icon: <PersonIcon />, path: '/users' },
     { text: 'Admins', icon: <PersonIcon color="error" />, path: '/admins' },
     { text: 'Organizers', icon: <PersonIcon color="warning" />, path: '/organizers' },
+    { text: 'Organizer Employees', icon: <PersonIcon color="info" />, path: '/organizer-employees' },
     { text: 'Events', icon: <EventIcon />, path: '/events' },
     { text: 'Venues', icon: <LocationOnIcon />, path: '/venues' },
     { text: 'Seat Management', icon: <EventSeatIcon />, path: '/seats' },

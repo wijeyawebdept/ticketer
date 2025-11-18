@@ -18,11 +18,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.TransactionRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.DashboardService;
@@ -35,6 +39,9 @@ import lombok.RequiredArgsConstructor;
 public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
     private final TransactionRepository transactionRepository;
@@ -75,20 +82,25 @@ public class DashboardServiceImpl implements DashboardService {
         if (authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("SUPER_ADMIN"))) {
             
-            long superAdminCount = userRepository.findAll().stream()
-                    .filter(user -> user.getRole() == User.Role.SUPER_ADMIN)
+            // Count super admins from admin table (role = SUPER_ADMIN)
+            long superAdminCount = adminRepository.findByActiveTrue().stream()
+                    .filter(admin -> admin.getRole() == Admin.Role.SUPER_ADMIN)
                     .count();
             overview.put("superAdminCount", superAdminCount);
             
-            long adminCount = userRepository.findAll().stream()
-                    .filter(user -> user.getRole() == User.Role.ADMIN)
+            // Count total admins (ADMIN + SUPER_ADMIN) from admin table
+            long adminCount = adminRepository.findByActiveTrue().stream()
+                    .filter(admin -> admin.getRole() == Admin.Role.ADMIN)
                     .count();
             overview.put("adminCount", adminCount);
             
-            long organizerCount = userRepository.findAll().stream()
-                    .filter(user -> user.getRole() == User.Role.ORGANIZER)
-                    .count();
+            // Count organizers from organizer table
+            long organizerCount = organizerRepository.findByActiveTrue().size();
             overview.put("organizerCount", organizerCount);
+            
+            // Count organizer employees from organizer_employee table
+            long organizerEmployeeCount = organizerEmployeeRepository.countByActiveTrue();
+            overview.put("organizerEmployeeCount", organizerEmployeeCount);
         }
 
         return overview;

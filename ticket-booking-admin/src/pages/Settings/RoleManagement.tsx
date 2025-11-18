@@ -67,6 +67,8 @@ const RoleManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState<RoleFormData>({
     roleName: '',
@@ -159,18 +161,31 @@ const RoleManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteRole = async (roleId: string) => {
-    if (window.confirm('Are you sure you want to delete this role?')) {
-      try {
-        await api.delete(`/api/admin/roles/${roleId}`);
-        setSuccess('Role deleted successfully');
-        fetchRoles();
-        setTimeout(() => setSuccess(null), 3000);
-      } catch (err: any) {
-        setError(err.response?.data || 'Failed to delete role');
-        setTimeout(() => setError(null), 3000);
-      }
+  const handleDeleteClick = (role: Role) => {
+    setRoleToDelete(role);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!roleToDelete) return;
+    
+    try {
+      await api.delete(`/api/admin/roles/${roleToDelete.roleId}`);
+      setSuccess('Role deleted successfully');
+      fetchRoles();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to delete role');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setOpenDeleteDialog(false);
+      setRoleToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setOpenDeleteDialog(false);
+    setRoleToDelete(null);
   };
 
   const handleToggleStatus = async (roleId: string) => {
@@ -260,8 +275,8 @@ const RoleManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={role.isSystemRole ? 'System' : 'Custom'}
-                      color={role.isSystemRole ? 'warning' : 'info'}
+                      label={(role.isSystemRole || role.roleName === 'SUPER_ADMIN') ? 'System' : 'Custom'}
+                      color={(role.isSystemRole || role.roleName === 'SUPER_ADMIN') ? 'warning' : 'info'}
                       size="small"
                     />
                   </TableCell>
@@ -270,7 +285,6 @@ const RoleManagement: React.FC = () => {
                       size="small"
                       color="primary"
                       onClick={() => handleOpenDialog(role)}
-                      disabled={role.isSystemRole}
                     >
                       <EditIcon />
                     </IconButton>
@@ -278,15 +292,14 @@ const RoleManagement: React.FC = () => {
                       size="small"
                       color="secondary"
                       onClick={() => handleToggleStatus(role.roleId)}
-                      disabled={role.isSystemRole}
                     >
                       {role.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
                     </IconButton>
                     <IconButton
                       size="small"
                       color="error"
-                      onClick={() => handleDeleteRole(role.roleId)}
-                      disabled={role.isSystemRole}
+                      onClick={() => handleDeleteClick(role)}
+                      disabled={role.isSystemRole || role.roleName === 'SUPER_ADMIN'}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -302,6 +315,11 @@ const RoleManagement: React.FC = () => {
         <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
+            {editingRole && (editingRole.isSystemRole || editingRole.roleName === 'SUPER_ADMIN') && (
+              <Typography variant="body2" color="info.main" sx={{ mb: 2, p: 1.5, bgcolor: 'info.lighter', borderRadius: 1 }}>
+                This is a system role. You can only modify permissions, not the name or description.
+              </Typography>
+            )}
             <TextField
               fullWidth
               label="Role Name"
@@ -310,6 +328,8 @@ const RoleManagement: React.FC = () => {
               onChange={handleInputChange}
               margin="normal"
               required
+              disabled={!!(editingRole && (editingRole.isSystemRole || editingRole.roleName === 'SUPER_ADMIN'))}
+              helperText={editingRole && (editingRole.isSystemRole || editingRole.roleName === 'SUPER_ADMIN') ? "Cannot modify system role name" : ""}
             />
             <TextField
               fullWidth
@@ -320,6 +340,8 @@ const RoleManagement: React.FC = () => {
               margin="normal"
               multiline
               rows={3}
+              disabled={!!(editingRole && (editingRole.isSystemRole || editingRole.roleName === 'SUPER_ADMIN'))}
+              helperText={editingRole && (editingRole.isSystemRole || editingRole.roleName === 'SUPER_ADMIN') ? "Cannot modify system role description" : ""}
             />
             <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
               Permissions
@@ -390,6 +412,52 @@ const RoleManagement: React.FC = () => {
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" color="primary">
             {editingRole ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleDeleteCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Confirm Role Deletion
+        </DialogTitle>
+        <DialogContent>
+          {roleToDelete && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                Are you sure you want to delete the following role?
+              </Typography>
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Role Name:
+                </Typography>
+                <Typography variant="body1" fontWeight="medium" gutterBottom>
+                  {roleToDelete.roleName}
+                </Typography>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
+                  Description:
+                </Typography>
+                <Typography variant="body2">
+                  {roleToDelete.roleDescription || 'No description'}
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                ⚠️ Warning: This action cannot be undone. Users with this role may lose their permissions.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

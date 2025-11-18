@@ -64,11 +64,11 @@ public class SeatController {
     }
     
     /**
-     * Block or unblock a seat (Admin only)
+     * Block or unblock a seat (Admin, Organizer only)
      * PUT /api/seats/{seatId}/block?block=true
      */
     @PutMapping("/{seatId}/block")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Void> blockSeat(@PathVariable UUID seatId, @RequestParam boolean block) {
         seatService.toggleBlock(seatId, block);
         return ResponseEntity.ok().build();
@@ -105,11 +105,11 @@ public class SeatController {
     }
     
     /**
-     * Generate seats for an event from venue layout (Admin only)
+     * Generate seats for an event from venue layout (Admin, Organizer only)
      * POST /api/seats/generate?venueId={venueId}&eventId={eventId}
      */
     @PostMapping("/generate")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Void> generateSeatsForEvent(@RequestParam UUID venueId, @RequestParam UUID eventId) {
         seatService.generateSeatsForEvent(venueId, eventId);
         return ResponseEntity.ok().build();

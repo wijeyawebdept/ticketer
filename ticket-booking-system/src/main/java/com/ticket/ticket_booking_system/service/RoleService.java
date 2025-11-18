@@ -1,16 +1,18 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ticket.ticket_booking_system.dto.CreateRoleRequest;
 import com.ticket.ticket_booking_system.dto.RoleDTO;
 import com.ticket.ticket_booking_system.entity.Role;
 import com.ticket.ticket_booking_system.repository.RoleRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -75,19 +77,25 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found with id: " + roleId));
 
-        // Prevent modification of system roles
+        // For system roles, only allow permission updates, not name/description changes
         if (role.getIsSystemRole()) {
-            throw new RuntimeException("Cannot modify system roles");
+            // Check if trying to change name or description
+            if (!role.getRoleName().equals(request.getRoleName()) || 
+                !role.getRoleDescription().equals(request.getRoleDescription())) {
+                throw new RuntimeException("Cannot modify name or description of system roles");
+            }
+        } else {
+            // For custom roles, check if new role name already exists (for other roles)
+            if (!role.getRoleName().equals(request.getRoleName()) && 
+                roleRepository.existsByRoleName(request.getRoleName())) {
+                throw new RuntimeException("Role with name '" + request.getRoleName() + "' already exists");
+            }
+            // Update name and description for custom roles
+            role.setRoleName(request.getRoleName());
+            role.setRoleDescription(request.getRoleDescription());
         }
 
-        // Check if new role name already exists (for other roles)
-        if (!role.getRoleName().equals(request.getRoleName()) && 
-            roleRepository.existsByRoleName(request.getRoleName())) {
-            throw new RuntimeException("Role with name '" + request.getRoleName() + "' already exists");
-        }
-
-        role.setRoleName(request.getRoleName());
-        role.setRoleDescription(request.getRoleDescription());
+        // Update permissions for both system and custom roles
         role.setCanManageUsers(request.isCanManageUsers());
         role.setCanManageEvents(request.isCanManageEvents());
         role.setCanManageVenues(request.isCanManageVenues());
