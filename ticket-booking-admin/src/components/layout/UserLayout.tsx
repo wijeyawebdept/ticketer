@@ -32,6 +32,7 @@ import {
   EventSeat as EventSeatIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import ConfirmDialog from '../ConfirmDialog';
@@ -85,6 +86,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 const UserLayout: React.FC = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -135,12 +137,12 @@ const UserLayout: React.FC = () => {
   };
 
   const menuItems = [
-    { text: 'Home', icon: <HomeIcon />, path: '/user/home' },
-    { text: 'Events', icon: <EventIcon />, path: '/user/events' },
-    { text: 'Book Seats', icon: <EventSeatIcon />, path: '/user/seats' },
-    { text: 'My Bookings', icon: <ReceiptIcon />, path: '/user/bookings' },
-    { text: 'Profile', icon: <AccountCircleIcon />, path: '/user/profile' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/user/settings' },
+    { text: t('navigation.dashboard'), icon: <HomeIcon />, path: '/user/home' },
+    { text: t('navigation.events'), icon: <EventIcon />, path: '/user/events' },
+    { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/user/seats' },
+    { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/user/bookings' },
+    { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/user/profile' },
+    { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/user/settings' },
   ];
 
   return (
@@ -158,7 +160,7 @@ const UserLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Ticket Booking - User Portal
+            {t('header.title')}
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "User Profile"}>

@@ -12,7 +12,13 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, Close as CloseIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  DeleteSweep as DeleteSweepIcon, 
+  Close as CloseIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import OrganizerForm from './components/OrganizerForm';
 import api from '../../services/api';
@@ -175,23 +181,28 @@ const Organizers: React.FC = () => {
         mb: 3 
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#ed6c02' }}>Organizer Management</Typography>
-        <Button
-          variant="contained"
-          color="warning"
-          startIcon={<AddIcon />}
-          onClick={handleCreateClick}
-          sx={{
-            borderRadius: 2,
-            padding: '8px 16px',
-            fontWeight: 600,
-            boxShadow: '0 4px 6px rgba(237, 108, 2, 0.2)',
-            '&:hover': {
-              boxShadow: '0 6px 8px rgba(237, 108, 2, 0.3)',
-            }
-          }}
-        >
-          Add New Organizer
-        </Button>
+        <Box>
+          <IconButton onClick={fetchOrganizers} sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="warning"
+            startIcon={<AddIcon />}
+            onClick={handleCreateClick}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(237, 108, 2, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(237, 108, 2, 0.3)',
+              }
+            }}
+          >
+            Add New Organizer
+          </Button>
+        </Box>
       </Box>
       
       <Paper 

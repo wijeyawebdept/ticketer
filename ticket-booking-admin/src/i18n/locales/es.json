@@ -1,0 +1,138 @@
+{
+  "settings": {
+    "title": "Configuración",
+    "tabs": {
+      "account": "Cuenta",
+      "notifications": "Notificaciones",
+      "security": "Seguridad",
+      "system": "Sistema",
+      "roles": "Roles"
+    },
+    "account": {
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo Electrónico",
+      "phoneNumber": "Número de Teléfono",
+      "saveChanges": "Guardar Cambios",
+      "successMessage": "Configuración de cuenta actualizada correctamente",
+      "errorMessage": "Error al actualizar la configuración de la cuenta"
+    },
+    "notifications": {
+      "emailNotifications": "Notificaciones por Correo Electrónico",
+      "emailDesc": "Recibir notificaciones sobre reservas y transacciones por correo electrónico",
+      "smsNotifications": "Notificaciones por SMS",
+      "smsDesc": "Recibir notificaciones sobre reservas y transacciones por SMS",
+      "marketingEmails": "Correos de Marketing",
+      "marketingDesc": "Recibir correos de marketing sobre próximos eventos y promociones",
+      "savePreferences": "Guardar Preferencias",
+      "successMessage": "Preferencias de notificación actualizadas correctamente",
+      "errorMessage": "Error al actualizar las preferencias de notificación"
+    },
+    "security": {
+      "changePassword": "Cambiar Contraseña",
+      "currentPassword": "Contraseña Actual",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Nueva Contraseña",
+      "updatePassword": "Actualizar Contraseña",
+      "successMessage": "Contraseña actualizada correctamente",
+      "errorMessage": "Error al actualizar la contraseña",
+      "passwordMismatch": "Las nuevas contraseñas no coinciden"
+    },
+    "system": {
+      "defaultCurrency": "Moneda Predeterminada",
+      "defaultLanguage": "Idioma Predeterminado",
+      "maintenanceMode": "Modo de Mantenimiento",
+      "maintenanceDesc": "Activar el modo de mantenimiento para deshabilitar temporalmente el sistema de reservas",
+      "saveSettings": "Guardar Configuración del Sistema",
+      "successMessage": "Configuración del sistema actualizada correctamente",
+      "errorMessage": "Error al actualizar la configuración del sistema",
+      "currencies": {
+        "usd": "USD ($)",
+        "eur": "EUR (€)",
+        "gbp": "GBP (£)",
+        "jpy": "JPY (¥)",
+        "lkr": "LKR (Rs)"
+      },
+      "languages": {
+        "en": "Inglés",
+        "es": "Español",
+        "fr": "Francés",
+        "de": "Alemán"
+      }
+    }
+  },
+  "navigation": {
+    "dashboard": "Panel de Control",
+    "users": "Usuarios",
+    "admins": "Administradores",
+    "organizers": "Organizadores",
+    "organizerEmployees": "Empleados del Organizador",
+    "events": "Eventos",
+    "venues": "Lugares",
+    "seatManagement": "Gestión de Asientos",
+    "bookings": "Reservas",
+    "recycleBin": "Papelera de Reciclaje",
+    "profile": "Perfil",
+    "settings": "Configuración"
+  },
+  "header": {
+    "title": "Panel de Administración de Reservas"
+  },
+  "dashboard": {
+    "title": "Panel de Control",
+    "welcomeMessage": "¡Bienvenido de nuevo! Esto es lo que está sucediendo hoy.",
+    "stats": {
+      "totalUsers": "Usuarios Totales",
+      "activeEvents": "Eventos Activos",
+      "monthlyBookings": "Reservas Mensuales",
+      "totalRevenue": "Ingresos Totales"
+    },
+    "superAdmin": {
+      "title": "Panel de SUPER ADMINISTRADOR",
+      "description": "Tienes acceso exclusivo a controles de todo el sistema y funciones avanzadas.",
+      "superAdmins": "Super Administradores",
+      "totalAdmins": "Administradores Totales",
+      "organizers": "Organizadores",
+      "systemHealth": "Estado del Sistema"
+    }
+  },
+  "users": {
+    "title": "Usuarios"
+  },
+  "admins": {
+    "title": "Administradores"
+  },
+  "organizers": {
+    "title": "Organizadores"
+  },
+  "organizerEmployees": {
+    "title": "Empleados del Organizador"
+  },
+  "events": {
+    "title": "Eventos"
+  },
+  "venues": {
+    "title": "Lugares"
+  },
+  "seatManagement": {
+    "title": "Gestión de Asientos"
+  },
+  "bookings": {
+    "title": "Reservas"
+  },
+  "recycleBin": {
+    "title": "Papelera de Reciclaje"
+  },
+  "profile": {
+    "title": "Perfil"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "refresh": "Actualizar",
+    "search": "Buscar"
+  }
+}

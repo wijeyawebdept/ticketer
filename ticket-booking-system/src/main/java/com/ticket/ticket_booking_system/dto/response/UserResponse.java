@@ -18,6 +18,7 @@ public class UserResponse {
     private String firstName;
     private String lastName;
     private String email;
+    private String password;
     private String phoneNumber;
     private java.time.LocalDate dateOfBirth;
     private String role;
@@ -41,6 +42,10 @@ public class UserResponse {
     
     public String getEmail() {
         return email;
+    }
+    
+    public String getPassword() {
+        return password;
     }
     
     public String getPhoneNumber() {
@@ -81,6 +86,7 @@ public class UserResponse {
         private String firstName;
         private String lastName;
         private String email;
+        private String password;
         private String phoneNumber;
         private java.time.LocalDate dateOfBirth;
         private String role;
@@ -106,6 +112,11 @@ public class UserResponse {
         
         public UserResponseBuilder email(String email) {
             this.email = email;
+            return this;
+        }
+        
+        public UserResponseBuilder password(String password) {
+            this.password = password;
             return this;
         }
         
@@ -150,6 +161,7 @@ public class UserResponse {
             response.firstName = this.firstName;
             response.lastName = this.lastName;
             response.email = this.email;
+            response.password = this.password;
             response.phoneNumber = this.phoneNumber;
             response.dateOfBirth = this.dateOfBirth;
             response.role = this.role;

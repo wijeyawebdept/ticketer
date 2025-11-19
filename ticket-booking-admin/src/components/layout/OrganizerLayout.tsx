@@ -33,6 +33,7 @@ import {
   EventSeat as EventSeatIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import ConfirmDialog from '../ConfirmDialog';
@@ -86,6 +87,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 const OrganizerLayout: React.FC = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -136,13 +138,13 @@ const OrganizerLayout: React.FC = () => {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/organizer/dashboard' },
-    { text: 'My Events', icon: <EventIcon />, path: '/organizer/events' },
-    { text: 'Venues', icon: <LocationOnIcon />, path: '/organizer/venues' },
-    { text: 'Seat Management', icon: <EventSeatIcon />, path: '/organizer/seats' },
-    { text: 'Bookings', icon: <ReceiptIcon />, path: '/organizer/bookings' },
-    { text: 'Profile', icon: <AccountCircleIcon />, path: '/organizer/profile' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/organizer/settings' },
+    { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/organizer/dashboard' },
+    { text: t('navigation.events'), icon: <EventIcon />, path: '/organizer/events' },
+    { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/organizer/venues' },
+    { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/organizer/seats' },
+    { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/organizer/bookings' },
+    { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/organizer/profile' },
+    { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/organizer/settings' },
   ];
 
   return (
@@ -160,7 +162,7 @@ const OrganizerLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Ticket Booking - Organizer Portal
+            {t('header.title')}
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Organizer Profile"}>

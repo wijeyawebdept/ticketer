@@ -1,0 +1,138 @@
+{
+  "settings": {
+    "title": "Paramètres",
+    "tabs": {
+      "account": "Compte",
+      "notifications": "Notifications",
+      "security": "Sécurité",
+      "system": "Système",
+      "roles": "Rôles"
+    },
+    "account": {
+      "firstName": "Prénom",
+      "lastName": "Nom de Famille",
+      "email": "Email",
+      "phoneNumber": "Numéro de Téléphone",
+      "saveChanges": "Enregistrer les Modifications",
+      "successMessage": "Paramètres du compte mis à jour avec succès",
+      "errorMessage": "Échec de la mise à jour des paramètres du compte"
+    },
+    "notifications": {
+      "emailNotifications": "Notifications par Email",
+      "emailDesc": "Recevoir des notifications sur les réservations et les transactions par email",
+      "smsNotifications": "Notifications par SMS",
+      "smsDesc": "Recevoir des notifications sur les réservations et les transactions par SMS",
+      "marketingEmails": "Emails Marketing",
+      "marketingDesc": "Recevoir des emails marketing sur les événements à venir et les promotions",
+      "savePreferences": "Enregistrer les Préférences",
+      "successMessage": "Préférences de notification mises à jour avec succès",
+      "errorMessage": "Échec de la mise à jour des préférences de notification"
+    },
+    "security": {
+      "changePassword": "Changer le Mot de Passe",
+      "currentPassword": "Mot de Passe Actuel",
+      "newPassword": "Nouveau Mot de Passe",
+      "confirmPassword": "Confirmer le Nouveau Mot de Passe",
+      "updatePassword": "Mettre à Jour le Mot de Passe",
+      "successMessage": "Mot de passe mis à jour avec succès",
+      "errorMessage": "Échec de la mise à jour du mot de passe",
+      "passwordMismatch": "Les nouveaux mots de passe ne correspondent pas"
+    },
+    "system": {
+      "defaultCurrency": "Devise par Défaut",
+      "defaultLanguage": "Langue par Défaut",
+      "maintenanceMode": "Mode Maintenance",
+      "maintenanceDesc": "Activer le mode maintenance pour désactiver temporairement le système de réservation",
+      "saveSettings": "Enregistrer les Paramètres Système",
+      "successMessage": "Paramètres système mis à jour avec succès",
+      "errorMessage": "Échec de la mise à jour des paramètres système",
+      "currencies": {
+        "usd": "USD ($)",
+        "eur": "EUR (€)",
+        "gbp": "GBP (£)",
+        "jpy": "JPY (¥)",
+        "lkr": "LKR (Rs)"
+      },
+      "languages": {
+        "en": "Anglais",
+        "es": "Espagnol",
+        "fr": "Français",
+        "de": "Allemand"
+      }
+    }
+  },
+  "navigation": {
+    "dashboard": "Tableau de Bord",
+    "users": "Utilisateurs",
+    "admins": "Administrateurs",
+    "organizers": "Organisateurs",
+    "organizerEmployees": "Employés de l'Organisateur",
+    "events": "Événements",
+    "venues": "Lieux",
+    "seatManagement": "Gestion des Sièges",
+    "bookings": "Réservations",
+    "recycleBin": "Corbeille",
+    "profile": "Profil",
+    "settings": "Paramètres"
+  },
+  "header": {
+    "title": "Panneau d'Administration des Réservations"
+  },
+  "dashboard": {
+    "title": "Tableau de Bord",
+    "welcomeMessage": "Bon retour! Voici ce qui se passe aujourd'hui.",
+    "stats": {
+      "totalUsers": "Utilisateurs Totaux",
+      "activeEvents": "Événements Actifs",
+      "monthlyBookings": "Réservations Mensuelles",
+      "totalRevenue": "Revenu Total"
+    },
+    "superAdmin": {
+      "title": "Tableau de Bord SUPER ADMIN",
+      "description": "Vous avez un accès exclusif aux contrôles à l'échelle du système et aux fonctionnalités avancées.",
+      "superAdmins": "Super Administrateurs",
+      "totalAdmins": "Administrateurs Totaux",
+      "organizers": "Organisateurs",
+      "systemHealth": "Santé du Système"
+    }
+  },
+  "users": {
+    "title": "Utilisateurs"
+  },
+  "admins": {
+    "title": "Administrateurs"
+  },
+  "organizers": {
+    "title": "Organisateurs"
+  },
+  "organizerEmployees": {
+    "title": "Employés de l'Organisateur"
+  },
+  "events": {
+    "title": "Événements"
+  },
+  "venues": {
+    "title": "Lieux"
+  },
+  "seatManagement": {
+    "title": "Gestion des Sièges"
+  },
+  "bookings": {
+    "title": "Réservations"
+  },
+  "recycleBin": {
+    "title": "Corbeille"
+  },
+  "profile": {
+    "title": "Profil"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "refresh": "Actualiser",
+    "search": "Rechercher"
+  }
+}

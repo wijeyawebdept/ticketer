@@ -26,7 +26,8 @@ import {
   CheckCircle as CheckCircleIcon,
   AccessTime as AccessTimeIcon,
   Cancel as CancelIcon,
-  EventAvailable as EventAvailableIcon
+  EventAvailable as EventAvailableIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { EventService } from '../../services';
@@ -274,23 +275,28 @@ const Events: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Event Management</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreateClick}
-            sx={{
-              borderRadius: 2,
-              padding: '8px 16px',
-              fontWeight: 600,
-              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-              '&:hover': {
-                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
-              }
-            }}
-          >
-            Add New Event
-          </Button>
+          <Box>
+            <IconButton onClick={fetchEvents} sx={{ mr: 1 }}>
+              <RefreshIcon />
+            </IconButton>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleCreateClick}
+              sx={{
+                borderRadius: 2,
+                padding: '8px 16px',
+                fontWeight: 600,
+                boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                '&:hover': {
+                  boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                }
+              }}
+            >
+              Add New Event
+            </Button>
+          </Box>
         </Grid>
         <Grid item xs={12}>
           <Paper 

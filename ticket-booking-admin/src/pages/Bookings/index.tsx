@@ -13,7 +13,7 @@ import {
   CircularProgress,
   Chip,
 } from '@mui/material';
-import { Visibility as VisibilityIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { Visibility as VisibilityIcon, Cancel as CancelIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { BookingService } from '../../services';
 import { Booking, BookingStatus } from '../../types';
@@ -167,6 +167,9 @@ const Bookings: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Booking Management</Typography>
+          <IconButton onClick={fetchBookings} sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
         </Grid>
         <Grid item xs={12}>
           <Paper 

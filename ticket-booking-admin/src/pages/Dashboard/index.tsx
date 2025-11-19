@@ -34,6 +34,7 @@ import {
   Security as SecurityIcon,
   AdminPanelSettings as AdminPanelSettingsIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { DashboardService } from '../../services';
 import { DashboardOverview } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -128,6 +129,7 @@ interface TrendData {
 }
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
@@ -177,10 +179,10 @@ const Dashboard: React.FC = () => {
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>
-          Dashboard
+          {t('dashboard.title')}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-          Welcome back! Here's what's happening today.
+          {t('dashboard.welcomeMessage')}
         </Typography>
       </Box>
       
@@ -188,7 +190,7 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Users"
+            title={t('dashboard.stats.totalUsers')}
             value={overview?.totalUsers || 0}
             icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#4CAF50"
@@ -197,7 +199,7 @@ const Dashboard: React.FC = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Active Events"
+            title={t('dashboard.stats.activeEvents')}
             value={overview?.activeEventsCount || 0}
             icon={<EventIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#2196F3"
@@ -206,7 +208,7 @@ const Dashboard: React.FC = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Monthly Bookings"
+            title={t('dashboard.stats.monthlyBookings')}
             value={overview?.monthBookings || 0}
             icon={<CalendarIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#FF9800"
@@ -215,7 +217,7 @@ const Dashboard: React.FC = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Revenue"
+            title={t('dashboard.stats.totalRevenue')}
             value={`LKR ${overview?.totalRevenue?.toLocaleString() || 0}`}
             icon={<MoneyIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#E91E63"
@@ -241,15 +243,15 @@ const Dashboard: React.FC = () => {
               }}
             >
               <AlertTitle sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
-              SUPER ADMIN Dashboard
+              {t('dashboard.superAdmin.title')}
               </AlertTitle>
-              You have exclusive access to system-wide controls and advanced features.
+              {t('dashboard.superAdmin.description')}
             </Alert>
           </Grid>
           
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="Super Admins"
+              title={t('dashboard.superAdmin.superAdmins')}
               value={overview?.superAdminCount || 0}
               icon={<SecurityIcon sx={{ color: 'white', fontSize: 32 }} />}
               color="#9C27B0"
@@ -257,7 +259,7 @@ const Dashboard: React.FC = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="Total Admins"
+              title={t('dashboard.superAdmin.totalAdmins')}
               value={overview?.adminCount || 0}
               icon={<AdminPanelSettingsIcon sx={{ color: 'white', fontSize: 32 }} />}
               color="#673AB7"
@@ -265,7 +267,7 @@ const Dashboard: React.FC = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="Organizers"
+              title={t('dashboard.superAdmin.organizers')}
               value={overview?.organizerCount || 0}
               icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
               color="#3F51B5"
@@ -273,8 +275,8 @@ const Dashboard: React.FC = () => {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="System Health"
-              value="Excellent"
+              title={t('dashboard.superAdmin.systemHealth')}
+              value={t('dashboard.superAdmin.systemHealth')}
               icon={<CheckCircleIcon sx={{ color: 'white', fontSize: 32 }} />}
               color="#00C853"
             />

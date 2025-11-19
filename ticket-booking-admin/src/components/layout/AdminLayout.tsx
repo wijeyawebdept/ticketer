@@ -35,6 +35,7 @@ import {
   RestoreFromTrash as RecycleBinIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import ConfirmDialog from '../ConfirmDialog';
@@ -90,6 +91,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 const AdminLayout: React.FC = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -140,18 +142,18 @@ const AdminLayout: React.FC = () => {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Users', icon: <PersonIcon />, path: '/users' },
-    { text: 'Admins', icon: <PersonIcon color="error" />, path: '/admins' },
-    { text: 'Organizers', icon: <PersonIcon color="warning" />, path: '/organizers' },
-    { text: 'Organizer Employees', icon: <PersonIcon color="info" />, path: '/organizer-employees' },
-    { text: 'Events', icon: <EventIcon />, path: '/events' },
-    { text: 'Venues', icon: <LocationOnIcon />, path: '/venues' },
-    { text: 'Seat Management', icon: <EventSeatIcon />, path: '/seats' },
-    { text: 'Bookings', icon: <ReceiptIcon />, path: '/bookings' },
-    { text: 'Recycle Bin', icon: <RecycleBinIcon />, path: '/recycle-bin' },
-    { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+    { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/dashboard' },
+    { text: t('navigation.users'), icon: <PersonIcon />, path: '/users' },
+    { text: t('navigation.admins'), icon: <PersonIcon />, path: '/admins' },
+    { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/organizers' },
+    { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/organizer-employees' },
+    { text: t('navigation.events'), icon: <EventIcon />, path: '/events' },
+    { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/venues' },
+    { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/seats' },
+    { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/bookings' },
+    { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/recycle-bin' },
+    { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/profile' },
+    { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/settings' },
   ];
 
   return (
@@ -169,7 +171,7 @@ const AdminLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Ticket Booking Admin Panel
+            {t('header.title')}
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "User Profile"}>
@@ -207,7 +209,7 @@ const AdminLayout: React.FC = () => {
                 <ListItemIcon>
                   <AccountCircleIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="Profile" sx={{ minWidth: 120 }} />
+                <ListItemText primary={t('navigation.profile')} sx={{ minWidth: 120 }} />
               </MenuItem>
               <MenuItem onClick={handleLogout}>
                 <ListItemIcon>

@@ -235,6 +235,7 @@ public class OrganizerEmployeeManagementService {
                 .firstName(employee.getFirstName())
                 .lastName(employee.getLastName())
                 .email(employee.getEmail())
+                .password(employee.getPassword())
                 .phoneNumber(employee.getPhoneNumber())
                 .dateOfBirth(employee.getDateOfBirth())
                 .profilePicture(employee.getProfilePicture())

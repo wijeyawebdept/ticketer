@@ -1,0 +1,138 @@
+{
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "account": "Konto",
+      "notifications": "Benachrichtigungen",
+      "security": "Sicherheit",
+      "system": "System",
+      "roles": "Rollen"
+    },
+    "account": {
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "phoneNumber": "Telefonnummer",
+      "saveChanges": "Änderungen Speichern",
+      "successMessage": "Kontoeinstellungen erfolgreich aktualisiert",
+      "errorMessage": "Fehler beim Aktualisieren der Kontoeinstellungen"
+    },
+    "notifications": {
+      "emailNotifications": "E-Mail-Benachrichtigungen",
+      "emailDesc": "Benachrichtigungen über Buchungen und Transaktionen per E-Mail erhalten",
+      "smsNotifications": "SMS-Benachrichtigungen",
+      "smsDesc": "Benachrichtigungen über Buchungen und Transaktionen per SMS erhalten",
+      "marketingEmails": "Marketing-E-Mails",
+      "marketingDesc": "Marketing-E-Mails über kommende Veranstaltungen und Werbeaktionen erhalten",
+      "savePreferences": "Einstellungen Speichern",
+      "successMessage": "Benachrichtigungseinstellungen erfolgreich aktualisiert",
+      "errorMessage": "Fehler beim Aktualisieren der Benachrichtigungseinstellungen"
+    },
+    "security": {
+      "changePassword": "Passwort Ändern",
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "confirmPassword": "Neues Passwort Bestätigen",
+      "updatePassword": "Passwort Aktualisieren",
+      "successMessage": "Passwort erfolgreich aktualisiert",
+      "errorMessage": "Fehler beim Aktualisieren des Passworts",
+      "passwordMismatch": "Die neuen Passwörter stimmen nicht überein"
+    },
+    "system": {
+      "defaultCurrency": "Standardwährung",
+      "defaultLanguage": "Standardsprache",
+      "maintenanceMode": "Wartungsmodus",
+      "maintenanceDesc": "Wartungsmodus aktivieren, um das Buchungssystem vorübergehend zu deaktivieren",
+      "saveSettings": "Systemeinstellungen Speichern",
+      "successMessage": "Systemeinstellungen erfolgreich aktualisiert",
+      "errorMessage": "Fehler beim Aktualisieren der Systemeinstellungen",
+      "currencies": {
+        "usd": "USD ($)",
+        "eur": "EUR (€)",
+        "gbp": "GBP (£)",
+        "jpy": "JPY (¥)",
+        "lkr": "LKR (Rs)"
+      },
+      "languages": {
+        "en": "Englisch",
+        "es": "Spanisch",
+        "fr": "Französisch",
+        "de": "Deutsch"
+      }
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Benutzer",
+    "admins": "Administratoren",
+    "organizers": "Veranstalter",
+    "organizerEmployees": "Veranstalter-Mitarbeiter",
+    "events": "Veranstaltungen",
+    "venues": "Veranstaltungsorte",
+    "seatManagement": "Sitzverwaltung",
+    "bookings": "Buchungen",
+    "recycleBin": "Papierkorb",
+    "profile": "Profil",
+    "settings": "Einstellungen"
+  },
+  "header": {
+    "title": "Ticket-Buchung Verwaltungspanel"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeMessage": "Willkommen zurück! Hier ist, was heute passiert.",
+    "stats": {
+      "totalUsers": "Benutzer Gesamt",
+      "activeEvents": "Aktive Veranstaltungen",
+      "monthlyBookings": "Monatliche Buchungen",
+      "totalRevenue": "Gesamtumsatz"
+    },
+    "superAdmin": {
+      "title": "SUPER ADMIN Dashboard",
+      "description": "Sie haben exklusiven Zugriff auf systemweite Steuerelemente und erweiterte Funktionen.",
+      "superAdmins": "Super-Administratoren",
+      "totalAdmins": "Administratoren Gesamt",
+      "organizers": "Veranstalter",
+      "systemHealth": "Systemzustand"
+    }
+  },
+  "users": {
+    "title": "Benutzer"
+  },
+  "admins": {
+    "title": "Administratoren"
+  },
+  "organizers": {
+    "title": "Veranstalter"
+  },
+  "organizerEmployees": {
+    "title": "Veranstalter-Mitarbeiter"
+  },
+  "events": {
+    "title": "Veranstaltungen"
+  },
+  "venues": {
+    "title": "Veranstaltungsorte"
+  },
+  "seatManagement": {
+    "title": "Sitzverwaltung"
+  },
+  "bookings": {
+    "title": "Buchungen"
+  },
+  "recycleBin": {
+    "title": "Papierkorb"
+  },
+  "profile": {
+    "title": "Profil"
+  },
+  "common": {
+    "loading": "Laden...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "refresh": "Aktualisieren",
+    "search": "Suchen"
+  }
+}

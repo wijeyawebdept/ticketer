@@ -14,6 +14,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import RoleManagement from './RoleManagement';
 import { UserRole } from '../../types';
@@ -42,6 +43,7 @@ const TabPanel = (props: TabPanelProps) => {
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState(0);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,6 +51,31 @@ const Settings: React.FC = () => {
 
   const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.ROLE_ADMIN ||
                   user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
+
+  // Load system settings from localStorage
+  const loadSystemSettings = () => {
+    const saved = localStorage.getItem('systemSettings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {
+          defaultCurrency: 'LKR',
+          defaultLanguage: 'en',
+          enableMaintenance: false,
+          logLevel: 'INFO',
+          themeMode: 'light'
+        };
+      }
+    }
+    return {
+      defaultCurrency: 'LKR',
+      defaultLanguage: 'en',
+      enableMaintenance: false,
+      logLevel: 'INFO',
+      themeMode: 'light'
+    };
+  };
 
   // Form states
   const [accountSettings, setAccountSettings] = useState({
@@ -70,13 +97,7 @@ const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
-    const [systemSettings, setSystemSettings] = useState({
-      defaultCurrency: 'LKR',
-      defaultLanguage: 'en',
-      enableMaintenance: false,
-      logLevel: 'INFO',
-      themeMode: 'light'
-    });
+  const [systemSettings, setSystemSettings] = useState(loadSystemSettings());
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -103,11 +124,18 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleSystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSystemSettings({
+  const handleSystemChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | React.ChangeEvent<HTMLSelectElement>) => {
+    const target = e.target as HTMLInputElement | HTMLSelectElement;
+    const newSettings = {
       ...systemSettings,
-      [e.target.name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value
-    });
+      [target.name]: 'type' in target && target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value
+    };
+    setSystemSettings(newSettings);
+    
+    // Change language immediately when language is changed
+    if (target.name === 'defaultLanguage') {
+      i18n.changeLanguage(target.value);
+    }
   };
 
   const handleSaveAccount = async () => {
@@ -117,10 +145,10 @@ const Settings: React.FC = () => {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess('Account settings updated successfully');
+      setSuccess(t('settings.account.successMessage'));
     } catch (err: unknown) {
       console.error('Error updating account settings:', err);
-      setError('Failed to update account settings');
+      setError(t('settings.account.errorMessage'));
     } finally {
       setSaving(false);
     }
@@ -133,10 +161,10 @@ const Settings: React.FC = () => {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess('Notification preferences updated successfully');
+      setSuccess(t('settings.notifications.successMessage'));
     } catch (err: unknown) {
       console.error('Error updating notification preferences:', err);
-      setError('Failed to update notification preferences');
+      setError(t('settings.notifications.errorMessage'));
     } finally {
       setSaving(false);
     }
@@ -148,14 +176,14 @@ const Settings: React.FC = () => {
     setError(null);
 
     if (securitySettings.newPassword !== securitySettings.confirmPassword) {
-      setError('New passwords do not match');
+      setError(t('settings.security.passwordMismatch'));
       setSaving(false);
       return;
     }
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess('Password updated successfully');
+      setSuccess(t('settings.security.successMessage'));
       setSecuritySettings({
         currentPassword: '',
         newPassword: '',
@@ -163,7 +191,7 @@ const Settings: React.FC = () => {
       });
     } catch (err: unknown) {
       console.error('Error updating password:', err);
-      setError('Failed to update password');
+      setError(t('settings.security.errorMessage'));
     } finally {
       setSaving(false);
     }
@@ -175,11 +203,15 @@ const Settings: React.FC = () => {
     setError(null);
 
     try {
+      // Save to localStorage
+      localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
+      // Change language
+      i18n.changeLanguage(systemSettings.defaultLanguage);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess('System settings updated successfully');
+      setSuccess(t('settings.system.successMessage'));
     } catch (err: unknown) {
       console.error('Error updating system settings:', err);
-      setError('Failed to update system settings');
+      setError(t('settings.system.errorMessage'));
     } finally {
       setSaving(false);
     }
@@ -188,7 +220,7 @@ const Settings: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
-        Settings
+        {t('settings.title')}
       </Typography>
 
       <Paper 
@@ -215,11 +247,11 @@ const Settings: React.FC = () => {
               }
             }}
           >
-            <Tab label="Account" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
-            <Tab label="Notifications" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
-            <Tab label="Security" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
-            <Tab label="System" id="settings-tab-3" aria-controls="settings-tabpanel-3" />
-            {isAdmin && <Tab label="Roles" id="settings-tab-4" aria-controls="settings-tabpanel-4" />}
+            <Tab label={t('settings.tabs.account')} id="settings-tab-0" aria-controls="settings-tabpanel-0" />
+            <Tab label={t('settings.tabs.notifications')} id="settings-tab-1" aria-controls="settings-tabpanel-1" />
+            <Tab label={t('settings.tabs.security')} id="settings-tab-2" aria-controls="settings-tabpanel-2" />
+            <Tab label={t('settings.tabs.system')} id="settings-tab-3" aria-controls="settings-tabpanel-3" />
+            {isAdmin && <Tab label={t('settings.tabs.roles')} id="settings-tab-4" aria-controls="settings-tabpanel-4" />}
           </Tabs>
         </Box>
 
@@ -231,7 +263,7 @@ const Settings: React.FC = () => {
 
             <Grid item xs={12} sm={6}>
               <TextField
-                label="First Name"
+                label={t('settings.account.firstName')}
                 name="firstName"
                 value={accountSettings.firstName}
                 onChange={handleAccountChange}
@@ -243,7 +275,7 @@ const Settings: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Last Name"
+                label={t('settings.account.lastName')}
                 name="lastName"
                 value={accountSettings.lastName}
                 onChange={handleAccountChange}
@@ -255,7 +287,7 @@ const Settings: React.FC = () => {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Email"
+                label={t('settings.account.email')}
                 name="email"
                 type="email"
                 value={accountSettings.email}
@@ -268,7 +300,7 @@ const Settings: React.FC = () => {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Phone Number"
+                label={t('settings.account.phoneNumber')}
                 name="phoneNumber"
                 value={accountSettings.phoneNumber}
                 onChange={handleAccountChange}
@@ -294,7 +326,7 @@ const Settings: React.FC = () => {
                   }
                 }}
               >
-                {saving ? <CircularProgress size={24} /> : 'Save Changes'}
+                {saving ? <CircularProgress size={24} /> : t('settings.account.saveChanges')}
               </Button>
             </Grid>
           </Grid>
@@ -316,10 +348,10 @@ const Settings: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="Email Notifications"
+                label={t('settings.notifications.emailNotifications')}
               />
               <Typography variant="body2" color="textSecondary">
-                Receive notifications about bookings and transactions via email
+                {t('settings.notifications.emailDesc')}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -332,10 +364,10 @@ const Settings: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="SMS Notifications"
+                label={t('settings.notifications.smsNotifications')}
               />
               <Typography variant="body2" color="textSecondary">
-                Receive notifications about bookings and transactions via SMS
+                {t('settings.notifications.smsDesc')}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -348,10 +380,10 @@ const Settings: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="Marketing Emails"
+                label={t('settings.notifications.marketingEmails')}
               />
               <Typography variant="body2" color="textSecondary">
-                Receive marketing emails about upcoming events and promotions
+                {t('settings.notifications.marketingDesc')}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -371,7 +403,7 @@ const Settings: React.FC = () => {
                   }
                 }}
               >
-                {saving ? <CircularProgress size={24} /> : 'Save Preferences'}
+                {saving ? <CircularProgress size={24} /> : t('settings.notifications.savePreferences')}
               </Button>
             </Grid>
           </Grid>
@@ -385,12 +417,12 @@ const Settings: React.FC = () => {
 
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
-                Change Password
+                {t('settings.security.changePassword')}
               </Typography>
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Current Password"
+                label={t('settings.security.currentPassword')}
                 name="currentPassword"
                 type="password"
                 value={securitySettings.currentPassword}
@@ -403,7 +435,7 @@ const Settings: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="New Password"
+                label={t('settings.security.newPassword')}
                 name="newPassword"
                 type="password"
                 value={securitySettings.newPassword}
@@ -416,7 +448,7 @@ const Settings: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Confirm New Password"
+                label={t('settings.security.confirmPassword')}
                 name="confirmPassword"
                 type="password"
                 value={securitySettings.confirmPassword}
@@ -443,7 +475,7 @@ const Settings: React.FC = () => {
                   }
                 }}
               >
-                {saving ? <CircularProgress size={24} /> : 'Update Password'}
+                {saving ? <CircularProgress size={24} /> : t('settings.security.updatePassword')}
               </Button>
             </Grid>
           </Grid>
@@ -458,7 +490,7 @@ const Settings: React.FC = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 select
-                label="Default Currency"
+                label={t('settings.system.defaultCurrency')}
                 name="defaultCurrency"
                 value={systemSettings.defaultCurrency}
                 onChange={handleSystemChange}
@@ -473,17 +505,17 @@ const Settings: React.FC = () => {
                 }}
                 sx={{ borderRadius: 2 }}
               >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="JPY">JPY (¥)</option>
-                <option value="LKR">LKR (Rs)</option>
+                <option value="USD">{t('settings.system.currencies.usd')}</option>
+                <option value="EUR">{t('settings.system.currencies.eur')}</option>
+                <option value="GBP">{t('settings.system.currencies.gbp')}</option>
+                <option value="JPY">{t('settings.system.currencies.jpy')}</option>
+                <option value="LKR">{t('settings.system.currencies.lkr')}</option>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 select
-                label="Default Language"
+                label={t('settings.system.defaultLanguage')}
                 name="defaultLanguage"
                 value={systemSettings.defaultLanguage}
                 onChange={handleSystemChange}
@@ -498,34 +530,10 @@ const Settings: React.FC = () => {
                 }}
                 sx={{ borderRadius: 2 }}
               >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                label="Log Level"
-                name="logLevel"
-                value={systemSettings.logLevel}
-                onChange={handleSystemChange}
-                fullWidth
-                variant="outlined"
-                margin="normal"
-                SelectProps={{
-                  native: true,
-                  inputProps: {
-                    'aria-label': 'Log Level',
-                  },
-                }}
-                sx={{ borderRadius: 2 }}
-              >
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARN">WARN</option>
-                <option value="ERROR">ERROR</option>
+                <option value="en">{t('settings.system.languages.en')}</option>
+                <option value="es">{t('settings.system.languages.es')}</option>
+                <option value="fr">{t('settings.system.languages.fr')}</option>
+                <option value="de">{t('settings.system.languages.de')}</option>
               </TextField>
             </Grid>
             <Grid item xs={12}>
@@ -538,26 +546,10 @@ const Settings: React.FC = () => {
                     color="primary"
                   />
                 }
-                label="Maintenance Mode"
+                label={t('settings.system.maintenanceMode')}
               />
               <Typography variant="body2" color="textSecondary">
-                Enable maintenance mode to temporarily disable the booking system
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Switch 
-                    checked={systemSettings.themeMode === 'dark'}
-                    onChange={handleSystemChange}
-                    name="themeMode"
-                    color="primary"
-                  />
-                }
-                label="Dark Mode"
-              />
-              <Typography variant="body2" color="textSecondary">
-                Enable dark mode for the application interface
+                {t('settings.system.maintenanceDesc')}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -577,7 +569,7 @@ const Settings: React.FC = () => {
                   }
                 }}
               >
-                {saving ? <CircularProgress size={24} /> : 'Save System Settings'}
+                {saving ? <CircularProgress size={24} /> : t('settings.system.saveSettings')}
               </Button>
             </Grid>
           </Grid>

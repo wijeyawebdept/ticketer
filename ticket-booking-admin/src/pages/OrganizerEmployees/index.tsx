@@ -18,7 +18,12 @@ import {
   InputLabel
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import api from '../../services/api';
 
 interface OrganizerEmployee {

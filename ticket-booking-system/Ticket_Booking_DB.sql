@@ -189,6 +189,7 @@ select * from roles;
 select * from admins;
 select * from recycle_bin;
 select * from organizers;
+select * from organizer_employees;
 
 -- Check what columns exist in the tables
 SELECT column_name 

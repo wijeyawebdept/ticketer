@@ -12,7 +12,13 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, Close as CloseIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  DeleteSweep as DeleteSweepIcon, 
+  Close as CloseIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import AdminForm from './components/AdminForm';
 import { useAuth } from '../../context/AuthContext';
@@ -194,23 +200,28 @@ const Admins: React.FC = () => {
         mb: 3 
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#d32f2f' }}>Admin Management</Typography>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<AddIcon />}
-          onClick={handleCreateClick}
-          sx={{
-            borderRadius: 2,
-            padding: '8px 16px',
-            fontWeight: 600,
-            boxShadow: '0 4px 6px rgba(211, 47, 47, 0.2)',
-            '&:hover': {
-              boxShadow: '0 6px 8px rgba(211, 47, 47, 0.3)',
-            }
-          }}
-        >
-          Add New Admin
-        </Button>
+        <Box>
+          <IconButton onClick={fetchAdmins} sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<AddIcon />}
+            onClick={handleCreateClick}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(211, 47, 47, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(211, 47, 47, 0.3)',
+              }
+            }}
+          >
+            Add New Admin
+          </Button>
+        </Box>
       </Box>
       
       <Paper 

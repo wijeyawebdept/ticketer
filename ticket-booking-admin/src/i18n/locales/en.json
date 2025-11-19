@@ -1,0 +1,138 @@
+{
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "account": "Account",
+      "notifications": "Notifications",
+      "security": "Security",
+      "system": "System",
+      "roles": "Roles"
+    },
+    "account": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "saveChanges": "Save Changes",
+      "successMessage": "Account settings updated successfully",
+      "errorMessage": "Failed to update account settings"
+    },
+    "notifications": {
+      "emailNotifications": "Email Notifications",
+      "emailDesc": "Receive notifications about bookings and transactions via email",
+      "smsNotifications": "SMS Notifications",
+      "smsDesc": "Receive notifications about bookings and transactions via SMS",
+      "marketingEmails": "Marketing Emails",
+      "marketingDesc": "Receive marketing emails about upcoming events and promotions",
+      "savePreferences": "Save Preferences",
+      "successMessage": "Notification preferences updated successfully",
+      "errorMessage": "Failed to update notification preferences"
+    },
+    "security": {
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "updatePassword": "Update Password",
+      "successMessage": "Password updated successfully",
+      "errorMessage": "Failed to update password",
+      "passwordMismatch": "New passwords do not match"
+    },
+    "system": {
+      "defaultCurrency": "Default Currency",
+      "defaultLanguage": "Default Language",
+      "maintenanceMode": "Maintenance Mode",
+      "maintenanceDesc": "Enable maintenance mode to temporarily disable the booking system",
+      "saveSettings": "Save System Settings",
+      "successMessage": "System settings updated successfully",
+      "errorMessage": "Failed to update system settings",
+      "currencies": {
+        "usd": "USD ($)",
+        "eur": "EUR (€)",
+        "gbp": "GBP (£)",
+        "jpy": "JPY (¥)",
+        "lkr": "LKR (Rs)"
+      },
+      "languages": {
+        "en": "English",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German"
+      }
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "admins": "Admins",
+    "organizers": "Organizers",
+    "organizerEmployees": "Organizer Employees",
+    "events": "Events",
+    "venues": "Venues",
+    "seatManagement": "Seat Management",
+    "bookings": "Bookings",
+    "recycleBin": "Recycle Bin",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "header": {
+    "title": "Ticket Booking Admin Panel"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeMessage": "Welcome back! Here's what's happening today.",
+    "stats": {
+      "totalUsers": "Total Users",
+      "activeEvents": "Active Events",
+      "monthlyBookings": "Monthly Bookings",
+      "totalRevenue": "Total Revenue"
+    },
+    "superAdmin": {
+      "title": "SUPER ADMIN Dashboard",
+      "description": "You have exclusive access to system-wide controls and advanced features.",
+      "superAdmins": "Super Admins",
+      "totalAdmins": "Total Admins",
+      "organizers": "Organizers",
+      "systemHealth": "System Health"
+    }
+  },
+  "users": {
+    "title": "Users"
+  },
+  "admins": {
+    "title": "Admins"
+  },
+  "organizers": {
+    "title": "Organizers"
+  },
+  "organizerEmployees": {
+    "title": "Organizer Employees"
+  },
+  "events": {
+    "title": "Events"
+  },
+  "venues": {
+    "title": "Venues"
+  },
+  "seatManagement": {
+    "title": "Seat Management"
+  },
+  "bookings": {
+    "title": "Bookings"
+  },
+  "recycleBin": {
+    "title": "Recycle Bin"
+  },
+  "profile": {
+    "title": "Profile"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "search": "Search"
+  }
+}

@@ -12,7 +12,13 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, Close as CloseIcon } from '@mui/icons-material';
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  DeleteSweep as DeleteSweepIcon, 
+  Close as CloseIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { UserService } from '../../services';
 import { User, UserRole } from '../../types';
@@ -126,6 +132,7 @@ const Users: React.FC = () => {
     { field: 'firstName', headerName: 'First Name', flex: 1 },
     { field: 'lastName', headerName: 'Last Name', flex: 1 },
     { field: 'email', headerName: 'Email', flex: 1 },
+    { field: 'phoneNumber', headerName: 'Phone Number', flex: 1 },
     { 
       field: 'role', 
       headerName: 'Role', 
@@ -189,11 +196,15 @@ const Users: React.FC = () => {
         mb: 3 
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>User Management</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleCreateClick}
+        <Box>
+          <IconButton onClick={fetchUsers} sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleCreateClick}
           sx={{
             borderRadius: 2,
             padding: '8px 16px',
@@ -203,9 +214,10 @@ const Users: React.FC = () => {
               boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
             }
           }}
-        >
-          Add New User
-        </Button>
+          >
+            Add New User
+          </Button>
+        </Box>
       </Box>
       
       <Paper 

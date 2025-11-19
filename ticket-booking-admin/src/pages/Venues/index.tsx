@@ -11,7 +11,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
@@ -284,14 +284,19 @@ const VenuesPage = () => {
     <Box p={3}>
       <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
         <Typography variant="h5">Venue Management</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenForm(true)}
-        >
-          Add New Venue
-        </Button>
+        <Box>
+          <IconButton onClick={fetchVenues} sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenForm(true)}
+          >
+            Add New Venue
+          </Button>
+        </Box>
       </Box>
 
       <Paper>
