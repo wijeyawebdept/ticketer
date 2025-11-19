@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './context/AuthContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
 import AdminLayout from './components/layout/AdminLayout';
@@ -26,6 +27,7 @@ import Profile from './pages/Profile';
 import SeatManagement from './pages/SeatManagement';
 import IntegrationTest from './pages/IntegrationTest';
 import RecycleBin from './pages/RecycleBin';
+import Employees from './pages/Employees';
 import { UserRole } from './types';
 
 // Lazy-loaded components
@@ -158,7 +160,8 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
+        <CurrencyProvider>
+          <Router>
           <Routes>
             {/* Public authentication routes */}
             <Route path="/login" element={<Login />} />
@@ -205,6 +208,8 @@ function App() {
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
+                <Route path="/organizer/employees" element={<Employees />} />
+                <Route path="/organizer/recycle-bin" element={<RecycleBin />} />
                 <Route path="/organizer/profile" element={<Profile />} />
                 <Route path="/organizer/settings" element={<Settings />} />
               </Route>
@@ -228,6 +233,7 @@ function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
+        </CurrencyProvider>
       </AuthProvider>
       
       {/* Toast Container for notifications */}

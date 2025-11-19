@@ -38,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 import { DashboardService } from '../../services';
 import { DashboardOverview } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface StatCardProps {
   title: string;
@@ -130,12 +131,16 @@ interface TrendData {
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
+  const { formatCurrency, currency } = useCurrency();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
+  
+  // Check if user is an organizer
+  const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER';
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -188,16 +193,19 @@ const Dashboard: React.FC = () => {
       
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title={t('dashboard.stats.totalUsers')}
-            value={overview?.totalUsers || 0}
-            icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
-            color="#4CAF50"
-            trend={trendData?.userGrowthTrend}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        {/* Hide total users for organizers */}
+        {!isOrganizer && (
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title={t('dashboard.stats.totalUsers')}
+              value={overview?.totalUsers || 0}
+              icon={<PeopleIcon sx={{ color: 'white', fontSize: 32 }} />}
+              color="#4CAF50"
+              trend={trendData?.userGrowthTrend}
+            />
+          </Grid>
+        )}
+        <Grid item xs={12} sm={6} md={isOrganizer ? 4 : 3}>
           <StatCard
             title={t('dashboard.stats.activeEvents')}
             value={overview?.activeEventsCount || 0}
@@ -206,7 +214,7 @@ const Dashboard: React.FC = () => {
             trend={trendData?.eventTrend}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={isOrganizer ? 4 : 3}>
           <StatCard
             title={t('dashboard.stats.monthlyBookings')}
             value={overview?.monthBookings || 0}
@@ -215,10 +223,10 @@ const Dashboard: React.FC = () => {
             trend={trendData?.bookingTrend}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={isOrganizer ? 4 : 3}>
           <StatCard
             title={t('dashboard.stats.totalRevenue')}
-            value={`LKR ${overview?.totalRevenue?.toLocaleString() || 0}`}
+            value={formatCurrency(overview?.totalRevenue || 0)}
             icon={<MoneyIcon sx={{ color: 'white', fontSize: 32 }} />}
             color="#E91E63"
             trend={trendData?.revenueTrend}
@@ -348,7 +356,7 @@ const Dashboard: React.FC = () => {
                         color={transaction.status === 'COMPLETED' ? 'success.main' : 'warning.main'}
                         sx={{ fontWeight: 700 }}
                       >
-                        LKR {transaction.amount?.toLocaleString() || 0}
+                        {formatCurrency(transaction.amount || 0)}
                       </Typography>
                     </ListItemSecondaryAction>
                   </ListItem>

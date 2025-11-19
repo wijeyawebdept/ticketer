@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 
@@ -40,5 +41,5 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     Page<Event> findAllWithVenueAndOrganizerAndTicketCategories(Pageable pageable);
 
     @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer AND e.isDeleted = false")
-    Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(User organizer, Pageable pageable);
+    Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(Organizer organizer, Pageable pageable);
 }

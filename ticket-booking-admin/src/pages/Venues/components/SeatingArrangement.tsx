@@ -213,7 +213,7 @@ const SeatingArrangement: React.FC = () => {
     const loadVenueData = async () => {
       try {
         setLoading(true);
-        const venueData = await VenueService.getVenueById(id || '', isAdmin);
+        const venueData = await VenueService.getVenueById(id || '');
         setVenue(venueData);
         
         // Initialize seating layout from venue data or create default
@@ -236,7 +236,7 @@ const SeatingArrangement: React.FC = () => {
     if (id) {
       loadVenueData();
     }
-  }, [id, isAdmin]);
+  }, [id]);
 
   // Handle seat click
   const handleSeatClick = (seat: Seat) => {
@@ -427,7 +427,7 @@ const SeatingArrangement: React.FC = () => {
       // Log the data being sent for debugging
       console.log('Sending seating layout data:', seatingLayoutData);
       
-      await VenueService.updateSeatingArrangement(id || '', seatingLayoutData, isAdmin);
+      await VenueService.updateSeatingArrangement(id || '', seatingLayoutData);
       
       // Send WebSocket notification about layout update
       // This would be implemented in a real WebSocket service

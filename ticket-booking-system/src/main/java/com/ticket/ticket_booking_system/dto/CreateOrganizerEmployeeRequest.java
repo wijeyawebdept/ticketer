@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,7 +31,8 @@ public class CreateOrganizerEmployeeRequest {
     private String phoneNumber;
     private LocalDate dateOfBirth;
     
-    @NotNull(message = "Organizer ID is required")
+    // Organizer ID will be set by the controller from authentication
+    // Not validated here as it's not part of the request body
     private UUID organizerId;
     
     private String employeePosition;

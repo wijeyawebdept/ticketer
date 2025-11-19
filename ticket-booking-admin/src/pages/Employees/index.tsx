@@ -1,0 +1,418 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Chip,
+  Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Grid,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon,
+  RestoreFromTrash as RestoreIcon,
+} from '@mui/icons-material';
+import EmployeeService, { OrganizerEmployee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../../services/employee.service';
+import ConfirmationDialog from '../../components/ConfirmationDialog';
+
+const Employees: React.FC = () => {
+  const [employees, setEmployees] = useState<OrganizerEmployee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [formData, setFormData] = useState<CreateEmployeeRequest>({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    dateOfBirth: '',
+    employeePosition: '',
+    department: '',
+  });
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [currentPage]);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await EmployeeService.getAllEmployees(currentPage, 10);
+      setEmployees(response.content);
+      setTotalPages(response.totalPages);
+    } catch (err: any) {
+      console.error('Error fetching employees:', err);
+      setError(err.response?.data?.message || 'Failed to fetch employees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setEditMode(false);
+    setCurrentEmployeeId(null);
+    setFormData({
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
+      dateOfBirth: '',
+      employeePosition: '',
+      department: '',
+    });
+    setOpenDialog(true);
+  };
+
+  const handleOpenEditDialog = (employee: OrganizerEmployee) => {
+    setEditMode(true);
+    setCurrentEmployeeId(employee.employeeId);
+    setFormData({
+      email: employee.email,
+      password: '', // Password not needed for edit
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      phoneNumber: employee.phoneNumber || '',
+      dateOfBirth: employee.dateOfBirth || '',
+      employeePosition: employee.employeePosition || '',
+      department: employee.department || '',
+    });
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleCreateEmployee = async () => {
+    try {
+      setError(null);
+      if (editMode && currentEmployeeId) {
+        // Update existing employee
+        const updateData: UpdateEmployeeRequest = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+          dateOfBirth: formData.dateOfBirth,
+          employeePosition: formData.employeePosition,
+        };
+        await EmployeeService.updateEmployee(currentEmployeeId, updateData);
+        setSuccess('Employee updated successfully');
+      } else {
+        // Create new employee
+        await EmployeeService.createEmployee(formData);
+        setSuccess('Employee created successfully');
+      }
+      setOpenDialog(false);
+      fetchEmployees();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error saving employee:', err);
+      setError(err.response?.data?.message || 'Failed to save employee');
+    }
+  };
+
+  const handleOpenDeleteDialog = (employee: OrganizerEmployee) => {
+    setEmployeeToDelete({
+      id: employee.employeeId,
+      name: `${employee.firstName} ${employee.lastName}`
+    });
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+
+    try {
+      setError(null);
+      await EmployeeService.deleteEmployee(employeeToDelete.id);
+      setSuccess('Employee moved to recycle bin successfully');
+      setOpenDeleteDialog(false);
+      setEmployeeToDelete(null);
+      fetchEmployees();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error deleting employee:', err);
+      setError(err.response?.data?.message || 'Failed to delete employee');
+      setOpenDeleteDialog(false);
+    }
+  };
+
+  const handleRestoreEmployee = async (employeeId: string) => {
+    try {
+      setError(null);
+      await EmployeeService.restoreEmployee(employeeId);
+      setSuccess('Employee restored successfully');
+      fetchEmployees();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error restoring employee:', err);
+      setError(err.response?.data?.message || 'Failed to restore employee');
+    }
+  };
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1" fontWeight="bold">
+          Organizer Employees
+        </Typography>
+        <Box>
+          <IconButton onClick={fetchEmployees} color="primary" sx={{ mr: 1 }}>
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenDialog}
+          >
+            Add Employee
+          </Button>
+        </Box>
+      </Box>
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>
+          {success}
+        </Alert>
+      )}
+
+      <Paper elevation={2}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell><strong>Name</strong></TableCell>
+                <TableCell><strong>Email</strong></TableCell>
+                <TableCell><strong>Phone</strong></TableCell>
+                <TableCell><strong>Position</strong></TableCell>
+                <TableCell><strong>Department</strong></TableCell>
+                <TableCell><strong>Status</strong></TableCell>
+                <TableCell align="center"><strong>Actions</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : employees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No employees found
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employees.map((employee) => (
+                  <TableRow key={employee.employeeId} hover>
+                    <TableCell>
+                      {employee.firstName} {employee.lastName}
+                    </TableCell>
+                    <TableCell>{employee.email}</TableCell>
+                    <TableCell>{employee.phoneNumber || '-'}</TableCell>
+                    <TableCell>{employee.employeePosition || '-'}</TableCell>
+                    <TableCell>{employee.department || '-'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={employee.active ? 'Active' : 'Inactive'}
+                        color={employee.active ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {employee.active ? (
+                        <>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenEditDialog(employee)}
+                            title="Edit"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleOpenDeleteDialog(employee)}
+                            title="Delete"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleRestoreEmployee(employee.employeeId)}
+                          title="Restore"
+                        >
+                          <RestoreIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* Create Employee Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>{editMode ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="First Name"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+              />
+            </Grid>
+            {!editMode && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+            )}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                name="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={handleInputChange}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Position"
+                name="employeePosition"
+                value={formData.employeePosition}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Department"
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCreateEmployee} variant="contained" color="primary">
+            {editMode ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={openDeleteDialog}
+        title="Move Employee to Recycle Bin"
+        message={`Are you sure you want to move ${employeeToDelete?.name || 'this employee'} to the recycle bin? This employee will be deactivated and can be restored later from the recycle bin.`}
+        confirmText="Move to Recycle Bin"
+        cancelText="Cancel"
+        variant="warning"
+        onConfirm={handleDeleteEmployee}
+        onCancel={() => {
+          setOpenDeleteDialog(false);
+          setEmployeeToDelete(null);
+        }}
+      />
+    </Box>
+  );
+};
+
+export default Employees;

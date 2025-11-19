@@ -1,42 +1,58 @@
 import api from './api';
-import { Venue } from '../types';
+import { Venue, UserRole } from '../types';
+
+// Helper function to get the base path based on user role
+const getBasePath = (): string => {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.role === UserRole.ORGANIZER || user.role === 'ROLE_ORGANIZER') {
+        return '/api/organizer';
+      }
+    } catch (e) {
+      console.error('Error parsing user role:', e);
+    }
+  }
+  return '/api/admin';
+};
 
 export const VenueService = {
   // Get all venues
-  getAllVenues: async (isAdmin: boolean = true): Promise<Venue[]> => {
-    const endpoint = isAdmin ? '/api/admin/venues' : '/api/organizer/venues';
-    const response = await api.get(endpoint);
+  getAllVenues: async (): Promise<Venue[]> => {
+    const basePath = getBasePath();
+    const response = await api.get(`${basePath}/venues`);
     return response.data as Venue[];
   },
 
   // Get venue by ID
-  getVenueById: async (id: string, isAdmin: boolean = true): Promise<Venue> => {
-    const endpoint = isAdmin ? `/api/admin/venues/${id}` : `/api/organizer/venues/${id}`;
-    const response = await api.get(endpoint);
+  getVenueById: async (id: string): Promise<Venue> => {
+    const basePath = getBasePath();
+    const response = await api.get(`${basePath}/venues/${id}`);
     return response.data as Venue;
   },
 
   // Create new venue
-  createVenue: async (venueData: Partial<Venue>, isAdmin: boolean = true): Promise<Venue> => {
-    const endpoint = isAdmin ? '/api/admin/venues' : '/api/organizer/venues';
-    const response = await api.post(endpoint, venueData);
+  createVenue: async (venueData: Partial<Venue>): Promise<Venue> => {
+    const basePath = getBasePath();
+    const response = await api.post(`${basePath}/venues`, venueData);
     return response.data as Venue;
   },
 
   // Update venue
-  updateVenue: async (id: string, venueData: Partial<Venue>, isAdmin: boolean = true): Promise<Venue> => {
-    const endpoint = isAdmin ? `/api/admin/venues/${id}` : `/api/organizer/venues/${id}`;
-    const response = await api.put(endpoint, venueData);
+  updateVenue: async (id: string, venueData: Partial<Venue>): Promise<Venue> => {
+    const basePath = getBasePath();
+    const response = await api.put(`${basePath}/venues/${id}`, venueData);
     return response.data as Venue;
   },
 
   // Delete venue
-  deleteVenue: async (id: string, isAdmin: boolean = true): Promise<void> => {
-    const endpoint = isAdmin ? `/api/admin/venues/${id}` : `/api/organizer/venues/${id}`;
+  deleteVenue: async (id: string): Promise<void> => {
+    const basePath = getBasePath();
     
     try {
-      console.log('Deleting venue at endpoint:', endpoint);
-      await api.delete(endpoint);
+      console.log('Deleting venue at endpoint:', `${basePath}/venues/${id}`);
+      await api.delete(`${basePath}/venues/${id}`);
     } catch (error: any) {
       console.error('VenueService.deleteVenue error:', error);
       
@@ -54,17 +70,17 @@ export const VenueService = {
   },
 
   // Get seating arrangement for a venue
-  getSeatingArrangement: async (venueId: string, isAdmin: boolean = true): Promise<any> => {
-    const endpoint = isAdmin ? `/api/admin/venues/${venueId}/seating` : `/api/organizer/venues/${venueId}/seating`;
-    const response = await api.get(endpoint);
+  getSeatingArrangement: async (venueId: string): Promise<any> => {
+    const basePath = getBasePath();
+    const response = await api.get(`${basePath}/venues/${venueId}/seating`);
     return response.data;
   },
 
   // Update seating arrangement for a venue
-  updateSeatingArrangement: async (venueId: string, seatingLayout: any, isAdmin: boolean = true): Promise<any> => {
-    const endpoint = isAdmin ? `/api/admin/venues/${venueId}/seating` : `/api/organizer/venues/${venueId}/seating`;
+  updateSeatingArrangement: async (venueId: string, seatingLayout: any): Promise<any> => {
+    const basePath = getBasePath();
     // Ensure we're sending only the seating layout data, not the entire venue object
-    const response = await api.put(endpoint, seatingLayout);
+    const response = await api.put(`${basePath}/venues/${venueId}/seating`, seatingLayout);
     return response.data;
   }
 };

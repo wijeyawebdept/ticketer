@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useCurrency } from '../../context/CurrencyContext';
 import RoleManagement from './RoleManagement';
 import { UserRole } from '../../types';
 
@@ -44,6 +45,7 @@ const TabPanel = (props: TabPanelProps) => {
 const Settings: React.FC = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
+  const { setCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useState(0);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -135,6 +137,11 @@ const Settings: React.FC = () => {
     // Change language immediately when language is changed
     if (target.name === 'defaultLanguage') {
       i18n.changeLanguage(target.value);
+    }
+    
+    // Change currency immediately when currency is changed
+    if (target.name === 'defaultCurrency') {
+      setCurrency(target.value);
     }
   };
 

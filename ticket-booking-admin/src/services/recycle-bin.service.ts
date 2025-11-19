@@ -21,10 +21,29 @@ export interface SoftDeleteRequest {
 
 class RecycleBinService {
   /**
+   * Get the base path based on user role
+   */
+  private getBasePath(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'ORGANIZER' || user.role === 'ROLE_ORGANIZER') {
+          return '/api/organizer';
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return '/api/admin';
+  }
+
+  /**
    * Move an item to the recycle bin (soft delete)
    */
   async moveToRecycleBin(request: SoftDeleteRequest): Promise<RecycleBinItem> {
-    const response = await api.post<RecycleBinItem>('/admin/recycle-bin', request);
+    const basePath = this.getBasePath();
+    const response = await api.post<RecycleBinItem>(`${basePath}/recycle-bin`, request);
     return response.data;
   }
 
@@ -32,7 +51,8 @@ class RecycleBinService {
    * Get all items from the recycle bin
    */
   async getAllRecycleBinItems(): Promise<RecycleBinItem[]> {
-    const response = await api.get<RecycleBinItem[]>('/admin/recycle-bin');
+    const basePath = this.getBasePath();
+    const response = await api.get<RecycleBinItem[]>(`${basePath}/recycle-bin`);
     return response.data;
   }
 
@@ -40,7 +60,8 @@ class RecycleBinService {
    * Get recycle bin items by entity type
    */
   async getRecycleBinItemsByType(entityType: 'USER' | 'EVENT' | 'VENUE'): Promise<RecycleBinItem[]> {
-    const response = await api.get<RecycleBinItem[]>(`/admin/recycle-bin/type/${entityType}`);
+    const basePath = this.getBasePath();
+    const response = await api.get<RecycleBinItem[]>(`${basePath}/recycle-bin/type/${entityType}`);
     return response.data;
   }
 
@@ -48,40 +69,50 @@ class RecycleBinService {
    * Get a single recycle bin item by ID
    */
   async getRecycleBinItemById(recycleId: string): Promise<RecycleBinItem> {
-    const response = await api.get<RecycleBinItem>(`/admin/recycle-bin/${recycleId}`);
+    const basePath = this.getBasePath();
+    const response = await api.get<RecycleBinItem>(`${basePath}/recycle-bin/${recycleId}`);
     return response.data;
   }
 
   /**
-   * Permanently delete an item from the recycle bin (requires SUPER_ADMIN role)
+   * Restore an item from the recycle bin
+   */
+  async restore(recycleId: string): Promise<RecycleBinItem> {
+    const basePath = this.getBasePath();
+    const response = await api.post<RecycleBinItem>(`${basePath}/recycle-bin/${recycleId}/restore`);
+    return response.data;
+  }
+
+  /**
+   * Permanently delete an item from the recycle bin
+   * For admins: requires SUPER_ADMIN role
+   * For organizers: deletes their own items
    */
   async permanentlyDelete(recycleId: string, reason?: string): Promise<void> {
-    await api.delete(`/admin/recycle-bin/${recycleId}`, {
+    const basePath = this.getBasePath();
+    await api.delete(`${basePath}/recycle-bin/${recycleId}`, {
       params: { reason },
     });
   }
 
   /**
-   * Empty the entire recycle bin (requires SUPER_ADMIN role)
+   * Empty the entire recycle bin
+   * For admins: requires SUPER_ADMIN role
+   * For organizers: empties their own items only
    */
   async emptyRecycleBin(): Promise<void> {
-    await api.delete('/admin/recycle-bin/empty');
+    const basePath = this.getBasePath();
+    await api.delete(`${basePath}/recycle-bin/empty`);
   }
 
   /**
-   * Empty recycle bin for a specific entity type (requires SUPER_ADMIN role)
+   * Empty recycle bin for a specific entity type
+   * For admins: requires SUPER_ADMIN role
+   * For organizers: empties their own items of this type only
    */
   async emptyRecycleBinByType(entityType: 'USER' | 'EVENT' | 'VENUE'): Promise<void> {
-    await api.delete(`/admin/recycle-bin/empty/${entityType}`);
-  }
-
-  /**
-   * Restore an item from the recycle bin (future feature)
-   * This would require additional backend implementation
-   */
-  async restore(recycleId: string): Promise<void> {
-    // TODO: Implement restore endpoint on backend
-    throw new Error('Restore functionality not yet implemented');
+    const basePath = this.getBasePath();
+    await api.delete(`${basePath}/recycle-bin/empty/type/${entityType}`);
   }
 }
 

@@ -21,7 +21,6 @@ interface VenueFormProps {
   venue?: Venue | null;
   onClose?: () => void;
   onSuccess?: () => void;
-  isAdmin?: boolean;
 }
 
 interface FormValues {
@@ -78,7 +77,7 @@ const validationSchema = Yup.object({
     })
 });
 
-const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess, isAdmin = true }) => {
+const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
   const initialValues: FormValues = {
     name: venue?.name || '',
     description: venue?.description || '',
@@ -123,10 +122,10 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess, isAdmi
 
           if (venue?.id) {
             // Update existing venue
-            await VenueService.updateVenue(venue.id, venueData, isAdmin);
+            await VenueService.updateVenue(venue.id, venueData);
           } else {
             // Create new venue
-            await VenueService.createVenue(venueData, isAdmin);
+            await VenueService.createVenue(venueData);
           }
 
           resetForm();

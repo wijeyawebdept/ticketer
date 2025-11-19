@@ -353,8 +353,8 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public Page<EventResponse> getEventsByOrganizer(UUID organizerId, Pageable pageable) {
-        User organizer = userRepository.findById(organizerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", organizerId.toString()));
+        Organizer organizer = organizerRepository.findById(organizerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organizer", "id", organizerId.toString()));
 
         // Use JOIN FETCH to avoid LazyInitializationException
         return eventRepository.findByOrganizerWithVenueAndOrganizerAndTicketCategories(organizer, pageable)

@@ -30,7 +30,9 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
-  EventSeat as EventSeatIcon
+  EventSeat as EventSeatIcon,
+  People as PeopleIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -143,6 +145,8 @@ const OrganizerLayout: React.FC = () => {
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/organizer/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/organizer/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/organizer/bookings' },
+    { text: t('navigation.organizerEmployees'), icon: <PeopleIcon />, path: '/organizer/employees' },
+    { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/organizer/recycle-bin' },
     { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/organizer/profile' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/organizer/settings' },
   ];
@@ -162,7 +166,7 @@ const OrganizerLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {t('header.title')}
+            {t('header.organizerTitle')}
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Organizer Profile"}>

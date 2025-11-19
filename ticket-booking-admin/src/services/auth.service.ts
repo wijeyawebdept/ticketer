@@ -74,24 +74,33 @@ class AuthService {
       if (response.data.token) {
         localStorage.setItem('auth_token', response.data.token);
         
-        // Store user data in localStorage for later use
-        if (response.data.user) {
-          localStorage.setItem('user_data', JSON.stringify({
-            email: response.data.user.email
-          }));
-        }
-      
-        // Debug the JWT token
+        // Debug the JWT token and get role from it
+        let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
           console.log('JWT Token decoded:', decoded);
           console.log('User from API response:', response.data.user);
           console.log('Role from JWT:', decoded.role);
+          userRole = decoded.role;
           if (response.data.user) {
             console.log('Role from API response:', response.data.user.role);
           }
         } catch (err) {
           console.error('Error decoding JWT token:', err);
+        }
+        
+        // Store user data in localStorage with role from JWT token
+        if (response.data.user) {
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            role: userRole || response.data.user.role // Use JWT role primarily
+          };
+          localStorage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          localStorage.setItem('user', JSON.stringify(userData)); // Store for role-based redirect
+          console.log('Stored user data in localStorage:', userData);
         }
       }
       
@@ -121,6 +130,7 @@ class AuthService {
   logout(): void {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
+    localStorage.removeItem('user');
   }
 
   getCurrentUser(): LoginResponse | null {

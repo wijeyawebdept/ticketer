@@ -26,7 +26,6 @@ import jakarta.validation.Valid;
 
 /**
  * Organizer venue management controller
- * Provides CRUD operations for venue management with organizer access control
  */
 @RestController
 @RequestMapping("/api/organizer/venues")

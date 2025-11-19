@@ -212,64 +212,66 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
             }}
           />
         )}
-        renderOption={(props, option) => (
-          <Paper
-            {...props}
-            component="li"
-            sx={{
-              borderRadius: 2,
-              mb: 0.5,
-              '&:hover': {
-                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-              },
-            }}
-          >
-            <ListItem sx={{ py: 1.5 }}>
-              <EventIcon color="primary" sx={{ mr: 2, flexShrink: 0 }} />
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      {option.name}
+        renderOption={(props, option) => {
+          const { key, ...otherProps } = props;
+          return (
+            <Paper
+              key={key}
+              {...otherProps}
+              component="li"
+              sx={{
+                borderRadius: 2,
+                mb: 0.5,
+                py: 1.5,
+                px: 2,
+                display: 'flex',
+                alignItems: 'flex-start',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                },
+              }}
+            >
+              <EventIcon color="primary" sx={{ mr: 2, flexShrink: 0, mt: 0.5 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {option.name}
+                  </Typography>
+                  <Chip
+                    label={option.status}
+                    color={getStatusChipColor(option.status)}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {option.venue && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <LocationIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {option.venue.name}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CalendarIcon fontSize="small" color="action" />
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(option.startDateTime)}
                     </Typography>
-                    <Chip
-                      label={option.status}
-                      color={getStatusChipColor(option.status)}
-                      size="small"
-                      variant="outlined"
-                    />
                   </Box>
-                }
-                secondary={
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    {option.venue && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <LocationIcon fontSize="small" color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {option.venue.name}
-                        </Typography>
-                      </Box>
-                    )}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <CalendarIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        {formatDate(option.startDateTime)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <PriceIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        {formatPrice(option.basePrice)}
-                      </Typography>
-                    </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <PriceIcon fontSize="small" color="action" />
+                    <Typography variant="body2" color="text.secondary">
+                      {formatPrice(option.basePrice)}
+                    </Typography>
                   </Box>
-                }
-              />
-            </ListItem>
-          </Paper>
-        )}
+                </Box>
+              </Box>
+            </Paper>
+          );
+        }}
         PaperComponent={({ children, ...other }) => (
-          <Paper {...other} sx={{ maxHeight: 400, overflow: 'auto' }}>
+          <Paper {...other} component="div" sx={{ maxHeight: 400, overflow: 'auto' }}>
             {children}
           </Paper>
         )}

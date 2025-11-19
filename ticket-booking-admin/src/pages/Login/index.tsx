@@ -76,7 +76,25 @@ const Login: React.FC = () => {
       
       await login(values.email, values.password);
       console.log('Login successful, token stored:', !!localStorage.getItem('auth_token'));
-      navigate('/dashboard');
+      
+      // Redirect based on user role
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        console.log('User role after login:', user.role);
+        
+        if (user.role === 'ORGANIZER' || user.role === 'ROLE_ORGANIZER') {
+          navigate('/organizer/dashboard');
+        } else if (user.role === 'USER' || user.role === 'ROLE_USER') {
+          navigate('/user/home');
+        } else {
+          // Admin and Super Admin
+          navigate('/dashboard');
+        }
+      } else {
+        // Fallback to dashboard if user data not found
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       console.error('Response status:', err.response?.status);

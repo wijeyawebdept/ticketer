@@ -56,21 +56,32 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     console.log('  Normalized User Role:', userRoleStr);
     console.log('  Normalized Required Role:', requiredRoleStr);
     
-    // Allow SUPER_ADMIN to access ADMIN routes
+    // Special role handling
     const isSuperAdmin = userRoleStr === 'SUPER_ADMIN' || userRoleStr === 'ROLE_SUPER_ADMIN';
     const isAdmin = userRoleStr === 'ADMIN' || userRoleStr === 'ROLE_ADMIN';
+    const isOrganizer = userRoleStr === 'ORGANIZER' || userRoleStr === 'ROLE_ORGANIZER';
+    const isUser = userRoleStr === 'USER' || userRoleStr === 'ROLE_USER';
+    
     const requiringAdmin = requiredRoleStr === 'ADMIN' || requiredRoleStr === 'ROLE_ADMIN';
+    const requiringOrganizer = requiredRoleStr === 'ORGANIZER' || requiredRoleStr === 'ROLE_ORGANIZER';
+    const requiringUser = requiredRoleStr === 'USER' || requiredRoleStr === 'ROLE_USER';
     
     console.log('  Is Super Admin:', isSuperAdmin);
     console.log('  Is Admin:', isAdmin);
+    console.log('  Is Organizer:', isOrganizer);
+    console.log('  Is User:', isUser);
     console.log('  Requiring Admin:', requiringAdmin);
+    console.log('  Requiring Organizer:', requiringOrganizer);
+    console.log('  Requiring User:', requiringUser);
     
     const isAuthorized = 
       userRoleStr === requiredRoleStr || 
       userRoleStr === `ROLE_${requiredRoleStr}` ||
       `ROLE_${userRoleStr}` === requiredRoleStr ||
       (isSuperAdmin && requiringAdmin) || // Allow SUPER_ADMIN to access ADMIN routes
-      (isAdmin && requiringAdmin); // Allow ADMIN to access ADMIN routes
+      (isAdmin && requiringAdmin) || // Allow ADMIN to access ADMIN routes
+      (isOrganizer && requiringOrganizer) || // Allow ORGANIZER to access ORGANIZER routes
+      (isUser && requiringUser); // Allow USER to access USER routes
     
     console.log('  Is Authorized:', isAuthorized);
     

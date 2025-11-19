@@ -26,7 +26,7 @@ import {
   RestoreFromTrash as RestoreIcon,
   DeleteForever as DeleteForeverIcon,
 } from '@mui/icons-material';
-import api from '../../services/api';
+import RecycleBinService from '../../services/recycle-bin.service';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 
@@ -88,14 +88,14 @@ const RecycleBin: React.FC = () => {
   const fetchRecycleBinItems = async () => {
     try {
       setLoading(true);
-      let response;
+      let data;
       if (tabValue === 0) {
-        response = await api.get<RecycleBinItem[]>('/api/admin/recycle-bin');
+        data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1];
-        response = await api.get<RecycleBinItem[]>(`/api/admin/recycle-bin/type/${entityType}`);
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE';
+        data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
-      setItems(response.data);
+      setItems(data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch recycle bin items');
@@ -117,7 +117,7 @@ const RecycleBin: React.FC = () => {
     if (!itemToRestore) return;
 
     try {
-      await api.post(`/api/admin/recycle-bin/${itemToRestore.recycleId}/restore`);
+      await RecycleBinService.restore(itemToRestore.recycleId);
       setSuccess(`${itemToRestore.entityType} "${itemToRestore.entityName}" restored successfully`);
       setOpenRestoreDialog(false);
       setItemToRestore(null);
@@ -142,12 +142,10 @@ const RecycleBin: React.FC = () => {
   };
 
   const handlePermanentDelete = async () => {
-    if (!itemToDelete || !isSuperAdmin) return;
+    if (!itemToDelete) return;
 
     try {
-      await api.delete(`/api/admin/recycle-bin/${itemToDelete.recycleId}`, {
-        params: { reason: deleteReason },
-      });
+      await RecycleBinService.permanentlyDelete(itemToDelete.recycleId, deleteReason);
       setSuccess('Item permanently deleted');
       handleCloseDeleteDialog();
       fetchRecycleBinItems();
@@ -164,14 +162,12 @@ const RecycleBin: React.FC = () => {
   };
 
   const handleConfirmEmpty = async () => {
-    if (!isSuperAdmin) return;
-
     try {
       if (tabValue === 0) {
-        await api.delete('/api/admin/recycle-bin/empty');
+        await RecycleBinService.emptyRecycleBin();
       } else {
-        const entityType = entityTypes[tabValue - 1];
-        await api.delete(`/api/admin/recycle-bin/empty/${entityType}`);
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE';
+        await RecycleBinService.emptyRecycleBinByType(entityType);
       }
       setSuccess('Recycle bin emptied successfully');
       setOpenEmptyDialog(false);
@@ -230,7 +226,7 @@ const RecycleBin: React.FC = () => {
 
       {!isSuperAdmin && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="body2" component="div">
+          <Typography variant="body2" component="span">
             <strong>Limited Access:</strong> Only Super Admins can permanently delete items from the recycle bin. You can restore items to make them active again.
           </Typography>
         </Alert>
@@ -238,7 +234,7 @@ const RecycleBin: React.FC = () => {
 
       {isSuperAdmin && items.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2" component="div">
+          <Typography variant="body2" component="span">
             <strong>Super Admin Access:</strong> You can restore items to make them active again, or permanently delete them from the database. Use permanent deletion with caution.
           </Typography>
         </Alert>
@@ -246,7 +242,7 @@ const RecycleBin: React.FC = () => {
 
       {isSuperAdmin && items.length === 0 && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          <Typography variant="body2" component="div">
+          <Typography variant="body2" component="span">
             <strong>Clean:</strong> Recycle bin is empty. No items to restore or delete.
           </Typography>
         </Alert>

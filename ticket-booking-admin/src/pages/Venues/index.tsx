@@ -45,11 +45,14 @@ const VenuesPage = () => {
     user?.role === 'ROLE_SUPER_ADMIN'
   );
   
+  // Check if user is organizer - organizers cannot modify venues
+  const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER';
+  
   // Fetch all venues from the API
   const fetchVenues = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await VenueService.getAllVenues(isAdmin);
+      const data = await VenueService.getAllVenues();
       console.log('Fetched venues:', data);
       
       // Validate venue data
@@ -68,7 +71,7 @@ const VenuesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   // Load venues when component mounts
   useEffect(() => {
@@ -115,11 +118,10 @@ const VenuesPage = () => {
     try {
       console.log('Attempting to delete venue:', {
         id: venueToDelete.id,
-        name: venueToDelete.name,
-        isAdmin: isAdmin
+        name: venueToDelete.name
       });
       
-      await VenueService.deleteVenue(venueToDelete.id, isAdmin);
+      await VenueService.deleteVenue(venueToDelete.id);
       ToastService.updateSuccess(toastId, `Venue "${venueToDelete.name}" has been deleted successfully!`);
       setDeleteDialogOpen(false);
       setVenueToDelete(null);
@@ -231,49 +233,60 @@ const VenuesPage = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <Tooltip title="Edit Venue">
-            <IconButton
-              onClick={() => handleEditVenue(params.row)}
-              size="small"
-              color="primary"
-              sx={{ mr: 1 }}
-            >
-              <EditIcon />
-            </IconButton>
+          <Tooltip title={isOrganizer ? "Organizers cannot edit venues" : "Edit Venue"}>
+            <span>
+              <IconButton
+                onClick={() => handleEditVenue(params.row)}
+                size="small"
+                color="primary"
+                disabled={isOrganizer}
+                sx={{ mr: 1 }}
+              >
+                <EditIcon />
+              </IconButton>
+            </span>
           </Tooltip>
-          <Tooltip title="Seating Arrangement">
-            <IconButton
-              onClick={() => handleSeatingArrangement(params.row)}
-              size="small"
-              color="secondary"
-              sx={{ mr: 1 }}
-            >
-              <EventSeatIcon />
-            </IconButton>
+          <Tooltip title={isOrganizer ? "Organizers cannot modify seating" : "Seating Arrangement"}>
+            <span>
+              <IconButton
+                onClick={() => handleSeatingArrangement(params.row)}
+                size="small"
+                color="secondary"
+                disabled={isOrganizer}
+                sx={{ mr: 1 }}
+              >
+                <EventSeatIcon />
+              </IconButton>
+            </span>
           </Tooltip>
-          <Tooltip title="Generate Template Seats">
-            <IconButton
-              onClick={() => handleGenerateSeats(params.row)}
-              size="small"
-              color="success"
-              disabled={generatingSeats === params.row.id}
-              sx={{ mr: 1 }}
-            >
-              {generatingSeats === params.row.id ? (
-                <CircularProgress size={20} />
-              ) : (
-                <AutoAwesomeIcon />
-              )}
-            </IconButton>
+          <Tooltip title={isOrganizer ? "Organizers cannot generate seats" : "Generate Template Seats"}>
+            <span>
+              <IconButton
+                onClick={() => handleGenerateSeats(params.row)}
+                size="small"
+                color="success"
+                disabled={generatingSeats === params.row.id || isOrganizer}
+                sx={{ mr: 1 }}
+              >
+                {generatingSeats === params.row.id ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <AutoAwesomeIcon />
+                )}
+              </IconButton>
+            </span>
           </Tooltip>
-          <Tooltip title="Move to Recycle Bin">
-            <IconButton
-              onClick={() => handleDeleteVenue(params.row)}
-              size="small"
-              color="warning"
-            >
-              <DeleteSweepIcon />
-            </IconButton>
+          <Tooltip title={isOrganizer ? "Organizers cannot delete venues" : "Move to Recycle Bin"}>
+            <span>
+              <IconButton
+                onClick={() => handleDeleteVenue(params.row)}
+                size="small"
+                color="warning"
+                disabled={isOrganizer}
+              >
+                <DeleteSweepIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
       ),
@@ -288,14 +301,19 @@ const VenuesPage = () => {
           <IconButton onClick={fetchVenues} sx={{ mr: 1 }}>
             <RefreshIcon />
           </IconButton>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenForm(true)}
-          >
-            Add New Venue
-          </Button>
+          <Tooltip title={isOrganizer ? "Organizers cannot create venues" : ""}>
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenForm(true)}
+                disabled={isOrganizer}
+              >
+                Add New Venue
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
       </Box>
 

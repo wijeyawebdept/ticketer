@@ -76,7 +76,8 @@
     "settings": "Configuración"
   },
   "header": {
-    "title": "Panel de Administración de Reservas"
+    "title": "Panel de Administración de Reservas",
+    "organizerTitle": "Panel de Organizador de Reservas"
   },
   "dashboard": {
     "title": "Panel de Control",

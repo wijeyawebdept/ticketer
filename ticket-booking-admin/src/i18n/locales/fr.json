@@ -76,7 +76,8 @@
     "settings": "Paramètres"
   },
   "header": {
-    "title": "Panneau d'Administration des Réservations"
+    "title": "Panneau d'Administration des Réservations",
+    "organizerTitle": "Panneau d'Organisateur de Réservations"
   },
   "dashboard": {
     "title": "Tableau de Bord",

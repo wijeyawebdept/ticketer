@@ -7,6 +7,8 @@ import TransactionService from './transaction.service';
 import { VenueService } from './venue.service';
 import { profileService } from './profile.service';
 import { RoleService } from './role.service';
+import RecycleBinService from './recycle-bin.service';
+import EmployeeService from './employee.service';
 
 export {
   AuthService,
@@ -17,5 +19,7 @@ export {
   TransactionService,
   VenueService,
   profileService,
-  RoleService
+  RoleService,
+  RecycleBinService,
+  EmployeeService
 };

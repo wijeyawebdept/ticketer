@@ -76,6 +76,12 @@ public class OrganizerEmployeeManagementController {
             @Valid @RequestBody CreateOrganizerEmployeeRequest request,
             Authentication authentication) {
         try {
+            // Admin must specify which organizer the employee belongs to
+            if (request.getOrganizerId() == null) {
+                return ResponseEntity.badRequest()
+                        .body("Organizer ID is required when admin creates an employee");
+            }
+            
             // Get the admin ID from authentication if available
             UUID createdByAdminId = null;
             if (authentication.getPrincipal() instanceof Admin) {
