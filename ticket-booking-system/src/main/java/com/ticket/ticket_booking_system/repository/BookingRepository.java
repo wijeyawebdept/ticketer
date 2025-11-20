@@ -48,6 +48,18 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     
     List<Booking> findByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status);
     
+    // Schedule-specific queries
+    Page<Booking> findByEventSchedule_ScheduleId(UUID scheduleId, Pageable pageable);
+    
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.eventSchedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
+    Long countConfirmedBookingsForSchedule(UUID scheduleId);
+    
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.eventSchedule.scheduleId = :scheduleId")
+    Long countAllBookingsForSchedule(UUID scheduleId);
+    
+    @Query("SELECT b FROM Booking b WHERE b.event.eventId = :eventId AND b.eventSchedule.scheduleId = :scheduleId")
+    List<Booking> findByEventAndSchedule(UUID eventId, UUID scheduleId);
+    
     Page<Booking> findByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status, Pageable pageable);
     
     List<Booking> findTopByEvent_Organizer_OrganizerIdOrderByBookingTimeDesc(UUID organizerId, Pageable pageable);

@@ -28,6 +28,7 @@ import SeatManagement from './pages/SeatManagement';
 import IntegrationTest from './pages/IntegrationTest';
 import RecycleBin from './pages/RecycleBin';
 import Employees from './pages/Employees';
+import EventSchedules from './pages/EventSchedules';
 import { UserRole } from './types';
 
 // Lazy-loaded components
@@ -204,6 +205,7 @@ function App() {
                 <Route path="/organizer/*" element={<Navigate to="/organizer/dashboard" replace />} />
                 <Route path="/organizer/dashboard" element={<Dashboard />} />
                 <Route path="/organizer/events" element={<Events />} />
+                <Route path="/organizer/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/organizer/venues" element={<Venues />} />
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />

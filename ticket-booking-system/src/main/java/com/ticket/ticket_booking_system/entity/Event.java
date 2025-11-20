@@ -49,12 +49,6 @@ public class Event {
     @JoinColumn(name = "venue_id")
     private Venue venue;
 
-    @Column(name = "start_date_time", nullable = false)
-    private LocalDateTime startDateTime;
-
-    @Column(name = "end_date_time")
-    private LocalDateTime endDateTime;
-
     @Column(name = "venue_name", length = 255)
     private String venueName;
 

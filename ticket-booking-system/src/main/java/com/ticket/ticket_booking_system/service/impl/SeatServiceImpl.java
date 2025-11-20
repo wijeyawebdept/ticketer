@@ -338,8 +338,6 @@ public class SeatServiceImpl implements SeatService {
                 .name("Default Template Event")
                 .description("Template event for venue-level seat management")
                 .venue(venue)
-                .startDateTime(LocalDateTime.now().plusYears(1)) // Set to future date
-                .endDateTime(LocalDateTime.now().plusYears(1).plusHours(2)) // 2 hours duration
                 .basePrice(java.math.BigDecimal.ZERO)
                 .totalCapacity(venue.getCapacity())
                 .availableSeats(venue.getCapacity())

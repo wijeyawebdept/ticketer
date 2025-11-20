@@ -116,8 +116,6 @@ public class EventServiceImpl implements EventService {
                 .venue(venue)
                 .venueName(venue.getName()) // Auto-populate from selected venue
                 .venueAddress(venue.getAddress()) // Auto-populate from selected venue
-                .startDateTime(request.getStartDateTime())
-                .endDateTime(request.getEndDateTime())
                 .basePrice(request.getBasePrice())
                 .totalCapacity(request.getTotalCapacity())
                 .availableSeats(request.getTotalCapacity()) // Initially all seats are available
@@ -230,14 +228,6 @@ public class EventServiceImpl implements EventService {
             // Auto-populate venue name and address when venue is changed
             event.setVenueName(venue.getName());
             event.setVenueAddress(venue.getAddress());
-        }
-
-        if (request.getStartDateTime() != null) {
-            event.setStartDateTime(request.getStartDateTime());
-        }
-
-        if (request.getEndDateTime() != null) {
-            event.setEndDateTime(request.getEndDateTime());
         }
 
         if (request.getBasePrice() != null) {
@@ -467,8 +457,6 @@ public class EventServiceImpl implements EventService {
                 .description(event.getDescription())
                 .venue(venueResponse)
                 .organizer(organizerResponse) // Can be NULL for ADMIN/SUPER_ADMIN events
-                .startDateTime(event.getStartDateTime())
-                .endDateTime(event.getEndDateTime())
                 .basePrice(event.getBasePrice())
                 .totalCapacity(event.getTotalCapacity())
                 .availableSeats(event.getAvailableSeats())

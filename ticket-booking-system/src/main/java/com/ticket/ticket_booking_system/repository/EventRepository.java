@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,11 +24,6 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     Page<Event> findByVenue(Venue venue, Pageable pageable);
 
     Page<Event> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
-    List<Event> findByStartDateTimeBetween(LocalDateTime start, LocalDateTime end);
-
-    @Query("SELECT e FROM Event e WHERE e.startDateTime >= :now AND e.status = 'PUBLISHED' ORDER BY e.startDateTime ASC")
-    List<Event> findUpcomingEvents(LocalDateTime now);
 
     @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e GROUP BY e ORDER BY COUNT(b) DESC")
     List<Event> findTopSellingEvents(Pageable pageable);

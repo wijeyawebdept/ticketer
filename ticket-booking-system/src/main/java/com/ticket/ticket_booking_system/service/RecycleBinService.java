@@ -13,6 +13,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.RecycleBin;
@@ -20,6 +21,7 @@ import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.RecycleBinRepository;
@@ -37,6 +39,7 @@ public class RecycleBinService {
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
+    private final EventScheduleRepository eventScheduleRepository;
     private final VenueRepository venueRepository;
     private final SeatRepository seatRepository;
     private final TicketCategoryRepository ticketCategoryRepository;
@@ -49,6 +52,7 @@ public class RecycleBinService {
             OrganizerRepository organizerRepository,
             OrganizerEmployeeRepository organizerEmployeeRepository,
             EventRepository eventRepository,
+            EventScheduleRepository eventScheduleRepository,
             VenueRepository venueRepository,
             SeatRepository seatRepository,
             TicketCategoryRepository ticketCategoryRepository) {
@@ -58,6 +62,7 @@ public class RecycleBinService {
         this.organizerRepository = organizerRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
         this.eventRepository = eventRepository;
+        this.eventScheduleRepository = eventScheduleRepository;
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.ticketCategoryRepository = ticketCategoryRepository;
@@ -165,6 +170,10 @@ public class RecycleBinService {
                 venueRepository.deleteById(entityId);
                 System.out.println("Venue permanently deleted: " + entityId);
                 break;
+            case "SCHEDULE":
+                eventScheduleRepository.deleteById(entityId);
+                System.out.println("Event Schedule permanently deleted: " + entityId);
+                break;
             default:
                 throw new RuntimeException("Unknown entity type: " + entityType);
         }
@@ -199,6 +208,9 @@ public class RecycleBinService {
                     break;
                 case "VENUE":
                     restoreVenue(recycleBin);
+                    break;
+                case "SCHEDULE":
+                    restoreSchedule(recycleBin);
                     break;
                 default:
                     throw new RuntimeException("Unknown entity type: " + entityType);
@@ -278,6 +290,17 @@ public class RecycleBinService {
         venueRepository.save(venue);
         
         System.out.println("Venue " + venue.getName() + " restored from recycle bin");
+    }
+
+    private void restoreSchedule(RecycleBin recycleBin) throws JsonProcessingException {
+        EventSchedule schedule = eventScheduleRepository.findById(recycleBin.getEntityId())
+                .orElseThrow(() -> new RuntimeException("Event Schedule not found: " + recycleBin.getEntityId()));
+        
+        // Reactivate the schedule
+        schedule.setIsDeleted(false);
+        eventScheduleRepository.save(schedule);
+        
+        System.out.println("Event Schedule " + schedule.getScheduleId() + " restored from recycle bin");
     }
 
     @Transactional
@@ -407,6 +430,14 @@ public class RecycleBinService {
                             System.out.println("Venue permanently deleted: " + entityId);
                         } else {
                             System.out.println("Venue not found (already deleted): " + entityId);
+                        }
+                        break;
+                    case "SCHEDULE":
+                        if (eventScheduleRepository.existsById(entityId)) {
+                            eventScheduleRepository.deleteById(entityId);
+                            System.out.println("Event Schedule permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Event Schedule not found (already deleted): " + entityId);
                         }
                         break;
                     default:

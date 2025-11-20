@@ -190,11 +190,12 @@ select * from admins;
 select * from recycle_bin;
 select * from organizers;
 select * from organizer_employees;
+select * from event_schedules;
 
 -- Check what columns exist in the tables
 SELECT column_name 
 FROM information_schema.columns 
-WHERE table_name = 'recycle_bin' 
+WHERE table_name = 'events' 
 ORDER BY ordinal_position;
 
 

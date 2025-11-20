@@ -18,14 +18,6 @@ public class EventCreateRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotNull(message = "Start date and time is required")
-    @Future(message = "Start date must be in the future")
-    private LocalDateTime startDateTime;
-
-    @NotNull(message = "End date and time is required")
-    @Future(message = "End date must be in the future")
-    private LocalDateTime endDateTime;
-
     @NotNull(message = "Venue ID is required")
     private UUID venueId;
 
@@ -57,22 +49,6 @@ public class EventCreateRequest {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public LocalDateTime getStartDateTime() {
-        return startDateTime;
-    }
-
-    public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
-    }
-
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
-
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
     }
 
     public UUID getVenueId() {

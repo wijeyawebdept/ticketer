@@ -35,8 +35,6 @@ import { useAuth } from '../../../context/AuthContext';
 interface FormValues {
   name: string;
   description: string;
-  startDateTime: Date;
-  endDateTime: Date;
   venueId: string;
   category: string;
   basePrice: number;
@@ -176,8 +174,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       initialValues={{
         name: event?.name || '',
         description: event?.description || '',
-        startDateTime: event?.startDateTime ? new Date(event.startDateTime) : new Date(),
-        endDateTime: event?.endDateTime ? new Date(event.endDateTime) : new Date(new Date().setHours(new Date().getHours() + 2)),
         venueId: event?.venue?.id || '',
         category: '',
         basePrice: event?.basePrice || 0,
@@ -200,43 +196,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           .max(2000, 'Description must not exceed 2000 characters')
           .test('no-only-spaces', 'Description cannot contain only spaces', (value) => {
             return value ? value.trim().length >= 10 : false;
-          }),
-        startDateTime: Yup.date()
-          .required('Start date and time is required')
-          .typeError('Start date and time must be a valid date')
-          .test('not-in-past', 'Start date and time cannot be in the past', function(value) {
-            // Allow editing events if they're already created (editing mode)
-            if (event?.id) return true;
-            if (!value) return false;
-            const now = new Date();
-            // Allow dates from yesterday onwards to handle timezone issues
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            return value >= yesterday;
-          })
-          .test('not-too-far', 'Start date cannot be more than 5 years in the future', function(value) {
-            if (!value) return false;
-            const fiveYearsFromNow = new Date();
-            fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
-            return value <= fiveYearsFromNow;
-          }),
-        endDateTime: Yup.date()
-          .required('End date and time is required')
-          .typeError('End date and time must be a valid date')
-          .min(Yup.ref('startDateTime'), 'End date and time must be after start date and time')
-          .test('reasonable-duration', 'Event duration cannot exceed 30 days', function(value) {
-            const { startDateTime } = this.parent;
-            if (!value || !startDateTime) return true;
-            const diffInMs = value.getTime() - startDateTime.getTime();
-            const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-            return diffInDays <= 30;
-          })
-          .test('minimum-duration', 'Event must be at least 30 minutes long', function(value) {
-            const { startDateTime } = this.parent;
-            if (!value || !startDateTime) return true;
-            const diffInMs = value.getTime() - startDateTime.getTime();
-            const diffInMinutes = diffInMs / (1000 * 60);
-            return diffInMinutes >= 30;
           }),
         venueId: Yup.string()
           .required('Venue is required')
@@ -354,23 +313,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             return;
           }
           
-          // Validate date/time is reasonable
-          const now = new Date();
-          if (!event?.id && values.startDateTime < now) {
-            setValidationError('Cannot create an event with a start time in the past');
-            setSubmitting(false);
-            setUploading(false);
-            return;
-          }
-          
           const eventData: any = { ...values };
           delete eventData.imageFile;
           
-          // Convert Date to ISO string for API
+          // Prepare data for API
           const eventDataForApi = {
             ...eventData,
-            startDateTime: eventData.startDateTime.toISOString(),
-            endDateTime: eventData.endDateTime.toISOString(),
             ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
               ...category,
               categoryName: category.categoryName.trim(),
@@ -483,56 +431,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 rows={4}
                 required
               />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DateTimePicker
-                  label="Start Date & Time"
-                  value={values.startDateTime}
-                  onChange={(newValue) => {
-                    if (newValue) {
-                      setFieldValue('startDateTime', newValue);
-                    }
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'normal',
-                      required: true,
-                      error: touched.startDateTime && Boolean(errors.startDateTime),
-                      helperText: touched.startDateTime && errors.startDateTime 
-                        ? errors.startDateTime as string 
-                        : 'When does your event start?'
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DateTimePicker
-                  label="End Date & Time"
-                  value={values.endDateTime}
-                  onChange={(newValue) => {
-                    if (newValue) {
-                      setFieldValue('endDateTime', newValue);
-                    }
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'normal',
-                      required: true,
-                      error: touched.endDateTime && Boolean(errors.endDateTime),
-                      helperText: touched.endDateTime && errors.endDateTime 
-                        ? errors.endDateTime as string 
-                        : 'When does your event end? (minimum 30 minutes, maximum 30 days)'
-                    }
-                  }}
-                />
-              </LocalizationProvider>
             </Grid>
             
             <Grid item xs={12} sm={6}>

@@ -27,14 +27,17 @@ import {
   AccessTime as AccessTimeIcon,
   Cancel as CancelIcon,
   EventAvailable as EventAvailableIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 import { EventService } from '../../services';
 import { Event, EventStatus } from '../../types';
 import EventForm from './components/EventForm';
 
 const Events: React.FC = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -51,6 +54,7 @@ const Events: React.FC = () => {
     setLoading(true);
     try {
       const response: any = await EventService.getAllEvents();
+      console.log('Events - Raw API response:', response);
       
       // Handle Page response from backend
       let eventsData: any[] = [];
@@ -64,6 +68,9 @@ const Events: React.FC = () => {
         // Handle unexpected response format
         eventsData = [];
       }
+      
+      console.log('Events - Processed events data:', eventsData);
+      console.log('Events - First event sample:', eventsData[0]);
       
       setEvents(eventsData);
     } catch (error) {
@@ -166,28 +173,6 @@ const Events: React.FC = () => {
       }
     },
     { 
-      field: 'startDateTime', 
-      headerName: 'Start Date', 
-      flex: 1, 
-      valueFormatter: (params) => {
-        if (params.value) {
-          return new Date(params.value as string).toLocaleDateString();
-        }
-        return 'N/A';
-      }
-    },
-    { 
-      field: 'endDateTime', 
-      headerName: 'End Date', 
-      flex: 1, 
-      valueFormatter: (params) => {
-        if (params.value) {
-          return new Date(params.value as string).toLocaleDateString();
-        }
-        return 'N/A';
-      }
-    },
-    { 
       field: 'availableSeats', 
       headerName: 'Available Seats', 
       flex: 1,
@@ -237,6 +222,31 @@ const Events: React.FC = () => {
             }}
           >
             <MoreVertIcon />
+          </IconButton>
+          <IconButton
+            onClick={() => {
+              console.log('Schedule button clicked - Full row data:', params.row);
+              console.log('Schedule button clicked - eventId:', params.row.eventId);
+              console.log('Schedule button clicked - id:', params.row.id);
+              const idToUse = params.row.eventId || params.row.id;
+              if (idToUse && idToUse !== 'undefined') {
+                navigate(`/organizer/events/${idToUse}/schedules`);
+              } else {
+                console.error('Cannot navigate - no valid ID found in row:', params.row);
+              }
+            }}
+            size="small"
+            color="secondary"
+            sx={{
+              backgroundColor: 'rgba(220, 0, 78, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(220, 0, 78, 0.2)',
+              },
+              mr: 1
+            }}
+            title="Manage Schedules"
+          >
+            <ScheduleIcon />
           </IconButton>
           <IconButton
             onClick={() => handleEditClick(params.row as Event)}
@@ -316,6 +326,7 @@ const Events: React.FC = () => {
               <DataGrid
                 rows={events}
                 columns={columns}
+                getRowId={(row) => row.eventId || row.id}
                 initialState={{
                   pagination: {
                     paginationModel: {

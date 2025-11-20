@@ -76,6 +76,42 @@ export enum EventStatus {
   COMPLETED = 'COMPLETED'
 }
 
+// Event Schedule types
+export enum ScheduleStatus {
+  ACTIVE = 'ACTIVE',
+  CANCELLED = 'CANCELLED',
+  SOLD_OUT = 'SOLD_OUT',
+  COMPLETED = 'COMPLETED'
+}
+
+export interface EventSchedule {
+  scheduleId: string;
+  eventId: string;
+  eventName: string;
+  scheduleDate: string; // LocalDate from backend
+  startTime: string; // LocalTime from backend
+  endTime: string;
+  capacity: number;
+  availableSeats: number;
+  bookedSeats: number;
+  priceAdjustment: number;
+  finalPrice: number;
+  status: ScheduleStatus;
+  notes?: string;
+  isBookable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventScheduleRequest {
+  scheduleDate: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  priceAdjustment?: number;
+  notes?: string;
+}
+
 // Venue related types
 export enum VenueLayoutType {
   THEATER = 'THEATER',

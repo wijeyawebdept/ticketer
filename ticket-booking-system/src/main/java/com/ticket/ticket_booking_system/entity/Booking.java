@@ -49,6 +49,10 @@ public class Booking {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id")
+    private EventSchedule eventSchedule;
+
     @Column(nullable = false)
     private LocalDateTime bookingTime;
 

@@ -16,6 +16,7 @@ public interface RecycleBinRepository extends JpaRepository<RecycleBin, UUID> {
     List<RecycleBin> findByDeletedAtAfter(LocalDateTime date);
     List<RecycleBin> findByEntityTypeOrderByDeletedAtDesc(String entityType);
     List<RecycleBin> findAllByOrderByDeletedAtDesc();
+    java.util.Optional<RecycleBin> findByEntityTypeAndEntityId(String entityType, UUID entityId);
     
     // Filter by owner role
     List<RecycleBin> findByAdminIdOrderByDeletedAtDesc(UUID adminId);

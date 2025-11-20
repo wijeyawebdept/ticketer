@@ -59,7 +59,7 @@ class RecycleBinService {
   /**
    * Get recycle bin items by entity type
    */
-  async getRecycleBinItemsByType(entityType: 'USER' | 'EVENT' | 'VENUE'): Promise<RecycleBinItem[]> {
+  async getRecycleBinItemsByType(entityType: 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE'): Promise<RecycleBinItem[]> {
     const basePath = this.getBasePath();
     const response = await api.get<RecycleBinItem[]>(`${basePath}/recycle-bin/type/${entityType}`);
     return response.data;

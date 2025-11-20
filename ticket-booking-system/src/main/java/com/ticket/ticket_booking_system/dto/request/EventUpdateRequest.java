@@ -11,12 +11,6 @@ public class EventUpdateRequest {
     private String name;
     private String description;
     
-    // No @Future validation for updates - events can be edited even if dates are in the past
-    private LocalDateTime startDateTime;
-    
-    // No @Future validation for updates - events can be edited even if dates are in the past
-    private LocalDateTime endDateTime;
-    
     private UUID venueId;
     
     @Positive(message = "Base price must be greater than zero")
@@ -43,22 +37,6 @@ public class EventUpdateRequest {
     
     public void setDescription(String description) {
         this.description = description;
-    }
-    
-    public LocalDateTime getStartDateTime() {
-        return startDateTime;
-    }
-    
-    public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
-    }
-    
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
-    
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
     }
     
     public UUID getVenueId() {

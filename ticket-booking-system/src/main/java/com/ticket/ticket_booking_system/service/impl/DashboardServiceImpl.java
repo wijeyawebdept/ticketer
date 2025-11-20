@@ -20,11 +20,13 @@ import org.springframework.stereotype.Service;
 
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.TransactionRepository;
@@ -43,6 +45,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
+    private final EventScheduleRepository eventScheduleRepository;
     private final BookingRepository bookingRepository;
     private final TransactionRepository transactionRepository;
 
@@ -237,13 +240,24 @@ public class DashboardServiceImpl implements DashboardService {
     public Map<String, Object> getUpcomingEvents(int count) {
         Map<String, Object> result = new HashMap<>();
 
-        List<Event> upcomingEvents = eventRepository.findUpcomingEvents(
-                LocalDateTime.now());
+        // Get published events and filter those with upcoming schedules
+        List<Event> publishedEvents = eventRepository.findByStatus(
+                Event.EventStatus.PUBLISHED,
+                PageRequest.of(0, count * 3) // Get more to ensure enough with schedules
+        ).getContent();
 
-        // Limit the results to the requested count
-        if (upcomingEvents.size() > count) {
-            upcomingEvents = upcomingEvents.subList(0, count);
-        }
+        LocalDate today = LocalDate.now();
+        List<Event> upcomingEvents = publishedEvents.stream()
+                .filter(event -> {
+                    // Check if event has upcoming schedules
+                    List<EventSchedule> schedules = eventScheduleRepository.findUpcomingSchedules(
+                            event.getEventId(),
+                            today
+                    );
+                    return !schedules.isEmpty();
+                })
+                .limit(count)
+                .collect(Collectors.toList());
 
         result.put("upcomingEvents", upcomingEvents);
         return result;

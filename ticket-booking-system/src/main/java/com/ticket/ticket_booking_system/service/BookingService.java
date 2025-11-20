@@ -15,8 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
+import com.ticket.ticket_booking_system.service.EventScheduleService;
 
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -30,12 +33,22 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final EventRepository eventRepository;
+    private final EventScheduleRepository eventScheduleRepository;
+    private final EventScheduleService eventScheduleService;
 
     /**
      * Get all bookings for admin with filters
      */
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, Pageable pageable) {
-        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search);
+        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null);
+        return bookingRepository.findAll(spec, pageable);
+    }
+    
+    /**
+     * Get all bookings for admin with schedule filter
+     */
+    public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, String scheduleId, Pageable pageable) {
+        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, scheduleId);
         return bookingRepository.findAll(spec, pageable);
     }
 
@@ -53,6 +66,7 @@ public class BookingService {
      */
     public Booking updateBookingStatus(String bookingId, String status) {
         Booking booking = getBookingById(bookingId);
+        Booking.BookingStatus oldStatus = booking.getStatus();
         
         try {
             Booking.BookingStatus bookingStatus = Booking.BookingStatus.valueOf(status.toUpperCase());
@@ -61,6 +75,12 @@ public class BookingService {
             if (bookingStatus == Booking.BookingStatus.CANCELLED) {
                 booking.setCancelledAt(LocalDateTime.now());
                 booking.setCancellationReason("Cancelled by admin");
+                
+                // Release seats back to schedule if booking was previously confirmed
+                if (oldStatus == Booking.BookingStatus.CONFIRMED && booking.getEventSchedule() != null) {
+                    int seatsToRelease = booking.getBookingSeats().size();
+                    eventScheduleService.releaseSeats(booking.getEventSchedule().getScheduleId(), seatsToRelease);
+                }
             }
             
             return bookingRepository.save(booking);
@@ -95,11 +115,39 @@ public class BookingService {
         
         return bookingRepository.findByEvent(event, Pageable.unpaged()).getContent();
     }
+    
+    /**
+     * Get bookings by schedule ID
+     */
+    public Page<Booking> getBookingsByScheduleId(String scheduleId, Pageable pageable) {
+        UUID uuid = UUID.fromString(scheduleId);
+        EventSchedule schedule = eventScheduleRepository.findById(uuid)
+                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + scheduleId));
+        
+        return bookingRepository.findByEventSchedule_ScheduleId(uuid, pageable);
+    }
+    
+    /**
+     * Get bookings by event and schedule
+     */
+    public List<Booking> getBookingsByEventAndSchedule(String eventId, String scheduleId) {
+        UUID eventUuid = UUID.fromString(eventId);
+        UUID scheduleUuid = UUID.fromString(scheduleId);
+        
+        return bookingRepository.findByEventAndSchedule(eventUuid, scheduleUuid);
+    }
 
     /**
      * Get booking statistics
      */
     public Map<String, Object> getBookingStatistics(String eventId, String dateFrom, String dateTo) {
+        return getBookingStatistics(eventId, null, dateFrom, dateTo);
+    }
+    
+    /**
+     * Get booking statistics with schedule filter
+     */
+    public Map<String, Object> getBookingStatistics(String eventId, String scheduleId, String dateFrom, String dateTo) {
         Map<String, Object> statistics = new HashMap<>();
         
         try {
@@ -142,6 +190,20 @@ public class BookingService {
                 }
             }
             
+            // Schedule specific statistics if provided
+            if (scheduleId != null) {
+                UUID uuid = UUID.fromString(scheduleId);
+                EventSchedule schedule = eventScheduleRepository.findById(uuid).orElse(null);
+                if (schedule != null) {
+                    long scheduleBookings = bookingRepository.countConfirmedBookingsForSchedule(uuid);
+                    long allScheduleBookings = bookingRepository.countAllBookingsForSchedule(uuid);
+                    statistics.put("scheduleConfirmedBookings", scheduleBookings);
+                    statistics.put("scheduleTotalBookings", allScheduleBookings);
+                    statistics.put("scheduleDate", schedule.getScheduleDate().toString());
+                    statistics.put("scheduleTime", schedule.getStartTime() + " - " + schedule.getEndTime());
+                }
+            }
+            
         } catch (Exception e) {
             log.error("Error calculating booking statistics", e);
             statistics.put("error", "Error calculating statistics: " + e.getMessage());
@@ -164,7 +226,7 @@ public class BookingService {
     /**
      * Create specification for dynamic filtering
      */
-    private Specification<Booking> createBookingSpecification(String eventId, String userId, String status, String search) {
+    private Specification<Booking> createBookingSpecification(String eventId, String userId, String status, String search, String scheduleId) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -195,6 +257,16 @@ public class BookingService {
                     predicates.add(criteriaBuilder.equal(root.get("status"), bookingStatus));
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid booking status: " + status);
+                }
+            }
+            
+            // Filter by schedule ID
+            if (scheduleId != null && !scheduleId.trim().isEmpty()) {
+                try {
+                    UUID scheduleUuid = UUID.fromString(scheduleId);
+                    predicates.add(criteriaBuilder.equal(root.get("eventSchedule").get("scheduleId"), scheduleUuid));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid schedule ID format: " + scheduleId);
                 }
             }
 

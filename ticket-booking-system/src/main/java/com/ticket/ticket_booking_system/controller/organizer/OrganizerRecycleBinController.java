@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/organizer/recycle-bin")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ORGANIZER') or hasAnyAuthority('ORGANIZER', 'ROLE_ORGANIZER')")
+@PreAuthorize("hasAnyRole('ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ORGANIZER', 'ROLE_ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ORGANIZER_EMPLOYEE')")
 public class OrganizerRecycleBinController {
 
     private final RecycleBinService recycleBinService;
@@ -122,6 +122,7 @@ public class OrganizerRecycleBinController {
 
     /**
      * Permanently delete an item from the recycle bin
+     * Organizers and organizer employees can only permanently delete EVENT and SCHEDULE types
      */
     @DeleteMapping("/{recycleId}")
     public ResponseEntity<?> permanentlyDelete(
@@ -141,6 +142,12 @@ public class OrganizerRecycleBinController {
                         .body("You do not have permission to delete this item");
             }
 
+            // Check entity type - only EVENT and SCHEDULE can be permanently deleted by organizers
+            if (!"EVENT".equals(item.getEntityType()) && !"SCHEDULE".equals(item.getEntityType())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Organizers can only permanently delete EVENT and SCHEDULE items. Other items can only be deleted by Super Admin.");
+            }
+
             recycleBinService.permanentlyDelete(recycleId);
             return ResponseEntity.ok("Item permanently deleted from recycle bin");
         } catch (RuntimeException e) {
@@ -150,6 +157,7 @@ public class OrganizerRecycleBinController {
 
     /**
      * Empty all items from the organizer's recycle bin
+     * Only EVENT and SCHEDULE types will be permanently deleted
      */
     @DeleteMapping("/empty")
     public ResponseEntity<?> emptyRecycleBin(Authentication authentication) {
@@ -159,12 +167,15 @@ public class OrganizerRecycleBinController {
                     .body("Unable to identify organizer");
         }
 
-        recycleBinService.emptyRecycleBinForOrganizer(organizerId);
-        return ResponseEntity.ok("Recycle bin emptied successfully");
+        // Only empty EVENT and SCHEDULE types for organizers
+        recycleBinService.emptyRecycleBinForOrganizerByType(organizerId, "EVENT");
+        recycleBinService.emptyRecycleBinForOrganizerByType(organizerId, "SCHEDULE");
+        return ResponseEntity.ok("Event and Schedule items permanently deleted from recycle bin");
     }
 
     /**
      * Empty recycle bin items by type for the organizer
+     * Only EVENT and SCHEDULE types can be emptied by organizers
      */
     @DeleteMapping("/empty/type/{entityType}")
     public ResponseEntity<?> emptyRecycleBinByType(
@@ -174,6 +185,12 @@ public class OrganizerRecycleBinController {
         if (organizerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Unable to identify organizer");
+        }
+
+        // Check entity type - only EVENT and SCHEDULE can be permanently deleted by organizers
+        if (!"EVENT".equals(entityType) && !"SCHEDULE".equals(entityType)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Organizers can only permanently delete EVENT and SCHEDULE items. Other items can only be deleted by Super Admin.");
         }
 
         recycleBinService.emptyRecycleBinForOrganizerByType(organizerId, entityType);

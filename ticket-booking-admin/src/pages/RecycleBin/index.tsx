@@ -78,7 +78,8 @@ const RecycleBin: React.FC = () => {
   const [openEmptyDialog, setOpenEmptyDialog] = useState(false);
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
-  const entityTypes = ['USER', 'EVENT', 'VENUE'];
+  const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === UserRole.ROLE_ORGANIZER;
+  const entityTypes = ['USER', 'EVENT', 'VENUE', 'SCHEDULE'];
 
   useEffect(() => {
     fetchRecycleBinItems();
@@ -92,7 +93,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE';
         data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
       setItems(data);
@@ -224,7 +225,14 @@ const RecycleBin: React.FC = () => {
         )}
       </Box>
 
-      {!isSuperAdmin && (
+      {!isSuperAdmin && isOrganizer && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2" component="span">
+            <strong>Organizer Access:</strong> You can restore items and permanently delete EVENT and SCHEDULE items. Other item types can only be deleted by Super Admin.
+          </Typography>
+        </Alert>
+      )}
+      {!isSuperAdmin && !isOrganizer && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <Typography variant="body2" component="span">
             <strong>Limited Access:</strong> Only Super Admins can permanently delete items from the recycle bin. You can restore items to make them active again.
@@ -266,6 +274,7 @@ const RecycleBin: React.FC = () => {
           <Tab label="Users" />
           <Tab label="Events" />
           <Tab label="Venues" />
+          <Tab label="Schedules" />
         </Tabs>
 
         {loading ? (
@@ -335,7 +344,23 @@ const RecycleBin: React.FC = () => {
                                 size="small"
                                 color="error"
                                 onClick={() => handleOpenDeleteDialog(item)}
-                                title="Delete Permanently (SUPER ADMIN Only)"
+                                title="Delete Permanently (SUPER ADMIN)"
+                                sx={{
+                                  backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                                  }
+                                }}
+                              >
+                                <DeleteForeverIcon />
+                              </IconButton>
+                            )}
+                            {!isSuperAdmin && isOrganizer && (item.entityType === 'EVENT' || item.entityType === 'SCHEDULE') && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleOpenDeleteDialog(item)}
+                                title="Delete Permanently"
                                 sx={{
                                   backgroundColor: 'rgba(211, 47, 47, 0.1)',
                                   '&:hover': {
