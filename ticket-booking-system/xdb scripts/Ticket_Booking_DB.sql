@@ -194,7 +194,7 @@ select * from organizer_employees;
 -- Check what columns exist in the tables
 SELECT column_name 
 FROM information_schema.columns 
-WHERE table_name = 'events' 
+WHERE table_name = 'recycle_bin' 
 ORDER BY ordinal_position;
 
 

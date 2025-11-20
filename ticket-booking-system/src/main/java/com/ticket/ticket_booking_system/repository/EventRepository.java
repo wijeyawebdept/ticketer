@@ -42,4 +42,9 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer AND e.isDeleted = false")
     Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(Organizer organizer, Pageable pageable);
+    
+    // Organizer-specific count queries
+    long countByOrganizer_OrganizerId(UUID organizerId);
+    
+    long countByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status);
 }

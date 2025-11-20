@@ -127,11 +127,12 @@ const Events: React.FC = () => {
     if (!selectedEvent) return;
     
     try {
-      await EventService.deleteEvent(selectedEvent.id);
+      // Use soft delete (move to recycle bin) instead of permanent delete
+      await EventService.moveToRecycleBin(selectedEvent.id);
       fetchEvents();
       handleDeleteDialogClose();
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Error moving event to recycle bin:', error);
     }
   };
 

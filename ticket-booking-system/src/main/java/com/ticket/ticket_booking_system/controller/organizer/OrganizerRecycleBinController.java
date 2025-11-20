@@ -3,8 +3,10 @@ package com.ticket.ticket_booking_system.controller.organizer;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,25 +34,37 @@ import lombok.RequiredArgsConstructor;
 public class OrganizerRecycleBinController {
 
     private final RecycleBinService recycleBinService;
+    private final OrganizerRepository organizerRepository;
 
     /**
-     * Get all recycle bin items for the organizer
-     * Note: In a production system, this should be filtered by organizer ID
+     * Get all recycle bin items for the current organizer
      */
     @GetMapping
-    public ResponseEntity<List<RecycleBinDTO>> getAllRecycleBinItems() {
-        List<RecycleBinDTO> items = recycleBinService.getAllRecycleBinItems();
-        // TODO: Filter by current organizer's ID
+    public ResponseEntity<?> getAllRecycleBinItems(Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsByOrganizer(organizerId);
         return ResponseEntity.ok(items);
     }
 
     /**
-     * Get recycle bin items by entity type (Event, Venue, etc.)
+     * Get recycle bin items by entity type (Event, Venue, etc.) for current organizer
      */
     @GetMapping("/type/{entityType}")
-    public ResponseEntity<List<RecycleBinDTO>> getRecycleBinItemsByType(@PathVariable String entityType) {
-        List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsByType(entityType);
-        // TODO: Filter by current organizer's ID
+    public ResponseEntity<?> getRecycleBinItemsByType(
+            @PathVariable String entityType,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsByOrganizerAndType(organizerId, entityType);
         return ResponseEntity.ok(items);
     }
 
@@ -56,9 +72,23 @@ public class OrganizerRecycleBinController {
      * Get a specific recycle bin item by ID
      */
     @GetMapping("/{recycleId}")
-    public ResponseEntity<RecycleBinDTO> getRecycleBinItem(@PathVariable UUID recycleId) {
+    public ResponseEntity<?> getRecycleBinItem(
+            @PathVariable UUID recycleId,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
         RecycleBinDTO item = recycleBinService.getRecycleBinItem(recycleId);
-        // TODO: Verify this item belongs to the current organizer
+        
+        // Verify this item belongs to the current organizer
+        if (item.getOrganizerId() == null || !item.getOrganizerId().equals(organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to access this recycle bin item");
+        }
+
         return ResponseEntity.ok(item);
     }
 
@@ -66,9 +96,23 @@ public class OrganizerRecycleBinController {
      * Restore an item from the recycle bin
      */
     @PostMapping("/{recycleId}/restore")
-    public ResponseEntity<?> restoreItem(@PathVariable UUID recycleId) {
+    public ResponseEntity<?> restoreItem(
+            @PathVariable UUID recycleId,
+            Authentication authentication) {
         try {
-            // TODO: Verify this item belongs to the current organizer before restoring
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+
+            // Get item and verify ownership
+            RecycleBinDTO item = recycleBinService.getRecycleBinItem(recycleId);
+            if (item.getOrganizerId() == null || !item.getOrganizerId().equals(organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to restore this item");
+            }
+
             RecycleBinDTO restored = recycleBinService.restoreItem(recycleId);
             return ResponseEntity.ok(restored);
         } catch (RuntimeException e) {
@@ -80,9 +124,23 @@ public class OrganizerRecycleBinController {
      * Permanently delete an item from the recycle bin
      */
     @DeleteMapping("/{recycleId}")
-    public ResponseEntity<?> permanentlyDelete(@PathVariable UUID recycleId) {
+    public ResponseEntity<?> permanentlyDelete(
+            @PathVariable UUID recycleId,
+            Authentication authentication) {
         try {
-            // TODO: Verify this item belongs to the current organizer before deleting
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+
+            // Get item and verify ownership
+            RecycleBinDTO item = recycleBinService.getRecycleBinItem(recycleId);
+            if (item.getOrganizerId() == null || !item.getOrganizerId().equals(organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to delete this item");
+            }
+
             recycleBinService.permanentlyDelete(recycleId);
             return ResponseEntity.ok("Item permanently deleted from recycle bin");
         } catch (RuntimeException e) {
@@ -94,10 +152,14 @@ public class OrganizerRecycleBinController {
      * Empty all items from the organizer's recycle bin
      */
     @DeleteMapping("/empty")
-    public ResponseEntity<?> emptyRecycleBin() {
-        // TODO: Implement organizer-specific empty recycle bin
-        // This should only delete items belonging to the current organizer
-        recycleBinService.emptyRecycleBin();
+    public ResponseEntity<?> emptyRecycleBin(Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        recycleBinService.emptyRecycleBinForOrganizer(organizerId);
         return ResponseEntity.ok("Recycle bin emptied successfully");
     }
 
@@ -105,10 +167,41 @@ public class OrganizerRecycleBinController {
      * Empty recycle bin items by type for the organizer
      */
     @DeleteMapping("/empty/type/{entityType}")
-    public ResponseEntity<?> emptyRecycleBinByType(@PathVariable String entityType) {
-        // TODO: Implement organizer-specific empty by type
-        // This should only delete items of this type belonging to the current organizer
-        recycleBinService.emptyRecycleBinByType(entityType);
+    public ResponseEntity<?> emptyRecycleBinByType(
+            @PathVariable String entityType,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        recycleBinService.emptyRecycleBinForOrganizerByType(organizerId, entityType);
         return ResponseEntity.ok("Recycle bin emptied for type: " + entityType);
+    }
+
+    /**
+     * Helper method to extract organizer ID from authentication
+     */
+    private UUID getOrganizerIdFromAuth(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+
+        // Try to get from Organizer principal
+        if (authentication.getPrincipal() instanceof Organizer) {
+            Organizer organizer = (Organizer) authentication.getPrincipal();
+            return organizer.getOrganizerId();
+        }
+
+        // Extract email from authentication principal (JWT token)
+        String email = authentication.getName();
+        if (email != null && !email.isEmpty()) {
+            return organizerRepository.findByEmail(email)
+                    .map(Organizer::getOrganizerId)
+                    .orElse(null);
+        }
+
+        return null;
     }
 }

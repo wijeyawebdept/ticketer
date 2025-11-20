@@ -28,7 +28,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ticket.ticket_booking_system.dto.request.EventCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.EventUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
+import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EventService;
 
@@ -45,10 +47,12 @@ public class OrganizerEventController {
 
     private final EventService eventService;
     private final OrganizerRepository organizerRepository;
+    private final BookingRepository bookingRepository;
 
-    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository) {
+    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository, BookingRepository bookingRepository) {
         this.eventService = eventService;
         this.organizerRepository = organizerRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     /**
@@ -174,16 +178,42 @@ public class OrganizerEventController {
 
     /**
      * Get event statistics - Organizer perspective
-     * TODO: Implement getEventStatistics in EventService
      */
     @GetMapping("/{eventId}/statistics")
     public ResponseEntity<Map<String, Object>> getEventStatistics(
             @PathVariable UUID eventId,
             Authentication authentication) {
-        // TODO: Add this method to EventService
+        
+        EventResponse eventResponse = eventService.getEventById(eventId);
+        
+        // Get bookings count for this specific event
+        long totalBookings = bookingRepository.count(
+                (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("event").get("eventId"), eventId));
+        long confirmedBookings = bookingRepository.count(
+                (root, query, criteriaBuilder) -> criteriaBuilder.and(
+                        criteriaBuilder.equal(root.get("event").get("eventId"), eventId),
+                        criteriaBuilder.equal(root.get("status"), Booking.BookingStatus.CONFIRMED)));
+        long cancelledBookings = bookingRepository.count(
+                (root, query, criteriaBuilder) -> criteriaBuilder.and(
+                        criteriaBuilder.equal(root.get("event").get("eventId"), eventId),
+                        criteriaBuilder.equal(root.get("status"), Booking.BookingStatus.CANCELLED)));
+        
+        int totalCapacity = eventResponse.getTotalCapacity() != null ? eventResponse.getTotalCapacity() : 0;
+        int availableSeats = eventResponse.getAvailableSeats() != null ? eventResponse.getAvailableSeats() : 0;
+        int bookedSeats = totalCapacity - availableSeats;
+        
         Map<String, Object> statistics = new HashMap<>();
-        statistics.put("message", "Event statistics coming soon");
         statistics.put("eventId", eventId.toString());
+        statistics.put("eventName", eventResponse.getName());
+        statistics.put("totalBookings", totalBookings);
+        statistics.put("confirmedBookings", confirmedBookings);
+        statistics.put("cancelledBookings", cancelledBookings);
+        statistics.put("availableSeats", availableSeats);
+        statistics.put("totalCapacity", totalCapacity);
+        statistics.put("bookedSeats", bookedSeats);
+        statistics.put("occupancyRate", totalCapacity > 0 ? 
+                String.format("%.2f%%", (bookedSeats * 100.0 / totalCapacity)) : "0.00%");
+        
         return ResponseEntity.ok(statistics);
     }
 

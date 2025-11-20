@@ -1,7 +1,10 @@
 package com.ticket.ticket_booking_system.controller.organizer;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -10,7 +13,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.DashboardService;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Organizer dashboard controller
@@ -19,13 +29,13 @@ import com.ticket.ticket_booking_system.service.DashboardService;
 @RestController
 @RequestMapping("/api/organizer/dashboard")
 @PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ORGANIZER', 'ADMIN', 'SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+@RequiredArgsConstructor
 public class OrganizerDashboardController {
 
     private final DashboardService dashboardService;
-
-    public OrganizerDashboardController(DashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
+    private final EventRepository eventRepository;
+    private final BookingRepository bookingRepository;
+    private final OrganizerRepository organizerRepository;
 
     /**
      * Get dashboard overview for organizer
@@ -107,32 +117,89 @@ public class OrganizerDashboardController {
      * Get organizer performance metrics
      */
     @GetMapping("/performance")
-    public ResponseEntity<Map<String, Object>> getPerformanceMetrics(
+    public ResponseEntity<?> getPerformanceMetrics(
             @RequestParam(defaultValue = "month") String period,
             Authentication authentication) {
-        // TODO: Implement organizer-specific performance metrics
-        // - Event success rate
-        // - Average attendance
-        // - Revenue per event
-        // - Booking completion rate
-        return ResponseEntity.ok(Map.of(
-            "message", "Performance metrics coming soon",
-            "period", period
-        ));
+        
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        long totalEvents = eventRepository.countByOrganizer_OrganizerId(organizerId);
+        long totalBookings = bookingRepository.countByEvent_Organizer_OrganizerId(organizerId);
+        long confirmedBookings = bookingRepository.countByEvent_Organizer_OrganizerIdAndStatus(
+                organizerId, com.ticket.ticket_booking_system.entity.Booking.BookingStatus.CONFIRMED);
+        
+        double bookingCompletionRate = totalBookings > 0 ? (confirmedBookings * 100.0 / totalBookings) : 0;
+        double avgBookingsPerEvent = totalEvents > 0 ? (totalBookings * 1.0 / totalEvents) : 0;
+
+        Map<String, Object> metrics = new HashMap<>();
+        metrics.put("period", period);
+        metrics.put("totalEvents", totalEvents);
+        metrics.put("totalBookings", totalBookings);
+        metrics.put("confirmedBookings", confirmedBookings);
+        metrics.put("bookingCompletionRate", String.format("%.2f%%", bookingCompletionRate));
+        metrics.put("avgBookingsPerEvent", String.format("%.2f", avgBookingsPerEvent));
+        
+        return ResponseEntity.ok(metrics);
     }
 
     /**
      * Get event statistics summary for organizer
      */
     @GetMapping("/event-summary")
-    public ResponseEntity<Map<String, Object>> getEventSummary(Authentication authentication) {
-        // TODO: Implement organizer-specific event summary
-        // - Total events created
-        // - Active events
-        // - Completed events
-        // - Cancelled events
-        return ResponseEntity.ok(Map.of(
-            "message", "Event summary coming soon"
-        ));
+    public ResponseEntity<?> getEventSummary(Authentication authentication) {
+        
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+
+        long totalEvents = eventRepository.countByOrganizer_OrganizerId(organizerId);
+        long publishedEvents = eventRepository.countByOrganizer_OrganizerIdAndStatus(
+                organizerId, Event.EventStatus.PUBLISHED);
+        long draftEvents = eventRepository.countByOrganizer_OrganizerIdAndStatus(
+                organizerId, Event.EventStatus.DRAFT);
+        long completedEvents = eventRepository.countByOrganizer_OrganizerIdAndStatus(
+                organizerId, Event.EventStatus.COMPLETED);
+        long cancelledEvents = eventRepository.countByOrganizer_OrganizerIdAndStatus(
+                organizerId, Event.EventStatus.CANCELLED);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalEvents", totalEvents);
+        summary.put("publishedEvents", publishedEvents);
+        summary.put("draftEvents", draftEvents);
+        summary.put("completedEvents", completedEvents);
+        summary.put("cancelledEvents", cancelledEvents);
+        
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Helper method to extract organizer ID from authentication
+     */
+    private UUID getOrganizerIdFromAuth(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+
+        // Try to get from Organizer principal
+        if (authentication.getPrincipal() instanceof Organizer) {
+            Organizer organizer = (Organizer) authentication.getPrincipal();
+            return organizer.getOrganizerId();
+        }
+
+        // Extract email from authentication principal (JWT token)
+        String email = authentication.getName();
+        if (email != null && !email.isEmpty()) {
+            return organizerRepository.findByEmail(email)
+                    .map(Organizer::getOrganizerId)
+                    .orElse(null);
+        }
+
+        return null;
     }
 }

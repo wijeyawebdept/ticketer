@@ -1,5 +1,7 @@
 package com.ticket.ticket_booking_system.controller.organizer;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ import com.ticket.ticket_booking_system.dto.CreateOrganizerEmployeeRequest;
 import com.ticket.ticket_booking_system.dto.OrganizerEmployeeDTO;
 import com.ticket.ticket_booking_system.dto.UpdateOrganizerEmployeeRequest;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.OrganizerEmployeeManagementService;
 
@@ -44,6 +47,7 @@ public class OrganizerEmployeeController {
 
     private final OrganizerEmployeeManagementService employeeService;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository employeeRepository;
 
     /**
      * Get all employees for the current organizer
@@ -74,11 +78,22 @@ public class OrganizerEmployeeController {
      * Get a specific employee by ID
      */
     @GetMapping("/{employeeId}")
-    public ResponseEntity<OrganizerEmployeeDTO> getEmployeeById(
+    public ResponseEntity<?> getEmployeeById(
             @PathVariable UUID employeeId,
             Authentication authentication) {
         
-        // TODO: Verify this employee belongs to the current organizer
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+        
+        // Verify employee belongs to current organizer
+        if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to access this employee");
+        }
+        
         OrganizerEmployeeDTO employee = employeeService.getEmployeeById(employeeId);
         return ResponseEntity.ok(employee);
     }
@@ -118,7 +133,18 @@ public class OrganizerEmployeeController {
             @Valid @RequestBody UpdateOrganizerEmployeeRequest request,
             Authentication authentication) {
         try {
-            // TODO: Verify this employee belongs to the current organizer
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+            
+            // Verify employee belongs to current organizer
+            if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to update this employee");
+            }
+            
             OrganizerEmployeeDTO employee = employeeService.updateEmployee(employeeId, request);
             return ResponseEntity.ok(employee);
         } catch (RuntimeException e) {
@@ -134,7 +160,18 @@ public class OrganizerEmployeeController {
             @PathVariable UUID employeeId,
             Authentication authentication) {
         try {
-            // TODO: Verify this employee belongs to the current organizer
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+            
+            // Verify employee belongs to current organizer
+            if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to delete this employee");
+            }
+            
             employeeService.deleteEmployee(employeeId);
             return ResponseEntity.ok("Employee deleted successfully");
         } catch (RuntimeException e) {
@@ -150,7 +187,18 @@ public class OrganizerEmployeeController {
             @PathVariable UUID employeeId,
             Authentication authentication) {
         try {
-            // TODO: Verify this employee belongs to the current organizer
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+            
+            // Verify employee belongs to current organizer
+            if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to restore this employee");
+            }
+            
             employeeService.restoreEmployee(employeeId);
             return ResponseEntity.ok("Employee restored successfully");
         } catch (RuntimeException e) {
@@ -162,10 +210,14 @@ public class OrganizerEmployeeController {
      * Get count of active employees for the current organizer
      */
     @GetMapping("/count")
-    public ResponseEntity<Long> countMyActiveEmployees(Authentication authentication) {
-        // TODO: Implement organizer-specific count
-        // For now, returns total count
-        long count = employeeService.countActiveEmployees();
+    public ResponseEntity<?> countMyActiveEmployees(Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+        
+        long count = employeeRepository.countByOrganizer_OrganizerIdAndActiveTrue(organizerId);
         return ResponseEntity.ok(count);
     }
 
@@ -174,10 +226,22 @@ public class OrganizerEmployeeController {
      */
     @GetMapping("/statistics")
     public ResponseEntity<?> getEmployeeStatistics(Authentication authentication) {
-        // TODO: Implement employee statistics
-        // This could include: total employees, active employees, inactive employees,
-        // employees by position, etc.
-        return ResponseEntity.ok("Employee statistics coming soon");
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+        
+        long totalEmployees = employeeRepository.countByOrganizer_OrganizerId(organizerId);
+        long activeEmployees = employeeRepository.countByOrganizer_OrganizerIdAndActiveTrue(organizerId);
+        long inactiveEmployees = totalEmployees - activeEmployees;
+        
+        Map<String, Object> statistics = new HashMap<>();
+        statistics.put("totalEmployees", totalEmployees);
+        statistics.put("activeEmployees", activeEmployees);
+        statistics.put("inactiveEmployees", inactiveEmployees);
+        
+        return ResponseEntity.ok(statistics);
     }
 
     /**
@@ -203,5 +267,15 @@ public class OrganizerEmployeeController {
         }
         
         return null;
+    }
+
+    /**
+     * Verify that an employee belongs to the specified organizer
+     */
+    private boolean verifyEmployeeOwnership(UUID employeeId, UUID organizerId) {
+        return employeeRepository.findById(employeeId)
+                .map(employee -> employee.getOrganizer() != null && 
+                                 employee.getOrganizer().getOrganizerId().equals(organizerId))
+                .orElse(false);
     }
 }

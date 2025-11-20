@@ -14,6 +14,7 @@ import {
   IconButton,
   CircularProgress,
   Paper,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,6 +29,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { Event, Venue, EventStatus, TicketCategory } from '../../../types';
 import { EventService } from '../../../services';
 import { VenueService } from '../../../services';
+import { useAuth } from '../../../context/AuthContext';
 
 // Define the form values type
 interface FormValues {
@@ -41,7 +43,7 @@ interface FormValues {
   totalCapacity: number;
   status: EventStatus;
   imageFile: File | null;
-  ticketCategories: TicketCategory[]; // Added ticket categories
+  ticketCategories: TicketCategory[];
 }
 
 interface EventFormProps {
@@ -95,11 +97,13 @@ const ImagePreview: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
 );
 
 const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
+  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(event?.imageUrl || null);
   const [uploading, setUploading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venueLoading, setVenueLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   
   // Function to get button text based on form state
   const getButtonText = (isUploading: boolean, isSubmitting: boolean): string => {
@@ -128,6 +132,23 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setValidationError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        setValidationError('Image size must not exceed 5MB. Please choose a smaller file.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+      
+      setValidationError(null);
       setSelectedImage(file);
       setFieldValue('imageFile', file);
       
@@ -158,57 +179,190 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         startDateTime: event?.startDateTime ? new Date(event.startDateTime) : new Date(),
         endDateTime: event?.endDateTime ? new Date(event.endDateTime) : new Date(new Date().setHours(new Date().getHours() + 2)),
         venueId: event?.venue?.id || '',
-        category: '', // Remove category requirement since backend doesn't support it
+        category: '',
         basePrice: event?.basePrice || 0,
         totalCapacity: event?.ticketsAvailable || 100,
         status: event?.status || EventStatus.DRAFT,
         imageFile: null,
         ticketCategories: event?.ticketCategories && event.ticketCategories.length > 0 
           ? event.ticketCategories 
-          : [{ categoryName: '', price: 0, capacity: 0 }] // Initialize with one empty category
+          : [{ categoryName: '', price: 0, capacity: 0 }]
       }}
       validationSchema={Yup.object({
         name: Yup.string()
           .required('Event name is required')
           .min(3, 'Event name must be at least 3 characters')
-          .max(100, 'Event name must be less than 100 characters'),
+          .max(100, 'Event name must not exceed 100 characters')
+          .matches(/^[a-zA-Z0-9\s\-',.()]+$/, 'Event name contains invalid characters'),
         description: Yup.string()
           .required('Event description is required')
-          .min(10, 'Description must be at least 10 characters'),
+          .min(10, 'Description must be at least 10 characters')
+          .max(2000, 'Description must not exceed 2000 characters')
+          .test('no-only-spaces', 'Description cannot contain only spaces', (value) => {
+            return value ? value.trim().length >= 10 : false;
+          }),
         startDateTime: Yup.date()
           .required('Start date and time is required')
-          .min(new Date(new Date().setDate(new Date().getDate() - 1)), 'Start date and time cannot be in the past'),
+          .typeError('Start date and time must be a valid date')
+          .test('not-in-past', 'Start date and time cannot be in the past', function(value) {
+            // Allow editing events if they're already created (editing mode)
+            if (event?.id) return true;
+            if (!value) return false;
+            const now = new Date();
+            // Allow dates from yesterday onwards to handle timezone issues
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return value >= yesterday;
+          })
+          .test('not-too-far', 'Start date cannot be more than 5 years in the future', function(value) {
+            if (!value) return false;
+            const fiveYearsFromNow = new Date();
+            fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
+            return value <= fiveYearsFromNow;
+          }),
         endDateTime: Yup.date()
           .required('End date and time is required')
-          .min(Yup.ref('startDateTime'), 'End date and time must be after start date and time'),
+          .typeError('End date and time must be a valid date')
+          .min(Yup.ref('startDateTime'), 'End date and time must be after start date and time')
+          .test('reasonable-duration', 'Event duration cannot exceed 30 days', function(value) {
+            const { startDateTime } = this.parent;
+            if (!value || !startDateTime) return true;
+            const diffInMs = value.getTime() - startDateTime.getTime();
+            const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+            return diffInDays <= 30;
+          })
+          .test('minimum-duration', 'Event must be at least 30 minutes long', function(value) {
+            const { startDateTime } = this.parent;
+            if (!value || !startDateTime) return true;
+            const diffInMs = value.getTime() - startDateTime.getTime();
+            const diffInMinutes = diffInMs / (1000 * 60);
+            return diffInMinutes >= 30;
+          }),
         venueId: Yup.string()
-          .required('Venue is required'),
+          .required('Venue is required')
+          .test('valid-uuid', 'Invalid venue selected', (value) => {
+            if (!value) return false;
+            // Check if it's a valid UUID format
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(value);
+          }),
         category: Yup.string()
-          .optional(), // Made category optional since backend doesn't support it
+          .optional(),
         basePrice: Yup.number()
           .required('Base price is required')
-          .min(0, 'Base price cannot be negative'),
+          .typeError('Base price must be a valid number')
+          .min(0, 'Base price cannot be negative')
+          .max(1000000, 'Base price cannot exceed LKR 1,000,000')
+          .test('two-decimals', 'Base price can have at most 2 decimal places', (value) => {
+            if (value === undefined || value === null) return false;
+            return /^\d+(\.\d{1,2})?$/.test(value.toString());
+          }),
         totalCapacity: Yup.number()
           .required('Total capacity is required')
-          .min(1, 'At least 1 ticket must be available'),
+          .typeError('Total capacity must be a valid number')
+          .integer('Total capacity must be a whole number')
+          .min(1, 'Total capacity must be at least 1')
+          .max(100000, 'Total capacity cannot exceed 100,000')
+          .test('capacity-vs-venue', 'Total capacity cannot exceed venue capacity', function(value) {
+            const { venueId } = this.parent;
+            if (!value || !venueId) return true;
+            const selectedVenue = venues.find(v => v.id === venueId);
+            if (!selectedVenue) return true;
+            return value <= selectedVenue.capacity;
+          })
+          .test('capacity-vs-categories', 'Total capacity must equal or exceed sum of all ticket category capacities', function(value) {
+            const { ticketCategories } = this.parent;
+            if (!value || !ticketCategories || ticketCategories.length === 0) return true;
+            const totalCategoryCapacity = ticketCategories.reduce(
+              (sum: number, cat: TicketCategory) => sum + (Number(cat.capacity) || 0), 
+              0
+            );
+            return value >= totalCategoryCapacity;
+          }),
+        status: Yup.string()
+          .required('Event status is required')
+          .oneOf(
+            [EventStatus.DRAFT, EventStatus.PUBLISHED, EventStatus.CANCELLED, EventStatus.COMPLETED],
+            'Invalid event status selected'
+          ),
         ticketCategories: Yup.array().of(
           Yup.object().shape({
             categoryName: Yup.string()
               .required('Category name is required')
-              .min(1, 'Category name is required'),
+              .min(2, 'Category name must be at least 2 characters')
+              .max(50, 'Category name must not exceed 50 characters')
+              .matches(/^[a-zA-Z0-9\s-]+$/, 'Category name contains invalid characters'),
             price: Yup.number()
               .required('Price is required')
-              .min(0, 'Price must be 0 or greater'),
+              .typeError('Price must be a valid number')
+              .min(0, 'Price cannot be negative')
+              .max(1000000, 'Price cannot exceed LKR 1,000,000')
+              .test('two-decimals', 'Price can have at most 2 decimal places', (value) => {
+                if (value === undefined || value === null) return false;
+                return /^\d+(\.\d{1,2})?$/.test(value.toString());
+              }),
             capacity: Yup.number()
               .required('Capacity is required')
+              .typeError('Capacity must be a valid number')
+              .integer('Capacity must be a whole number')
               .min(1, 'Capacity must be at least 1')
+              .max(100000, 'Capacity cannot exceed 100,000'),
+            description: Yup.string()
+              .max(500, 'Description must not exceed 500 characters')
+              .optional()
           })
-        ).required('At least one ticket category is required')
+        )
+        .required('At least one ticket category is required')
         .min(1, 'At least one ticket category is required')
+        .test('unique-categories', 'Category names must be unique', function(categories) {
+          if (!categories || categories.length === 0) return true;
+          const names = categories
+            .filter((cat: TicketCategory) => cat.categoryName && cat.categoryName.trim())
+            .map((cat: TicketCategory) => cat.categoryName.toLowerCase().trim());
+          const uniqueNames = new Set(names);
+          return names.length === uniqueNames.size;
+        })
       })}
       onSubmit={async (values: FormValues, { setSubmitting, resetForm, setErrors }: FormikHelpers<FormValues>) => {
         try {
+          setValidationError(null);
           setUploading(true);
+          
+          // Additional business rule validations
+          const totalCategoryCapacity = values.ticketCategories.reduce(
+            (sum, cat) => sum + Number(cat.capacity), 
+            0
+          );
+          
+          if (totalCategoryCapacity > values.totalCapacity) {
+            setValidationError(
+              `Sum of ticket category capacities (${totalCategoryCapacity}) cannot exceed total event capacity (${values.totalCapacity})`
+            );
+            setSubmitting(false);
+            setUploading(false);
+            return;
+          }
+          
+          // Check venue capacity
+          const selectedVenue = venues.find(v => v.id === values.venueId);
+          if (selectedVenue && values.totalCapacity > selectedVenue.capacity) {
+            setValidationError(
+              `Event capacity (${values.totalCapacity}) cannot exceed venue capacity (${selectedVenue.capacity})`
+            );
+            setSubmitting(false);
+            setUploading(false);
+            return;
+          }
+          
+          // Validate date/time is reasonable
+          const now = new Date();
+          if (!event?.id && values.startDateTime < now) {
+            setValidationError('Cannot create an event with a start time in the past');
+            setSubmitting(false);
+            setUploading(false);
+            return;
+          }
+          
           const eventData: any = { ...values };
           delete eventData.imageFile;
           
@@ -219,7 +373,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             endDateTime: eventData.endDateTime.toISOString(),
             ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
               ...category,
-              price: Number(category.price) // Ensure price is a number
+              categoryName: category.categoryName.trim(),
+              description: category.description?.trim() || '',
+              price: Number(category.price),
+              capacity: Number(category.capacity)
             }))
           };
           
@@ -240,11 +397,21 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             await EventService.uploadEventImage(savedEvent.id, formData);
           }
           
+          setValidationError(null);
           resetForm();
           if (onSuccess) onSuccess();
         } catch (error) {
           console.error(`Error ${event ? 'updating' : 'creating'} event:`, error);
-          handleApiError(error as ApiError, setErrors, event ? 'update' : 'create');
+          
+          // Extract error message from API response
+          const apiError = error as ApiError;
+          if (apiError.response?.data?.message) {
+            setValidationError(apiError.response.data.message);
+          } else {
+            setValidationError(`Failed to ${event ? 'update' : 'create'} event. Please check all fields and try again.`);
+          }
+          
+          handleApiError(apiError, setErrors, event ? 'update' : 'create');
         } finally {
           setSubmitting(false);
           setUploading(false);
@@ -253,6 +420,23 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
     >
       {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+          {/* Validation Error Alert */}
+          {validationError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setValidationError(null)}>
+              {validationError}
+            </Alert>
+          )}
+          
+          {/* Role Information */}
+          {user && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Creating event as: <strong>{user.role}</strong> ({user.email})
+              {user.role.includes('ORGANIZER') && (
+                <> - Events will be associated with your organizer account</>
+              )}
+            </Alert>
+          )}
+          
           <Typography variant="h6" sx={{ mb: 2 }}>Event Information</Typography>
           <Divider sx={{ mb: 3 }} />
           
@@ -267,7 +451,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.name && Boolean(errors.name)}
-                helperText={touched.name && errors.name ? errors.name as string : undefined}
+                helperText={
+                  touched.name && errors.name 
+                    ? errors.name as string 
+                    : 'Enter a descriptive name for your event (3-100 characters)'
+                }
                 variant="outlined"
                 margin="normal"
                 required
@@ -284,7 +472,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.description && Boolean(errors.description)}
-                helperText={touched.description && errors.description ? errors.description as string : undefined}
+                helperText={
+                  touched.description && errors.description 
+                    ? errors.description as string 
+                    : `Provide detailed information about your event (${values.description.length}/2000 characters, minimum 10)`
+                }
                 variant="outlined"
                 margin="normal"
                 multiline
@@ -309,7 +501,9 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                       margin: 'normal',
                       required: true,
                       error: touched.startDateTime && Boolean(errors.startDateTime),
-                      helperText: touched.startDateTime && errors.startDateTime ? errors.startDateTime as string : undefined
+                      helperText: touched.startDateTime && errors.startDateTime 
+                        ? errors.startDateTime as string 
+                        : 'When does your event start?'
                     }
                   }}
                 />
@@ -332,7 +526,9 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                       margin: 'normal',
                       required: true,
                       error: touched.endDateTime && Boolean(errors.endDateTime),
-                      helperText: touched.endDateTime && errors.endDateTime ? errors.endDateTime as string : undefined
+                      helperText: touched.endDateTime && errors.endDateTime 
+                        ? errors.endDateTime as string 
+                        : 'When does your event end? (minimum 30 minutes, maximum 30 days)'
                     }
                   }}
                 />
@@ -460,7 +656,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.basePrice && Boolean(errors.basePrice)}
-                helperText={touched.basePrice && errors.basePrice ? errors.basePrice as string : undefined}
+                helperText={
+                  touched.basePrice && errors.basePrice 
+                    ? errors.basePrice as string 
+                    : 'Minimum ticket price (0 for free events, max LKR 1,000,000)'
+                }
                 variant="outlined"
                 margin="normal"
                 InputProps={{
@@ -481,7 +681,13 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.totalCapacity && Boolean(errors.totalCapacity)}
-                helperText={touched.totalCapacity && errors.totalCapacity ? errors.totalCapacity as string : undefined}
+                helperText={
+                  touched.totalCapacity && errors.totalCapacity 
+                    ? errors.totalCapacity as string 
+                    : values.venueId 
+                      ? `Maximum attendees (must not exceed venue capacity: ${venues.find(v => v.id === values.venueId)?.capacity || 'N/A'})` 
+                      : 'Total number of tickets available (1-100,000)'
+                }
                 variant="outlined"
                 margin="normal"
                 required
@@ -492,6 +698,28 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>Ticket Categories</Typography>
               <Divider sx={{ mb: 3 }} />
+              
+              {/* Capacity Summary */}
+              {values.ticketCategories.length > 0 && (
+                <Alert 
+                  severity={
+                    values.ticketCategories.reduce((sum, cat) => sum + (Number(cat.capacity) || 0), 0) > values.totalCapacity
+                      ? 'error'
+                      : values.ticketCategories.reduce((sum, cat) => sum + (Number(cat.capacity) || 0), 0) === values.totalCapacity
+                      ? 'success'
+                      : 'info'
+                  }
+                  sx={{ mb: 2 }}
+                >
+                  <strong>Capacity Summary:</strong> 
+                  {' '}Total Event Capacity: {values.totalCapacity}
+                  {' | '}Category Capacities Sum: {values.ticketCategories.reduce((sum, cat) => sum + (Number(cat.capacity) || 0), 0)}
+                  {' | '}Remaining: {values.totalCapacity - values.ticketCategories.reduce((sum, cat) => sum + (Number(cat.capacity) || 0), 0)}
+                  {values.ticketCategories.reduce((sum, cat) => sum + (Number(cat.capacity) || 0), 0) > values.totalCapacity && (
+                    <> - <strong>Categories exceed total capacity!</strong></>
+                  )}
+                </Alert>
+              )}
               
               {values.ticketCategories.map((category, index) => (
                 <Paper key={index} sx={{ p: 2, mb: 2 }}>
@@ -641,11 +869,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 Upload Image
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   hidden
                   onChange={(e) => handleImageChange(e, setFieldValue)}
                 />
               </Button>
+              <FormHelperText>
+                Upload a promotional image for your event (JPEG, PNG, GIF, or WebP, max 5MB)
+              </FormHelperText>
               
               {imagePreview && <ImagePreview src={imagePreview} alt="Event preview" />}
             </Grid>

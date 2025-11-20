@@ -73,6 +73,11 @@ class EventService {
     await api.delete(`${basePath}/events/${id}`);
   }
 
+  async moveToRecycleBin(id: string): Promise<void> {
+    const basePath = this.getBasePath();
+    await api.delete(`${basePath}/events/${id}/soft`);
+  }
+
   async changeEventStatus(id: string, status: string): Promise<Event> {
     const basePath = this.getBasePath();
     const response = await api.patch<Event>(`${basePath}/events/${id}/change-status?status=${status}`);

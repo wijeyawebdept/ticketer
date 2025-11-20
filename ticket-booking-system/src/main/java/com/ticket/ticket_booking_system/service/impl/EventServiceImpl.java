@@ -23,12 +23,14 @@ import com.ticket.ticket_booking_system.dto.response.VenueBasicResponse; // Adde
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.TicketCategory; // Added import
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException; // Added import
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
@@ -49,6 +51,7 @@ public class EventServiceImpl implements EventService {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final FileUploadService fileUploadService;
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
     private final SeatRepository seatRepository; // Added repository for seat deletion
@@ -275,6 +278,12 @@ public class EventServiceImpl implements EventService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String authenticatedEmail = authentication.getName();
         
+        // Initialize owner IDs
+        UUID adminId = null;
+        UUID organizerId = null;
+        UUID organizerEmployeeId = null;
+        UUID userId = null;
+        
         // Try to find authenticated user in any of the tables
         User deletedBy = userRepository.findByEmail(authenticatedEmail).orElse(null);
         
@@ -289,6 +298,7 @@ public class EventServiceImpl implements EventService {
                 deletedBy.setEmail(admin.getEmail());
                 deletedBy.setFirstName(admin.getFirstName());
                 deletedBy.setLastName(admin.getLastName());
+                adminId = admin.getAdminId();
             } else {
                 // Check if it's an organizer
                 Organizer organizer = organizerRepository.findByEmail(authenticatedEmail).orElse(null);
@@ -299,20 +309,38 @@ public class EventServiceImpl implements EventService {
                     deletedBy.setEmail(organizer.getEmail());
                     deletedBy.setFirstName(organizer.getFirstName());
                     deletedBy.setLastName(organizer.getLastName());
+                    organizerId = organizer.getOrganizerId();
                 } else {
-                    throw new IllegalStateException("Current authenticated user not found in any table");
+                    // Check if it's an organizer employee
+                    OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(authenticatedEmail).orElse(null);
+                    if (employee != null) {
+                        deletedBy = new User();
+                        deletedBy.setId(employee.getEmployeeId());
+                        deletedBy.setEmail(employee.getEmail());
+                        deletedBy.setFirstName(employee.getFirstName());
+                        deletedBy.setLastName(employee.getLastName());
+                        organizerEmployeeId = employee.getEmployeeId();
+                    } else {
+                        throw new IllegalStateException("Current authenticated user not found in any table");
+                    }
                 }
             }
+        } else {
+            userId = deletedBy.getId();
         }
         
-        // Move to recycle bin
+        // Move to recycle bin with owner tracking
         recycleBinService.moveToRecycleBin(
                 "EVENT",
                 event.getEventId(),
                 event.getName(),
                 event,
                 deletedBy,
-                "Event soft deleted by " + deletedBy.getEmail()
+                "Event soft deleted by " + deletedBy.getEmail(),
+                adminId,
+                organizerId,
+                organizerEmployeeId,
+                userId
         );
         
         // Mark as deleted (soft delete)

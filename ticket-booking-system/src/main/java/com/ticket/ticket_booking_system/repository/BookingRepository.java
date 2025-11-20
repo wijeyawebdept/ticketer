@@ -38,4 +38,17 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingTime BETWEEN :startDate AND :endDate AND b.status = 'CONFIRMED'")
     Long countBookingsBetweenDates(LocalDateTime startDate, LocalDateTime endDate);
+    
+    // Organizer-specific queries
+    Page<Booking> findByEvent_Organizer_OrganizerId(UUID organizerId, Pageable pageable);
+    
+    long countByEvent_Organizer_OrganizerId(UUID organizerId);
+    
+    long countByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status);
+    
+    List<Booking> findByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status);
+    
+    Page<Booking> findByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status, Pageable pageable);
+    
+    List<Booking> findTopByEvent_Organizer_OrganizerIdOrderByBookingTimeDesc(UUID organizerId, Pageable pageable);
 }

@@ -23,4 +23,8 @@ public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmpl
     Page<OrganizerEmployee> findByOrganizer_OrganizerIdAndActiveTrue(UUID organizerId, Pageable pageable);
     
     long countByActiveTrue();
+    
+    long countByOrganizer_OrganizerId(UUID organizerId);
+    
+    long countByOrganizer_OrganizerIdAndActiveTrue(UUID organizerId);
 }
