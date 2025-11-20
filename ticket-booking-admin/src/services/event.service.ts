@@ -80,7 +80,7 @@ class EventService {
 
   async changeEventStatus(id: string, status: string): Promise<Event> {
     const basePath = this.getBasePath();
-    const response = await api.patch<Event>(`${basePath}/events/${id}/change-status?status=${status}`);
+    const response = await api.patch<Event>(`${basePath}/events/${id}/status?status=${status}`);
     return response.data;
   }
   
