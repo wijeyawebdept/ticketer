@@ -1,7 +1,6 @@
 package com.ticket.ticket_booking_system.dto.request;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import jakarta.validation.constraints.Positive;
