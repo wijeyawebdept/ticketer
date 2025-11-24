@@ -10,6 +10,7 @@ import { profileService } from './profile.service';
 import { RoleService } from './role.service';
 import RecycleBinService from './recycle-bin.service';
 import EmployeeService from './employee.service';
+import OrganizerService from './organizer.service';
 
 export {
   AuthService,
@@ -18,6 +19,7 @@ export {
   EventService,
   EventScheduleService,
   BookingService,
+  OrganizerService,
   TransactionService,
   VenueService,
   profileService,

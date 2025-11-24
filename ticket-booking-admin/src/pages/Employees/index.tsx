@@ -20,6 +20,7 @@ import {
   DialogActions,
   TextField,
   Grid,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -30,6 +31,8 @@ import {
 } from '@mui/icons-material';
 import EmployeeService, { OrganizerEmployee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../../services/employee.service';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
+import OrganizerService, { Organizer } from '../../services/organizer.service';
+import { UserRole } from '../../types';
 
 const Employees: React.FC = () => {
   const [employees, setEmployees] = useState<OrganizerEmployee[]>([]);
@@ -43,6 +46,9 @@ const Employees: React.FC = () => {
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [formData, setFormData] = useState<CreateEmployeeRequest>({
     email: '',
     password: '',
@@ -55,14 +61,48 @@ const Employees: React.FC = () => {
   });
 
   useEffect(() => {
+    checkUserRole();
+    fetchOrganizers();
     fetchEmployees();
   }, [currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+    fetchEmployees();
+  }, [selectedOrganizerId]);
+
+  const checkUserRole = () => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setIsAdmin(user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
+                    user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+  };
+
+  const fetchOrganizers = async () => {
+    try {
+      const response = await OrganizerService.getAllOrganizers(0, 100);
+      setOrganizers(response.content);
+    } catch (error) {
+      console.error('Error fetching organizers:', error);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await EmployeeService.getAllEmployees(currentPage, 10);
+      let response;
+      if (selectedOrganizerId) {
+        response = await EmployeeService.getEmployeesByOrganizer(selectedOrganizerId, currentPage, 10);
+      } else {
+        response = await EmployeeService.getAllEmployees(currentPage, 10);
+      }
       setEmployees(response.content);
       setTotalPages(response.totalPages);
     } catch (err: any) {
@@ -189,7 +229,27 @@ const Employees: React.FC = () => {
         <Typography variant="h4" component="h1" fontWeight="bold">
           Organizer Employees
         </Typography>
-        <Box>
+        <Box display="flex" gap={2} alignItems="center">
+          {isAdmin && organizers.length > 0 && (
+            <Autocomplete
+              size="small"
+              sx={{ minWidth: 250 }}
+              options={[{ organizerId: '', organizationName: 'All Organizers' }, ...organizers]}
+              getOptionLabel={(option) => option.organizationName}
+              value={organizers.find(org => org.organizerId === selectedOrganizerId) || { organizerId: '', organizationName: 'All Organizers' }}
+              onChange={(_, newValue) => {
+                setSelectedOrganizerId(newValue?.organizerId || '');
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Filter by Organizer"
+                  placeholder="Search organizers..."
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
+            />
+          )}
           <IconButton onClick={fetchEmployees} color="primary" sx={{ mr: 1 }}>
             <RefreshIcon />
           </IconButton>

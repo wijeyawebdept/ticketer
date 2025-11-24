@@ -127,6 +127,14 @@ class EventService {
     const response = await api.patch<Event>(`${basePath}/events/${eventId}/publish?publish=${publish}`);
     return response.data;
   }
+
+  /**
+   * Get events by organizer ID (admin only)
+   */
+  async getEventsByOrganizer(organizerId: string, page: number = 0, size: number = 10): Promise<any> {
+    const response = await api.get<any>(`/api/admin/events/by-organizer/${organizerId}?page=${page}&size=${size}`);
+    return response.data;
+  }
 }
 
 export default new EventService();

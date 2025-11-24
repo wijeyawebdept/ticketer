@@ -15,7 +15,8 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Autocomplete
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { 
@@ -71,6 +72,7 @@ interface FormData {
 const OrganizerEmployees: React.FC = () => {
   const [employees, setEmployees] = useState<OrganizerEmployee[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -96,12 +98,23 @@ const OrganizerEmployees: React.FC = () => {
     fetchOrganizers();
   }, []);
 
+  useEffect(() => {
+    fetchEmployees();
+  }, [selectedOrganizerId]);
+
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await api.get<{ content: OrganizerEmployee[] }>('/api/admin/organizer-employees', {
-        params: { page: 0, size: 1000 }
-      });
+      let response;
+      if (selectedOrganizerId) {
+        response = await api.get<{ content: OrganizerEmployee[] }>(`/api/admin/organizer-employees/by-organizer/${selectedOrganizerId}`, {
+          params: { page: 0, size: 1000 }
+        });
+      } else {
+        response = await api.get<{ content: OrganizerEmployee[] }>('/api/admin/organizer-employees', {
+          params: { page: 0, size: 1000 }
+        });
+      }
       setEmployees(response.data.content);
     } catch (err: any) {
       setError(err.response?.data || 'Failed to fetch organizer employees');
@@ -256,7 +269,27 @@ const OrganizerEmployees: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4">Organizer Employees</Typography>
-        <Box>
+        <Box display="flex" gap={2} alignItems="center">
+          {organizers.length > 0 && (
+            <Autocomplete
+              size="small"
+              sx={{ minWidth: 250 }}
+              options={[{ organizerId: '', organizationName: 'All Organizers', firstName: '', lastName: '' }, ...organizers]}
+              getOptionLabel={(option) => option.organizationName}
+              value={organizers.find(org => org.organizerId === selectedOrganizerId) || { organizerId: '', organizationName: 'All Organizers', firstName: '', lastName: '' }}
+              onChange={(_, newValue) => {
+                setSelectedOrganizerId(newValue?.organizerId || '');
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Filter by Organizer"
+                  placeholder="Search organizers..."
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
+            />
+          )}
           <IconButton onClick={fetchEmployees} sx={{ mr: 1 }}>
             <RefreshIcon />
           </IconButton>

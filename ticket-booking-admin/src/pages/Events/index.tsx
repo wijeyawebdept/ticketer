@@ -15,7 +15,9 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Autocomplete,
+  TextField
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -32,9 +34,10 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
-import { EventService } from '../../services';
-import { Event, EventStatus } from '../../types';
+import { EventService, OrganizerService } from '../../services';
+import { Event, EventStatus, UserRole } from '../../types';
 import EventForm from './components/EventForm';
+import { Organizer } from '../../services/organizer.service';
 
 const Events: React.FC = () => {
   const navigate = useNavigate();
@@ -45,15 +48,51 @@ const Events: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [contextMenuEvent, setContextMenuEvent] = useState<Event | null>(null);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    checkUserRole();
+    fetchOrganizers();
+    fetchEvents();
+  }, []);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [selectedOrganizerId]);
+
+  const checkUserRole = () => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setIsAdmin(user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
+                    user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+  };
+
+  const fetchOrganizers = async () => {
+    try {
+      const response = await OrganizerService.getAllOrganizers(0, 100);
+      setOrganizers(response.content);
+    } catch (error) {
+      console.error('Error fetching organizers:', error);
+    }
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const response: any = await EventService.getAllEvents();
+      let response: any;
+      if (selectedOrganizerId) {
+        response = await EventService.getEventsByOrganizer(selectedOrganizerId);
+      } else {
+        response = await EventService.getAllEvents();
+      }
       console.log('Events - Raw API response:', response);
       
       // Handle Page response from backend
@@ -286,7 +325,27 @@ const Events: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Event Management</Typography>
-          <Box>
+          <Box display="flex" gap={2} alignItems="center">
+            {isAdmin && organizers.length > 0 && (
+              <Autocomplete
+                size="small"
+                sx={{ minWidth: 250 }}
+                options={[{ organizerId: '', organizationName: 'All Organizers' }, ...organizers]}
+                getOptionLabel={(option) => option.organizationName}
+                value={organizers.find(org => org.organizerId === selectedOrganizerId) || { organizerId: '', organizationName: 'All Organizers' }}
+                onChange={(_, newValue) => {
+                  setSelectedOrganizerId(newValue?.organizerId || '');
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Filter by Organizer"
+                    placeholder="Search organizers..."
+                  />
+                )}
+                isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
+              />
+            )}
             <IconButton onClick={fetchEvents} sx={{ mr: 1 }}>
               <RefreshIcon />
             </IconButton>
