@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,4 +28,10 @@ public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmpl
     long countByOrganizer_OrganizerId(UUID organizerId);
     
     long countByOrganizer_OrganizerIdAndActiveTrue(UUID organizerId);
+    
+    // Find all employees of a specific organizer (including inactive ones)
+    List<OrganizerEmployee> findByOrganizer_OrganizerId(UUID organizerId);
+    
+    // Delete all employees of a specific organizer
+    void deleteByOrganizer_OrganizerId(UUID organizerId);
 }

@@ -1,17 +1,8 @@
 package com.ticket.ticket_booking_system.service.impl;
 
-import com.ticket.ticket_booking_system.dto.request.OrganizerCreateRequest;
-import com.ticket.ticket_booking_system.dto.request.OrganizerUpdateRequest;
-import com.ticket.ticket_booking_system.dto.response.OrganizerResponse;
-import com.ticket.ticket_booking_system.entity.Admin;
-import com.ticket.ticket_booking_system.entity.Organizer;
-import com.ticket.ticket_booking_system.entity.User;
-import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
-import com.ticket.ticket_booking_system.repository.AdminRepository;
-import com.ticket.ticket_booking_system.repository.OrganizerRepository;
-import com.ticket.ticket_booking_system.repository.UserRepository;
-import com.ticket.ticket_booking_system.service.OrganizerManagementService;
-import com.ticket.ticket_booking_system.service.RecycleBinService;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -20,7 +11,22 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import com.ticket.ticket_booking_system.dto.request.OrganizerCreateRequest;
+import com.ticket.ticket_booking_system.dto.request.OrganizerUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.OrganizerResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.OrganizerManagementService;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
 
 @Service
 public class OrganizerManagementServiceImpl implements OrganizerManagementService {
@@ -28,6 +34,8 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
     private final OrganizerRepository organizerRepository;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final EventRepository eventRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecycleBinService recycleBinService;
 
@@ -35,11 +43,15 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
             OrganizerRepository organizerRepository,
             UserRepository userRepository,
             AdminRepository adminRepository,
+            OrganizerEmployeeRepository organizerEmployeeRepository,
+            EventRepository eventRepository,
             PasswordEncoder passwordEncoder,
             RecycleBinService recycleBinService) {
         this.organizerRepository = organizerRepository;
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
+        this.organizerEmployeeRepository = organizerEmployeeRepository;
+        this.eventRepository = eventRepository;
         this.passwordEncoder = passwordEncoder;
         this.recycleBinService = recycleBinService;
     }
@@ -139,21 +151,80 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
         // Create a temporary User object for the authenticated user
         User deletedBy = findAuthenticatedUser(authenticatedEmail);
 
-        // Move to recycle bin
+        System.out.println("=== SOFT DELETE ORGANIZER WITH CASCADE ===");
+        System.out.println("Organizer ID: " + organizerId);
+        System.out.println("Organizer Name: " + organizer.getFirstName() + " " + organizer.getLastName());
+        
+        // 1. Find and soft delete all employees of this organizer
+        List<OrganizerEmployee> employees = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId);
+        System.out.println("Found " + employees.size() + " employees to soft delete");
+        
+        for (OrganizerEmployee employee : employees) {
+            // Move each employee to recycle bin
+            recycleBinService.moveToRecycleBin(
+                "ORGANIZER_EMPLOYEE",
+                employee.getEmployeeId(),
+                employee.getFirstName() + " " + employee.getLastName(),
+                employee,
+                deletedBy,
+                "Employee soft deleted due to organizer deletion",
+                null, // adminId
+                organizerId, // organizerId
+                employee.getEmployeeId(), // organizerEmployeeId
+                null // userId
+            );
+            
+            // Deactivate the employee
+            employee.setActive(false);
+            organizerEmployeeRepository.save(employee);
+            System.out.println("Employee " + employee.getEmail() + " moved to recycle bin");
+        }
+        
+        // 2. Find and soft delete all events of this organizer
+        List<Event> events = eventRepository.findByOrganizer_OrganizerId(organizerId);
+        System.out.println("Found " + events.size() + " events to soft delete");
+        
+        for (Event event : events) {
+            // Move each event to recycle bin
+            recycleBinService.moveToRecycleBin(
+                "EVENT",
+                event.getEventId(),
+                event.getName(),
+                event,
+                deletedBy,
+                "Event soft deleted due to organizer deletion",
+                null, // adminId
+                organizerId, // organizerId
+                null, // organizerEmployeeId
+                null // userId
+            );
+            
+            // Mark event as deleted
+            event.setIsDeleted(true);
+            eventRepository.save(event);
+            System.out.println("Event " + event.getName() + " moved to recycle bin");
+        }
+        
+        // 3. Finally, move organizer to recycle bin
         recycleBinService.moveToRecycleBin(
             "ORGANIZER",
             organizer.getOrganizerId(),
             organizer.getFirstName() + " " + organizer.getLastName(),
             organizer,
             deletedBy,
-            "Organizer soft deleted by " + deletedBy.getEmail()
+            "Organizer soft deleted by " + deletedBy.getEmail(),
+            null, // adminId
+            organizerId, // organizerId
+            null, // organizerEmployeeId
+            null // userId
         );
 
         // Deactivate the organizer instead of deleting
         organizer.setActive(false);
         organizerRepository.save(organizer);
 
-        System.out.println("Organizer " + organizer.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
+        System.out.println("Organizer " + organizer.getEmail() + " and all related entities moved to recycle bin by " + deletedBy.getEmail());
+        System.out.println("=== SOFT DELETE CASCADE COMPLETE ===");
     }
 
     @Override

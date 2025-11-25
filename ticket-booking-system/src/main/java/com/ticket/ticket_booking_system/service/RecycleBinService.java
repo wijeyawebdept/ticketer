@@ -144,6 +144,21 @@ public class RecycleBinService {
                 System.out.println("Admin permanently deleted: " + entityId);
                 break;
             case "ORGANIZER":
+                // Delete all employees of this organizer first
+                System.out.println("Deleting employees for organizer: " + entityId);
+                organizerEmployeeRepository.deleteByOrganizer_OrganizerId(entityId);
+                
+                // Delete all events created by this organizer
+                System.out.println("Deleting events for organizer: " + entityId);
+                List<Event> organizerEvents = eventRepository.findByOrganizer_OrganizerId(entityId);
+                for (Event event : organizerEvents) {
+                    // Delete associated seats and ticket categories for each event
+                    seatRepository.deleteByEventId(event.getEventId());
+                    ticketCategoryRepository.deleteByEventId(event.getEventId());
+                }
+                eventRepository.deleteByOrganizer_OrganizerId(entityId);
+                
+                // Finally, delete the organizer
                 organizerRepository.deleteById(entityId);
                 System.out.println("Organizer permanently deleted: " + entityId);
                 break;

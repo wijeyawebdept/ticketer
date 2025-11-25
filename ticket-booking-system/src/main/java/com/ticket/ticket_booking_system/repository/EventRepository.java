@@ -41,4 +41,10 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     long countByOrganizer_OrganizerId(UUID organizerId);
     
     long countByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status);
+    
+    // Find all events by organizer ID
+    List<Event> findByOrganizer_OrganizerId(UUID organizerId);
+    
+    // Delete all events of a specific organizer
+    void deleteByOrganizer_OrganizerId(UUID organizerId);
 }
