@@ -24,18 +24,6 @@ interface ConfirmationDialogProps {
   onCancel: () => void;
 }
 
-/**
- * Reusable confirmation dialog component
- * Usage:
- * <ConfirmationDialog
- *   open={open}
- *   title="Delete Venue"
- *   message="Are you sure you want to delete this venue?"
- *   variant="danger"
- *   onConfirm={handleDelete}
- *   onCancel={() => setOpen(false)}
- * />
- */
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   open,
   title,
