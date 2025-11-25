@@ -85,6 +85,8 @@ const Login: React.FC = () => {
         
         if (user.role === 'ORGANIZER' || user.role === 'ROLE_ORGANIZER') {
           navigate('/organizer/dashboard');
+        } else if (user.role === 'ORGANIZER_EMPLOYEE' || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
+          navigate('/employee/dashboard');
         } else if (user.role === 'USER' || user.role === 'ROLE_USER') {
           navigate('/user/home');
         } else {

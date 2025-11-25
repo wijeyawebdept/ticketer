@@ -14,7 +14,6 @@ public class VenueResponse {
     private String state;
     private String zipCode;
     private Integer capacity;
-    private String layoutType;
     private Map<String, Object> seatingLayout;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -96,14 +95,6 @@ public class VenueResponse {
     
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
-    }
-    
-    public String getLayoutType() {
-        return layoutType;
-    }
-    
-    public void setLayoutType(String layoutType) {
-        this.layoutType = layoutType;
     }
     
     public Map<String, Object> getSeatingLayout() {

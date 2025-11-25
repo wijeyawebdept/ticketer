@@ -29,7 +29,7 @@ import jakarta.validation.Valid;
  */
 @RestController
 @RequestMapping("/api/organizer/venues")
-@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER') or hasAuthority('ROLE_SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','ORGANIZER','ORGANIZER_EMPLOYEE','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('ORGANIZER') or hasAuthority('ORGANIZER_EMPLOYEE') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ORGANIZER') or hasAuthority('ROLE_ORGANIZER_EMPLOYEE') or hasAuthority('ROLE_SUPER_ADMIN')")
 public class OrganizerVenueController {
 
     private final VenueService venueService;
@@ -145,7 +145,6 @@ public class OrganizerVenueController {
         response.setState(venue.getState());
         response.setZipCode(venue.getZipCode());
         response.setCapacity(venue.getCapacity());
-        response.setLayoutType(venue.getLayoutType());
         response.setSeatingLayout(venue.getSeatingLayout());
         response.setCreatedAt(venue.getCreatedAt());
         response.setUpdatedAt(venue.getUpdatedAt());

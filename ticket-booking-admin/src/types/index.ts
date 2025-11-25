@@ -17,6 +17,8 @@ export enum UserRole {
   ROLE_USER = 'ROLE_USER',
   ORGANIZER = 'ORGANIZER',
   ROLE_ORGANIZER = 'ROLE_ORGANIZER',
+  ORGANIZER_EMPLOYEE = 'ORGANIZER_EMPLOYEE',
+  ROLE_ORGANIZER_EMPLOYEE = 'ROLE_ORGANIZER_EMPLOYEE',
   ADMIN = 'ADMIN',
   ROLE_ADMIN = 'ROLE_ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -113,13 +115,6 @@ export interface EventScheduleRequest {
 }
 
 // Venue related types
-export enum VenueLayoutType {
-  THEATER = 'THEATER',
-  GENERAL_ADMISSION = 'GENERAL_ADMISSION', 
-  STADIUM = 'STADIUM',
-  CUSTOM = 'CUSTOM'
-}
-
 export interface Venue {
   id: string;
   name: string;
@@ -129,7 +124,6 @@ export interface Venue {
   state: string;
   zipCode: string;
   capacity: number;
-  layoutType: VenueLayoutType;
   seatingLayout?: { [key: string]: any };
   createdAt?: string;
   updatedAt?: string;

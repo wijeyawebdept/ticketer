@@ -13,10 +13,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostUpdate;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -57,6 +57,12 @@ public class Seat {
 
     @Column(name = "seat_number", nullable = false, length = 20)
     private String seatNumber;
+
+    @Column(name = "x_position")
+    private Integer xPosition; // X coordinate for frontend rendering
+
+    @Column(name = "y_position")
+    private Integer yPosition; // Y coordinate for frontend rendering
 
     @Column(name = "seat_type", nullable = false)
     private String seatType; // e.g., "REGULAR", "VIP", "PREMIUM"

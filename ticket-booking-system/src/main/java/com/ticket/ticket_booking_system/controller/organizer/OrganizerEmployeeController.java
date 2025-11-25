@@ -27,6 +27,7 @@ import com.ticket.ticket_booking_system.dto.CreateOrganizerEmployeeRequest;
 import com.ticket.ticket_booking_system.dto.OrganizerEmployeeDTO;
 import com.ticket.ticket_booking_system.dto.UpdateOrganizerEmployeeRequest;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.OrganizerEmployeeManagementService;
@@ -246,6 +247,7 @@ public class OrganizerEmployeeController {
 
     /**
      * Helper method to extract organizer ID from authentication
+     * Supports both Organizer and OrganizerEmployee principals
      */
     private UUID getOrganizerIdFromAuth(Authentication authentication) {
         if (authentication == null) {
@@ -258,11 +260,26 @@ public class OrganizerEmployeeController {
             return organizer.getOrganizerId();
         }
         
+        // Try to get from OrganizerEmployee principal
+        if (authentication.getPrincipal() instanceof OrganizerEmployee) {
+            OrganizerEmployee employee = (OrganizerEmployee) authentication.getPrincipal();
+            return employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null;
+        }
+        
         // Extract email from authentication principal (JWT token)
         String email = authentication.getName();
         if (email != null && !email.isEmpty()) {
-            return organizerRepository.findByEmail(email)
+            // Try organizer repository first
+            UUID organizerId = organizerRepository.findByEmail(email)
                     .map(Organizer::getOrganizerId)
+                    .orElse(null);
+            if (organizerId != null) {
+                return organizerId;
+            }
+            
+            // Try employee repository and get their organizer's ID
+            return employeeRepository.findByEmail(email)
+                    .map(emp -> emp.getOrganizer() != null ? emp.getOrganizer().getOrganizerId() : null)
                     .orElse(null);
         }
         

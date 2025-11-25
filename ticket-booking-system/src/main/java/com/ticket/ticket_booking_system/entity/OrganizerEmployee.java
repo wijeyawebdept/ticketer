@@ -153,7 +153,7 @@ public class OrganizerEmployee implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active && emailVerified;
+        return active;
     }
 
     public enum Role {

@@ -45,4 +45,5 @@ class OrganizerService {
   }
 }
 
-export default new OrganizerService();
+const organizerService = new OrganizerService();
+export default organizerService;

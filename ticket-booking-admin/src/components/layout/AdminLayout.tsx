@@ -141,6 +141,10 @@ const AdminLayout: React.FC = () => {
     setLogoutConfirmOpen(false);
   };
 
+  const handleMenuItemClick = () => {
+    setOpen(false);
+  };
+
   const menuItems = [
     { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/dashboard' },
     { text: t('navigation.users'), icon: <PersonIcon />, path: '/users' },
@@ -248,6 +252,7 @@ const AdminLayout: React.FC = () => {
               <ListItemButton
                 component={RouterLink}
                 to={item.path}
+                onClick={handleMenuItemClick}
                 sx={{
                   borderRadius: '8px',
                   mx: 1,

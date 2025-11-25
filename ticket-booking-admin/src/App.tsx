@@ -10,6 +10,7 @@ import RoleBasedRedirect from './components/RoleBasedRedirect';
 import AdminLayout from './components/layout/AdminLayout';
 import UserLayout from './components/layout/UserLayout';
 import OrganizerLayout from './components/layout/OrganizerLayout';
+import OrganizerEmployeeLayout from './components/layout/OrganizerEmployeeLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -184,6 +185,7 @@ function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/admins" element={<Admins />} />
                 <Route path="/organizers" element={<Organizers />} />
@@ -214,6 +216,23 @@ function App() {
                 <Route path="/organizer/recycle-bin" element={<RecycleBin />} />
                 <Route path="/organizer/profile" element={<Profile />} />
                 <Route path="/organizer/settings" element={<Settings />} />
+              </Route>
+            </Route>
+
+            {/* Organizer Employee routes - ONLY for ORGANIZER_EMPLOYEE users */}
+            <Route element={<ProtectedRoute requiredRole={UserRole.ORGANIZER_EMPLOYEE} />}>
+              <Route element={<OrganizerEmployeeLayout />}>
+                <Route path="/employee/*" element={<Navigate to="/employee/dashboard" replace />} />
+                <Route path="/employee/dashboard" element={<Dashboard />} />
+                <Route path="/employee/events" element={<Events />} />
+                <Route path="/employee/events/:eventId/schedules" element={<EventSchedules />} />
+                <Route path="/employee/venues" element={<Venues />} />
+                <Route path="/employee/venues/:id/seating" element={<SeatingArrangement />} />
+                <Route path="/employee/bookings" element={<Bookings />} />
+                <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
+                <Route path="/employee/recycle-bin" element={<RecycleBin />} />
+                <Route path="/employee/profile" element={<Profile />} />
+                <Route path="/employee/settings" element={<Settings />} />
               </Route>
             </Route>
 

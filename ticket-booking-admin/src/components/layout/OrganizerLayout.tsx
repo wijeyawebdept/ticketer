@@ -139,6 +139,10 @@ const OrganizerLayout: React.FC = () => {
     setLogoutConfirmOpen(false);
   };
 
+  const handleMenuItemClick = () => {
+    setOpen(false);
+  };
+
   const menuItems = [
     { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/organizer/dashboard' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/organizer/events' },
@@ -239,6 +243,7 @@ const OrganizerLayout: React.FC = () => {
               <ListItemButton 
                 component={RouterLink} 
                 to={item.path}
+                onClick={handleMenuItemClick}
                 sx={{
                   borderRadius: '8px',
                   mx: 1,

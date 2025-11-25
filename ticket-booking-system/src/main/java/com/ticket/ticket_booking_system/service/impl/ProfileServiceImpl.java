@@ -9,9 +9,11 @@ import com.ticket.ticket_booking_system.dto.ProfileDTO;
 import com.ticket.ticket_booking_system.dto.ProfileUpdateDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.FileUploadService;
@@ -23,13 +25,16 @@ public class ProfileServiceImpl implements ProfileService {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository employeeRepository;
     private final FileUploadService fileUploadService;
     
     public ProfileServiceImpl(UserRepository userRepository, AdminRepository adminRepository,
-                             OrganizerRepository organizerRepository, FileUploadService fileUploadService) {
+                             OrganizerRepository organizerRepository, OrganizerEmployeeRepository employeeRepository,
+                             FileUploadService fileUploadService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
+        this.employeeRepository = employeeRepository;
         this.fileUploadService = fileUploadService;
     }
     
@@ -51,6 +56,12 @@ public class ProfileServiceImpl implements ProfileService {
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
             return convertOrganizerToProfileDTO(organizer);
+        }
+        
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            return convertEmployeeToProfileDTO(employee);
         }
         
         throw new ResourceNotFoundException("User", "email", email);
@@ -103,6 +114,21 @@ public class ProfileServiceImpl implements ProfileService {
             return convertOrganizerToProfileDTO(updatedOrganizer);
         }
         
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            employee.setFirstName(profileUpdateDTO.getFirstName());
+            employee.setLastName(profileUpdateDTO.getLastName());
+            employee.setEmail(profileUpdateDTO.getEmail());
+            employee.setPhoneNumber(profileUpdateDTO.getPhoneNumber());
+            employee.setDateOfBirth(profileUpdateDTO.getDateOfBirth());
+            if (profileUpdateDTO.getProfilePicture() != null) {
+                employee.setProfilePicture(profileUpdateDTO.getProfilePicture());
+            }
+            OrganizerEmployee updatedEmployee = employeeRepository.save(employee);
+            return convertEmployeeToProfileDTO(updatedEmployee);
+        }
+        
         throw new ResourceNotFoundException("User", "email", email);
     }
     
@@ -141,6 +167,18 @@ public class ProfileServiceImpl implements ProfileService {
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
             organizer.setProfilePicture(profilePicturePath);
             organizerRepository.save(organizer);
+            return profilePicturePath;
+        }
+        
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            if (employee.getProfilePicture() != null && !employee.getProfilePicture().isEmpty()) {
+                fileUploadService.deleteProfilePicture(employee.getProfilePicture());
+            }
+            String profilePicturePath = fileUploadService.uploadProfilePicture(file);
+            employee.setProfilePicture(profilePicturePath);
+            employeeRepository.save(employee);
             return profilePicturePath;
         }
         
@@ -198,6 +236,24 @@ public class ProfileServiceImpl implements ProfileService {
                 .createdAt(organizer.getCreatedAt())
                 .lastLoginAt(organizer.getLastLoginAt())
                 .updatedAt(organizer.getUpdatedAt())
+                .build();
+    }
+    
+    private ProfileDTO convertEmployeeToProfileDTO(OrganizerEmployee employee) {
+        return ProfileDTO.builder()
+                .userId(employee.getEmployeeId())
+                .firstName(employee.getFirstName())
+                .lastName(employee.getLastName())
+                .email(employee.getEmail())
+                .phoneNumber(employee.getPhoneNumber())
+                .dateOfBirth(employee.getDateOfBirth())
+                .profilePicture(employee.getProfilePicture())
+                .role(employee.getRole().name())
+                .active(employee.isActive())
+                .emailVerified(employee.isEmailVerified())
+                .createdAt(employee.getCreatedAt())
+                .lastLoginAt(employee.getLastLoginAt())
+                .updatedAt(employee.getUpdatedAt())
                 .build();
     }
 }

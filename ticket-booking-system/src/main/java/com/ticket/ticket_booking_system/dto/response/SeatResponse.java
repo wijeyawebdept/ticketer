@@ -23,6 +23,8 @@ public class SeatResponse {
     private String section;
     private String rowNumber;
     private String seatNumber;
+    private Integer xPosition;
+    private Integer yPosition;
     private String seatType;
     private BigDecimal price;
     private Boolean isAvailable;

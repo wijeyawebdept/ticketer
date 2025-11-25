@@ -7,19 +7,29 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.AdminResponse;
+import com.ticket.ticket_booking_system.security.AdminPermission;
+import com.ticket.ticket_booking_system.security.SuperAdminOnly;
 import com.ticket.ticket_booking_system.service.AdminManagementService;
 
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/admins")
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+@AdminPermission
 public class AdminManagementController {
 
     private final AdminManagementService adminManagementService;
@@ -29,7 +39,7 @@ public class AdminManagementController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN') or hasAnyAuthority('SUPER_ADMIN', 'ROLE_SUPER_ADMIN')")
+    @SuperAdminOnly
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<AdminResponse> createAdmin(@Valid @RequestBody AdminCreateRequest request) {
         AdminResponse createdAdmin = adminManagementService.createAdmin(request);
@@ -64,7 +74,7 @@ public class AdminManagementController {
     }
 
     @PatchMapping("/{adminId}/toggle-status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN') or hasAnyAuthority('SUPER_ADMIN', 'ROLE_SUPER_ADMIN')")
+    @SuperAdminOnly
     public ResponseEntity<AdminResponse> toggleAdminStatus(@PathVariable UUID adminId) {
         AdminResponse admin = adminManagementService.toggleAdminStatus(adminId);
         return ResponseEntity.ok(admin);

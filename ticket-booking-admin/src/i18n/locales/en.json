@@ -77,7 +77,8 @@
   },
   "header": {
     "title": "Ticket Booking Admin Panel",
-    "organizerTitle": "Ticket Booking Organizer Panel"
+    "organizerTitle": "Ticket Booking Organizer Panel",
+    "employeeTitle": "Organizer Employee Panel"
   },
   "dashboard": {
     "title": "Dashboard",

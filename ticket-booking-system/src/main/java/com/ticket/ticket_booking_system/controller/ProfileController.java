@@ -34,7 +34,7 @@ public class ProfileController {
     }
     
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ProfileDTO> getProfile(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String email = userDetails.getUsername();
@@ -44,7 +44,7 @@ public class ProfileController {
     }
     
     @PutMapping
-    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ProfileDTO> updateProfile(
             @Valid @RequestBody ProfileUpdateDTO profileUpdateDTO,
             Authentication authentication) {
@@ -57,7 +57,7 @@ public class ProfileController {
     }
     
     @PostMapping("/upload-picture")
-    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> uploadProfilePicture(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws IOException {

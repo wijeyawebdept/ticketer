@@ -17,10 +17,12 @@ import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.Role;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.RoleRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -34,6 +36,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecycleBinService recycleBinService;
 
@@ -42,12 +45,14 @@ public class UserServiceImpl implements UserService {
             RoleRepository roleRepository,
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
+            OrganizerEmployeeRepository employeeRepository,
             PasswordEncoder passwordEncoder,
             RecycleBinService recycleBinService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
+        this.employeeRepository = employeeRepository;
         this.passwordEncoder = passwordEncoder;
         this.recycleBinService = recycleBinService;
     }
@@ -98,14 +103,7 @@ public class UserServiceImpl implements UserService {
         return mapUserToResponse(savedUser);
     }
 
-    /**
-     * No longer needed - Admin and Organizer are separate tables with their own authentication.
-     * Users table only contains role="USER"
-     */
     private void createRoleSpecificRecord(User user, String roleName) {
-        // After migration, users table only contains USER role
-        // Admins and Organizers are created directly in their respective tables
-        // This method is kept for backward compatibility but does nothing
         System.out.println("ℹcreateRoleSpecificRecord called but no action needed - separate tables architecture");
     }
 
@@ -136,6 +134,12 @@ public class UserServiceImpl implements UserService {
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
             return mapOrganizerToResponse(organizer);
+        }
+        
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            return mapEmployeeToResponse(employee);
         }
         
         throw new ResourceNotFoundException("User", "email", email);
@@ -447,6 +451,23 @@ public class UserServiceImpl implements UserService {
                 .emailVerified(organizer.isEmailVerified())
                 .createdAt(organizer.getCreatedAt())
                 .lastLoginAt(organizer.getLastLoginAt())
+                .build();
+    }
+    
+    private UserResponse mapEmployeeToResponse(OrganizerEmployee employee) {
+        return UserResponse.builder()
+                .id(employee.getEmployeeId())
+                .firstName(employee.getFirstName())
+                .lastName(employee.getLastName())
+                .email(employee.getEmail())
+                .password(employee.getPassword())
+                .phoneNumber(employee.getPhoneNumber())
+                .dateOfBirth(employee.getDateOfBirth())
+                .role(employee.getRole().name())
+                .active(employee.isActive())
+                .emailVerified(employee.isEmailVerified())
+                .createdAt(employee.getCreatedAt())
+                .lastLoginAt(employee.getLastLoginAt())
                 .build();
     }
 }

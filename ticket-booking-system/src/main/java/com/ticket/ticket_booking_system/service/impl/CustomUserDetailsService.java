@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 
@@ -18,6 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -37,6 +39,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         var organizer = organizerRepository.findByEmail(username);
         if (organizer.isPresent()) {
             return organizer.get();
+        }
+
+        // Check in Organizer Employees table (role=ORGANIZER_EMPLOYEE)
+        var employee = organizerEmployeeRepository.findByEmail(username);
+        if (employee.isPresent()) {
+            return employee.get();
         }
 
         throw new UsernameNotFoundException("User not found with email: " + username);

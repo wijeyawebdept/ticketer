@@ -53,9 +53,20 @@ const Events: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
-    checkUserRole();
-    fetchOrganizers();
-    fetchEvents();
+    const initPage = async () => {
+      await checkUserRole();
+      // Only fetch organizers for admin users
+      const user = localStorage.getItem('user');
+      if (user) {
+        const userData = JSON.parse(user);
+        if (userData.role === UserRole.ADMIN || userData.role === UserRole.SUPER_ADMIN || 
+            userData.role === 'ROLE_ADMIN' || userData.role === 'ROLE_SUPER_ADMIN') {
+          fetchOrganizers();
+        }
+      }
+      fetchEvents();
+    };
+    initPage();
   }, []);
 
   useEffect(() => {
@@ -269,7 +280,21 @@ const Events: React.FC = () => {
               console.log('Schedule button clicked - id:', params.row.id);
               const idToUse = params.row.eventId || params.row.id;
               if (idToUse && idToUse !== 'undefined') {
-                navigate(`/organizer/events/${idToUse}/schedules`);
+                // Detect user role and navigate to appropriate path
+                const userStr = localStorage.getItem('user');
+                let basePath = '/organizer';
+                if (userStr) {
+                  try {
+                    const user = JSON.parse(userStr);
+                    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
+                        user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
+                      basePath = '';
+                    }
+                  } catch (e) {
+                    console.error('Error parsing user:', e);
+                  }
+                }
+                navigate(`${basePath}/events/${idToUse}/schedules`);
               } else {
                 console.error('Cannot navigate - no valid ID found in row:', params.row);
               }

@@ -8,7 +8,8 @@ class DashboardService {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        if (user.role === UserRole.ORGANIZER || user.role === 'ROLE_ORGANIZER') {
+        if (user.role === UserRole.ORGANIZER || user.role === 'ROLE_ORGANIZER' ||
+            user.role === UserRole.ORGANIZER_EMPLOYEE || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
           return '/api/organizer';
         }
       } catch (e) {

@@ -36,8 +36,6 @@ public class VenueUpdateRequest {
     @Positive(message = "Capacity must be positive")
     private Integer capacity;
 
-    private String layoutType;
-
     private Map<String, Object> seatingLayout;
 
     // Constructors
@@ -110,14 +108,6 @@ public class VenueUpdateRequest {
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
-    }
-
-    public String getLayoutType() {
-        return layoutType;
-    }
-
-    public void setLayoutType(String layoutType) {
-        this.layoutType = layoutType;
     }
 
     public Map<String, Object> getSeatingLayout() {

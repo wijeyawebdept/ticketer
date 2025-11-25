@@ -30,7 +30,9 @@ import com.ticket.ticket_booking_system.dto.request.EventUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EventService;
 
@@ -42,16 +44,19 @@ import jakarta.validation.Valid;
  */
 @RestController
 @RequestMapping("/api/organizer/events")
-@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ORGANIZER', 'ADMIN', 'SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 public class OrganizerEventController {
 
     private final EventService eventService;
     private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository employeeRepository;
     private final BookingRepository bookingRepository;
 
-    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository, BookingRepository bookingRepository) {
+    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository, 
+                                   OrganizerEmployeeRepository employeeRepository, BookingRepository bookingRepository) {
         this.eventService = eventService;
         this.organizerRepository = organizerRepository;
+        this.employeeRepository = employeeRepository;
         this.bookingRepository = bookingRepository;
     }
 
@@ -295,11 +300,27 @@ public class OrganizerEventController {
             return organizer.getOrganizerId();
         }
         
+        // Try to get from OrganizerEmployee principal
+        if (authentication.getPrincipal() instanceof OrganizerEmployee) {
+            OrganizerEmployee employee = (OrganizerEmployee) authentication.getPrincipal();
+            return employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null;
+        }
+        
         // Extract email from authentication principal (JWT token)
         String email = authentication.getName();
         if (email != null && !email.isEmpty()) {
-            return organizerRepository.findByEmail(email)
+            // Try to find as organizer first
+            UUID organizerId = organizerRepository.findByEmail(email)
                     .map(Organizer::getOrganizerId)
+                    .orElse(null);
+            
+            if (organizerId != null) {
+                return organizerId;
+            }
+            
+            // Try to find as organizer employee
+            return employeeRepository.findByEmail(email)
+                    .map(employee -> employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null)
                     .orElse(null);
         }
         

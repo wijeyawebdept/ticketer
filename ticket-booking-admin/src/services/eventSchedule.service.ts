@@ -8,7 +8,8 @@ class EventScheduleService {
     if (!user) return '/api/admin';
     
     const role = user.role;
-    if (role === 'ORGANIZER' || role === 'ROLE_ORGANIZER') {
+    if (role === 'ORGANIZER' || role === 'ROLE_ORGANIZER' ||
+        role === 'ORGANIZER_EMPLOYEE' || role === 'ROLE_ORGANIZER_EMPLOYEE') {
       return '/api/organizer';
     } else if (role === 'ADMIN' || role === 'ROLE_ADMIN' || role === 'SUPER_ADMIN' || role === 'ROLE_SUPER_ADMIN') {
       return '/api/admin';
@@ -91,4 +92,5 @@ class EventScheduleService {
   }
 }
 
-export default new EventScheduleService();
+const eventScheduleService = new EventScheduleService();
+export default eventScheduleService;

@@ -161,7 +161,6 @@ public class AdminVenueController {
         response.setState(venue.getState());
         response.setZipCode(venue.getZipCode());
         response.setCapacity(venue.getCapacity());
-        response.setLayoutType(venue.getLayoutType());
         response.setSeatingLayout(venue.getSeatingLayout());
         response.setCreatedAt(venue.getCreatedAt());
         response.setUpdatedAt(venue.getUpdatedAt());
@@ -181,7 +180,6 @@ public class AdminVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
-        venue.setLayoutType(request.getLayoutType());
         venue.setSeatingLayout(request.getSeatingLayout());
         return venue;
     }
@@ -199,7 +197,6 @@ public class AdminVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
-        venue.setLayoutType(request.getLayoutType());
         venue.setSeatingLayout(request.getSeatingLayout());
         return venue;
     }

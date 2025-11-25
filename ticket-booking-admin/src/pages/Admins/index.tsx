@@ -162,10 +162,11 @@ const Admins: React.FC = () => {
             onClick={() => handleEditClick(params.row as Admin)}
             size="small"
             color="primary"
+            disabled={!isSuperAdmin()}
             sx={{
-              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              backgroundColor: isSuperAdmin() ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0, 0, 0, 0.12)',
               '&:hover': {
-                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                backgroundColor: isSuperAdmin() ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.12)',
               },
               mr: 1
             }}
@@ -176,10 +177,11 @@ const Admins: React.FC = () => {
             onClick={() => handleDeleteClick(params.row as Admin)}
             size="small"
             color="warning"
+            disabled={!isSuperAdmin()}
             sx={{
-              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+              backgroundColor: isSuperAdmin() ? 'rgba(255, 152, 0, 0.1)' : 'rgba(0, 0, 0, 0.12)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                backgroundColor: isSuperAdmin() ? 'rgba(255, 152, 0, 0.2)' : 'rgba(0, 0, 0, 0.12)',
               }
             }}
             title="Move to Recycle Bin"
@@ -209,13 +211,14 @@ const Admins: React.FC = () => {
             color="error"
             startIcon={<AddIcon />}
             onClick={handleCreateClick}
+            disabled={!isSuperAdmin()}
             sx={{
               borderRadius: 2,
               padding: '8px 16px',
               fontWeight: 600,
-              boxShadow: '0 4px 6px rgba(211, 47, 47, 0.2)',
+              boxShadow: isSuperAdmin() ? '0 4px 6px rgba(211, 47, 47, 0.2)' : 'none',
               '&:hover': {
-                boxShadow: '0 6px 8px rgba(211, 47, 47, 0.3)',
+                boxShadow: isSuperAdmin() ? '0 6px 8px rgba(211, 47, 47, 0.3)' : 'none',
               }
             }}
           >

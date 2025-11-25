@@ -15,6 +15,7 @@ import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../services/api';
+import { ToastService } from '../../../services/toast.service';
 
 interface Admin {
   adminId: string;
@@ -96,22 +97,35 @@ const AdminForm: React.FC<AdminFormProps> = ({ admin, onClose, onSuccess }) => {
           
           if (admin?.adminId) {
             await api.put(`/api/admin/admins/${admin.adminId}`, adminData);
+            ToastService.success('Admin updated successfully!');
           } else {
             if (!adminData.password) {
               setErrors({ password: 'Password is required' });
               return;
             }
             await api.post('/api/admin/admins', adminData);
+            ToastService.success('Admin created successfully!');
           }
           
           resetForm();
           if (onSuccess) onSuccess();
         } catch (error: any) {
           console.error(`Error ${admin ? 'updating' : 'creating'} admin:`, error);
+          
+          // Check if it's a 403 permission error
+          if (error?.response?.status === 403) {
+            ToastService.warning('You don\'t have permission to complete this action. Only Super Admins can create new admins.');
+            if (onClose) onClose();
+            return;
+          }
+          
           if (error?.response?.data?.message) {
             setErrors({ email: error.response.data.message });
+            ToastService.error(error.response.data.message);
           } else {
-            setErrors({ email: `Failed to ${admin ? 'update' : 'create'} admin. Please try again.` });
+            const errorMsg = `Failed to ${admin ? 'update' : 'create'} admin. Please try again.`;
+            setErrors({ email: errorMsg });
+            ToastService.error(errorMsg);
           }
         } finally {
           setSubmitting(false);

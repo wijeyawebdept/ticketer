@@ -106,6 +106,21 @@ CREATE TABLE booking_seats (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+--add event_id column to booking_seats table
+ALTER TABLE booking_seats
+ADD COLUMN event_id UUID;
+
+--Add the foreign key constraint
+ALTER TABLE booking_seats
+ADD CONSTRAINT fk_booking_seats_event
+FOREIGN KEY (event_id) REFERENCES events(event_id)
+ON DELETE CASCADE;
+
+--Make event_id NOT NULL
+ALTER TABLE booking_seats
+ALTER COLUMN event_id SET NOT NULL;
+
+
 -- Transactions table
 CREATE TABLE transactions (
     transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -195,7 +210,7 @@ select * from event_schedules;
 -- Check what columns exist in the tables
 SELECT column_name 
 FROM information_schema.columns 
-WHERE table_name = 'events' 
+WHERE table_name = 'booking_seats' 
 ORDER BY ordinal_position;
 
 

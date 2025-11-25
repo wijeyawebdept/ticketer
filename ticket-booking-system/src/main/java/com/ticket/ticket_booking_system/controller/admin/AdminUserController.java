@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -24,13 +23,15 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.security.AdminPermission;
+import com.ticket.ticket_booking_system.security.Permissions;
 import com.ticket.ticket_booking_system.service.UserService;
 
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+@AdminPermission
 public class AdminUserController {
 
     private final UserService userService;
@@ -41,12 +42,14 @@ public class AdminUserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @AdminPermission(value = Permissions.MANAGE_USERS)
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserResponse createdUser = userService.createUser(request);
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
     @GetMapping
+    @AdminPermission(value = Permissions.VIEW_USERS)
     public ResponseEntity<Page<UserResponse>> getAllUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String query,
@@ -66,12 +69,14 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
+    @AdminPermission(value = Permissions.VIEW_USERS)
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID userId) {
         UserResponse user = userService.getUserById(userId);
         return ResponseEntity.ok(user);
     }
 
     @PutMapping("/{userId}")
+    @AdminPermission(value = Permissions.MANAGE_USERS)
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UserUpdateRequest request) {
@@ -81,13 +86,14 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{userId}")
+    @AdminPermission(value = Permissions.MANAGE_USERS)
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
         userService.softDeleteUser(userId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{userId}/permanent")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN') or hasAnyAuthority('SUPER_ADMIN', 'ROLE_SUPER_ADMIN')")
+    @AdminPermission(value = Permissions.DELETE_USERS, accessLevel = "SENIOR", superAdminBypass = true)
     public ResponseEntity<Void> permanentlyDeleteUser(@PathVariable UUID userId) {
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();

@@ -53,9 +53,6 @@ public class Venue {
     @Column(nullable = false)
     private Integer capacity;
     
-    @Column(name = "layout_type")
-    private String layoutType;
-    
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "seating_chart_config", columnDefinition = "jsonb")
     private String seatingChartConfig;

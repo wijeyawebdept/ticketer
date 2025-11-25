@@ -114,7 +114,6 @@ public class VenueServiceImpl implements VenueService {
         venue.setState(venueDetails.getState());
         venue.setZipCode(venueDetails.getZipCode());
         venue.setCapacity(venueDetails.getCapacity());
-        venue.setLayoutType(venueDetails.getLayoutType());
         venue.setSeatingChartConfig(venueDetails.getSeatingChartConfig());
         venue.setSeatingLayout(venueDetails.getSeatingLayout());
         venue.setUpdatedAt(LocalDateTime.now());
