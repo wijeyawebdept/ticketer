@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import {
   Box,
   CssBaseline,
@@ -18,7 +18,8 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  useMediaQuery
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -87,7 +88,9 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 const UserLayout: React.FC = () => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [open, setOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -134,6 +137,12 @@ const UserLayout: React.FC = () => {
 
   const handleLogoutCancel = () => {
     setLogoutConfirmOpen(false);
+  };
+
+  const handleMenuItemClick = () => {
+    if (isMobile) {
+      setOpen(false);
+    }
   };
 
   const menuItems = [
@@ -217,9 +226,13 @@ const UserLayout: React.FC = () => {
             borderRight: '1px solid rgba(0,0,0,0.05)',
           },
         }}
-        variant="persistent"
+        variant={isMobile ? "temporary" : "persistent"}
         anchor="left"
         open={open}
+        onClose={() => setOpen(false)}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+        }}
       >
         <DrawerHeader>
           <IconButton onClick={() => setOpen(false)}>
@@ -233,6 +246,7 @@ const UserLayout: React.FC = () => {
               <ListItemButton 
                 component={RouterLink} 
                 to={item.path}
+                onClick={handleMenuItemClick}
                 sx={{
                   borderRadius: '8px',
                   mx: 1,

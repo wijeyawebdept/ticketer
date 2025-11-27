@@ -33,7 +33,7 @@ import {
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { EventScheduleService, EventService } from '../../services';
@@ -46,12 +46,25 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 const EventSchedules: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedSchedule, setSelectedSchedule] = useState<EventSchedule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+
+  // Determine the correct back navigation path based on current route
+  const getBackPath = () => {
+    const pathname = location.pathname;
+    if (pathname.startsWith('/organizer/')) {
+      return '/organizer/events';
+    } else if (pathname.startsWith('/employee/')) {
+      return '/employee/events';
+    } else {
+      return '/events'; // Admin route
+    }
+  };
 
   useEffect(() => {
     console.log('EventSchedules - eventId from useParams:', eventId);
@@ -60,7 +73,7 @@ const EventSchedules: React.FC = () => {
       fetchSchedules();
     } else {
       console.error('EventSchedules - Invalid or missing eventId:', eventId);
-      navigate('/organizer/events');
+      navigate(getBackPath());
     }
   }, [eventId]);
 
@@ -193,7 +206,7 @@ const EventSchedules: React.FC = () => {
         {/* Header */}
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Box display="flex" alignItems="center" gap={2}>
-            <IconButton onClick={() => navigate('/organizer/events')} color="primary">
+            <IconButton onClick={() => navigate(getBackPath())} color="primary">
               <ArrowBackIcon />
             </IconButton>
             <Box>
