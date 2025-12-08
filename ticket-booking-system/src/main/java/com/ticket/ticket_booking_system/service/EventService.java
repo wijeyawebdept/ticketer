@@ -39,4 +39,9 @@ public interface EventService {
 
     // Add image upload method
     String uploadEventImage(UUID eventId, MultipartFile file) throws IOException;
+
+    // Organizer assignment methods
+    EventResponse assignOrganizerToEvent(UUID eventId, UUID organizerId);
+
+    EventResponse removeOrganizerFromEvent(UUID eventId);
 }

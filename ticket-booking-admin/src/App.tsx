@@ -30,6 +30,9 @@ import IntegrationTest from './pages/IntegrationTest';
 import RecycleBin from './pages/RecycleBin';
 import Employees from './pages/Employees';
 import EventSchedules from './pages/EventSchedules';
+import EventAssignments from './pages/EventAssignments';
+import AdminEventAssignments from './pages/AdminEventAssignments';
+import OrganizerAssignment from './pages/OrganizerAssignment';
 import { UserRole } from './types';
 
 // Lazy-loaded components
@@ -190,6 +193,8 @@ function App() {
                 <Route path="/admins" element={<Admins />} />
                 <Route path="/organizers" element={<Organizers />} />
                 <Route path="/organizer-employees" element={<OrganizerEmployees />} />
+                <Route path="/event-assignments" element={<AdminEventAssignments />} />
+                <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
                 <Route path="/venues" element={<Venues />} />
                 <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/bookings" element={<Bookings />} />
@@ -213,6 +218,7 @@ function App() {
                 <Route path="/organizer/bookings" element={<Bookings />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/organizer/employees" element={<Employees />} />
+                <Route path="/organizer/event-assignments" element={<EventAssignments />} />
                 <Route path="/organizer/recycle-bin" element={<RecycleBin />} />
                 <Route path="/organizer/profile" element={<Profile />} />
                 <Route path="/organizer/settings" element={<Settings />} />

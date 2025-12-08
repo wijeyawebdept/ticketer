@@ -74,7 +74,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .organizationName(request.getOrganizationName())
-                .active(true)
+                .active(1)
                 .emailVerified(false)
                 .build();
 
@@ -87,7 +87,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
     @Override
     @Transactional(readOnly = true)
     public Page<OrganizerResponse> getAllOrganizers(Pageable pageable) {
-        Page<Organizer> organizers = organizerRepository.findByActiveTrue(pageable);
+        Page<Organizer> organizers = organizerRepository.findByActiveNot(-1, pageable);
         return organizers.map(this::mapOrganizerToResponse);
     }
 
@@ -167,15 +167,11 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
                 employee.getFirstName() + " " + employee.getLastName(),
                 employee,
                 deletedBy,
-                "Employee soft deleted due to organizer deletion",
-                null, // adminId
-                organizerId, // organizerId
-                employee.getEmployeeId(), // organizerEmployeeId
-                null // userId
+                "Employee soft deleted due to organizer deletion"
             );
             
-            // Deactivate the employee
-            employee.setActive(false);
+            // Soft delete - moved to recycle bin
+            employee.setActive(-1);
             organizerEmployeeRepository.save(employee);
             System.out.println("Employee " + employee.getEmail() + " moved to recycle bin");
         }
@@ -192,11 +188,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
                 event.getName(),
                 event,
                 deletedBy,
-                "Event soft deleted due to organizer deletion",
-                null, // adminId
-                organizerId, // organizerId
-                null, // organizerEmployeeId
-                null // userId
+                "Event soft deleted due to organizer deletion"
             );
             
             // Mark event as deleted
@@ -212,15 +204,11 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
             organizer.getFirstName() + " " + organizer.getLastName(),
             organizer,
             deletedBy,
-            "Organizer soft deleted by " + deletedBy.getEmail(),
-            null, // adminId
-            organizerId, // organizerId
-            null, // organizerEmployeeId
-            null // userId
+            "Organizer soft deleted by " + deletedBy.getEmail()
         );
 
-        // Deactivate the organizer instead of deleting
-        organizer.setActive(false);
+        // Soft delete - moved to recycle bin
+        organizer.setActive(-1);
         organizerRepository.save(organizer);
 
         System.out.println("Organizer " + organizer.getEmail() + " and all related entities moved to recycle bin by " + deletedBy.getEmail());
@@ -233,7 +221,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
         Organizer organizer = organizerRepository.findById(organizerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organizer", "id", organizerId.toString()));
 
-        organizer.setActive(!organizer.isActive());
+        organizer.setActive(organizer.getActive() == 1 ? 0 : 1); // Toggle between active (1) and deactivated (0)
         Organizer updatedOrganizer = organizerRepository.save(organizer);
 
         System.out.println("Organizer " + updatedOrganizer.getEmail() + " status toggled to: " + updatedOrganizer.isActive());
@@ -276,6 +264,52 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
         }
 
         throw new IllegalStateException("Current authenticated user not found in any table");
+    }
+
+    @Override
+    @Transactional
+    public OrganizerResponse activateOrganizer(UUID organizerId) {
+        Organizer organizer = organizerRepository.findById(organizerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organizer", "id", organizerId.toString()));
+        
+        // Activate the organizer
+        organizer.setActive(1);
+        Organizer updatedOrganizer = organizerRepository.save(organizer);
+        
+        // CASCADE: Activate all employees associated with this organizer
+        List<OrganizerEmployee> employees = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId);
+        if (!employees.isEmpty()) {
+            employees.forEach(employee -> employee.setActive(1));
+            organizerEmployeeRepository.saveAll(employees);
+            System.out.println("Activated " + employees.size() + " employees for organizer " + updatedOrganizer.getEmail());
+        }
+        
+        System.out.println("Organizer " + updatedOrganizer.getEmail() + " activated");
+        
+        return mapOrganizerToResponse(updatedOrganizer);
+    }
+    
+    @Override
+    @Transactional
+    public OrganizerResponse deactivateOrganizer(UUID organizerId) {
+        Organizer organizer = organizerRepository.findById(organizerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organizer", "id", organizerId.toString()));
+        
+        // Deactivate the organizer
+        organizer.setActive(0);
+        Organizer updatedOrganizer = organizerRepository.save(organizer);
+        
+        // CASCADE: Deactivate all employees associated with this organizer
+        List<OrganizerEmployee> employees = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId);
+        if (!employees.isEmpty()) {
+            employees.forEach(employee -> employee.setActive(0));
+            organizerEmployeeRepository.saveAll(employees);
+            System.out.println("Deactivated " + employees.size() + " employees for organizer " + updatedOrganizer.getEmail());
+        }
+        
+        System.out.println("Organizer " + updatedOrganizer.getEmail() + " deactivated");
+        
+        return mapOrganizerToResponse(updatedOrganizer);
     }
 
     /**

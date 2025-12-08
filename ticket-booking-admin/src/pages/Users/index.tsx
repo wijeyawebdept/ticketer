@@ -17,7 +17,9 @@ import {
   Edit as EditIcon, 
   DeleteSweep as DeleteSweepIcon, 
   Close as CloseIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { UserService } from '../../services';
@@ -98,6 +100,24 @@ const Users: React.FC = () => {
     setSelectedUser(null);
   };
 
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await UserService.activateUser(userId);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error activating user:', error);
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      await UserService.deactivateUser(userId);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!selectedUser) return;
     
@@ -148,6 +168,19 @@ const Users: React.FC = () => {
       )
     },
     {
+      field: 'active',
+      headerName: 'Status',
+      flex: 0.8,
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          label={params.value ? 'Active' : 'Inactive'}
+          color={params.value ? 'success' : 'default'}
+          size="small"
+          sx={{ fontWeight: 500 }}
+        />
+      )
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
       flex: 1,
@@ -168,6 +201,39 @@ const Users: React.FC = () => {
           >
             <EditIcon />
           </IconButton>
+          {params.row.active ? (
+            <IconButton
+              onClick={() => handleDeactivateUser(params.row.id)}
+              size="small"
+              color="error"
+              sx={{
+                backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                },
+                mr: 1
+              }}
+              title="Deactivate User"
+            >
+              <DeactivateIcon />
+            </IconButton>
+          ) : (
+            <IconButton
+              onClick={() => handleActivateUser(params.row.id)}
+              size="small"
+              color="success"
+              sx={{
+                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                },
+                mr: 1
+              }}
+              title="Activate User"
+            >
+              <ActivateIcon />
+            </IconButton>
+          )}
           <IconButton
             onClick={() => handleDeleteClick(params.row as User)}
             size="small"

@@ -90,7 +90,7 @@ public class UserServiceImpl implements UserService {
                 .profilePicture(request.getProfilePicture())
                 .role(enumRole)
                 .roleEntity(roleEntity)
-                .active(true)
+                .active(1)
                 .emailVerified(false)
                 .build();
 
@@ -147,8 +147,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Page<UserResponse> getAllUsers(Pageable pageable) {
-        // Only return active users (exclude soft-deleted users in recycle bin)
-        return userRepository.findByActiveTrue(pageable)
+        // return all active and deactivated users (exclude soft-deleted ones with active = -1)
+        return userRepository.findByActiveNot(-1, pageable)
                 .map(this::mapUserToResponse);
     }
 
@@ -320,8 +320,8 @@ public class UserServiceImpl implements UserService {
             "User soft deleted by " + deletedBy.getEmail()
         );
         
-        // Deactivate the user instead of deleting
-        user.setActive(false);
+        // Soft delete - moved to recycle bin
+        user.setActive(-1);
         userRepository.save(user);
         
         System.out.println("User " + user.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
@@ -342,7 +342,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
-        user.setActive(!user.isActive());
+        user.setActive(user.getActive() == 1 ? 0 : 1); // Toggle between active (1) and deactivated (0)
         userRepository.save(user);
     }
 
@@ -352,7 +352,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
-        user.setActive(true);
+        user.setActive(1); // Activate user
         User savedUser = userRepository.save(user);
         return mapUserToResponse(savedUser);
     }
@@ -363,7 +363,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
-        user.setActive(false);
+        user.setActive(0); // Deactivate user (can be reactivated)
         User savedUser = userRepository.save(user);
         return mapUserToResponse(savedUser);
     }

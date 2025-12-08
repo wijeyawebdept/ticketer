@@ -67,7 +67,7 @@ public class Admin implements UserDetails {
 
     @Column(name = "active", nullable = false)
     @Builder.Default
-    private boolean active = true;
+    private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
@@ -156,7 +156,12 @@ public class Admin implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active;
+        return active == 1;
+    }
+    
+    // Helper method for backward compatibility
+    public boolean isActive() {
+        return active == 1;
     }
 
     public enum Role {

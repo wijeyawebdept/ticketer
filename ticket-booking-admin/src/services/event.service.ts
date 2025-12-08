@@ -99,6 +99,11 @@ class EventService {
     return response.data.imageUrl;
   }
 
+  async getOrganizerEvents(): Promise<Event[]> {
+    const response = await api.get<Event[]>('/api/organizer/events');
+    return response.data;
+  }
+
   async getActiveEvents(): Promise<any> {
     const basePath = this.getBasePath();
     const response = await api.get<any>(`${basePath}/events/active`);

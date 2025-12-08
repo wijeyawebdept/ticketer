@@ -17,7 +17,9 @@ import {
   Edit as EditIcon, 
   DeleteSweep as DeleteSweepIcon, 
   Close as CloseIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import AdminForm from './components/AdminForm';
@@ -108,6 +110,24 @@ const Admins: React.FC = () => {
     }
   };
 
+  const handleActivateAdmin = async (adminId: string) => {
+    try {
+      await api.patch(`/api/admin/admins/${adminId}/activate`);
+      fetchAdmins();
+    } catch (error) {
+      console.error('Error activating admin:', error);
+    }
+  };
+
+  const handleDeactivateAdmin = async (adminId: string) => {
+    try {
+      await api.patch(`/api/admin/admins/${adminId}/deactivate`);
+      fetchAdmins();
+    } catch (error) {
+      console.error('Error deactivating admin:', error);
+    }
+  };
+
   const getRoleChipColor = (role: string) => {
     switch (role) {
       case 'SUPER_ADMIN':
@@ -154,7 +174,7 @@ const Admins: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1,
+      flex: 1.2,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
@@ -173,6 +193,41 @@ const Admins: React.FC = () => {
           >
             <EditIcon />
           </IconButton>
+          {params.row.active ? (
+            <IconButton
+              onClick={() => handleDeactivateAdmin(params.row.adminId)}
+              size="small"
+              color="error"
+              disabled={!isSuperAdmin()}
+              sx={{
+                backgroundColor: isSuperAdmin() ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.12)',
+                '&:hover': {
+                  backgroundColor: isSuperAdmin() ? 'rgba(211, 47, 47, 0.2)' : 'rgba(0, 0, 0, 0.12)',
+                },
+                mr: 1
+              }}
+              title="Deactivate Admin (Super Admin Only)"
+            >
+              <DeactivateIcon />
+            </IconButton>
+          ) : (
+            <IconButton
+              onClick={() => handleActivateAdmin(params.row.adminId)}
+              size="small"
+              color="success"
+              disabled={!isSuperAdmin()}
+              sx={{
+                backgroundColor: isSuperAdmin() ? 'rgba(46, 125, 50, 0.1)' : 'rgba(0, 0, 0, 0.12)',
+                '&:hover': {
+                  backgroundColor: isSuperAdmin() ? 'rgba(46, 125, 50, 0.2)' : 'rgba(0, 0, 0, 0.12)',
+                },
+                mr: 1
+              }}
+              title="Activate Admin (Super Admin Only)"
+            >
+              <ActivateIcon />
+            </IconButton>
+          )}
           <IconButton
             onClick={() => handleDeleteClick(params.row as Admin)}
             size="small"

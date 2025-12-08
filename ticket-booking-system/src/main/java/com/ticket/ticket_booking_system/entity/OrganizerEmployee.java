@@ -36,7 +36,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "organizer", "createdByAdmin"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "organizer"})
 public class OrganizerEmployee implements UserDetails {
 
     @Id
@@ -74,7 +74,7 @@ public class OrganizerEmployee implements UserDetails {
 
     @Column(name = "active", nullable = false)
     @Builder.Default
-    private boolean active = true;
+    private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
@@ -87,10 +87,6 @@ public class OrganizerEmployee implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_id", nullable = false)
     private Organizer organizer;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_admin_id")
-    private Admin createdByAdmin;
 
     @Column(name = "employee_position", length = 100)
     private String employeePosition;
@@ -143,7 +139,7 @@ public class OrganizerEmployee implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return active;
+        return active >= 0;
     }
 
     @Override
@@ -153,7 +149,12 @@ public class OrganizerEmployee implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active;
+        return active == 1;
+    }
+    
+    // Helper method for backward compatibility
+    public boolean isActive() {
+        return active == 1;
     }
 
     public enum Role {

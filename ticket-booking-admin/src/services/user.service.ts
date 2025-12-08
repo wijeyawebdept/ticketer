@@ -53,6 +53,16 @@ class UserService {
   async deleteUser(id: string): Promise<void> {
     await api.delete(`/api/admin/users/${id}`);
   }
+
+  async activateUser(id: string): Promise<User> {
+    const response = await api.patch<User>(`/api/admin/users/${id}/activate`);
+    return response.data;
+  }
+
+  async deactivateUser(id: string): Promise<User> {
+    const response = await api.patch<User>(`/api/admin/users/${id}/deactivate`);
+    return response.data;
+  }
 }
 
 const userService = new UserService();

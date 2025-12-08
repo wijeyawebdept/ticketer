@@ -319,18 +319,14 @@ public class EventServiceImpl implements EventService {
             userId = deletedBy.getId();
         }
         
-        // Move to recycle bin with owner tracking
+        // Move to recycle bin
         recycleBinService.moveToRecycleBin(
                 "EVENT",
                 event.getEventId(),
                 event.getName(),
                 event,
                 deletedBy,
-                "Event soft deleted by " + deletedBy.getEmail(),
-                adminId,
-                organizerId,
-                organizerEmployeeId,
-                userId
+                "Event soft deleted by " + deletedBy.getEmail()
         );
         
         // Mark as deleted (soft delete)
@@ -464,6 +460,7 @@ public class EventServiceImpl implements EventService {
                 .imageUrl(event.getImageUrl())
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
+                .createdByType(event.getCreatedByType()) // Include creator type for filtering
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .build();
     }
@@ -510,5 +507,56 @@ public class EventServiceImpl implements EventService {
 
         System.out.println("Successfully copied " + eventSeats.size() + " seats to event");
         System.out.println("COPY SEATS COMPLETE");
+    }
+
+    @Override
+    @Transactional
+    public EventResponse assignOrganizerToEvent(UUID eventId, UUID organizerId) {
+        // Find the event
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+
+        // Verify event was created by admin/super admin (allow null for backward compatibility)
+        if (event.getCreatedByType() != null && 
+            !"ADMIN".equals(event.getCreatedByType()) && 
+            !"SUPER_ADMIN".equals(event.getCreatedByType())) {
+            throw new IllegalArgumentException("Can only assign organizers to admin-created events");
+        }
+
+        // Find the organizer
+        Organizer organizer = organizerRepository.findById(organizerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organizer", "id", organizerId.toString()));
+
+        // Verify organizer is active (use isActive() for primitive boolean)
+        if (organizer.getActive() != 1) {
+            throw new IllegalArgumentException("Cannot assign inactive organizer");
+        }
+
+        // Assign organizer to event
+        event.setOrganizer(organizer);
+        Event savedEvent = eventRepository.save(event);
+
+        return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse removeOrganizerFromEvent(UUID eventId) {
+        // Find the event
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+
+        // Verify event was created by admin/super admin (allow null for backward compatibility)
+        if (event.getCreatedByType() != null && 
+            !"ADMIN".equals(event.getCreatedByType()) && 
+            !"SUPER_ADMIN".equals(event.getCreatedByType())) {
+            throw new IllegalArgumentException("Can only remove organizers from admin-created events");
+        }
+
+        // Remove organizer
+        event.setOrganizer(null);
+        Event savedEvent = eventRepository.save(event);
+
+        return mapEventToResponse(savedEvent);
     }
 }

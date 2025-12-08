@@ -1,5 +1,15 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.AdminResponse;
@@ -12,15 +22,6 @@ import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.AdminManagementService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 public class AdminManagementServiceImpl implements AdminManagementService {
@@ -62,7 +63,23 @@ public class AdminManagementServiceImpl implements AdminManagementService {
             throw new IllegalArgumentException("Invalid role: " + request.getRole() + ". Must be ADMIN or SUPER_ADMIN");
         }
 
-        // Create admin entity
+        // Create admin entity with appropriate permissions based on role
+        Admin.AccessLevel accessLevel;
+        Boolean canDeleteUsers;
+        Boolean canModifySystemSettings;
+        
+        if (role == Admin.Role.SUPER_ADMIN) {
+            // Super admins get full permissions
+            accessLevel = Admin.AccessLevel.SUPER;
+            canDeleteUsers = true;
+            canModifySystemSettings = true;
+        } else {
+            // Regular admins get standard permissions
+            accessLevel = Admin.AccessLevel.STANDARD;
+            canDeleteUsers = false;
+            canModifySystemSettings = false;
+        }
+
         Admin admin = Admin.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -70,12 +87,15 @@ public class AdminManagementServiceImpl implements AdminManagementService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .role(role)
-                .active(true)
+                .accessLevel(accessLevel)
+                .canDeleteUsers(canDeleteUsers)
+                .canModifySystemSettings(canModifySystemSettings)
+                .active(1)
                 .emailVerified(false)
                 .build();
 
         Admin savedAdmin = adminRepository.save(admin);
-        System.out.println("Admin created with ID: " + savedAdmin.getAdminId() + ", Role: " + role);
+        System.out.println("Admin created with ID: " + savedAdmin.getAdminId() + ", Role: " + role + ", Access Level: " + accessLevel);
 
         return mapAdminToResponse(savedAdmin);
     }
@@ -83,7 +103,7 @@ public class AdminManagementServiceImpl implements AdminManagementService {
     @Override
     @Transactional(readOnly = true)
     public Page<AdminResponse> getAllAdmins(Pageable pageable) {
-        Page<Admin> admins = adminRepository.findByActiveTrue(pageable);
+        Page<Admin> admins = adminRepository.findByActiveNot(-1, pageable);
         return admins.map(this::mapAdminToResponse);
     }
 
@@ -128,13 +148,27 @@ public class AdminManagementServiceImpl implements AdminManagementService {
             try {
                 Admin.Role role = Admin.Role.valueOf(request.getRole());
                 admin.setRole(role);
+                
+                // Automatically update permissions based on role
+                if (role == Admin.Role.SUPER_ADMIN) {
+                    admin.setAccessLevel(Admin.AccessLevel.SUPER);
+                    admin.setCanDeleteUsers(true);
+                    admin.setCanModifySystemSettings(true);
+                } else {
+                    // When downgrading from SUPER_ADMIN to ADMIN, set standard permissions
+                    if (admin.getAccessLevel() == Admin.AccessLevel.SUPER) {
+                        admin.setAccessLevel(Admin.AccessLevel.STANDARD);
+                        admin.setCanDeleteUsers(false);
+                        admin.setCanModifySystemSettings(false);
+                    }
+                }
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid role: " + request.getRole());
             }
         }
 
         Admin updatedAdmin = adminRepository.save(admin);
-        System.out.println("Admin updated: " + updatedAdmin.getAdminId());
+        System.out.println("Admin updated: " + updatedAdmin.getAdminId() + ", Role: " + updatedAdmin.getRole() + ", Access Level: " + updatedAdmin.getAccessLevel());
 
         return mapAdminToResponse(updatedAdmin);
     }
@@ -162,8 +196,8 @@ public class AdminManagementServiceImpl implements AdminManagementService {
             "Admin soft deleted by " + deletedBy.getEmail()
         );
 
-        // Deactivate the admin instead of deleting
-        admin.setActive(false);
+        // Soft delete - moved to recycle bin
+        admin.setActive(-1);
         adminRepository.save(admin);
 
         System.out.println("Admin " + admin.getEmail() + " moved to recycle bin by " + deletedBy.getEmail());
@@ -175,7 +209,7 @@ public class AdminManagementServiceImpl implements AdminManagementService {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
 
-        admin.setActive(!admin.isActive());
+        admin.setActive(admin.getActive() == 1 ? 0 : 1); // Toggle between active (1) and deactivated (0)
         Admin updatedAdmin = adminRepository.save(admin);
 
         System.out.println("Admin " + updatedAdmin.getEmail() + " status toggled to: " + updatedAdmin.isActive());
@@ -218,6 +252,34 @@ public class AdminManagementServiceImpl implements AdminManagementService {
         }
 
         throw new IllegalStateException("Current authenticated user not found in any table");
+    }
+
+    @Override
+    @Transactional
+    public AdminResponse activateAdmin(UUID adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+        
+        admin.setActive(1);
+        Admin updatedAdmin = adminRepository.save(admin);
+        
+        System.out.println("Admin " + updatedAdmin.getEmail() + " activated");
+        
+        return mapAdminToResponse(updatedAdmin);
+    }
+    
+    @Override
+    @Transactional
+    public AdminResponse deactivateAdmin(UUID adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+        
+        admin.setActive(0);
+        Admin updatedAdmin = adminRepository.save(admin);
+        
+        System.out.println("Admin " + updatedAdmin.getEmail() + " deactivated");
+        
+        return mapAdminToResponse(updatedAdmin);
     }
 
     /**

@@ -125,15 +125,11 @@ public class EventScheduleServiceImpl implements EventScheduleService {
                 .firstName("System")
                 .lastName("User")
                 .build();
-        UUID organizerId = null;
-        UUID organizerEmployeeId = null;
-        UUID userId = null;
         
         // Try to find the user in different repositories
         java.util.Optional<User> userOpt = userRepository.findByEmail(currentUserEmail);
         if (userOpt.isPresent()) {
             deletedBy = userOpt.get();
-            userId = deletedBy.getId();
         } else {
             // Try organizer
             java.util.Optional<Organizer> organizerOpt = organizerRepository.findByEmail(currentUserEmail);
@@ -145,7 +141,6 @@ public class EventScheduleServiceImpl implements EventScheduleService {
                         .firstName(organizer.getOrganizationName())
                         .lastName("")
                         .build();
-                organizerId = organizer.getOrganizerId();
             } else {
                 // Try organizer employee
                 java.util.Optional<OrganizerEmployee> employeeOpt = organizerEmployeeRepository.findByEmail(currentUserEmail);
@@ -157,15 +152,8 @@ public class EventScheduleServiceImpl implements EventScheduleService {
                             .firstName(employee.getFirstName())
                             .lastName(employee.getLastName())
                             .build();
-                    organizerEmployeeId = employee.getEmployeeId();
-                    organizerId = employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null;
                 }
             }
-        }
-        
-        // Get organizer ID from event if not already set
-        if (organizerId == null && schedule.getEvent().getOrganizer() != null) {
-            organizerId = schedule.getEvent().getOrganizer().getOrganizerId();
         }
         
         // Create a simplified schedule data map to avoid circular reference issues
@@ -182,18 +170,14 @@ public class EventScheduleServiceImpl implements EventScheduleService {
         scheduleData.put("status", schedule.getStatus().toString());
         scheduleData.put("notes", schedule.getNotes());
         
-        // Move to recycle bin with owner tracking
+        // Move to recycle bin
         recycleBinService.moveToRecycleBin(
                 "SCHEDULE",
                 schedule.getScheduleId(),
                 schedule.getEvent().getName() + " - " + schedule.getScheduleDate() + " " + schedule.getStartTime(),
                 scheduleData,
                 deletedBy,
-                "Schedule soft deleted by " + deletedBy.getEmail(),
-                null, // adminId
-                organizerId,
-                organizerEmployeeId,
-                userId
+                "Schedule soft deleted by " + deletedBy.getEmail()
         );
         
         // Mark as deleted (soft delete)

@@ -17,7 +17,9 @@ import {
   Edit as EditIcon, 
   DeleteSweep as DeleteSweepIcon, 
   Close as CloseIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import OrganizerForm from './components/OrganizerForm';
@@ -99,6 +101,24 @@ const Organizers: React.FC = () => {
     }
   };
 
+  const handleActivateOrganizer = async (organizerId: string) => {
+    try {
+      await api.patch(`/api/admin/organizers/${organizerId}/activate`);
+      fetchOrganizers();
+    } catch (error) {
+      console.error('Error activating organizer:', error);
+    }
+  };
+
+  const handleDeactivateOrganizer = async (organizerId: string) => {
+    try {
+      await api.patch(`/api/admin/organizers/${organizerId}/deactivate`);
+      fetchOrganizers();
+    } catch (error) {
+      console.error('Error deactivating organizer:', error);
+    }
+  };
+
   const columns: GridColDef[] = [
     { field: 'firstName', headerName: 'First Name', flex: 1 },
     { field: 'lastName', headerName: 'Last Name', flex: 1 },
@@ -153,6 +173,39 @@ const Organizers: React.FC = () => {
           >
             <EditIcon />
           </IconButton>
+          {params.row.active ? (
+            <IconButton
+              onClick={() => handleDeactivateOrganizer(params.row.organizerId)}
+              size="small"
+              color="error"
+              sx={{
+                backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                },
+                mr: 1
+              }}
+              title="Deactivate Organizer (and all employees)"
+            >
+              <DeactivateIcon />
+            </IconButton>
+          ) : (
+            <IconButton
+              onClick={() => handleActivateOrganizer(params.row.organizerId)}
+              size="small"
+              color="success"
+              sx={{
+                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                },
+                mr: 1
+              }}
+              title="Activate Organizer"
+            >
+              <ActivateIcon />
+            </IconButton>
+          )}
           <IconButton
             onClick={() => handleDeleteClick(params.row as Organizer)}
             size="small"

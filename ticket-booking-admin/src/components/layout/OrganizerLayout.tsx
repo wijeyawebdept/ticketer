@@ -33,6 +33,7 @@ import {
   AccountCircle as AccountCircleIcon,
   EventSeat as EventSeatIcon,
   People as PeopleIcon,
+  Assignment as AssignmentIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
@@ -155,6 +156,7 @@ const OrganizerLayout: React.FC = () => {
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/organizer/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/organizer/bookings' },
     { text: t('navigation.organizerEmployees'), icon: <PeopleIcon />, path: '/organizer/employees' },
+    { text: 'Event Assignments', icon: <AssignmentIcon />, path: '/organizer/event-assignments' },
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/organizer/recycle-bin' },
     { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/organizer/profile' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/organizer/settings' },

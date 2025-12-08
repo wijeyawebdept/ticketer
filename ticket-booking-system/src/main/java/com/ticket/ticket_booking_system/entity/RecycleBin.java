@@ -54,19 +54,6 @@ public class RecycleBin {
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
-    // Owner tracking - one of these will be set based on the entity owner
-    @Column(name = "admin_id", columnDefinition = "UUID")
-    private UUID adminId;
-
-    @Column(name = "organizer_id", columnDefinition = "UUID")
-    private UUID organizerId;
-
-    @Column(name = "organizer_employee_id", columnDefinition = "UUID")
-    private UUID organizerEmployeeId;
-
-    @Column(name = "user_id", columnDefinition = "UUID")
-    private UUID userId;
-
     @PrePersist
     protected void onCreate() {
         if (deletedAt == null) {

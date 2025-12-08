@@ -51,4 +51,18 @@ public interface AdminManagementService {
      * @return Updated admin response
      */
     AdminResponse toggleAdminStatus(UUID adminId);
+    
+    /**
+     * Activate admin
+     * @param adminId Admin UUID
+     * @return Updated admin response
+     */
+    AdminResponse activateAdmin(UUID adminId);
+    
+    /**
+     * Deactivate admin
+     * @param adminId Admin UUID
+     * @return Updated admin response
+     */
+    AdminResponse deactivateAdmin(UUID adminId);
 }

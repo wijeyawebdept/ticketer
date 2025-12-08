@@ -81,6 +81,17 @@ export const ToastService = {
   },
 };
 
+/**
+ * Helper functions for convenience
+ */
+export const showSuccessToast = (message: string) => {
+  ToastService.success(message);
+};
+
+export const showErrorToast = (message: string) => {
+  ToastService.error(message);
+};
+
 // Predefined messages for common operations
 export const ToastMessages = {
   // Authentication

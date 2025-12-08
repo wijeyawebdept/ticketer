@@ -23,7 +23,9 @@ import {
   Add as AddIcon, 
   Edit as EditIcon, 
   Delete as DeleteIcon, 
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 
@@ -229,6 +231,26 @@ const OrganizerEmployees: React.FC = () => {
     setEmployeeToDelete(null);
   };
 
+  const handleActivateEmployee = async (employeeId: string) => {
+    try {
+      await api.patch(`/api/admin/organizer-employees/${employeeId}/activate`);
+      setSuccess('Employee activated successfully');
+      fetchEmployees();
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to activate employee');
+    }
+  };
+
+  const handleDeactivateEmployee = async (employeeId: string) => {
+    try {
+      await api.patch(`/api/admin/organizer-employees/${employeeId}/deactivate`);
+      setSuccess('Employee deactivated successfully');
+      fetchEmployees();
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to deactivate employee');
+    }
+  };
+
   const columns: GridColDef[] = [
     { field: 'firstName', headerName: 'First Name', width: 120 },
     { field: 'lastName', headerName: 'Last Name', width: 120 },
@@ -250,17 +272,36 @@ const OrganizerEmployees: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 120,
+      width: 150,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <>
+        <Box>
           <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleDeleteClick(params.row)}>
+          {params.row.active ? (
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDeactivateEmployee(params.row.employeeId)}
+              title="Deactivate Employee"
+            >
+              <DeactivateIcon />
+            </IconButton>
+          ) : (
+            <IconButton
+              size="small"
+              color="success"
+              onClick={() => handleActivateEmployee(params.row.employeeId)}
+              title="Activate Employee"
+            >
+              <ActivateIcon />
+            </IconButton>
+          )}
+          <IconButton size="small" color="warning" onClick={() => handleDeleteClick(params.row)}>
             <DeleteIcon />
           </IconButton>
-        </>
+        </Box>
       )
     }
   ];

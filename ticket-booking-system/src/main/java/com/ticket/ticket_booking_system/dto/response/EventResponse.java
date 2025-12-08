@@ -21,6 +21,7 @@ public class EventResponse {
     private UserBasicResponse organizer;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String createdByType; // "ADMIN", "SUPER_ADMIN", "ORGANIZER", etc.
 
     // Added ticket categories field
     private List<TicketCategoryResponse> ticketCategories;
@@ -143,6 +144,14 @@ public class EventResponse {
         this.updatedAt = updatedAt;
     }
 
+    public String getCreatedByType() {
+        return createdByType;
+    }
+
+    public void setCreatedByType(String createdByType) {
+        this.createdByType = createdByType;
+    }
+
     // Added getter and setter for ticketCategories
     public List<TicketCategoryResponse> getTicketCategories() {
         return ticketCategories;
@@ -223,6 +232,11 @@ public class EventResponse {
 
         public Builder updatedAt(LocalDateTime updatedAt) {
             eventResponse.setUpdatedAt(updatedAt);
+            return this;
+        }
+
+        public Builder createdByType(String createdByType) {
+            eventResponse.setCreatedByType(createdByType);
             return this;
         }
 

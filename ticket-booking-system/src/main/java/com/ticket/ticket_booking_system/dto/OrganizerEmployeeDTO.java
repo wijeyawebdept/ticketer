@@ -31,8 +31,6 @@ public class OrganizerEmployeeDTO {
     private UUID organizerId;
     private String organizerName;
     private String organizationName;
-    private UUID createdByAdminId;
-    private String createdByAdminName;
     private String employeePosition;
     private String department;
     private LocalDate hireDate;

@@ -7,6 +7,7 @@ export interface RecycleBinItem {
   entityName: string;
   entityData: any;
   deletedBy: string;
+  deletedByName: string;
   deletedAt: string;
   reason: string | null;
 }

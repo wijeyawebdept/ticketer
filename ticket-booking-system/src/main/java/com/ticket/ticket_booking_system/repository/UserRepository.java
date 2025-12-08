@@ -25,13 +25,24 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             String firstName, String lastName, String email, Pageable pageable);
     
     // Additional query methods for better performance
-    @Query("SELECT u FROM User u WHERE u.active = true AND u.email = :email")
+    @Query("SELECT u FROM User u WHERE u.active = 1 AND u.email = :email")
     Optional<User> findActiveUserByEmail(@Param("email") String email);
     
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.active = true")
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.active = 1")
     boolean existsActiveUserByEmail(@Param("email") String email);
     
-    Page<User> findByActiveTrue(Pageable pageable);
+    Page<User> findByActive(int active, Pageable pageable);
     
-    Page<User> findByActiveFalse(Pageable pageable);
+    // Legacy methods - deprecated, use findByActive instead
+    default Page<User> findByActiveTrue(Pageable pageable) {
+        return findByActive(1, pageable);
+    }
+    
+    default Page<User> findByActiveFalse(Pageable pageable) {
+        return findByActive(0, pageable);
+    }
+    
+    // Find all users except soft-deleted ones
+    @Query("SELECT u FROM User u WHERE u.active <> :excludeStatus")
+    Page<User> findByActiveNot(@Param("excludeStatus") int excludeStatus, Pageable pageable);
 }

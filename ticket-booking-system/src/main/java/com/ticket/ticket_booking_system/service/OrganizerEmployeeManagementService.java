@@ -38,7 +38,7 @@ public class OrganizerEmployeeManagementService {
 
     @Transactional(readOnly = true)
     public Page<OrganizerEmployeeDTO> getAllEmployees(Pageable pageable) {
-        return employeeRepository.findByActiveTrue(pageable)
+        return employeeRepository.findByActiveNot(-1, pageable)
                 .map(this::convertToDTO);
     }
 
@@ -56,7 +56,7 @@ public class OrganizerEmployeeManagementService {
     }
 
     @Transactional
-    public OrganizerEmployeeDTO createEmployee(CreateOrganizerEmployeeRequest request, UUID createdByAdminId) {
+    public OrganizerEmployeeDTO createEmployee(CreateOrganizerEmployeeRequest request) {
         // Check if email already exists
         if (employeeRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists: " + request.getEmail());
@@ -65,12 +65,6 @@ public class OrganizerEmployeeManagementService {
         // Verify organizer exists
         Organizer organizer = organizerRepository.findById(request.getOrganizerId())
                 .orElseThrow(() -> new RuntimeException("Organizer not found with id: " + request.getOrganizerId()));
-
-        // Get admin if provided
-        Admin createdByAdmin = null;
-        if (createdByAdminId != null) {
-            createdByAdmin = adminRepository.findById(createdByAdminId).orElse(null);
-        }
 
         // Create employee
         OrganizerEmployee employee = OrganizerEmployee.builder()
@@ -81,10 +75,9 @@ public class OrganizerEmployeeManagementService {
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
                 .role(OrganizerEmployee.Role.ORGANIZER_EMPLOYEE)
-                .active(true)
+                .active(1)
                 .emailVerified(false)
                 .organizer(organizer)
-                .createdByAdmin(createdByAdmin)
                 .employeePosition(request.getEmployeePosition())
                 .department(request.getDepartment())
                 .hireDate(request.getHireDate())
@@ -128,7 +121,7 @@ public class OrganizerEmployeeManagementService {
             employee.setHireDate(request.getHireDate());
         }
         if (request.getActive() != null) {
-            employee.setActive(request.getActive());
+            employee.setActive(request.getActive() ? 1 : 0);
         }
 
         // Update organizer if provided
@@ -162,8 +155,8 @@ public class OrganizerEmployeeManagementService {
             "Organizer Employee soft deleted by " + deletedBy.getEmail()
         );
         
-        // Deactivate the employee
-        employee.setActive(false);
+        // Soft delete - moved to recycle bin
+        employee.setActive(-1);
         employee.setUpdatedAt(LocalDateTime.now());
         employeeRepository.save(employee);
     }
@@ -173,7 +166,7 @@ public class OrganizerEmployeeManagementService {
         OrganizerEmployee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
         
-        employee.setActive(true);
+        employee.setActive(1); // Reactivate employee
         employee.setUpdatedAt(LocalDateTime.now());
         employeeRepository.save(employee);
     }
@@ -247,14 +240,35 @@ public class OrganizerEmployeeManagementService {
                 .organizerName(employee.getOrganizer() != null ? 
                         employee.getOrganizer().getFirstName() + " " + employee.getOrganizer().getLastName() : null)
                 .organizationName(employee.getOrganizer() != null ? employee.getOrganizer().getOrganizationName() : null)
-                .createdByAdminId(employee.getCreatedByAdmin() != null ? employee.getCreatedByAdmin().getAdminId() : null)
-                .createdByAdminName(employee.getCreatedByAdmin() != null ? 
-                        employee.getCreatedByAdmin().getFirstName() + " " + employee.getCreatedByAdmin().getLastName() : null)
                 .employeePosition(employee.getEmployeePosition())
                 .department(employee.getDepartment())
                 .hireDate(employee.getHireDate())
                 .createdAt(employee.getCreatedAt())
                 .updatedAt(employee.getUpdatedAt())
                 .build();
+    }
+    
+    @Transactional
+    public OrganizerEmployeeDTO activateEmployee(UUID employeeId) {
+        OrganizerEmployee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
+        
+        employee.setActive(1);
+        employee.setUpdatedAt(LocalDateTime.now());
+        OrganizerEmployee updatedEmployee = employeeRepository.save(employee);
+        
+        return convertToDTO(updatedEmployee);
+    }
+    
+    @Transactional
+    public OrganizerEmployeeDTO deactivateEmployee(UUID employeeId) {
+        OrganizerEmployee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
+        
+        employee.setActive(0);
+        employee.setUpdatedAt(LocalDateTime.now());
+        OrganizerEmployee updatedEmployee = employeeRepository.save(employee);
+        
+        return convertToDTO(updatedEmployee);
     }
 }

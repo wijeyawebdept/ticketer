@@ -79,4 +79,18 @@ public class AdminManagementController {
         AdminResponse admin = adminManagementService.toggleAdminStatus(adminId);
         return ResponseEntity.ok(admin);
     }
+    
+    @PatchMapping("/{adminId}/activate")
+    @SuperAdminOnly
+    public ResponseEntity<AdminResponse> activateAdmin(@PathVariable UUID adminId) {
+        AdminResponse admin = adminManagementService.activateAdmin(adminId);
+        return ResponseEntity.ok(admin);
+    }
+    
+    @PatchMapping("/{adminId}/deactivate")
+    @SuperAdminOnly
+    public ResponseEntity<AdminResponse> deactivateAdmin(@PathVariable UUID adminId) {
+        AdminResponse admin = adminManagementService.deactivateAdmin(adminId);
+        return ResponseEntity.ok(admin);
+    }
 }

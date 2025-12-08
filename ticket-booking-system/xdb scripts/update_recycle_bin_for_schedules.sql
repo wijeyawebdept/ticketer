@@ -4,10 +4,10 @@
 -- Update entity_type constraint if it exists
 ALTER TABLE recycle_bin DROP CONSTRAINT IF EXISTS recycle_bin_entity_type_check;
 
--- Add new constraint including SCHEDULE
+-- Add new constraint including all entity types
 ALTER TABLE recycle_bin 
 ADD CONSTRAINT recycle_bin_entity_type_check 
-CHECK (entity_type IN ('USER', 'EVENT', 'VENUE', 'SCHEDULE'));
+CHECK (entity_type IN ('USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'EVENT', 'VENUE', 'SCHEDULE'));
 
 -- Add index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_recycle_bin_entity_type_id 

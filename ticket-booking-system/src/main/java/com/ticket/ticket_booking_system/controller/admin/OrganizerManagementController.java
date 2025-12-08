@@ -67,4 +67,16 @@ public class OrganizerManagementController {
         OrganizerResponse organizer = organizerManagementService.toggleOrganizerStatus(organizerId);
         return ResponseEntity.ok(organizer);
     }
+    
+    @PatchMapping("/{organizerId}/activate")
+    public ResponseEntity<OrganizerResponse> activateOrganizer(@PathVariable UUID organizerId) {
+        OrganizerResponse organizer = organizerManagementService.activateOrganizer(organizerId);
+        return ResponseEntity.ok(organizer);
+    }
+    
+    @PatchMapping("/{organizerId}/deactivate")
+    public ResponseEntity<OrganizerResponse> deactivateOrganizer(@PathVariable UUID organizerId) {
+        OrganizerResponse organizer = organizerManagementService.deactivateOrganizer(organizerId);
+        return ResponseEntity.ok(organizer);
+    }
 }

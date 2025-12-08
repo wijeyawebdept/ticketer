@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
@@ -68,18 +69,14 @@ public class RecycleBinService {
         this.ticketCategoryRepository = ticketCategoryRepository;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        // Configure ObjectMapper to handle Hibernate lazy loading and empty beans
+        this.objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Transactional
     public RecycleBinDTO moveToRecycleBin(String entityType, UUID entityId, String entityName,
                                           Object entityData, User deletedBy, String reason) {
-        return moveToRecycleBin(entityType, entityId, entityName, entityData, deletedBy, reason, null, null, null, null);
-    }
-
-    @Transactional
-    public RecycleBinDTO moveToRecycleBin(String entityType, UUID entityId, String entityName,
-                                          Object entityData, User deletedBy, String reason,
-                                          UUID adminId, UUID organizerId, UUID organizerEmployeeId, UUID userId) {
         try {
             String entityDataJson = objectMapper.writeValueAsString(entityData);
             
@@ -91,10 +88,6 @@ public class RecycleBinService {
                     .deletedBy(deletedBy.getId())
                     .deletedByName(deletedBy.getFirstName() + " " + deletedBy.getLastName())
                     .reason(reason)
-                    .adminId(adminId)
-                    .organizerId(organizerId)
-                    .organizerEmployeeId(organizerEmployeeId)
-                    .userId(userId)
                     .build();
 
             RecycleBin saved = recycleBinRepository.save(recycleBin);
@@ -246,7 +239,7 @@ public class RecycleBinService {
                 .orElseThrow(() -> new RuntimeException("User not found: " + recycleBin.getEntityId()));
         
         // Reactivate the user
-        user.setActive(true);
+        user.setActive(1);
         userRepository.save(user);
         
         System.out.println("User " + user.getEmail() + " restored from recycle bin");
@@ -257,7 +250,7 @@ public class RecycleBinService {
                 .orElseThrow(() -> new RuntimeException("Admin not found: " + recycleBin.getEntityId()));
         
         // Reactivate the admin
-        admin.setActive(true);
+        admin.setActive(1);
         adminRepository.save(admin);
         
         System.out.println("Admin " + admin.getEmail() + " restored from recycle bin");
@@ -268,7 +261,7 @@ public class RecycleBinService {
                 .orElseThrow(() -> new RuntimeException("Organizer not found: " + recycleBin.getEntityId()));
         
         // Reactivate the organizer
-        organizer.setActive(true);
+        organizer.setActive(1);
         organizerRepository.save(organizer);
         
         System.out.println("Organizer " + organizer.getEmail() + " restored from recycle bin");
@@ -279,7 +272,7 @@ public class RecycleBinService {
                 .orElseThrow(() -> new RuntimeException("Organizer Employee not found: " + recycleBin.getEntityId()));
         
         // Reactivate the employee
-        employee.setActive(true);
+        employee.setActive(1);
         organizerEmployeeRepository.save(employee);
         
         System.out.println("Organizer Employee " + employee.getEmail() + " restored from recycle bin");
@@ -470,110 +463,6 @@ public class RecycleBinService {
         System.out.println("Recycle bin emptied for type: " + entityType);
     }
 
-    // Organizer-specific methods
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByOrganizer(UUID organizerId) {
-        return recycleBinRepository.findByOrganizerIdOrderByDeletedAtDesc(organizerId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByOrganizerAndType(UUID organizerId, String entityType) {
-        return recycleBinRepository.findByOrganizerIdAndEntityTypeOrderByDeletedAtDesc(organizerId, entityType).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public void emptyRecycleBinForOrganizer(UUID organizerId) {
-        List<RecycleBin> items = recycleBinRepository.findByOrganizerIdOrderByDeletedAtDesc(organizerId);
-        
-        for (RecycleBin item : items) {
-            permanentlyDeleteEntity(item.getEntityType(), item.getEntityId());
-        }
-        
-        recycleBinRepository.deleteByOrganizerId(organizerId);
-    }
-
-    @Transactional
-    public void emptyRecycleBinForOrganizerByType(UUID organizerId, String entityType) {
-        List<RecycleBin> items = recycleBinRepository.findByOrganizerIdAndEntityTypeOrderByDeletedAtDesc(organizerId, entityType);
-        
-        for (RecycleBin item : items) {
-            permanentlyDeleteEntity(item.getEntityType(), item.getEntityId());
-        }
-        
-        recycleBinRepository.deleteByOrganizerIdAndEntityType(organizerId, entityType);
-    }
-
-    // Admin-specific methods
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByAdmin(UUID adminId) {
-        return recycleBinRepository.findByAdminIdOrderByDeletedAtDesc(adminId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByAdminAndType(UUID adminId, String entityType) {
-        return recycleBinRepository.findByAdminIdAndEntityTypeOrderByDeletedAtDesc(adminId, entityType).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    // Organizer Employee-specific methods
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByOrganizerEmployee(UUID organizerEmployeeId) {
-        return recycleBinRepository.findByOrganizerEmployeeIdOrderByDeletedAtDesc(organizerEmployeeId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByOrganizerEmployeeAndType(UUID organizerEmployeeId, String entityType) {
-        return recycleBinRepository.findByOrganizerEmployeeIdAndEntityTypeOrderByDeletedAtDesc(organizerEmployeeId, entityType).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public void emptyRecycleBinForOrganizerEmployee(UUID organizerEmployeeId) {
-        List<RecycleBin> items = recycleBinRepository.findByOrganizerEmployeeIdOrderByDeletedAtDesc(organizerEmployeeId);
-        
-        for (RecycleBin item : items) {
-            permanentlyDeleteEntity(item.getEntityType(), item.getEntityId());
-        }
-        
-        recycleBinRepository.deleteByOrganizerEmployeeId(organizerEmployeeId);
-    }
-
-    @Transactional
-    public void emptyRecycleBinForOrganizerEmployeeByType(UUID organizerEmployeeId, String entityType) {
-        List<RecycleBin> items = recycleBinRepository.findByOrganizerEmployeeIdAndEntityTypeOrderByDeletedAtDesc(organizerEmployeeId, entityType);
-        
-        for (RecycleBin item : items) {
-            permanentlyDeleteEntity(item.getEntityType(), item.getEntityId());
-        }
-        
-        recycleBinRepository.deleteByOrganizerEmployeeIdAndEntityType(organizerEmployeeId, entityType);
-    }
-
-    // User-specific methods
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByUser(UUID userId) {
-        return recycleBinRepository.findByUserIdOrderByDeletedAtDesc(userId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<RecycleBinDTO> getRecycleBinItemsByUserAndType(UUID userId, String entityType) {
-        return recycleBinRepository.findByUserIdAndEntityTypeOrderByDeletedAtDesc(userId, entityType).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
     // Helper method to permanently delete an entity from database
     private void permanentlyDeleteEntity(String entityType, UUID entityId) {
         try {
@@ -628,10 +517,6 @@ public class RecycleBinService {
                 .deletedByName(recycleBin.getDeletedByName())
                 .deletedAt(recycleBin.getDeletedAt())
                 .reason(recycleBin.getReason())
-                .adminId(recycleBin.getAdminId())
-                .organizerId(recycleBin.getOrganizerId())
-                .organizerEmployeeId(recycleBin.getOrganizerEmployeeId())
-                .userId(recycleBin.getUserId())
                 .build();
     }
 }

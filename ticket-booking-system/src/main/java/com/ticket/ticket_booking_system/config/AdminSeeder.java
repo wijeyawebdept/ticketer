@@ -52,7 +52,7 @@ public class AdminSeeder implements CommandLineRunner {
                 .dateOfBirth(LocalDate.of(1990, 1, 1))
                 .role(Admin.Role.ADMIN)
                 .emailVerified(true)
-                .active(true)
+                .active(1)
                 .accessLevel(Admin.AccessLevel.STANDARD)
                 .canDeleteUsers(false)
                 .canModifySystemSettings(false)

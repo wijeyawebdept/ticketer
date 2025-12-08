@@ -73,7 +73,7 @@ public class User implements UserDetails {
 
     @Column(name = "active", nullable = false)
     @Builder.Default
-    private boolean active = true;
+    private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
@@ -96,8 +96,8 @@ public class User implements UserDetails {
         if (updatedAt == null) {
             updatedAt = LocalDateTime.now();
         }
-        if (!active) {
-            active = true; // Ensure active is true for new users
+        if (active == 0) {
+            active = 1; // Ensure active is 1 for new users
         }
     }
     
@@ -156,11 +156,11 @@ public class User implements UserDetails {
     
     // Custom isActive method for clarity
     public boolean isActive() {
-        return this.active;
+        return this.active == 1;
     }
     
     // Custom setter for active to ensure consistency
-    public void setActive(boolean active) {
+    public void setActive(int active) {
         this.active = active;
     }
     
@@ -185,7 +185,7 @@ public class User implements UserDetails {
         private LocalDate dateOfBirth;
         private String profilePicture;
         private Role role = Role.USER; // Default role
-        private boolean active = true;
+        private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
         private boolean emailVerified = false;
         private LocalDateTime createdAt;
         private LocalDateTime lastLoginAt;
@@ -236,7 +236,7 @@ public class User implements UserDetails {
             return this;
         }
         
-        public UserBuilder active(boolean active) {
+        public UserBuilder active(int active) {
             this.active = active;
             return this;
         }

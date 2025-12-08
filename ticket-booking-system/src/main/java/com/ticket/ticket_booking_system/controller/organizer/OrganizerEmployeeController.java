@@ -117,8 +117,8 @@ public class OrganizerEmployeeController {
             // Set the organizer ID in the request
             request.setOrganizerId(organizerId);
             
-            // Create employee (createdByAdminId is null for organizer-created employees)
-            OrganizerEmployeeDTO employee = employeeService.createEmployee(request, null);
+            // Create employee
+            OrganizerEmployeeDTO employee = employeeService.createEmployee(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(employee);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

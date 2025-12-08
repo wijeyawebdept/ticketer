@@ -37,6 +37,7 @@ interface RecycleBinItem {
   entityName: string;
   entityData: any;
   deletedBy: string;
+  deletedByName: string;
   deletedAt: string;
   reason: string | null;
 }
@@ -318,7 +319,7 @@ const RecycleBin: React.FC = () => {
                             ID: {item.entityId}
                           </Typography>
                         </TableCell>
-                        <TableCell>{item.deletedBy}</TableCell>
+                        <TableCell>{item.deletedByName || item.deletedBy}</TableCell>
                         <TableCell>
                           {new Date(item.deletedAt).toLocaleString()}
                         </TableCell>

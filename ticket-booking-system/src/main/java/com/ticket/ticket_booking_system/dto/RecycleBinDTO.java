@@ -22,10 +22,4 @@ public class RecycleBinDTO {
     private String deletedByName;
     private LocalDateTime deletedAt;
     private String reason;
-    
-    // Owner tracking
-    private UUID adminId;
-    private UUID organizerId;
-    private UUID organizerEmployeeId;
-    private UUID userId;
 }

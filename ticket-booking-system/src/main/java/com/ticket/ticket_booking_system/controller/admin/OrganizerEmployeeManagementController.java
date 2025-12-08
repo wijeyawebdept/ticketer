@@ -82,14 +82,7 @@ public class OrganizerEmployeeManagementController {
                         .body("Organizer ID is required when admin creates an employee");
             }
             
-            // Get the admin ID from authentication if available
-            UUID createdByAdminId = null;
-            if (authentication.getPrincipal() instanceof Admin) {
-                Admin admin = (Admin) authentication.getPrincipal();
-                createdByAdminId = admin.getAdminId();
-            }
-            
-            OrganizerEmployeeDTO employee = employeeService.createEmployee(request, createdByAdminId);
+            OrganizerEmployeeDTO employee = employeeService.createEmployee(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(employee);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -132,5 +125,25 @@ public class OrganizerEmployeeManagementController {
     public ResponseEntity<Long> countActiveEmployees() {
         long count = employeeService.countActiveEmployees();
         return ResponseEntity.ok(count);
+    }
+    
+    @PostMapping("/{employeeId}/activate")
+    public ResponseEntity<?> activateEmployee(@PathVariable UUID employeeId) {
+        try {
+            OrganizerEmployeeDTO employee = employeeService.activateEmployee(employeeId);
+            return ResponseEntity.ok(employee);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    @PostMapping("/{employeeId}/deactivate")
+    public ResponseEntity<?> deactivateEmployee(@PathVariable UUID employeeId) {
+        try {
+            OrganizerEmployeeDTO employee = employeeService.deactivateEmployee(employeeId);
+            return ResponseEntity.ok(employee);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

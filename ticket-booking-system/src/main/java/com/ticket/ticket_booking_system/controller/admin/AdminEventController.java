@@ -98,6 +98,13 @@ public class AdminEventController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{eventId}/soft")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Void> softDeleteEvent(@PathVariable UUID eventId) {
+        eventService.softDeleteEvent(eventId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{eventId}/permanent")
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> permanentlyDeleteEvent(@PathVariable UUID eventId) {
@@ -148,5 +155,28 @@ public class AdminEventController {
         response.put("imageUrl", imageUrl);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{eventId}/assign-organizer")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<EventResponse> assignOrganizerToEvent(
+            @PathVariable UUID eventId,
+            @RequestParam UUID organizerId) {
+        
+        EventResponse event = eventService.assignOrganizerToEvent(eventId, organizerId);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Organizer assigned successfully");
+        
+        return ResponseEntity.ok(event);
+    }
+
+    @DeleteMapping("/{eventId}/remove-organizer")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<EventResponse> removeOrganizerFromEvent(@PathVariable UUID eventId) {
+        
+        EventResponse event = eventService.removeOrganizerFromEvent(eventId);
+        
+        return ResponseEntity.ok(event);
     }
 }

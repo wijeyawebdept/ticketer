@@ -33,7 +33,9 @@ import {
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
   EventSeat as EventSeatIcon,
-  RestoreFromTrash as RecycleBinIcon
+  RestoreFromTrash as RecycleBinIcon,
+  Assignment as AssignmentIcon,
+  PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +159,8 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/organizers' },
     { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/organizer-employees' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/events' },
+    { text: 'Employee Assignment', icon: <AssignmentIcon />, path: '/event-assignments' },
+    { text: 'Organizer Assignment', icon: <PersonAddIcon />, path: '/organizer-assignment' },
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/bookings' },

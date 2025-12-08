@@ -51,4 +51,18 @@ public interface OrganizerManagementService {
      * @return Updated organizer response
      */
     OrganizerResponse toggleOrganizerStatus(UUID organizerId);
+    
+    /**
+     * Activate organizer
+     * @param organizerId Organizer UUID
+     * @return Updated organizer response
+     */
+    OrganizerResponse activateOrganizer(UUID organizerId);
+    
+    /**
+     * Deactivate organizer and all associated employees
+     * @param organizerId Organizer UUID
+     * @return Updated organizer response
+     */
+    OrganizerResponse deactivateOrganizer(UUID organizerId);
 }
