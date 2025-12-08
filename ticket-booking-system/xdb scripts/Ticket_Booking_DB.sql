@@ -215,7 +215,6 @@ WHERE table_name = 'booking_seats'
 ORDER BY ordinal_position;
 
 
-
 -- Check venue capacity vs actual template seats count
 SELECT 
     v.venue_id,
