@@ -23,7 +23,7 @@ public class OrganizerEmployeeDTO {
     private LocalDate dateOfBirth;
     private String profilePicture;
     private String role;
-    private boolean active;
+    private int active; // 1 = active, 0 = deactivated, -1 = soft deleted
     private boolean emailVerified;
     private LocalDateTime lastLoginAt;
     

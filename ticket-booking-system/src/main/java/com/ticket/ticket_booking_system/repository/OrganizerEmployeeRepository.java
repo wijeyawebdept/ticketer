@@ -55,4 +55,8 @@ public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmpl
     // Find all employees except soft-deleted ones
     @org.springframework.data.jpa.repository.Query("SELECT e FROM OrganizerEmployee e WHERE e.active <> :excludeStatus")
     Page<OrganizerEmployee> findByActiveNot(@org.springframework.data.repository.query.Param("excludeStatus") int excludeStatus, Pageable pageable);
+    
+    // Find employees by organizer excluding soft-deleted ones
+    @org.springframework.data.jpa.repository.Query("SELECT e FROM OrganizerEmployee e WHERE e.organizer.organizerId = :organizerId AND e.active <> -1")
+    Page<OrganizerEmployee> findByOrganizer_OrganizerIdAndActiveNot(@org.springframework.data.repository.query.Param("organizerId") UUID organizerId, Pageable pageable);
 }

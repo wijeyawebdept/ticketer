@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -202,6 +203,60 @@ public class OrganizerEmployeeController {
             
             employeeService.restoreEmployee(employeeId);
             return ResponseEntity.ok("Employee restored successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Activate an employee (set active = 1)
+     */
+    @PatchMapping("/{employeeId}/activate")
+    public ResponseEntity<?> activateEmployee(
+            @PathVariable UUID employeeId,
+            Authentication authentication) {
+        try {
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+            
+            // Verify employee belongs to current organizer
+            if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to activate this employee");
+            }
+            
+            OrganizerEmployeeDTO employee = employeeService.activateEmployee(employeeId);
+            return ResponseEntity.ok(employee);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Deactivate an employee (set active = 0)
+     */
+    @PatchMapping("/{employeeId}/deactivate")
+    public ResponseEntity<?> deactivateEmployee(
+            @PathVariable UUID employeeId,
+            Authentication authentication) {
+        try {
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unable to identify organizer");
+            }
+            
+            // Verify employee belongs to current organizer
+            if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to deactivate this employee");
+            }
+            
+            OrganizerEmployeeDTO employee = employeeService.deactivateEmployee(employeeId);
+            return ResponseEntity.ok(employee);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

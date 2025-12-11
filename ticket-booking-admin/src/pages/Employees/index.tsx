@@ -28,6 +28,9 @@ import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   RestoreFromTrash as RestoreIcon,
+  ToggleOff as DeactivateIcon,
+  ToggleOn as ActivateIcon,
+  DeleteSweep as DeleteSweepIcon,
 } from '@mui/icons-material';
 import EmployeeService, { OrganizerEmployee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../../services/employee.service';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
@@ -45,7 +48,7 @@ const Employees: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(0); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -62,7 +65,20 @@ const Employees: React.FC = () => {
 
   useEffect(() => {
     checkUserRole();
-    fetchOrganizers();
+    // Only fetch organizers if user is admin (for the organizer filter dropdown)
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const isAdmin = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
+                        user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN';
+        if (isAdmin) {
+          fetchOrganizers();
+        }
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
     fetchEmployees();
   }, [currentPage]);
 
@@ -223,6 +239,35 @@ const Employees: React.FC = () => {
     }
   };
 
+  const handleActivateEmployee = async (employeeId: string) => {
+    try {
+      setError(null);
+      await EmployeeService.activateEmployee(employeeId);
+      setSuccess('Employee activated successfully');
+      fetchEmployees();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error activating employee:', err);
+      setError(err.response?.data?.message || 'Failed to activate employee');
+    }
+  };
+
+  const handleDeactivateEmployee = async (employeeId: string) => {
+    try {
+      setError(null);
+      await EmployeeService.deactivateEmployee(employeeId);
+      setSuccess('Employee deactivated successfully');
+      fetchEmployees();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error deactivating employee:', err);
+      setError(err.response?.data?.message || 'Failed to deactivate employee');
+    }
+  };
+
+  // Filter out deleted employees (show only active and inactive)
+  const visibleEmployees = employees.filter(emp => emp.active !== -1);
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -296,7 +341,7 @@ const Employees: React.FC = () => {
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : employees.length === 0 ? (
+              ) : visibleEmployees.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                     <Typography variant="body1" color="text.secondary">
@@ -305,7 +350,7 @@ const Employees: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                employees.map((employee) => (
+                visibleEmployees.map((employee) => (
                   <TableRow key={employee.employeeId} hover>
                     <TableCell>
                       {employee.firstName} {employee.lastName}
@@ -316,41 +361,74 @@ const Employees: React.FC = () => {
                     <TableCell>{employee.department || '-'}</TableCell>
                     <TableCell>
                       <Chip
-                        label={employee.active ? 'Active' : 'Inactive'}
-                        color={employee.active ? 'success' : 'default'}
+                        label={employee.active === 1 ? 'Active' : 'Inactive'}
+                        color={employee.active === 1 ? 'success' : 'default'}
                         size="small"
+                        sx={{ fontWeight: 500 }}
                       />
                     </TableCell>
                     <TableCell align="center">
-                      {employee.active ? (
-                        <>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenEditDialog(employee)}
-                            title="Edit"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleOpenDeleteDialog(employee)}
-                            title="Delete"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </>
+                      <IconButton
+                        onClick={() => handleOpenEditDialog(employee)}
+                        size="small"
+                        color="primary"
+                        sx={{
+                          backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                          },
+                          mr: 1
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      {employee.active === 1 ? (
+                        <IconButton
+                          onClick={() => handleDeactivateEmployee(employee.employeeId)}
+                          size="small"
+                          color="error"
+                          sx={{
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            '&:hover': {
+                              backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                            },
+                            mr: 1
+                          }}
+                          title="Deactivate Employee"
+                        >
+                          <DeactivateIcon />
+                        </IconButton>
                       ) : (
                         <IconButton
+                          onClick={() => handleActivateEmployee(employee.employeeId)}
                           size="small"
-                          color="primary"
-                          onClick={() => handleRestoreEmployee(employee.employeeId)}
-                          title="Restore"
+                          color="success"
+                          sx={{
+                            backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                            '&:hover': {
+                              backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                            },
+                            mr: 1
+                          }}
+                          title="Activate Employee"
                         >
-                          <RestoreIcon fontSize="small" />
+                          <ActivateIcon />
                         </IconButton>
                       )}
+                      <IconButton
+                        onClick={() => handleOpenDeleteDialog(employee)}
+                        size="small"
+                        color="warning"
+                        sx={{
+                          backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                          }
+                        }}
+                        title="Move to Recycle Bin"
+                      >
+                        <DeleteSweepIcon />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))

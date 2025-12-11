@@ -32,6 +32,7 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import api from '../../services/api';
 import EventAssignmentService, { EventEmployeeAssignment } from '../../services/event-assignment.service';
 import EventService from '../../services/event.service';
 import { showErrorToast, showSuccessToast } from '../../services/toast.service';
@@ -45,7 +46,8 @@ interface Employee {
 }
 
 interface Event {
-  eventId: string;
+  id?: string;
+  eventId?: string;
   name: string;
   status: string;
 }
@@ -65,6 +67,7 @@ const EventAssignments: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchData = async () => {
@@ -87,13 +90,9 @@ const EventAssignments: React.FC = () => {
 
   const fetchEmployees = async (): Promise<Employee[]> => {
     try {
-      const response = await fetch('/api/organizer/employees', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      return await response.json();
+      const response = await api.get<any>('/api/organizer/employees');
+      // Backend returns Page<OrganizerEmployeeDTO>, extract content array
+      return response.data.content || [];
     } catch (error) {
       showErrorToast('Failed to fetch employees');
       return [];
@@ -257,7 +256,7 @@ const EventAssignments: React.FC = () => {
               <InputLabel>Event</InputLabel>
               <Select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} label="Event">
                 {events.map((event) => (
-                  <MenuItem key={event.eventId} value={event.eventId}>
+                  <MenuItem key={event.id || event.eventId} value={event.id || event.eventId}>
                     {event.name}
                   </MenuItem>
                 ))}

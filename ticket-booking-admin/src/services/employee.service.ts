@@ -12,7 +12,7 @@ export interface OrganizerEmployee {
   department?: string;
   isEmployee: boolean;
   isVerified: boolean;
-  active: boolean;
+  active: number; // 1 = active, 0 = deactivated, -1 = soft deleted
   canCreateEmployees: boolean;
   parentOrganizerId?: string;
   organizationName?: string;
@@ -172,6 +172,28 @@ class EmployeeService {
     await api.post(
       `${basePath === '/api/organizer' ? `${basePath}/employees/${employeeId}/restore` : `${basePath}/organizer-employees/${employeeId}/restore`}`
     );
+  }
+
+  /**
+   * Activate an employee (set active = 1)
+   */
+  async activateEmployee(employeeId: string): Promise<OrganizerEmployee> {
+    const basePath = this.getBasePath();
+    const response = await api.patch<OrganizerEmployee>(
+      `${basePath === '/api/organizer' ? `${basePath}/employees/${employeeId}/activate` : `${basePath}/organizer-employees/${employeeId}/activate`}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Deactivate an employee (set active = 0)
+   */
+  async deactivateEmployee(employeeId: string): Promise<OrganizerEmployee> {
+    const basePath = this.getBasePath();
+    const response = await api.patch<OrganizerEmployee>(
+      `${basePath === '/api/organizer' ? `${basePath}/employees/${employeeId}/deactivate` : `${basePath}/organizer-employees/${employeeId}/deactivate`}`
+    );
+    return response.data;
   }
 
   /**

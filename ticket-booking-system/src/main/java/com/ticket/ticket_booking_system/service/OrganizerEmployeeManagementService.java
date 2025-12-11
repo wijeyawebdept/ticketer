@@ -44,7 +44,8 @@ public class OrganizerEmployeeManagementService {
 
     @Transactional(readOnly = true)
     public Page<OrganizerEmployeeDTO> getEmployeesByOrganizer(UUID organizerId, Pageable pageable) {
-        return employeeRepository.findByOrganizer_OrganizerIdAndActiveTrue(organizerId, pageable)
+        // Return both active (1) and inactive (0) employees, exclude deleted (-1)
+        return employeeRepository.findByOrganizer_OrganizerIdAndActiveNot(organizerId, pageable)
                 .map(this::convertToDTO);
     }
 
@@ -233,7 +234,7 @@ public class OrganizerEmployeeManagementService {
                 .dateOfBirth(employee.getDateOfBirth())
                 .profilePicture(employee.getProfilePicture())
                 .role(employee.getRole().name())
-                .active(employee.isActive())
+                .active(employee.getActive())
                 .emailVerified(employee.isEmailVerified())
                 .lastLoginAt(employee.getLastLoginAt())
                 .organizerId(employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null)

@@ -100,8 +100,9 @@ class EventService {
   }
 
   async getOrganizerEvents(): Promise<Event[]> {
-    const response = await api.get<Event[]>('/api/organizer/events');
-    return response.data;
+    const response = await api.get<any>('/api/organizer/events');
+    // Backend returns Page<EventResponse>, extract content array
+    return response.data.content || [];
   }
 
   async getActiveEvents(): Promise<any> {

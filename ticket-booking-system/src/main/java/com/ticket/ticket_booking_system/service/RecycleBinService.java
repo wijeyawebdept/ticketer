@@ -111,6 +111,53 @@ public class RecycleBinService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get recycle bin items for organizer and their employees
+     * Returns items deleted by the organizer or any of their employees
+     */
+    @Transactional(readOnly = true)
+    public List<RecycleBinDTO> getRecycleBinItemsForOrganizer(UUID organizerId) {
+        // Get all employee IDs for this organizer
+        List<UUID> employeeIds = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId)
+                .stream()
+                .map(OrganizerEmployee::getEmployeeId)
+                .collect(Collectors.toList());
+        
+        // Get the organizer's user ID
+        Organizer organizer = organizerRepository.findById(organizerId)
+                .orElseThrow(() -> new RuntimeException("Organizer not found"));
+        
+        // Get all items - then filter by deletedBy matching organizer or their employees
+        return recycleBinRepository.findAllByOrderByDeletedAtDesc().stream()
+                .filter(item -> {
+                    UUID deletedBy = item.getDeletedBy();
+                    // Check if deleted by organizer or any of their employees
+                    return deletedBy.equals(organizerId) || employeeIds.contains(deletedBy);
+                })
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get recycle bin items by type for organizer and their employees
+     */
+    @Transactional(readOnly = true)
+    public List<RecycleBinDTO> getRecycleBinItemsByTypeForOrganizer(String entityType, UUID organizerId) {
+        // Get all employee IDs for this organizer
+        List<UUID> employeeIds = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId)
+                .stream()
+                .map(OrganizerEmployee::getEmployeeId)
+                .collect(Collectors.toList());
+        
+        return recycleBinRepository.findByEntityTypeOrderByDeletedAtDesc(entityType).stream()
+                .filter(item -> {
+                    UUID deletedBy = item.getDeletedBy();
+                    return deletedBy.equals(organizerId) || employeeIds.contains(deletedBy);
+                })
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     @Transactional(readOnly = true)
     public RecycleBinDTO getRecycleBinItem(UUID recycleId) {
         RecycleBin recycleBin = recycleBinRepository.findById(recycleId)
