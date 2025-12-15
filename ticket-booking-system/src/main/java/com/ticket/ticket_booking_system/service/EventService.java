@@ -44,4 +44,9 @@ public interface EventService {
     EventResponse assignOrganizerToEvent(UUID eventId, UUID organizerId);
 
     EventResponse removeOrganizerFromEvent(UUID eventId);
+
+    // Activation/Deactivation methods
+    EventResponse activateEvent(UUID eventId);
+
+    EventResponse deactivateEvent(UUID eventId);
 }

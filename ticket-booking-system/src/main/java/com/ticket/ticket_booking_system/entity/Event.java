@@ -74,6 +74,10 @@ public class Event {
     private EventStatus status;
 
     @Builder.Default
+    @Column(name = "active", nullable = false)
+    private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
+
+    @Builder.Default
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 

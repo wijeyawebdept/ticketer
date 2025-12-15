@@ -326,4 +326,22 @@ public class OrganizerEventController {
         
         return null;
     }
+
+    /**
+     * Activate event - Organizer can activate their own events
+     */
+    @PutMapping("/{eventId}/activate")
+    public ResponseEntity<EventResponse> activateEvent(@PathVariable UUID eventId, Authentication authentication) {
+        EventResponse event = eventService.activateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
+
+    /**
+     * Deactivate event - Organizer can deactivate their own events
+     */
+    @PutMapping("/{eventId}/deactivate")
+    public ResponseEntity<EventResponse> deactivateEvent(@PathVariable UUID eventId, Authentication authentication) {
+        EventResponse event = eventService.deactivateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
 }

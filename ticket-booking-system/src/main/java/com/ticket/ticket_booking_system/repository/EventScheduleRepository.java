@@ -86,4 +86,7 @@ public interface EventScheduleRepository extends JpaRepository<EventSchedule, UU
            "AND es.status = 'ACTIVE' " +
            "AND es.isDeleted = false")
     Integer getTotalAvailableSeatsForEvent(@Param("eventId") UUID eventId);
+
+    // Delete all schedules for a specific event (for permanent deletion)
+    void deleteByEvent_EventId(UUID eventId);
 }

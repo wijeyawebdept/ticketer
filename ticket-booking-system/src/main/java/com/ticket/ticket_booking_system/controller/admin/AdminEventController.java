@@ -179,4 +179,18 @@ public class AdminEventController {
         
         return ResponseEntity.ok(event);
     }
+
+    @PutMapping("/{eventId}/activate")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<EventResponse> activateEvent(@PathVariable UUID eventId) {
+        EventResponse event = eventService.activateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
+
+    @PutMapping("/{eventId}/deactivate")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN', 'ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<EventResponse> deactivateEvent(@PathVariable UUID eventId) {
+        EventResponse event = eventService.deactivateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
 }

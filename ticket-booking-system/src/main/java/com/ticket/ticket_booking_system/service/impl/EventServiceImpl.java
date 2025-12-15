@@ -22,6 +22,7 @@ import com.ticket.ticket_booking_system.dto.response.UserBasicResponse; // Added
 import com.ticket.ticket_booking_system.dto.response.VenueBasicResponse; // Added import
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.TicketCategory; // Added import
@@ -30,6 +31,7 @@ import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException; // Added import
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
@@ -52,6 +54,7 @@ public class EventServiceImpl implements EventService {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final EventScheduleRepository eventScheduleRepository;
     private final FileUploadService fileUploadService;
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
     private final SeatRepository seatRepository; // Added repository for seat deletion
@@ -319,7 +322,27 @@ public class EventServiceImpl implements EventService {
             userId = deletedBy.getId();
         }
         
-        // Move to recycle bin
+        // First, move all event schedules to recycle bin
+        List<EventSchedule> schedules = eventScheduleRepository.findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(event.getEventId());
+        System.out.println("Found " + schedules.size() + " schedules to move to recycle bin for event: " + event.getName());
+        
+        for (EventSchedule schedule : schedules) {
+            recycleBinService.moveToRecycleBin(
+                "SCHEDULE",
+                schedule.getScheduleId(),
+                event.getName() + " - " + schedule.getScheduleDate() + " " + schedule.getStartTime(),
+                schedule,
+                deletedBy,
+                "Schedule soft deleted due to event deletion"
+            );
+            
+            // Mark schedule as deleted
+            schedule.setIsDeleted(true);
+            eventScheduleRepository.save(schedule);
+            System.out.println("Schedule " + schedule.getScheduleDate() + " moved to recycle bin");
+        }
+        
+        // Move event to recycle bin
         recycleBinService.moveToRecycleBin(
                 "EVENT",
                 event.getEventId(),
@@ -329,9 +352,12 @@ public class EventServiceImpl implements EventService {
                 "Event soft deleted by " + deletedBy.getEmail()
         );
         
-        // Mark as deleted (soft delete)
+        // Mark as deleted (soft delete) - use active = -1
+        event.setActive(-1);
         event.setIsDeleted(true);
         eventRepository.save(event);
+        
+        System.out.println("Event " + event.getName() + " moved to recycle bin with status=-1");
     }
 
     @Override
@@ -557,6 +583,34 @@ public class EventServiceImpl implements EventService {
         event.setOrganizer(null);
         Event savedEvent = eventRepository.save(event);
 
+        return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse activateEvent(UUID eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+        
+        event.setActive(1); // Activate event
+        Event savedEvent = eventRepository.save(event);
+        
+        System.out.println("Event " + event.getName() + " activated (status=1)");
+        
+        return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse deactivateEvent(UUID eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+        
+        event.setActive(0); // Deactivate event (can be reactivated)
+        Event savedEvent = eventRepository.save(event);
+        
+        System.out.println("Event " + event.getName() + " deactivated (status=0)");
+        
         return mapEventToResponse(savedEvent);
     }
 }

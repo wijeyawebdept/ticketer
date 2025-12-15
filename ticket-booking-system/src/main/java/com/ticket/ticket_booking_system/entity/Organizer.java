@@ -75,7 +75,7 @@ public class Organizer implements UserDetails {
     @Builder.Default
     private Role role = Role.ORGANIZER;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
@@ -197,17 +197,17 @@ public class Organizer implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return active == 1; // Only active organizers (status = 1)
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return active == 1; // Only active organizers (status = 1)
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return active == 1; // Only active organizers (status = 1)
     }
 
     @Override

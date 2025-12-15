@@ -72,7 +72,7 @@ public class OrganizerEmployee implements UserDetails {
     @Builder.Default
     private Role role = Role.ORGANIZER_EMPLOYEE;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
@@ -134,17 +134,17 @@ public class OrganizerEmployee implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return active == 1; // Only active employees (status = 1)
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return active >= 0;
+        return active == 1; // Only active employees (status = 1)
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return active == 1; // Only active employees (status = 1)
     }
 
     @Override

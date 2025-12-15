@@ -236,6 +236,9 @@ public class VenueServiceImpl implements VenueService {
                         // Continue with other events even if one fails
                     }
                 }
+                
+                // Flush to ensure all events are deleted before deleting venue
+                eventRepository.flush();
                 System.out.println("All associated events permanently deleted");
             } else {
                 System.out.println("No events associated with this venue");
@@ -247,11 +250,13 @@ public class VenueServiceImpl implements VenueService {
             if (templateSeatsCount > 0) {
                 System.out.println("Deleting " + templateSeatsCount + " template seats...");
                 seatRepository.deleteByVenueAndEventIsNull(venue);
+                seatRepository.flush();
                 System.out.println("Template seats deleted successfully");
             }
 
             // Now delete the venue itself
             venueRepository.delete(venue);
+            venueRepository.flush();
 
             System.out.println("Venue permanently deleted successfully");
             System.out.println("PERMANENT DELETE VENUE COMPLETE");

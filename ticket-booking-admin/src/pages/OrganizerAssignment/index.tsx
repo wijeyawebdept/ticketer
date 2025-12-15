@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { showSuccessToast, showErrorToast } from '../../services/toast.service';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface Event {
   id: string;
@@ -66,6 +67,8 @@ const OrganizerAssignment: React.FC = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [eventToRemove, setEventToRemove] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -135,18 +138,29 @@ const OrganizerAssignment: React.FC = () => {
   };
 
   const handleRemoveOrganizer = async (eventId: string) => {
-    if (!window.confirm('Are you sure you want to remove the organizer from this event?')) {
-      return;
-    }
+    setEventToRemove(eventId);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmRemoveOrganizer = async () => {
+    if (!eventToRemove) return;
 
     try {
-      await api.delete(`/api/admin/events/${eventId}/remove-organizer`);
+      await api.delete(`/api/admin/events/${eventToRemove}/remove-organizer`);
       showSuccessToast('Organizer removed successfully');
       fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to remove organizer');
       console.error('Error removing organizer:', error);
+    } finally {
+      setConfirmDialogOpen(false);
+      setEventToRemove(null);
     }
+  };
+
+  const handleCancelRemove = () => {
+    setConfirmDialogOpen(false);
+    setEventToRemove(null);
   };
 
   if (loading) {
@@ -189,7 +203,6 @@ const OrganizerAssignment: React.FC = () => {
                   <TableCell><strong>Event Name</strong></TableCell>
                   <TableCell><strong>Category</strong></TableCell>
                   <TableCell><strong>Status</strong></TableCell>
-                  <TableCell><strong>Price</strong></TableCell>
                   <TableCell><strong>Assigned Organizer</strong></TableCell>
                   <TableCell align="center"><strong>Actions</strong></TableCell>
                 </TableRow>
@@ -218,7 +231,6 @@ const OrganizerAssignment: React.FC = () => {
                         }
                       />
                     </TableCell>
-                    <TableCell>${event.basePrice?.toFixed(2) || '0.00'}</TableCell>
                     <TableCell>
                       {event.organizer ? (
                         <Box>
@@ -309,6 +321,16 @@ const OrganizerAssignment: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        title="Remove Organizer"
+        content="Are you sure you want to remove the organizer from this event?"
+        onClose={handleCancelRemove}
+        onConfirm={confirmRemoveOrganizer}
+        confirmText="Remove"
+        cancelText="Cancel"
+      />
     </Box>
   );
 };

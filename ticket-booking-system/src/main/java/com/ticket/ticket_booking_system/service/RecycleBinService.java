@@ -123,9 +123,10 @@ public class RecycleBinService {
                 .map(OrganizerEmployee::getEmployeeId)
                 .collect(Collectors.toList());
         
-        // Get the organizer's user ID
-        Organizer organizer = organizerRepository.findById(organizerId)
-                .orElseThrow(() -> new RuntimeException("Organizer not found"));
+        // Verify organizer exists
+        if (!organizerRepository.existsById(organizerId)) {
+            throw new RuntimeException("Organizer not found");
+        }
         
         // Get all items - then filter by deletedBy matching organizer or their employees
         return recycleBinRepository.findAllByOrderByDeletedAtDesc().stream()
@@ -207,7 +208,10 @@ public class RecycleBinService {
                 System.out.println("Organizer Employee permanently deleted: " + entityId);
                 break;
             case "EVENT":
-                // Delete associated seats first to avoid foreign key constraint violation
+                // Delete associated event schedules first to avoid foreign key constraint violation
+                System.out.println("Deleting event schedules for event: " + entityId);
+                eventScheduleRepository.deleteByEvent_EventId(entityId);
+                // Delete associated seats
                 System.out.println("Deleting seats for event: " + entityId);
                 seatRepository.deleteByEventId(entityId);
                 // Delete associated ticket categories
@@ -329,11 +333,12 @@ public class RecycleBinService {
         Event event = eventRepository.findById(recycleBin.getEntityId())
                 .orElseThrow(() -> new RuntimeException("Event not found: " + recycleBin.getEntityId()));
         
-        // Reactivate the event
+        // Reactivate the event - set active = 1 and isDeleted = false
+        event.setActive(1);
         event.setIsDeleted(false);
         eventRepository.save(event);
         
-        System.out.println("Event " + event.getName() + " restored from recycle bin");
+        System.out.println("Event " + event.getName() + " restored from recycle bin (status=1)");
     }
 
     private void restoreVenue(RecycleBin recycleBin) throws JsonProcessingException {

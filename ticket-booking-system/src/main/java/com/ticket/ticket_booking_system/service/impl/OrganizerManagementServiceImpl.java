@@ -16,12 +16,14 @@ import com.ticket.ticket_booking_system.dto.request.OrganizerUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.OrganizerResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -36,6 +38,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
     private final AdminRepository adminRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
+    private final EventScheduleRepository eventScheduleRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecycleBinService recycleBinService;
 
@@ -45,6 +48,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
             AdminRepository adminRepository,
             OrganizerEmployeeRepository organizerEmployeeRepository,
             EventRepository eventRepository,
+            EventScheduleRepository eventScheduleRepository,
             PasswordEncoder passwordEncoder,
             RecycleBinService recycleBinService) {
         this.organizerRepository = organizerRepository;
@@ -52,6 +56,7 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
         this.adminRepository = adminRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
         this.eventRepository = eventRepository;
+        this.eventScheduleRepository = eventScheduleRepository;
         this.passwordEncoder = passwordEncoder;
         this.recycleBinService = recycleBinService;
     }
@@ -176,11 +181,26 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
             System.out.println("Employee " + employee.getEmail() + " moved to recycle bin");
         }
         
-        // 2. Find and soft delete all events of this organizer
+        // 2. Find and soft delete all events of this organizer (with their schedules)
         List<Event> events = eventRepository.findByOrganizer_OrganizerId(organizerId);
         System.out.println("Found " + events.size() + " events to soft delete");
         
         for (Event event : events) {
+            // First, move all schedules of this event to recycle bin
+            List<EventSchedule> schedules = eventScheduleRepository.findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(event.getEventId());
+            for (EventSchedule schedule : schedules) {
+                recycleBinService.moveToRecycleBin(
+                    "SCHEDULE",
+                    schedule.getScheduleId(),
+                    event.getName() + " - " + schedule.getScheduleDate() + " " + schedule.getStartTime(),
+                    schedule,
+                    deletedBy,
+                    "Schedule soft deleted due to organizer deletion"
+                );
+                schedule.setIsDeleted(true);
+                eventScheduleRepository.save(schedule);
+            }
+            
             // Move each event to recycle bin
             recycleBinService.moveToRecycleBin(
                 "EVENT",
@@ -191,10 +211,11 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
                 "Event soft deleted due to organizer deletion"
             );
             
-            // Mark event as deleted
+            // Mark event as deleted - use active = -1
+            event.setActive(-1);
             event.setIsDeleted(true);
             eventRepository.save(event);
-            System.out.println("Event " + event.getName() + " moved to recycle bin");
+            System.out.println("Event " + event.getName() + " and its schedules moved to recycle bin");
         }
         
         // 3. Finally, move organizer to recycle bin

@@ -71,7 +71,7 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private com.ticket.ticket_booking_system.entity.Role roleEntity;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
 
@@ -129,24 +129,23 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return Boolean.TRUE.equals(this.active);
+        return this.active == 1; // Only active users (status = 1)
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return Boolean.TRUE.equals(this.active);
+        return this.active == 1; // Only active users (status = 1)
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return Boolean.TRUE.equals(this.active);
+        return this.active == 1; // Only active users (status = 1)
     }
 
     @Override
     public boolean isEnabled() {
-        // For now, we'll only check active status and ignore email verification
-        // to prevent the "User is disabled" error
-        return Boolean.TRUE.equals(this.active);
+        // Active = 1 (enabled), 0 = deactivated, -1 = soft deleted
+        return this.active == 1;
     }
     
     // Custom getter for email (since getUsername() returns email)

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.request.EventScheduleRequest;
 import com.ticket.ticket_booking_system.dto.response.EventScheduleResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.EventSchedule.ScheduleStatus;
@@ -20,6 +21,7 @@ import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
@@ -40,6 +42,7 @@ public class EventScheduleServiceImpl implements EventScheduleService {
     private final RecycleBinRepository recycleBinRepository;
     private final RecycleBinService recycleBinService;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
 
@@ -131,27 +134,39 @@ public class EventScheduleServiceImpl implements EventScheduleService {
         if (userOpt.isPresent()) {
             deletedBy = userOpt.get();
         } else {
-            // Try organizer
-            java.util.Optional<Organizer> organizerOpt = organizerRepository.findByEmail(currentUserEmail);
-            if (organizerOpt.isPresent()) {
-                Organizer organizer = organizerOpt.get();
+            // Try admin
+            java.util.Optional<Admin> adminOpt = adminRepository.findByEmail(currentUserEmail);
+            if (adminOpt.isPresent()) {
+                Admin admin = adminOpt.get();
                 deletedBy = User.builder()
-                        .id(organizer.getOrganizerId())
-                        .email(organizer.getEmail())
-                        .firstName(organizer.getOrganizationName())
-                        .lastName("")
+                        .id(admin.getAdminId())
+                        .email(admin.getEmail())
+                        .firstName(admin.getFirstName())
+                        .lastName(admin.getLastName())
                         .build();
             } else {
-                // Try organizer employee
-                java.util.Optional<OrganizerEmployee> employeeOpt = organizerEmployeeRepository.findByEmail(currentUserEmail);
-                if (employeeOpt.isPresent()) {
-                    OrganizerEmployee employee = employeeOpt.get();
+                // Try organizer
+                java.util.Optional<Organizer> organizerOpt = organizerRepository.findByEmail(currentUserEmail);
+                if (organizerOpt.isPresent()) {
+                    Organizer organizer = organizerOpt.get();
                     deletedBy = User.builder()
-                            .id(employee.getEmployeeId())
-                            .email(employee.getEmail())
-                            .firstName(employee.getFirstName())
-                            .lastName(employee.getLastName())
+                            .id(organizer.getOrganizerId())
+                            .email(organizer.getEmail())
+                            .firstName(organizer.getOrganizationName())
+                            .lastName("")
                             .build();
+                } else {
+                    // Try organizer employee
+                    java.util.Optional<OrganizerEmployee> employeeOpt = organizerEmployeeRepository.findByEmail(currentUserEmail);
+                    if (employeeOpt.isPresent()) {
+                        OrganizerEmployee employee = employeeOpt.get();
+                        deletedBy = User.builder()
+                                .id(employee.getEmployeeId())
+                                .email(employee.getEmail())
+                                .firstName(employee.getFirstName())
+                                .lastName(employee.getLastName())
+                                .build();
+                    }
                 }
             }
         }
