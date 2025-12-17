@@ -73,4 +73,40 @@ public class ProfileController {
         
         return ResponseEntity.ok(response);
     }
+    
+    @PostMapping("/change-password")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @RequestBody Map<String, String> passwordData,
+            Authentication authentication) {
+        
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+        
+        String currentPassword = passwordData.get("currentPassword");
+        String newPassword = passwordData.get("newPassword");
+        
+        if (currentPassword == null || currentPassword.isEmpty()) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Current password is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+        
+        if (newPassword == null || newPassword.isEmpty()) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "New password is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+        
+        try {
+            profileService.changePassword(email, currentPassword, newPassword);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Password changed successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
 }

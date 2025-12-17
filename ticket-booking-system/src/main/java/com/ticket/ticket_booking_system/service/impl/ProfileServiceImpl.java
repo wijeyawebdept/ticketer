@@ -2,6 +2,7 @@ package com.ticket.ticket_booking_system.service.impl;
 
 import java.io.IOException;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,15 +28,17 @@ public class ProfileServiceImpl implements ProfileService {
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
     private final FileUploadService fileUploadService;
+    private final PasswordEncoder passwordEncoder;
     
     public ProfileServiceImpl(UserRepository userRepository, AdminRepository adminRepository,
                              OrganizerRepository organizerRepository, OrganizerEmployeeRepository employeeRepository,
-                             FileUploadService fileUploadService) {
+                             FileUploadService fileUploadService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
         this.fileUploadService = fileUploadService;
+        this.passwordEncoder = passwordEncoder;
     }
     
     @Override
@@ -255,5 +258,54 @@ public class ProfileServiceImpl implements ProfileService {
                 .lastLoginAt(employee.getLastLoginAt())
                 .updatedAt(employee.getUpdatedAt())
                 .build();
+    }
+    
+    @Override
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        // Check users table first
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return;
+        }
+        
+        // Check admins table
+        Admin admin = adminRepository.findByEmail(email).orElse(null);
+        if (admin != null) {
+            if (!passwordEncoder.matches(currentPassword, admin.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            admin.setPassword(passwordEncoder.encode(newPassword));
+            adminRepository.save(admin);
+            return;
+        }
+        
+        // Check organizers table
+        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+        if (organizer != null) {
+            if (!passwordEncoder.matches(currentPassword, organizer.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            organizer.setPassword(passwordEncoder.encode(newPassword));
+            organizerRepository.save(organizer);
+            return;
+        }
+        
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            if (!passwordEncoder.matches(currentPassword, employee.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            employee.setPassword(passwordEncoder.encode(newPassword));
+            employeeRepository.save(employee);
+            return;
+        }
+        
+        throw new ResourceNotFoundException("User", "email", email);
     }
 }

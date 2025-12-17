@@ -15,12 +15,14 @@ import {
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';
 import { Formik, Form, Field, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../types';
 
 // Add this for better type checking
 type FormikBag<V> = {
@@ -39,7 +41,7 @@ interface LoginFormValues {
   password: string;
 }
 
-const Login: React.FC = () => {
+const RestrictedLogin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +71,7 @@ const Login: React.FC = () => {
   ) => {
     try {
       setError(null);
-      console.log('Attempting login with:', { email: values.email });
+      console.log('Attempting restricted login with:', { email: values.email });
       
       // Clear any existing tokens before login attempt
       localStorage.removeItem('auth_token');
@@ -78,7 +80,7 @@ const Login: React.FC = () => {
       await login(values.email, values.password);
       console.log('Login successful, token stored:', !!localStorage.getItem('auth_token'));
       
-      // Redirect based on user role
+      // Redirect based on user role - only allow restricted roles
       const userData = localStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
@@ -86,19 +88,25 @@ const Login: React.FC = () => {
         
         const normalizedRole = user.role.replace('ROLE_', '');
         
-        // Only allow USER role on this login page
-        if (normalizedRole === 'USER' || user.role === 'ROLE_USER') {
-          navigate('/user/home');
+        // Check if user has restricted access role
+        if (normalizedRole === 'ORGANIZER' || user.role === 'ROLE_ORGANIZER') {
+          navigate('/organizer/dashboard');
+        } else if (normalizedRole === 'ORGANIZER_EMPLOYEE' || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
+          navigate('/employee/dashboard');
+        } else if (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || 
+                   user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
+          // Admin and Super Admin
+          navigate('/dashboard');
         } else {
-          // If user is admin, organizer, or organizer employee, deny access
+          // If user is a regular USER, deny access
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          setError('Access denied. Please use the restricted login page for administrators and organizers.');
+          setError('Access denied. This login is only for administrators, organizers, and organizer employees.');
           return;
         }
       } else {
-        // Fallback - try to determine from token
-        setError('Unable to determine user role. Please try again.');
+        // Fallback to dashboard if user data not found
+        navigate('/dashboard');
       }
     } catch (err: any) {
       console.error('Login error:', err);
@@ -131,7 +139,15 @@ const Login: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ marginTop: 8, padding: 4 }}>
+      <Paper 
+        elevation={6} 
+        sx={{ 
+          marginTop: 8, 
+          padding: 4,
+          border: '2px solid #1976d2',
+          borderRadius: 2
+        }}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -139,13 +155,16 @@ const Login: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-            Ticket Booking System
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <AdminIcon sx={{ fontSize: 40, color: '#1976d2', mr: 1 }} />
+            <Typography component="h1" variant="h5">
+              Ticket Booking Admin
+            </Typography>
+          </Box>
           
           <Chip 
-            label="Customer Login" 
-            color="success" 
+            label="Restricted Access" 
+            color="primary" 
             sx={{ mb: 2, fontWeight: 'bold' }}
           />
           
@@ -238,26 +257,15 @@ const Login: React.FC = () => {
                   </MuiLink>
                 </Box>
                 
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="body2">
-                    Don't have an account?{' '}
-                    <Link to="/register" style={{ textDecoration: 'none' }}>
-                      Register here
-                    </Link>
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
                   <Typography variant="body2" color="text.secondary">
-                    <Link to="/auth-debug" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    </Link>
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ textAlign: 'center', mt: 0.5 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    <Link to="/auth-tester" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    </Link>
+                    Looking for customer login?{' '}
+                    <MuiLink 
+                      onClick={() => navigate('/login')}
+                      sx={{ cursor: 'pointer', textDecoration: 'none' }}
+                    >
+                      Click here
+                    </MuiLink>
                   </Typography>
                 </Box>
               </Form>
@@ -270,4 +278,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default RestrictedLogin;

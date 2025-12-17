@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
-import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
@@ -42,30 +41,50 @@ public class OrganizerRecycleBinController {
      * Get all recycle bin items for current organizer and their employees
      */
     @GetMapping
-    public ResponseEntity<List<RecycleBinDTO>> getAllRecycleBinItems(Authentication authentication) {
-        UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<?> getAllRecycleBinItems(Authentication authentication) {
+        try {
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                System.err.println("Failed to get organizer ID from authentication: " + 
+                    (authentication != null ? authentication.getName() : "null"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer. Please ensure you are logged in correctly.");
+            }
+            
+            List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsForOrganizer(organizerId);
+            return ResponseEntity.ok(items);
+        } catch (Exception e) {
+            System.err.println("Error fetching recycle bin items: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error fetching recycle bin items: " + e.getMessage());
         }
-        
-        List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsForOrganizer(organizerId);
-        return ResponseEntity.ok(items);
     }
 
     /**
      * Get recycle bin items by entity type for current organizer and their employees
      */
     @GetMapping("/type/{entityType}")
-    public ResponseEntity<List<RecycleBinDTO>> getRecycleBinItemsByType(
+    public ResponseEntity<?> getRecycleBinItemsByType(
             @PathVariable String entityType,
             Authentication authentication) {
-        UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        try {
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId == null) {
+                System.err.println("Failed to get organizer ID from authentication for type query: " + 
+                    (authentication != null ? authentication.getName() : "null"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer. Please ensure you are logged in correctly.");
+            }
+            
+            List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsByTypeForOrganizer(entityType, organizerId);
+            return ResponseEntity.ok(items);
+        } catch (Exception e) {
+            System.err.println("Error fetching recycle bin items by type: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error fetching recycle bin items: " + e.getMessage());
         }
-        
-        List<RecycleBinDTO> items = recycleBinService.getRecycleBinItemsByTypeForOrganizer(entityType, organizerId);
-        return ResponseEntity.ok(items);
     }
 
     /**
@@ -127,19 +146,39 @@ public class OrganizerRecycleBinController {
      */
     private UUID getOrganizerIdFromAuth(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
+            System.err.println("Authentication is null or has no name");
             return null;
         }
 
         String email = authentication.getName();
+        System.out.println("Getting organizer ID for email: " + email);
 
         // First try to find as organizer
-        return organizerRepository.findByEmail(email)
-                .map(Organizer::getOrganizerId)
+        UUID organizerId = organizerRepository.findByEmail(email)
+                .map(organizer -> {
+                    System.out.println("Found as organizer with ID: " + organizer.getOrganizerId());
+                    return organizer.getOrganizerId();
+                })
                 .orElseGet(() -> {
                     // If not found as organizer, try as organizer employee
-                    return organizerEmployeeRepository.findByEmail(email)
-                            .map(employee -> employee.getOrganizer().getOrganizerId())
+                    UUID empOrganizerId = organizerEmployeeRepository.findByEmail(email)
+                            .map(employee -> {
+                                if (employee.getOrganizer() == null) {
+                                    System.err.println("Employee found but organizer is null for email: " + email);
+                                    return null;
+                                }
+                                System.out.println("Found as organizer employee with organizer ID: " + 
+                                    employee.getOrganizer().getOrganizerId());
+                                return employee.getOrganizer().getOrganizerId();
+                            })
                             .orElse(null);
+                    
+                    if (empOrganizerId == null) {
+                        System.err.println("User not found as organizer or employee for email: " + email);
+                    }
+                    return empOrganizerId;
                 });
+        
+        return organizerId;
     }
 }

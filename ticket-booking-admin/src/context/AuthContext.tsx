@@ -10,6 +10,8 @@ interface AuthContextType {
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
   isSuperAdmin: () => boolean;
+  isRestrictedUser: () => boolean;
+  isCustomerUser: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +92,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
   }, [user]);
 
+  const isRestrictedUser = React.useCallback((): boolean => {
+    if (user === null) return false;
+    const normalizedRole = typeof user.role === 'string' ? user.role.replace('ROLE_', '') : user.role;
+    return (
+      normalizedRole === 'ADMIN' || 
+      normalizedRole === 'SUPER_ADMIN' || 
+      normalizedRole === 'ORGANIZER' || 
+      normalizedRole === 'ORGANIZER_EMPLOYEE' ||
+      user.role === 'ROLE_ADMIN' ||
+      user.role === 'ROLE_SUPER_ADMIN' ||
+      user.role === 'ROLE_ORGANIZER' ||
+      user.role === 'ROLE_ORGANIZER_EMPLOYEE'
+    );
+  }, [user]);
+
+  const isCustomerUser = React.useCallback((): boolean => {
+    if (user === null) return false;
+    const normalizedRole = typeof user.role === 'string' ? user.role.replace('ROLE_', '') : user.role;
+    return normalizedRole === 'USER' || user.role === 'ROLE_USER';
+  }, [user]);
+
   const contextValue = React.useMemo(
     () => ({
       user,
@@ -99,8 +122,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated,
       isAdmin,
       isSuperAdmin,
+      isRestrictedUser,
+      isCustomerUser,
     }),
-    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin]
+    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin, isRestrictedUser, isCustomerUser]
   );
 
   return (

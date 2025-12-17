@@ -12,11 +12,18 @@ import {
   Tabs,
   Tab,
   Alert,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { profileService } from '../../services/profile.service';
 import RoleManagement from './RoleManagement';
 import { UserRole } from '../../types';
 
@@ -99,6 +106,12 @@ const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
+  });
+
   const [systemSettings, setSystemSettings] = useState(loadSystemSettings());
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -124,6 +137,17 @@ const Settings: React.FC = () => {
       ...securitySettings,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleClickShowPassword = (field: 'currentPassword' | 'newPassword' | 'confirmPassword') => {
+    setShowPasswords({
+      ...showPasswords,
+      [field]: !showPasswords[field]
+    });
+  };
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
   };
 
   const handleSystemChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | React.ChangeEvent<HTMLSelectElement>) => {
@@ -188,17 +212,27 @@ const Settings: React.FC = () => {
       return;
     }
 
+    if (!securitySettings.currentPassword || !securitySettings.newPassword) {
+      setError('Please fill in all password fields');
+      setSaving(false);
+      return;
+    }
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess(t('settings.security.successMessage'));
+      await profileService.changePassword(
+        securitySettings.currentPassword,
+        securitySettings.newPassword
+      );
+      setSuccess('Password updated successfully');
       setSecuritySettings({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Error updating password:', err);
-      setError(t('settings.security.errorMessage'));
+      const errorMessage = err.response?.data?.message || 'Failed to update password. Please check your current password.';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -431,39 +465,81 @@ const Settings: React.FC = () => {
               <TextField
                 label={t('settings.security.currentPassword')}
                 name="currentPassword"
-                type="password"
+                type={showPasswords.currentPassword ? 'text' : 'password'}
                 value={securitySettings.currentPassword}
                 onChange={handleSecurityChange}
                 fullWidth
                 variant="outlined"
                 margin="normal"
                 sx={{ borderRadius: 2 }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => handleClickShowPassword('currentPassword')}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showPasswords.currentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 label={t('settings.security.newPassword')}
                 name="newPassword"
-                type="password"
+                type={showPasswords.newPassword ? 'text' : 'password'}
                 value={securitySettings.newPassword}
                 onChange={handleSecurityChange}
                 fullWidth
                 variant="outlined"
                 margin="normal"
                 sx={{ borderRadius: 2 }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => handleClickShowPassword('newPassword')}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showPasswords.newPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 label={t('settings.security.confirmPassword')}
                 name="confirmPassword"
-                type="password"
+                type={showPasswords.confirmPassword ? 'text' : 'password'}
                 value={securitySettings.confirmPassword}
                 onChange={handleSecurityChange}
                 fullWidth
                 variant="outlined"
                 margin="normal"
                 sx={{ borderRadius: 2 }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => handleClickShowPassword('confirmPassword')}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showPasswords.confirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12}>

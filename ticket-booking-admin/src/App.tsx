@@ -12,6 +12,7 @@ import UserLayout from './components/layout/UserLayout';
 import OrganizerLayout from './components/layout/OrganizerLayout';
 import OrganizerEmployeeLayout from './components/layout/OrganizerEmployeeLayout';
 import Login from './pages/Login';
+import RestrictedLogin from './pages/RestrictedLogin';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
@@ -170,6 +171,7 @@ function App() {
           <Routes>
             {/* Public authentication routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/login/restricted" element={<RestrictedLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/integration-test" element={<IntegrationTest />} />
             <Route path="/auth-debug" element={

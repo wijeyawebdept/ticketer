@@ -132,6 +132,10 @@ public class RecycleBinService {
         return recycleBinRepository.findAllByOrderByDeletedAtDesc().stream()
                 .filter(item -> {
                     UUID deletedBy = item.getDeletedBy();
+                    // Skip items with null deletedBy
+                    if (deletedBy == null) {
+                        return false;
+                    }
                     // Check if deleted by organizer or any of their employees
                     return deletedBy.equals(organizerId) || employeeIds.contains(deletedBy);
                 })
@@ -153,6 +157,10 @@ public class RecycleBinService {
         return recycleBinRepository.findByEntityTypeOrderByDeletedAtDesc(entityType).stream()
                 .filter(item -> {
                     UUID deletedBy = item.getDeletedBy();
+                    // Skip items with null deletedBy
+                    if (deletedBy == null) {
+                        return false;
+                    }
                     return deletedBy.equals(organizerId) || employeeIds.contains(deletedBy);
                 })
                 .map(this::convertToDTO)
