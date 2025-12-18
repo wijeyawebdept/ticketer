@@ -17,7 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public @interface AdminPermission {
     /**
      * Specific permission required (optional)
-     * Examples: "MANAGE_USERS", "MANAGE_EVENTS", "MANAGE_VENUES", "DELETE_USERS", "MODIFY_SETTINGS"
      */
     String value() default "";
     

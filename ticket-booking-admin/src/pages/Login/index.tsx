@@ -131,7 +131,15 @@ const Login: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ marginTop: 8, padding: 4 }}>
+      <Paper 
+        elevation={6} 
+        sx={{ 
+          marginTop: 8, 
+          padding: 4,
+          border: '2px solid #4caf50',
+          borderRadius: 2
+        }}
+      >
         <Box
           sx={{
             display: 'flex',

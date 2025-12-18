@@ -259,5 +259,3 @@ ORDER BY difference DESC;
 
 
 
-
-

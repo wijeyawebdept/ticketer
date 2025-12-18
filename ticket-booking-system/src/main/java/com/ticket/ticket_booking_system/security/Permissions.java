@@ -2,7 +2,6 @@ package com.ticket.ticket_booking_system.security;
 
 /**
  * Centralized permission constants for the system
- * Use these constants with @AdminPermission annotation
  */
 public final class Permissions {
 
