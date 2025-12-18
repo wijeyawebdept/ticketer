@@ -23,6 +23,7 @@ public interface VenueRepository extends JpaRepository<Venue, UUID> {
     List<Venue> findTopUsedVenues();
     
     // Find all active venues (exclude soft-deleted venues in recycle bin)
-    @Query("SELECT v FROM Venue v WHERE v.isDeleted = false")
+    // status: 1 = active, 0 = inactive, -1 = soft deleted
+    @Query("SELECT v FROM Venue v WHERE v.status >= 0")
     List<Venue> findAllActive();
 }

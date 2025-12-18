@@ -61,6 +61,7 @@ export interface Event {
   venue: Venue;
   category?: string; // Made optional since backend doesn't support event categories
   status: EventStatus;
+  active?: number; // 1=active, 0=inactive, -1=deleted
   createdBy: User;
   createdAt: string;
   updatedAt: string | null;
@@ -124,6 +125,7 @@ export interface Venue {
   state: string;
   zipCode: string;
   capacity: number;
+  status?: number; // 1=active, 0=inactive, -1=soft deleted
   seatingLayout?: { [key: string]: any };
   createdAt?: string;
   updatedAt?: string;

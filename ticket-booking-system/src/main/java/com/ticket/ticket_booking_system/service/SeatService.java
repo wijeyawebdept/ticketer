@@ -44,6 +44,21 @@ public interface SeatService {
     void reserveSeats(List<UUID> seatIds);
     
     /**
+     * Unreserve seats (mark as available again) - Admin only
+     */
+    void unreserveSeats(List<UUID> seatIds);
+    
+    /**
+     * Permanently hold seats until event ends - Admin only
+     */
+    void permanentHoldSeats(List<UUID> seatIds);
+    
+    /**
+     * Release permanent hold - Admin only
+     */
+    void releasePermanentHold(List<UUID> seatIds);
+    
+    /**
      * Release seat holds for a user
      */
     void releaseSeatHolds(UUID userId);

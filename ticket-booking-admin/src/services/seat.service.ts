@@ -15,6 +15,7 @@ export interface Seat {
   isBlocked: boolean;
   holdExpiresAt?: string;
   heldByUser?: string;
+  isPermanentHold?: boolean;
   createdAt?: string;
 }
 
@@ -95,6 +96,16 @@ export const SeatService = {
     await axiosInstance.put(`/api/seats/${seatId}/block?block=${block}`);
   },
 
+  // Admin: Permanent hold seats (until event ends)
+  permanentHoldSeats: async (seatIds: string[]): Promise<void> => {
+    await axiosInstance.post('/api/seats/permanent-hold', seatIds);
+  },
+
+  // Admin: Release permanent hold
+  releasePermanentHold: async (seatIds: string[]): Promise<void> => {
+    await axiosInstance.post('/api/seats/release-permanent-hold', seatIds);
+  },
+
   // User: Hold seats temporarily
   holdSeats: async (request: HoldSeatsRequest): Promise<void> => {
     await axiosInstance.post('/api/seats/hold', request);
@@ -103,6 +114,11 @@ export const SeatService = {
   // User: Reserve held seats
   reserveSeats: async (seatIds: string[]): Promise<void> => {
     await axiosInstance.post('/api/seats/reserve', seatIds);
+  },
+
+  // Admin: Unreserve/Release booked seats
+  unreserveSeats: async (seatIds: string[]): Promise<void> => {
+    await axiosInstance.post('/api/seats/unreserve', seatIds);
   },
 
   // User: Release user's seat holds

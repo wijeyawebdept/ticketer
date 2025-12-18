@@ -62,8 +62,8 @@ public class Venue {
     private Map<String, Object> seatingLayout;
 
     @Builder.Default
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    @Column(name = "status", nullable = false)
+    private Integer status = 1; // 1 = active, 0 = inactive, -1 = soft deleted (in recycle bin)
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

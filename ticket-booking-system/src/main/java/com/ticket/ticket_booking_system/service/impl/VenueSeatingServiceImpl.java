@@ -172,6 +172,7 @@ public class VenueSeatingServiceImpl implements VenueSeatingService {
                 .price(seat.getPrice())
                 .isAvailable(seat.getIsAvailable())
                 .isBlocked(seat.getIsBlocked())
+                .isPermanentHold(seat.getIsPermanentHold())
                 .holdExpiresAt(seat.getHoldExpiresAt())
                 .heldByUser(seat.getHeldByUser())
                 .createdAt(seat.getCreatedAt() != null ? seat.getCreatedAt().toLocalDateTime() : null)

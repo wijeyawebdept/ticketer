@@ -17,7 +17,8 @@ import {
   ListItemIcon,
   ListItemText,
   Autocomplete,
-  TextField
+  TextField,
+  InputAdornment
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -30,7 +31,11 @@ import {
   Cancel as CancelIcon,
   EventAvailable as EventAvailableIcon,
   Refresh as RefreshIcon,
-  Schedule as ScheduleIcon
+  Schedule as ScheduleIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon,
+  Search as SearchIcon,
+  Publish as PublishIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
@@ -48,30 +53,17 @@ const Events: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [contextMenuEvent, setContextMenuEvent] = useState<Event | null>(null);
-  const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
 
   useEffect(() => {
     const initPage = async () => {
       await checkUserRole();
-      // Only fetch organizers for admin users
-      const user = localStorage.getItem('user');
-      if (user) {
-        const userData = JSON.parse(user);
-        if (userData.role === UserRole.ADMIN || userData.role === UserRole.SUPER_ADMIN || 
-            userData.role === 'ROLE_ADMIN' || userData.role === 'ROLE_SUPER_ADMIN') {
-          fetchOrganizers();
-        }
-      }
       fetchEvents();
     };
     initPage();
   }, []);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [selectedOrganizerId]);
 
   const checkUserRole = () => {
     const userStr = localStorage.getItem('user');
@@ -86,24 +78,10 @@ const Events: React.FC = () => {
     }
   };
 
-  const fetchOrganizers = async () => {
-    try {
-      const response = await OrganizerService.getAllOrganizers(0, 100);
-      setOrganizers(response.content);
-    } catch (error) {
-      console.error('Error fetching organizers:', error);
-    }
-  };
-
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      let response: any;
-      if (selectedOrganizerId) {
-        response = await EventService.getEventsByOrganizer(selectedOrganizerId);
-      } else {
-        response = await EventService.getAllEvents();
-      }
+      const response = await EventService.getAllEvents();
       console.log('Events - Raw API response:', response);
       
       // Handle Page response from backend
@@ -178,6 +156,24 @@ const Events: React.FC = () => {
     setSelectedEvent(null);
   };
 
+  const handleActivateEvent = async (eventId: string) => {
+    try {
+      await EventService.activateEvent(eventId);
+      fetchEvents(); // Refresh the events list
+    } catch (error) {
+      console.error('Error activating event:', error);
+    }
+  };
+
+  const handleDeactivateEvent = async (eventId: string) => {
+    try {
+      await EventService.deactivateEvent(eventId);
+      fetchEvents(); // Refresh the events list
+    } catch (error) {
+      console.error('Error deactivating event:', error);
+    }
+  };
+
   // The event saving is now handled by EventForm component
 
   const handleDeleteConfirm = async () => {
@@ -190,6 +186,53 @@ const Events: React.FC = () => {
       handleDeleteDialogClose();
     } catch (error) {
       console.error('Error moving event to recycle bin:', error);
+    }
+  };
+
+  // Bulk action handlers
+  const handleBulkPublish = async () => {
+    if (selectedEventIds.length === 0) return;
+    
+    try {
+      await Promise.all(
+        selectedEventIds.map(id => EventService.changeEventStatus(id, EventStatus.PUBLISHED))
+      );
+      setSelectedEventIds([]);
+      fetchEvents();
+    } catch (error) {
+      console.error('Error bulk publishing events:', error);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedEventIds.length === 0) return;
+    
+    try {
+      await Promise.all(
+        selectedEventIds.map(id => EventService.deactivateEvent(id))
+      );
+      setSelectedEventIds([]);
+      fetchEvents();
+    } catch (error) {
+      console.error('Error bulk deactivating events:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedEventIds.length === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedEventIds.length} event(s)?`)) {
+      return;
+    }
+    
+    try {
+      await Promise.all(
+        selectedEventIds.map(id => EventService.moveToRecycleBin(id))
+      );
+      setSelectedEventIds([]);
+      fetchEvents();
+    } catch (error) {
+      console.error('Error bulk deleting events:', error);
     }
   };
 
@@ -224,10 +267,12 @@ const Events: React.FC = () => {
     },
     { 
       field: 'availableSeats', 
-      headerName: 'Available Seats', 
+      headerName: 'Seats', 
       flex: 1,
-      valueFormatter: (params) => {
-        return params.value || 0;
+      valueGetter: (params) => {
+        const available = params.row.availableSeats || 0;
+        const total = params.row.totalCapacity || 0;
+        return `${available} / ${total}`;
       }
     },
     { 
@@ -235,12 +280,13 @@ const Events: React.FC = () => {
       headerName: 'Price (LKR)', 
       flex: 1, 
       valueFormatter: (params) => {
-        return `LKR ${params.value || 0}`;
+        const price = params.value || 0;
+        return `LKR ${price.toLocaleString('en-US')}`;
       }
     },
     {
       field: 'status',
-      headerName: 'Status',
+      headerName: 'Event Status',
       flex: 1,
       renderCell: (params: GridRenderCellParams) => (
         <Chip 
@@ -253,6 +299,23 @@ const Events: React.FC = () => {
       )
     },
     {
+      field: 'active',
+      headerName: 'Active Status',
+      flex: 0.8,
+      renderCell: (params: GridRenderCellParams) => {
+        // Only PUBLISHED events are considered Active
+        const isActive = params.row.status === EventStatus.PUBLISHED;
+        return (
+          <Chip
+            label={isActive ? 'Active' : 'Inactive'}
+            color={isActive ? 'success' : 'default'}
+            size="small"
+            sx={{ fontWeight: 500 }}
+          />
+        );
+      }
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
       flex: 1,
@@ -263,6 +326,7 @@ const Events: React.FC = () => {
             onClick={(e) => handleContextMenuClick(e, params.row as Event)}
             size="small"
             color="primary"
+            title="Change Status"
             sx={{
               backgroundColor: 'rgba(25, 118, 210, 0.1)',
               '&:hover': {
@@ -301,6 +365,7 @@ const Events: React.FC = () => {
             }}
             size="small"
             color="secondary"
+            title="Manage Schedules"
             sx={{
               backgroundColor: 'rgba(220, 0, 78, 0.1)',
               '&:hover': {
@@ -308,7 +373,6 @@ const Events: React.FC = () => {
               },
               mr: 1
             }}
-            title="Manage Schedules"
           >
             <ScheduleIcon />
           </IconButton>
@@ -316,6 +380,7 @@ const Events: React.FC = () => {
             onClick={() => handleEditClick(params.row as Event)}
             size="small"
             color="primary"
+            title="Edit Event"
             sx={{
               backgroundColor: 'rgba(25, 118, 210, 0.1)',
               '&:hover': {
@@ -330,13 +395,13 @@ const Events: React.FC = () => {
             onClick={() => handleDeleteClick(params.row as Event)}
             size="small"
             color="warning"
+            title="Move to Recycle Bin"
             sx={{
               backgroundColor: 'rgba(255, 152, 0, 0.1)',
               '&:hover': {
                 backgroundColor: 'rgba(255, 152, 0, 0.2)',
               }
             }}
-            title="Move to Recycle Bin"
           >
             <DeleteSweepIcon />
           </IconButton>
@@ -351,26 +416,20 @@ const Events: React.FC = () => {
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Event Management</Typography>
           <Box display="flex" gap={2} alignItems="center">
-            {isAdmin && organizers.length > 0 && (
-              <Autocomplete
-                size="small"
-                sx={{ minWidth: 250 }}
-                options={[{ organizerId: '', organizationName: 'All Organizers' }, ...organizers]}
-                getOptionLabel={(option) => option.organizationName}
-                value={organizers.find(org => org.organizerId === selectedOrganizerId) || { organizerId: '', organizationName: 'All Organizers' }}
-                onChange={(_, newValue) => {
-                  setSelectedOrganizerId(newValue?.organizerId || '');
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Filter by Organizer"
-                    placeholder="Search organizers..."
-                  />
-                )}
-                isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
-              />
-            )}
+            <TextField
+              size="small"
+              placeholder="Search events, venues, organizers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ minWidth: 350 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
             <IconButton onClick={fetchEvents} sx={{ mr: 1 }}>
               <RefreshIcon />
             </IconButton>
@@ -393,6 +452,68 @@ const Events: React.FC = () => {
             </Button>
           </Box>
         </Grid>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedEventIds.length > 0 && (
+          <Grid item xs={12}>
+            <Paper
+              sx={{
+                p: 2,
+                backgroundColor: '#e3f2fd',
+                borderRadius: 2,
+                border: '1px solid #1976d2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <Typography variant="body1" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                {selectedEventIds.length} event(s) selected
+              </Typography>
+              <Box display="flex" gap={1}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<PublishIcon />}
+                  onClick={handleBulkPublish}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Publish
+                </Button>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  size="small"
+                  startIcon={<DeactivateIcon />}
+                  onClick={handleBulkDeactivate}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Deactivate
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  startIcon={<DeleteSweepIcon />}
+                  onClick={handleBulkDelete}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setSelectedEventIds([])}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Clear Selection
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+        )}
+
         <Grid item xs={12}>
           <Paper 
             sx={{ 
@@ -408,9 +529,41 @@ const Events: React.FC = () => {
               </Box>
             ) : (
               <DataGrid
-                rows={events}
+                rows={events.filter(event => {
+                  // Unified search filter - searches across all fields
+                  if (searchTerm) {
+                    const search = searchTerm.toLowerCase();
+                    const eventName = event.name?.toLowerCase() || '';
+                    const venueName = event.venue?.name?.toLowerCase() || '';
+                    const venueAddress = event.venue?.address?.toLowerCase() || '';
+                    const venueCity = event.venue?.city?.toLowerCase() || '';
+                    const category = event.category?.toLowerCase() || '';
+                    const status = event.status?.toLowerCase() || '';
+                    
+                    // Search in organizer name - check both organizer and createdBy fields
+                    let organizerName = '';
+                    const organizerData = (event as any).organizer || event.createdBy;
+                    if (organizerData) {
+                      organizerName = `${organizerData.firstName || ''} ${organizerData.lastName || ''}`.toLowerCase();
+                    }
+                    
+                    return eventName.includes(search) || 
+                           venueName.includes(search) || 
+                           venueAddress.includes(search) ||
+                           venueCity.includes(search) ||
+                           category.includes(search) ||
+                           status.includes(search) ||
+                           organizerName.includes(search);
+                  }
+                  return true;
+                })}
                 columns={columns}
                 getRowId={(row) => row.eventId || row.id}
+                checkboxSelection
+                rowSelectionModel={selectedEventIds}
+                onRowSelectionModelChange={(newSelection) => {
+                  setSelectedEventIds(newSelection as string[]);
+                }}
                 initialState={{
                   pagination: {
                     paginationModel: {

@@ -112,7 +112,7 @@ public class AdminEventController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{eventId}/change-status")
+    @PatchMapping("/{eventId}/status")
     public ResponseEntity<EventResponse> changeEventStatus(
             @PathVariable UUID eventId,
             @RequestParam String status) {

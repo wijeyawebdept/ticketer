@@ -9,9 +9,10 @@ import {
   DialogContent,
   CircularProgress,
   IconButton,
-  Tooltip
+  Tooltip,
+  Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon, CheckCircle as ActivateIcon, Block as DeactivateIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
@@ -199,6 +200,26 @@ const VenuesPage = () => {
     }
   };
 
+  // Handle toggle venue status
+  const handleToggleStatus = async (venue: Venue) => {
+    const toastId = ToastService.loading(`Updating status for "${venue.name}"...`);
+    
+    try {
+      const updatedVenue = await VenueService.toggleVenueStatus(venue.id);
+      
+      // Update the local state
+      setVenues(prevVenues =>
+        prevVenues.map(v => v.id === updatedVenue.id ? updatedVenue : v)
+      );
+      
+      const newStatus = updatedVenue.status === 1 ? 'Active' : 'Inactive';
+      ToastService.updateSuccess(toastId, `Venue status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error toggling venue status:', error);
+      ToastService.updateError(toastId, `Failed to update venue status. Please try again.`);
+    }
+  };
+
   // Define columns for DataGrid
   const columns: GridColDef[] = [
     {
@@ -226,10 +247,28 @@ const VenuesPage = () => {
       minWidth: 100,
     },
     {
+      field: 'status',
+      headerName: 'Status',
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params: GridRenderCellParams) => {
+        const status = params.row.status ?? 1; // Default to active if not set
+        const isActive = status === 1;
+        return (
+          <Chip
+            label={isActive ? 'Active' : 'Inactive'}
+            color={isActive ? 'success' : 'default'}
+            size="small"
+            sx={{ fontWeight: 500 }}
+          />
+        );
+      },
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
-      flex: 2,
-      minWidth: 200,
+      flex: 2.5,
+      minWidth: 250,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
@@ -276,6 +315,47 @@ const VenuesPage = () => {
               </IconButton>
             </span>
           </Tooltip>
+          {params.row.status === 1 ? (
+            <Tooltip title={isOrganizer ? "Organizers cannot deactivate venues" : "Deactivate Venue"}>
+              <span>
+                <IconButton
+                  onClick={() => handleToggleStatus(params.row)}
+                  size="small"
+                  color="error"
+                  disabled={isOrganizer}
+                  sx={{
+                    backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                    },
+                    mr: 1
+                  }}
+                >
+                  <DeactivateIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title={isOrganizer ? "Organizers cannot activate venues" : "Activate Venue"}>
+              <span>
+                <IconButton
+                  onClick={() => handleToggleStatus(params.row)}
+                  size="small"
+                  color="success"
+                  disabled={isOrganizer}
+                  sx={{
+                    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                    },
+                    mr: 1
+                  }}
+                >
+                  <ActivateIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           <Tooltip title={isOrganizer ? "Organizers cannot delete venues" : "Move to Recycle Bin"}>
             <span>
               <IconButton

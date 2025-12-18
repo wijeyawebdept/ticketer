@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.ticket.ticket_booking_system.dto.VenueResponse;
 import com.ticket.ticket_booking_system.entity.Venue;
 
 public interface VenueService {
@@ -31,4 +32,7 @@ public interface VenueService {
     
     // Generate template seats for a venue
     int generateSeatsForVenue(UUID venueId);
+    
+    // Toggle venue status (active/inactive)
+    VenueResponse toggleVenueStatus(UUID venueId);
 }

@@ -29,6 +29,7 @@ public class SeatResponse {
     private BigDecimal price;
     private Boolean isAvailable;
     private Boolean isBlocked;
+    private Boolean isPermanentHold;
     private LocalDateTime holdExpiresAt;
     private UUID heldByUser;
     private LocalDateTime createdAt;

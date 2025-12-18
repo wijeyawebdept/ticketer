@@ -80,7 +80,13 @@ public class SeatController {
      */
     @PostMapping("/hold")
     public ResponseEntity<Void> holdSeats(@RequestBody SeatHoldRequest request) {
-        seatService.holdSeats(request.getSeatIds(), request.getUserId(), request.getHoldDurationMinutes());
+        // If userId is null, use a placeholder for admin holds
+        UUID userId = request.getUserId();
+        if (userId == null) {
+            // For admin holds without specific user, use a special UUID or null
+            userId = null;
+        }
+        seatService.holdSeats(request.getSeatIds(), userId, request.getHoldDurationMinutes());
         return ResponseEntity.ok().build();
     }
     
@@ -91,6 +97,39 @@ public class SeatController {
     @PostMapping("/reserve")
     public ResponseEntity<Void> reserveSeats(@RequestBody List<UUID> seatIds) {
         seatService.reserveSeats(seatIds);
+        return ResponseEntity.ok().build();
+    }
+    
+    /**
+     * Unreserve seats (mark as available again) - Admin only
+     * POST /api/seats/unreserve
+     */
+    @PostMapping("/unreserve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
+    public ResponseEntity<Void> unreserveSeats(@RequestBody List<UUID> seatIds) {
+        seatService.unreserveSeats(seatIds);
+        return ResponseEntity.ok().build();
+    }
+    
+    /**
+     * Permanently hold seats until event ends (Admin only)
+     * POST /api/seats/permanent-hold
+     */
+    @PostMapping("/permanent-hold")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
+    public ResponseEntity<Void> permanentHoldSeats(@RequestBody List<UUID> seatIds) {
+        seatService.permanentHoldSeats(seatIds);
+        return ResponseEntity.ok().build();
+    }
+    
+    /**
+     * Release permanent hold (Admin only)
+     * POST /api/seats/release-permanent-hold
+     */
+    @PostMapping("/release-permanent-hold")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
+    public ResponseEntity<Void> releasePermanentHold(@RequestBody List<UUID> seatIds) {
+        seatService.releasePermanentHold(seatIds);
         return ResponseEntity.ok().build();
     }
     

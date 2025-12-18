@@ -142,6 +142,16 @@ class EventService {
     const response = await api.get<any>(`/api/admin/events/by-organizer/${organizerId}?page=${page}&size=${size}`);
     return response.data;
   }
+
+  async activateEvent(eventId: string): Promise<Event> {
+    const response = await api.put<Event>(`/api/admin/events/${eventId}/activate`);
+    return response.data;
+  }
+
+  async deactivateEvent(eventId: string): Promise<Event> {
+    const response = await api.put<Event>(`/api/admin/events/${eventId}/deactivate`);
+    return response.data;
+  }
 }
 
 const eventService = new EventService();

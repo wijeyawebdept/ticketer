@@ -14,6 +14,7 @@ public class VenueResponse {
     private String state;
     private String zipCode;
     private Integer capacity;
+    private Integer status; // 1 = active, 0 = inactive, -1 = soft deleted
     private Map<String, Object> seatingLayout;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -95,6 +96,14 @@ public class VenueResponse {
     
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+    
+    public Integer getStatus() {
+        return status;
+    }
+    
+    public void setStatus(Integer status) {
+        this.status = status;
     }
     
     public Map<String, Object> getSeatingLayout() {

@@ -150,6 +150,7 @@ public class SeatServiceImpl implements SeatService {
                 .price(seat.getPrice())
                 .isAvailable(seat.getIsAvailable())
                 .isBlocked(seat.getIsBlocked())
+                .isPermanentHold(seat.getIsPermanentHold())
                 .holdExpiresAt(seat.getHoldExpiresAt())
                 .heldByUser(seat.getHeldByUser())
                 .createdAt(seat.getCreatedAt() != null ? seat.getCreatedAt().toLocalDateTime() : null)
@@ -188,8 +189,8 @@ public class SeatServiceImpl implements SeatService {
             }
             seat.setHoldExpiresAt(holdExpiry);
             seat.setHeldByUser(userId);
-            // Update status field for database compatibility
-            seat.setStatus("HELD");
+            // Update status field for database compatibility - use RESERVED instead of HELD
+            seat.setStatus("RESERVED");
 
             // Notify WebSocket subscribers about seat hold
             webSocketService.notifySeatUpdate(
@@ -199,13 +200,15 @@ public class SeatServiceImpl implements SeatService {
         }
         seatRepository.saveAll(seats);
 
-        // Notify the specific user about their hold
-        SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
-                seats.get(0).getEvent().getEventId(),
-                "Seats held for " + holdDurationMinutes + " minutes",
-                "HOLD_CONFIRMED",
-                holdExpiry.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
-        webSocketService.notifyUserSeatHold(userId, seats.get(0).getEvent().getEventId(), notification);
+        // Notify the specific user about their hold (only if userId is provided)
+        if (userId != null && !seats.isEmpty()) {
+            SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
+                    seats.get(0).getEvent().getEventId(),
+                    "Seats held for " + holdDurationMinutes + " minutes",
+                    "HOLD_CONFIRMED",
+                    holdExpiry.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
+            webSocketService.notifyUserSeatHold(userId, seats.get(0).getEvent().getEventId(), notification);
+        }
     }
 
     @Override
@@ -227,6 +230,69 @@ public class SeatServiceImpl implements SeatService {
                     seat.getEvent().getEventId(),
                     seat,
                     "RESERVED");
+        }
+        seatRepository.saveAll(seats);
+    }
+
+    @Override
+    @Transactional
+    public void unreserveSeats(List<UUID> seatIds) {
+        List<Seat> seats = seatRepository.findAllById(seatIds);
+        for (Seat seat : seats) {
+            seat.setIsAvailable(true);
+            seat.setHoldExpiresAt(null);
+            seat.setHeldByUser(null);
+            seat.setStatus("AVAILABLE");
+
+            // Notify WebSocket subscribers about seat unreservation
+            webSocketService.notifySeatUpdate(
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "UNRESERVED");
+        }
+        seatRepository.saveAll(seats);
+    }
+
+    @Override
+    @Transactional
+    public void permanentHoldSeats(List<UUID> seatIds) {
+        List<Seat> seats = seatRepository.findAllById(seatIds);
+        for (Seat seat : seats) {
+            if (!seat.isAvailableForBooking()) {
+                throw new IllegalStateException("Seat not available for permanent hold: " + seat.getSeatNumber());
+            }
+            seat.setIsAvailable(false);
+            seat.setIsPermanentHold(true); // Mark as permanent hold
+            // Set a very far future date to indicate permanent hold
+            seat.setHoldExpiresAt(LocalDateTime.now().plusYears(100));
+            seat.setHeldByUser(null); // Admin hold, no specific user
+            seat.setStatus("RESERVED"); // Use RESERVED status to comply with database constraint
+
+            // Notify WebSocket subscribers
+            webSocketService.notifySeatUpdate(
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "PERMANENT_HOLD");
+        }
+        seatRepository.saveAll(seats);
+    }
+
+    @Override
+    @Transactional
+    public void releasePermanentHold(List<UUID> seatIds) {
+        List<Seat> seats = seatRepository.findAllById(seatIds);
+        for (Seat seat : seats) {
+            seat.setIsAvailable(true);
+            seat.setIsPermanentHold(false); // Clear permanent hold flag
+            seat.setHoldExpiresAt(null);
+            seat.setHeldByUser(null);
+            seat.setStatus("AVAILABLE");
+
+            // Notify WebSocket subscribers
+            webSocketService.notifySeatUpdate(
+                    seat.getEvent().getEventId(),
+                    seat,
+                    "RELEASED");
         }
         seatRepository.saveAll(seats);
     }

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -209,5 +210,14 @@ public class AdminVenueController {
     public ResponseEntity<String> generateSeatsForVenue(@PathVariable UUID id) {
         int seatsGenerated = venueService.generateSeatsForVenue(id);
         return ResponseEntity.ok(seatsGenerated + " template seats generated for venue");
+    }
+    
+    /**
+     * Toggle venue active status - Admin only
+     */
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<VenueResponse> toggleVenueStatus(@PathVariable UUID id) {
+        VenueResponse updated = venueService.toggleVenueStatus(id);
+        return ResponseEntity.ok(updated);
     }
 }

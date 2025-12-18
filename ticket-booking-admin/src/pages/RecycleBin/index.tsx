@@ -233,13 +233,6 @@ const RecycleBin: React.FC = () => {
           </Typography>
         </Alert>
       )}
-      {!isSuperAdmin && !isOrganizer && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="body2" component="span">
-            <strong>Limited Access:</strong> Only Super Admins can permanently delete items from the recycle bin. You can restore items to make them active again.
-          </Typography>
-        </Alert>
-      )}
 
       {isSuperAdmin && items.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>

@@ -83,6 +83,10 @@ public class Seat {
     @Builder.Default
     private Boolean isBlocked = false;
 
+    @Column(name = "is_permanent_hold")
+    @Builder.Default
+    private Boolean isPermanentHold = false;
+
     @Column(name = "hold_expires_at")
     private LocalDateTime holdExpiresAt;
 
@@ -115,9 +119,11 @@ public class Seat {
         }
 
         // Sync status field
-        // If status is not set, derive it from isAvailable and isBlocked
+        // If status is not set, derive it from isAvailable, isBlocked, and isPermanentHold
         if (this.status == null || this.status.isEmpty()) {
-            if (Boolean.TRUE.equals(this.isBlocked)) {
+            if (Boolean.TRUE.equals(this.isPermanentHold)) {
+                this.status = "RESERVED"; // Permanent hold uses RESERVED status
+            } else if (Boolean.TRUE.equals(this.isBlocked)) {
                 this.status = "RESERVED"; // Changed from "BLOCKED" to "RESERVED" to comply with database constraints
             } else if (Boolean.FALSE.equals(this.isAvailable)) {
                 this.status = "RESERVED";

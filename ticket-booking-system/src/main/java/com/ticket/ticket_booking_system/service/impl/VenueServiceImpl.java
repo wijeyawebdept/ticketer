@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ticket.ticket_booking_system.dto.VenueResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -202,8 +203,8 @@ public class VenueServiceImpl implements VenueService {
                 "Venue soft deleted by " + deletedBy.getEmail()
         );
         
-        // Mark venue as deleted (soft delete)
-        venue.setIsDeleted(true);
+        // Mark venue as soft deleted - set status to -1 (in recycle bin)
+        venue.setStatus(-1);
         venueRepository.save(venue);
         
         System.out.println("Venue soft deleted successfully");
@@ -278,19 +279,20 @@ public class VenueServiceImpl implements VenueService {
         System.out.println("Venue Name: " + venue.getName());
         System.out.println("Venue Capacity: " + venue.getCapacity());
 
+        // Validate capacity before proceeding
+        if (venue.getCapacity() == null || venue.getCapacity() <= 0) {
+            throw new IllegalStateException(
+                    "Venue capacity must be set before generating seats. Current capacity: " + venue.getCapacity());
+        }
+
         // Delete any existing template seats for this venue (event_id IS NULL)
         seatRepository.deleteByVenueAndEventIsNull(venue);
+        System.out.println("Deleted existing template seats");
 
         // Generate default grid layout if no seating chart config exists
         if (venue.getSeatingChartConfig() == null || venue.getSeatingChartConfig().trim().isEmpty()) {
-            // Calculate rows and columns based on venue capacity
-            // Ensure we have a valid capacity - if null or zero, throw an error
-            if (venue.getCapacity() == null || venue.getCapacity() <= 0) {
-                throw new IllegalStateException(
-                        "Venue capacity must be set before generating seats. Current capacity: " + venue.getCapacity());
-            }
             int capacity = venue.getCapacity();
-            System.out.println("Generating " + capacity + " seats...");
+            System.out.println("Generating EXACTLY " + capacity + " seats to match venue capacity...");
 
             // Calculate optimal grid dimensions
             // Prefer 15 seats per row (cinema standard), adjust rows accordingly
@@ -350,8 +352,9 @@ public class VenueServiceImpl implements VenueService {
                 ObjectMapper objectMapper = new ObjectMapper();
                 Map<String, Object> seatingLayout = new HashMap<>();
                 seatingLayout.put("rows", rows);
-                seatingLayout.put("columns", seatsPerRow); // Changed from "cols" to "columns" to match frontend
+                seatingLayout.put("columns", seatsPerRow);
                 seatingLayout.put("seats", seatsJson);
+                seatingLayout.put("totalSeats", seatsCreated); // Add actual count
 
                 // Set seating layout as Map (will be auto-converted to JSONB by Hibernate)
                 venue.setSeatingLayout(seatingLayout);
@@ -379,15 +382,23 @@ public class VenueServiceImpl implements VenueService {
                 venueRepository.save(venue);
 
                 System.out
-                        .println("Successfully generated " + seatsCreated + " seats for venue capacity: " + capacity);
-                System.out.println("Grid dimensions: " + rows + " rows × " + seatsPerRow + " columns");
+                        .println("Successfully generated exactly " + seatsCreated + " seats matching venue capacity: " + capacity);
+                System.out.println("Grid dimensions: " + rows + " rows × up to " + seatsPerRow + " columns per row");
+                System.out.println("Last row has " + (capacity % seatsPerRow == 0 ? seatsPerRow : capacity % seatsPerRow) + " seats");
                 System.out.println("Saved seating layout and chart config to venue");
+                
+                // Verify the exact count
+                if (seatsCreated != capacity) {
+                    System.err.println("WARNING: Seat count mismatch! Created " + seatsCreated + " but capacity is " + capacity);
+                    throw new IllegalStateException("Seat generation failed: created " + seatsCreated + " seats but capacity is " + capacity);
+                }
             } catch (Exception e) {
                 System.err.println("Failed to save seating layout JSON: " + e.getMessage());
                 e.printStackTrace();
+                throw new RuntimeException("Failed to generate seats: " + e.getMessage(), e);
             }
 
-            System.out.println("GENERATE SEATS COMPLETE");
+            System.out.println("GENERATE SEATS COMPLETE - EXACTLY " + seatsCreated + " seats created");
             return seatsCreated;
         } else {
             // Generate seats from the existing seating chart config
@@ -409,6 +420,31 @@ public class VenueServiceImpl implements VenueService {
     @Override
     public List<Venue> findVenuesByMinimumCapacity(int minCapacity) {
         return venueRepository.findByMinimumCapacity(minCapacity);
+    }
+    
+    @Override
+    @Transactional
+    public VenueResponse toggleVenueStatus(UUID venueId) {
+        System.out.println("TOGGLE VENUE STATUS START");
+        System.out.println("Venue ID: " + venueId);
+        
+        Venue venue = getVenueById(venueId);
+        System.out.println("Current status: " + venue.getStatus());
+        
+        if (venue.getStatus() == -1) {
+            throw new IllegalStateException("Cannot toggle status of a soft-deleted venue. Please restore it first.");
+        }
+        
+        int newStatus = (venue.getStatus() == 1) ? 0 : 1;
+        venue.setStatus(newStatus);
+        venue.setUpdatedAt(LocalDateTime.now());
+        
+        Venue savedVenue = venueRepository.save(venue);
+        
+        System.out.println("New status: " + newStatus + " (" + (newStatus == 1 ? "ACTIVE" : "INACTIVE") + ")");
+        System.out.println("TOGGLE VENUE STATUS END");
+        
+        return convertToVenueResponse(savedVenue);
     }
 
     @Override
@@ -736,5 +772,25 @@ public class VenueServiceImpl implements VenueService {
                 .build();
 
         return eventRepository.save(defaultEvent);
+    }
+    
+    /**
+     * Convert Venue entity to VenueResponse DTO
+     */
+    private VenueResponse convertToVenueResponse(Venue venue) {
+        VenueResponse response = new VenueResponse();
+        response.setId(venue.getVenueId());
+        response.setName(venue.getName());
+        response.setDescription(venue.getDescription());
+        response.setAddress(venue.getAddress());
+        response.setCity(venue.getCity());
+        response.setState(venue.getState());
+        response.setZipCode(venue.getZipCode());
+        response.setCapacity(venue.getCapacity());
+        response.setStatus(venue.getStatus());
+        response.setSeatingLayout(venue.getSeatingLayout());
+        response.setCreatedAt(venue.getCreatedAt());
+        response.setUpdatedAt(venue.getUpdatedAt());
+        return response;
     }
 }

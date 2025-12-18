@@ -353,11 +353,11 @@ public class RecycleBinService {
         Venue venue = venueRepository.findById(recycleBin.getEntityId())
                 .orElseThrow(() -> new RuntimeException("Venue not found: " + recycleBin.getEntityId()));
         
-        // Reactivate the venue
-        venue.setIsDeleted(false);
+        // Reactivate the venue - set status to 1 (active)
+        venue.setStatus(1);
         venueRepository.save(venue);
         
-        System.out.println("Venue " + venue.getName() + " restored from recycle bin");
+        System.out.println("Venue " + venue.getName() + " restored from recycle bin (status=1)");
     }
 
     private void restoreSchedule(RecycleBin recycleBin) throws JsonProcessingException {

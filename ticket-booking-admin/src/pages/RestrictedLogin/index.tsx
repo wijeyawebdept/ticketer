@@ -155,12 +155,9 @@ const RestrictedLogin: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <AdminIcon sx={{ fontSize: 40, color: '#1976d2', mr: 1 }} />
-            <Typography component="h1" variant="h5">
-              Ticket Booking Admin
-            </Typography>
-          </Box>
+          <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
+            Ticket Booking System
+          </Typography>
           
           <Chip 
             label="Restricted Access" 

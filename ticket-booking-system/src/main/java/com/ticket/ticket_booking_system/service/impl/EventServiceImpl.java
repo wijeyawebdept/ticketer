@@ -383,6 +383,15 @@ public class EventServiceImpl implements EventService {
         try {
             Event.EventStatus eventStatus = Event.EventStatus.valueOf(status.toUpperCase());
             event.setStatus(eventStatus);
+            
+            // Update active field based on status
+            // Only PUBLISHED events are considered active
+            if (eventStatus == Event.EventStatus.PUBLISHED) {
+                event.setActive(1); // Active
+            } else {
+                event.setActive(0); // Inactive for DRAFT, CANCELLED, COMPLETED
+            }
+            
             Event savedEvent = eventRepository.save(event);
             return mapEventToResponse(savedEvent);
         } catch (IllegalArgumentException e) {
@@ -593,9 +602,10 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
         
         event.setActive(1); // Activate event
+        event.setStatus(Event.EventStatus.PUBLISHED); // Set status to PUBLISHED
         Event savedEvent = eventRepository.save(event);
         
-        System.out.println("Event " + event.getName() + " activated (status=1)");
+        System.out.println("Event " + event.getName() + " activated (status=1, PUBLISHED)");
         
         return mapEventToResponse(savedEvent);
     }
@@ -607,6 +617,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
         
         event.setActive(0); // Deactivate event (can be reactivated)
+        event.setStatus(Event.EventStatus.DRAFT); // Set status to DRAFT
         Event savedEvent = eventRepository.save(event);
         
         System.out.println("Event " + event.getName() + " deactivated (status=0)");

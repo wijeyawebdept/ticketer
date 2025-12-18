@@ -83,5 +83,11 @@ export const VenueService = {
     // Ensure we're sending only the seating layout data, not the entire venue object
     const response = await api.put(`${basePath}/venues/${venueId}/seating`, seatingLayout);
     return response.data;
+  },
+
+  // Toggle venue status (active/inactive)
+  toggleVenueStatus: async (id: string): Promise<Venue> => {
+    const response = await api.patch(`/api/admin/venues/${id}/toggle-status`);
+    return response.data as Venue;
   }
 };

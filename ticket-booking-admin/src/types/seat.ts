@@ -14,6 +14,7 @@ export interface Seat {
   price: number;
   isAvailable: boolean;
   isBlocked: boolean;
+  isPermanentHold: boolean;
   holdExpiresAt?: string;
   heldByUser?: string;
   createdAt?: string;
