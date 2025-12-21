@@ -1,9 +1,12 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
+import com.ticket.ticket_booking_system.dto.request.BulkAdminOperationRequest;
 import com.ticket.ticket_booking_system.dto.response.AdminResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -22,6 +26,8 @@ import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.AdminManagementService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class AdminManagementServiceImpl implements AdminManagementService {
@@ -98,6 +104,41 @@ public class AdminManagementServiceImpl implements AdminManagementService {
         System.out.println("Admin created with ID: " + savedAdmin.getAdminId() + ", Role: " + role + ", Access Level: " + accessLevel);
 
         return mapAdminToResponse(savedAdmin);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdminResponse> searchAdmins(String searchTerm, Boolean active, Pageable pageable) {
+        Specification<Admin> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Search in firstName, lastName, and email
+            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+                String searchPattern = "%" + searchTerm.toLowerCase() + "%";
+                Predicate firstNamePredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("firstName")), searchPattern);
+                Predicate lastNamePredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("lastName")), searchPattern);
+                Predicate emailPredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("email")), searchPattern);
+                
+                predicates.add(criteriaBuilder.or(firstNamePredicate, lastNamePredicate, emailPredicate));
+            }
+
+            // Filter by active status
+            if (active != null) {
+                int activeValue = active ? 1 : 0;
+                predicates.add(criteriaBuilder.equal(root.get("active"), activeValue));
+            } else {
+                // Default: exclude soft-deleted admins
+                predicates.add(criteriaBuilder.notEqual(root.get("active"), -1));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Admin> admins = adminRepository.findAll(spec, pageable);
+        return admins.map(this::mapAdminToResponse);
     }
 
     @Override
@@ -280,6 +321,69 @@ public class AdminManagementServiceImpl implements AdminManagementService {
         System.out.println("Admin " + updatedAdmin.getEmail() + " deactivated");
         
         return mapAdminToResponse(updatedAdmin);
+    }
+
+    @Override
+    @Transactional
+    public int bulkOperation(BulkAdminOperationRequest request) {
+        int successCount = 0;
+        
+        for (UUID adminId : request.getAdminIds()) {
+            try {
+                Admin admin = adminRepository.findById(adminId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
+                
+                switch (request.getOperation()) {
+                    case ACTIVATE:
+                        admin.setActive(1);
+                        adminRepository.save(admin);
+                        successCount++;
+                        break;
+                        
+                    case DEACTIVATE:
+                        admin.setActive(0);
+                        adminRepository.save(admin);
+                        successCount++;
+                        break;
+                        
+                    case CHANGE_ROLE:
+                        if (request.getNewRole() != null && !request.getNewRole().trim().isEmpty()) {
+                            try {
+                                Admin.Role newRole = Admin.Role.valueOf(request.getNewRole());
+                                admin.setRole(newRole);
+                                
+                                // Update permissions based on role
+                                if (newRole == Admin.Role.SUPER_ADMIN) {
+                                    admin.setAccessLevel(Admin.AccessLevel.SUPER);
+                                    admin.setCanDeleteUsers(true);
+                                } else {
+                                    admin.setAccessLevel(Admin.AccessLevel.STANDARD);
+                                    admin.setCanDeleteUsers(false);
+                                }
+                                
+                                adminRepository.save(admin);
+                                successCount++;
+                            } catch (IllegalArgumentException e) {
+                                System.err.println("Invalid role for admin " + adminId + ": " + request.getNewRole());
+                            }
+                        }
+                        break;
+                        
+                    case DELETE:
+                        // Soft delete
+                        admin.setActive(-1);
+                        adminRepository.save(admin);
+                        
+                        // Note: Recycle bin entry will be created by the individual delete endpoint if needed
+                        successCount++;
+                        break;
+                }
+            } catch (Exception e) {
+                System.err.println("Error processing admin " + adminId + ": " + e.getMessage());
+            }
+        }
+        
+        return successCount;
     }
 
     /**

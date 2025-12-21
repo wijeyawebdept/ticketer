@@ -1,12 +1,13 @@
 package com.ticket.ticket_booking_system.service;
 
-import com.ticket.ticket_booking_system.dto.request.OrganizerCreateRequest;
-import com.ticket.ticket_booking_system.dto.request.OrganizerUpdateRequest;
-import com.ticket.ticket_booking_system.dto.response.OrganizerResponse;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.UUID;
+import com.ticket.ticket_booking_system.dto.request.OrganizerCreateRequest;
+import com.ticket.ticket_booking_system.dto.request.OrganizerUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.OrganizerResponse;
 
 public interface OrganizerManagementService {
     
@@ -23,6 +24,15 @@ public interface OrganizerManagementService {
      * @return Page of organizer responses
      */
     Page<OrganizerResponse> getAllOrganizers(Pageable pageable);
+    
+    /**
+     * Search organizers with filters
+     * @param searchTerm Search term for name/email/organization
+     * @param active Active status filter
+     * @param pageable Pagination information
+     * @return Page of organizer responses
+     */
+    Page<OrganizerResponse> searchOrganizers(String searchTerm, Integer active, Pageable pageable);
     
     /**
      * Get organizer by ID

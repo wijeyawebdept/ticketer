@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ticket.ticket_booking_system.dto.CreateOrganizerEmployeeRequest;
 import com.ticket.ticket_booking_system.dto.OrganizerEmployeeDTO;
 import com.ticket.ticket_booking_system.dto.UpdateOrganizerEmployeeRequest;
-import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.service.OrganizerEmployeeManagementService;
 
 import jakarta.validation.Valid;
@@ -41,6 +40,9 @@ public class OrganizerEmployeeManagementController {
 
     @GetMapping
     public ResponseEntity<Page<OrganizerEmployeeDTO>> getAllEmployees(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer active,
+            @RequestParam(required = false) UUID organizerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -50,7 +52,7 @@ public class OrganizerEmployeeManagementController {
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         
-        Page<OrganizerEmployeeDTO> employees = employeeService.getAllEmployees(pageable);
+        Page<OrganizerEmployeeDTO> employees = employeeService.searchEmployees(search, active, organizerId, pageable);
         return ResponseEntity.ok(employees);
     }
 

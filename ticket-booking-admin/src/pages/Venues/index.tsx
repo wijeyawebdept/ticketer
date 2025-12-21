@@ -7,12 +7,20 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   CircularProgress,
   IconButton,
   Tooltip,
-  Chip
+  Chip,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  DialogContentText
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon, CheckCircle as ActivateIcon, Block as DeactivateIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon, CheckCircle as ActivateIcon, Block as DeactivateIcon, Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
@@ -27,10 +35,24 @@ const VenuesPage = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [generatingSeats, setGeneratingSeats] = useState<string | null>(null);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [minCapacity, setMinCapacity] = useState<string>('');
+  const [maxCapacity, setMaxCapacity] = useState<string>('');
+  
+  // Batch operations states
+  const [selectedVenueIds, setSelectedVenueIds] = useState<string[]>([]);
+  
+  // Info dialog states
+  const [infoDialogOpen, setInfoDialogOpen] = useState<boolean>(false);
+  const [infoVenue, setInfoVenue] = useState<Venue | null>(null);
   
   // Confirmation dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -66,6 +88,7 @@ const VenuesPage = () => {
       });
       
       setVenues(validatedVenues);
+      setFilteredVenues(validatedVenues);
     } catch (error) {
       console.error('Error fetching venues:', error);
       ToastService.error('Failed to load venues. Please try again later.');
@@ -78,6 +101,39 @@ const VenuesPage = () => {
   useEffect(() => {
     fetchVenues();
   }, [fetchVenues]);
+
+  // Apply filters
+  useEffect(() => {
+    let filtered = [...venues];
+
+    // Search by name
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(venue =>
+        venue.name.toLowerCase().includes(query) ||
+        venue.description?.toLowerCase().includes(query) ||
+        venue.address?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      const status = statusFilter === 'active' ? 1 : 0;
+      filtered = filtered.filter(venue => venue.status === status);
+    }
+
+    // Filter by capacity range
+    if (minCapacity) {
+      const min = parseInt(minCapacity);
+      filtered = filtered.filter(venue => venue.capacity >= min);
+    }
+    if (maxCapacity) {
+      const max = parseInt(maxCapacity);
+      filtered = filtered.filter(venue => venue.capacity <= max);
+    }
+
+    setFilteredVenues(filtered);
+  }, [venues, searchQuery, statusFilter, minCapacity, maxCapacity]);
 
   // Handle form close
   const handleFormClose = () => {
@@ -220,6 +276,57 @@ const VenuesPage = () => {
     }
   };
 
+  // Handle bulk operations
+  const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
+    if (selectedVenueIds.length === 0) return;
+
+    const toastId = ToastService.loading(`Performing ${operation.toLowerCase()} on ${selectedVenueIds.length} venue(s)...`);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const venueId of selectedVenueIds) {
+        try {
+          if (operation === 'ACTIVATE' || operation === 'DEACTIVATE') {
+            const venue = venues.find(v => v.id === venueId);
+            if (venue) {
+              const shouldToggle = (operation === 'ACTIVATE' && venue.status !== 1) || 
+                                  (operation === 'DEACTIVATE' && venue.status === 1);
+              if (shouldToggle) {
+                await VenueService.toggleVenueStatus(venueId);
+              }
+            }
+            successCount++;
+          } else if (operation === 'DELETE') {
+            await VenueService.deleteVenue(venueId);
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to process venue ${venueId}:`, error);
+          failCount++;
+        }
+      }
+
+      setSelectedVenueIds([]);
+      fetchVenues();
+
+      if (failCount === 0) {
+        ToastService.updateSuccess(toastId, `Successfully ${operation.toLowerCase()}d ${successCount} venue(s)`);
+      } else {
+        ToastService.updateError(toastId, `Completed: ${successCount} succeeded, ${failCount} failed`);
+      }
+    } catch (error) {
+      console.error('Error performing bulk operation:', error);
+      ToastService.updateError(toastId, 'Failed to perform bulk operation. Please try again.');
+    }
+  };
+
+  // Handle selection change
+  const handleSelectionChange = (newSelection: string[]) => {
+    setSelectedVenueIds(newSelection);
+  };
+
   // Define columns for DataGrid
   const columns: GridColDef[] = [
     {
@@ -227,18 +334,81 @@ const VenuesPage = () => {
       headerName: 'Name',
       flex: 1,
       minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => (
+        <Tooltip title={params.value || ''} arrow placement="top">
+          <Typography
+            variant="body2"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              cursor: 'help'
+            }}
+          >
+            {params.value}
+          </Typography>
+        </Tooltip>
+      ),
     },
     {
       field: 'description',
       headerName: 'Description',
-      flex: 2,
-      minWidth: 200,
+      flex: 1.5,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => {
+        const text = params.value || 'N/A';
+        const truncated = text.length > 50 ? text.substring(0, 50) + '...' : text;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1
+              }}
+            >
+              {truncated}
+            </Typography>
+            {text.length > 50 && (
+              <Tooltip title="Click row info icon to view full details" arrow>
+                <InfoIcon fontSize="small" color="action" sx={{ cursor: 'help' }} />
+              </Tooltip>
+            )}
+          </Box>
+        );
+      },
     },
     {
       field: 'address',
       headerName: 'Address',
-      flex: 2,
-      minWidth: 200,
+      flex: 1.5,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => {
+        const text = params.value || 'N/A';
+        const truncated = text.length > 50 ? text.substring(0, 50) + '...' : text;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1
+              }}
+            >
+              {truncated}
+            </Typography>
+            {text.length > 50 && (
+              <Tooltip title="Click row info icon to view full details" arrow>
+                <InfoIcon fontSize="small" color="action" sx={{ cursor: 'help' }} />
+              </Tooltip>
+            )}
+          </Box>
+        );
+      },
     },
     {
       field: 'capacity',
@@ -272,7 +442,20 @@ const VenuesPage = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <Tooltip title={isOrganizer ? "Organizers cannot edit venues" : "Edit Venue"}>
+          <Tooltip title="View Full Details" arrow>
+            <IconButton
+              onClick={() => {
+                setInfoVenue(params.row);
+                setInfoDialogOpen(true);
+              }}
+              size="small"
+              color="info"
+              sx={{ mr: 1 }}
+            >
+              <InfoIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isOrganizer ? "Organizers cannot edit venues" : "Edit Venue"} arrow>
             <span>
               <IconButton
                 onClick={() => handleEditVenue(params.row)}
@@ -397,6 +580,109 @@ const VenuesPage = () => {
         </Box>
       </Box>
 
+      {/* Search and Filter Section */}
+      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search by name, description, or address..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ flexGrow: 1, minWidth: 300 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="inactive">Inactive</MenuItem>
+          </Select>
+        </FormControl>
+        <TextField
+          size="small"
+          label="Min Capacity"
+          type="number"
+          value={minCapacity}
+          onChange={(e) => setMinCapacity(e.target.value)}
+          sx={{ width: 130 }}
+          inputProps={{ min: 0 }}
+        />
+        <TextField
+          size="small"
+          label="Max Capacity"
+          type="number"
+          value={maxCapacity}
+          onChange={(e) => setMaxCapacity(e.target.value)}
+          sx={{ width: 130 }}
+          inputProps={{ min: 0 }}
+        />
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => {
+            setSearchQuery('');
+            setStatusFilter('all');
+            setMinCapacity('');
+            setMaxCapacity('');
+          }}
+          sx={{ height: 40 }}
+        >
+          Clear Filters
+        </Button>
+        <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', ml: 'auto' }}>
+          Showing {filteredVenues.length} of {venues.length} venue{venues.length !== 1 ? 's' : ''}
+        </Typography>
+      </Box>
+
+      {/* Bulk Operations Bar */}
+      {selectedVenueIds.length > 0 && !isOrganizer && (
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="body1" fontWeight={500}>
+              {selectedVenueIds.length} venue(s) selected
+            </Typography>
+            <Box>
+              <Button
+                variant="outlined"
+                color="success"
+                size="small"
+                onClick={() => handleBulkOperation('ACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Activate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => handleBulkOperation('DEACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Deactivate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                onClick={() => handleBulkOperation('DELETE')}
+              >
+                Delete Selected
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
       <Paper>
         <Box height={500} width="100%">
           {loading ? (
@@ -405,14 +691,17 @@ const VenuesPage = () => {
             </Box>
           ) : (
             <DataGrid
-              rows={venues}
+              rows={filteredVenues}
               columns={columns}
               getRowId={(row) => row.id}
               pageSizeOptions={[5, 10, 25]}
+              checkboxSelection
+              disableRowSelectionOnClick={false}
+              onRowSelectionModelChange={(newSelection) => handleSelectionChange(newSelection as string[])}
+              rowSelectionModel={selectedVenueIds}
               initialState={{
                 pagination: { paginationModel: { pageSize: 10 } },
               }}
-              disableRowSelectionOnClick
             />
           )}
         </Box>
@@ -463,6 +752,84 @@ const VenuesPage = () => {
           setVenueForSeats(null);
         }}
       />
+
+      {/* Venue Info Dialog */}
+      <Dialog
+        open={infoDialogOpen}
+        onClose={() => {
+          setInfoDialogOpen(false);
+          setInfoVenue(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <InfoIcon color="info" />
+            <Typography variant="h6">Venue Details</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {infoVenue && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Name
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {infoVenue.name}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Description
+                </Typography>
+                <DialogContentText>
+                  {infoVenue.description || 'N/A'}
+                </DialogContentText>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Address
+                </Typography>
+                <DialogContentText>
+                  {infoVenue.address || 'N/A'}
+                </DialogContentText>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 3 }}>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Capacity
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium">
+                    {infoVenue.capacity}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Status
+                  </Typography>
+                  <Chip
+                    label={infoVenue.status === 1 ? 'Active' : 'Inactive'}
+                    color={infoVenue.status === 1 ? 'success' : 'default'}
+                    size="small"
+                  />
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setInfoDialogOpen(false);
+              setInfoVenue(null);
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

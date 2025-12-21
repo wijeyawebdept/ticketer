@@ -16,7 +16,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Autocomplete,
   TextField,
   InputAdornment
 } from '@mui/material';
@@ -32,17 +31,13 @@ import {
   EventAvailable as EventAvailableIcon,
   Refresh as RefreshIcon,
   Schedule as ScheduleIcon,
-  CheckCircle as ActivateIcon,
-  Block as DeactivateIcon,
-  Search as SearchIcon,
-  Publish as PublishIcon
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
-import { EventService, OrganizerService } from '../../services';
+import { EventService } from '../../services';
 import { Event, EventStatus, UserRole } from '../../types';
 import EventForm from './components/EventForm';
-import { Organizer } from '../../services/organizer.service';
 
 const Events: React.FC = () => {
   const navigate = useNavigate();
@@ -53,30 +48,12 @@ const Events: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [contextMenuEvent, setContextMenuEvent] = useState<Event | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
 
   useEffect(() => {
-    const initPage = async () => {
-      await checkUserRole();
-      fetchEvents();
-    };
-    initPage();
+    fetchEvents();
   }, []);
-
-  const checkUserRole = () => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setIsAdmin(user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
-                    user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
-      } catch (e) {
-        console.error('Error parsing user:', e);
-      }
-    }
-  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -154,24 +131,6 @@ const Events: React.FC = () => {
   const handleDeleteDialogClose = () => {
     setIsDeleteDialogOpen(false);
     setSelectedEvent(null);
-  };
-
-  const handleActivateEvent = async (eventId: string) => {
-    try {
-      await EventService.activateEvent(eventId);
-      fetchEvents(); // Refresh the events list
-    } catch (error) {
-      console.error('Error activating event:', error);
-    }
-  };
-
-  const handleDeactivateEvent = async (eventId: string) => {
-    try {
-      await EventService.deactivateEvent(eventId);
-      fetchEvents(); // Refresh the events list
-    } catch (error) {
-      console.error('Error deactivating event:', error);
-    }
   };
 
   // The event saving is now handled by EventForm component
@@ -456,59 +415,39 @@ const Events: React.FC = () => {
         {/* Bulk Actions Toolbar */}
         {selectedEventIds.length > 0 && (
           <Grid item xs={12}>
-            <Paper
-              sx={{
-                p: 2,
-                backgroundColor: '#e3f2fd',
-                borderRadius: 2,
-                border: '1px solid #1976d2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <Typography variant="body1" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                {selectedEventIds.length} event(s) selected
-              </Typography>
-              <Box display="flex" gap={1}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  size="small"
-                  startIcon={<PublishIcon />}
-                  onClick={handleBulkPublish}
-                  sx={{ fontWeight: 600 }}
-                >
-                  Publish
-                </Button>
-                <Button
-                  variant="contained"
-                  color="warning"
-                  size="small"
-                  startIcon={<DeactivateIcon />}
-                  onClick={handleBulkDeactivate}
-                  sx={{ fontWeight: 600 }}
-                >
-                  Deactivate
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  size="small"
-                  startIcon={<DeleteSweepIcon />}
-                  onClick={handleBulkDelete}
-                  sx={{ fontWeight: 600 }}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setSelectedEventIds([])}
-                  sx={{ fontWeight: 600 }}
-                >
-                  Clear Selection
-                </Button>
+            <Paper sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="body1" fontWeight={500}>
+                  {selectedEventIds.length} event(s) selected
+                </Typography>
+                <Box>
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    size="small"
+                    onClick={handleBulkPublish}
+                    sx={{ mr: 1 }}
+                  >
+                    Publish Selected
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={handleBulkDeactivate}
+                    sx={{ mr: 1 }}
+                  >
+                    Deactivate Selected
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    size="small"
+                    onClick={handleBulkDelete}
+                  >
+                    Delete Selected
+                  </Button>
+                </Box>
               </Box>
             </Paper>
           </Grid>

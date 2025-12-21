@@ -15,11 +15,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
+import com.ticket.ticket_booking_system.dto.request.BulkAdminOperationRequest;
 import com.ticket.ticket_booking_system.dto.response.AdminResponse;
 import com.ticket.ticket_booking_system.security.AdminPermission;
 import com.ticket.ticket_booking_system.security.SuperAdminOnly;
@@ -48,8 +50,17 @@ public class AdminManagementController {
 
     @GetMapping
     public ResponseEntity<Page<AdminResponse>> getAllAdmins(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        Page<AdminResponse> admins = adminManagementService.getAllAdmins(pageable);
+        Page<AdminResponse> admins;
+        
+        if ((search != null && !search.trim().isEmpty()) || active != null) {
+            admins = adminManagementService.searchAdmins(search, active, pageable);
+        } else {
+            admins = adminManagementService.getAllAdmins(pageable);
+        }
+        
         return ResponseEntity.ok(admins);
     }
 
@@ -92,5 +103,12 @@ public class AdminManagementController {
     public ResponseEntity<AdminResponse> deactivateAdmin(@PathVariable UUID adminId) {
         AdminResponse admin = adminManagementService.deactivateAdmin(adminId);
         return ResponseEntity.ok(admin);
+    }
+    
+    @PostMapping("/bulk-operation")
+    @SuperAdminOnly
+    public ResponseEntity<String> bulkOperation(@Valid @RequestBody BulkAdminOperationRequest request) {
+        int successCount = adminManagementService.bulkOperation(request);
+        return ResponseEntity.ok(successCount + " admin(s) processed successfully");
     }
 }

@@ -13,13 +13,74 @@ interface PaginatedResponse<T> {
   empty: boolean;
 }
 
+// User detail response interfaces
+export interface BookingSummary {
+  bookingId: string;
+  eventName: string;
+  bookingDate: string;
+  status: string;
+  totalAmount: number;
+  ticketCount: number;
+}
+
+export interface ActivityLog {
+  action: string;
+  timestamp: string;
+  description: string;
+}
+
+export interface UserDetailResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  dateOfBirth?: string;
+  role: string;
+  active: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  totalBookings: number;
+  recentBookings: BookingSummary[];
+  activityLogs: ActivityLog[];
+}
+
+// Bulk operation request interface
+export interface BulkUserOperationRequest {
+  userIds: string[];
+  operation: 'ACTIVATE' | 'DEACTIVATE' | 'CHANGE_ROLE' | 'DELETE';
+  newRole?: string;
+}
+
+export interface BulkOperationResponse {
+  successful: number;
+  failed: number;
+  successfulIds: string[];
+  errors: { userId: string; error: string }[];
+  message: string;
+}
+
 class UserService {
-  async getAllUsers(): Promise<User[]> {
-    console.log(' Fetching users from API...');
-    const response = await api.get<PaginatedResponse<User>>('/api/admin/users');
+  async getAllUsers(params?: {
+    search?: string;
+    role?: string;
+    active?: boolean;
+    page?: number;
+    size?: number;
+  }): Promise<User[]> {
+    console.log(' Fetching users from API with params:', params);
+    
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.role) queryParams.append('role', params.role);
+    if (params?.active !== undefined) queryParams.append('active', String(params.active));
+    if (params?.page !== undefined) queryParams.append('page', String(params.page));
+    if (params?.size !== undefined) queryParams.append('size', String(params.size));
+    
+    const url = `/api/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await api.get<PaginatedResponse<User>>(url);
     console.log(' Raw API response:', response.data);
-    console.log(' Users array from content:', response.data.content);
-    console.log(' Total elements:', response.data.totalElements);
     
     // Extract the users array from the paginated response
     return response.data.content || [];
@@ -27,6 +88,11 @@ class UserService {
 
   async getUserById(id: string): Promise<User> {
     const response = await api.get<User>(`/api/admin/users/${id}`);
+    return response.data;
+  }
+  
+  async getUserDetails(id: string): Promise<UserDetailResponse> {
+    const response = await api.get<UserDetailResponse>(`/api/admin/users/${id}/details`);
     return response.data;
   }
 
@@ -61,6 +127,11 @@ class UserService {
 
   async deactivateUser(id: string): Promise<User> {
     const response = await api.patch<User>(`/api/admin/users/${id}/deactivate`);
+    return response.data;
+  }
+  
+  async bulkOperation(request: BulkUserOperationRequest): Promise<BulkOperationResponse> {
+    const response = await api.post<BulkOperationResponse>('/api/admin/users/bulk-operation', request);
     return response.data;
   }
 }

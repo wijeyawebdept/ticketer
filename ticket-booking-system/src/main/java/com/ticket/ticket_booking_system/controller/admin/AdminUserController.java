@@ -20,8 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.dto.request.BulkUserOperationRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.UserDetailResponse;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
 import com.ticket.ticket_booking_system.security.AdminPermission;
 import com.ticket.ticket_booking_system.security.Permissions;
@@ -53,14 +55,22 @@ public class AdminUserController {
     public ResponseEntity<Page<UserResponse>> getAllUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         
         Page<UserResponse> users;
         
-        if (role != null && !role.isEmpty()) {
+        // Use advanced search if search parameter is provided with optional filters
+        if (search != null && !search.trim().isEmpty()) {
+            users = userService.searchUsersAdvanced(search, role, active, pageable);
+        } else if (role != null && !role.isEmpty()) {
             users = userService.getUsersByRole(role, pageable);
         } else if (query != null && !query.isEmpty()) {
             users = userService.searchUsers(query, pageable);
+        } else if (active != null) {
+            // Filter by active status only
+            users = userService.searchUsersAdvanced(null, null, active, pageable);
         } else {
             users = userService.getAllUsers(pageable);
         }
@@ -73,6 +83,16 @@ public class AdminUserController {
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID userId) {
         UserResponse user = userService.getUserById(userId);
         return ResponseEntity.ok(user);
+    }
+    
+    /**
+     * Get detailed user information including bookings and activity logs
+     */
+    @GetMapping("/{userId}/details")
+    @AdminPermission(value = Permissions.VIEW_USERS)
+    public ResponseEntity<UserDetailResponse> getUserDetails(@PathVariable UUID userId) {
+        UserDetailResponse userDetails = userService.getUserDetails(userId);
+        return ResponseEntity.ok(userDetails);
     }
 
     @PutMapping("/{userId}")
@@ -124,5 +144,15 @@ public class AdminUserController {
         
         userService.changeUserRole(userId, role);
         return ResponseEntity.ok(Map.of("message", "User role updated successfully"));
+    }
+    
+    /**
+     * Perform bulk operations on multiple users
+     */
+    @PostMapping("/bulk-operation")
+    @AdminPermission(value = Permissions.MANAGE_USERS)
+    public ResponseEntity<Map<String, Object>> bulkOperation(@Valid @RequestBody BulkUserOperationRequest request) {
+        Map<String, Object> result = userService.bulkOperation(request);
+        return ResponseEntity.ok(result);
     }
 }

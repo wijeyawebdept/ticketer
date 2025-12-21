@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +10,20 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
-  Chip
+  Chip,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Alert,
+  Snackbar,
+  Grid
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -19,13 +32,19 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
   CheckCircle as ActivateIcon,
-  Block as DeactivateIcon
+  Block as DeactivateIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  Visibility as ViewIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams, GridRowSelectionModel } from '@mui/x-data-grid';
 import { UserService } from '../../services';
 import { User, UserRole } from '../../types';
 import UserForm from './components/UserForm';
+import UserDetailsDialog from './components/UserDetailsDialog';
 import { useAuth } from '../../context/AuthContext';
+import { formatPhoneNumber } from '../../utils/formatters';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -33,17 +52,31 @@ const Users: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState<boolean>(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { isSuperAdmin } = useAuth();
 
-  const fetchUsers = React.useCallback(async () => {
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  // Bulk operations
+  const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
+  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Starting to fetch users...');
-      const data = await UserService.getAllUsers();
-      console.log('Users data received:', data);
-      console.log('Data type:', typeof data);
-      console.log('Is array?', Array.isArray(data));
-      console.log('Users count:', data?.length);
+      const params: any = {};
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter) params.active = statusFilter === 'active';
+      // Only fetch USER role
+      params.role = 'USER';
+
+      const data = await UserService.getAllUsers(params);
       
       // Filter out SUPER_ADMIN users if the current user is not a SUPER_ADMIN
       let filteredUsers = data;
@@ -52,28 +85,24 @@ const Users: React.FC = () => {
           user.role !== UserRole.SUPER_ADMIN && 
           user.role !== UserRole.ROLE_SUPER_ADMIN
         );
-        console.log('Filtered users (excluding SUPER_ADMIN):', filteredUsers);
       }
       
       setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
+      showSnackbar('Error fetching users', 'error');
     } finally {
       setLoading(false);
     }
-  }, [isSuperAdmin]);
+  }, [searchTerm, statusFilter, isSuperAdmin]);
 
   useEffect(() => {
-    fetchUsers();
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers();
+    }, 300); // Debounce search
+
+    return () => clearTimeout(delayDebounceFn);
   }, [fetchUsers]);
-
-  // Add this debugging effect to log when users state changes
-  useEffect(() => {
-    console.log('DataGrid receiving users:', users);
-    console.log('Users type:', typeof users);
-    console.log('Users is array:', Array.isArray(users));
-    console.log('Users length:', users?.length);
-  }, [users]);
 
   const handleCreateClick = () => {
     setSelectedUser(null);
@@ -83,6 +112,11 @@ const Users: React.FC = () => {
   const handleEditClick = (user: User) => {
     setSelectedUser(user);
     setIsDialogOpen(true);
+  };
+
+  const handleViewClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsDetailsDialogOpen(true);
   };
 
   const handleDeleteClick = (user: User) => {
@@ -100,12 +134,19 @@ const Users: React.FC = () => {
     setSelectedUser(null);
   };
 
+  const handleDetailsDialogClose = () => {
+    setIsDetailsDialogOpen(false);
+    setSelectedUserId(null);
+  };
+
   const handleActivateUser = async (userId: string) => {
     try {
       await UserService.activateUser(userId);
       fetchUsers();
+      showSnackbar('User activated successfully', 'success');
     } catch (error) {
       console.error('Error activating user:', error);
+      showSnackbar('Error activating user', 'error');
     }
   };
 
@@ -113,8 +154,10 @@ const Users: React.FC = () => {
     try {
       await UserService.deactivateUser(userId);
       fetchUsers();
+      showSnackbar('User deactivated successfully', 'success');
     } catch (error) {
       console.error('Error deactivating user:', error);
+      showSnackbar('Error deactivating user', 'error');
     }
   };
 
@@ -125,16 +168,61 @@ const Users: React.FC = () => {
       await UserService.deleteUser(selectedUser.id);
       fetchUsers();
       handleDeleteDialogClose();
+      showSnackbar('User moved to recycle bin', 'success');
     } catch (error) {
       console.error('Error deleting user:', error);
+      showSnackbar('Error deleting user', 'error');
     }
+  };
+
+  const handleBulkMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setBulkMenuAnchor(event.currentTarget);
+  };
+
+  const handleBulkMenuClose = () => {
+    setBulkMenuAnchor(null);
+  };
+
+  const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
+    if (selectedRows.length === 0) {
+      showSnackbar('Please select users first', 'error');
+      return;
+    }
+
+    try {
+      const userIds = selectedRows.map(id => String(id));
+      const result = await UserService.bulkOperation({
+        userIds,
+        operation
+      });
+      
+      showSnackbar(result.message, result.failed > 0 ? 'error' : 'success');
+      fetchUsers();
+      setSelectedRows([]);
+    } catch (error) {
+      console.error('Error performing bulk operation:', error);
+      showSnackbar('Error performing bulk operation', 'error');
+    }
+    
+    handleBulkMenuClose();
+  };
+
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
   };
 
   const getRoleChipColor = (role: UserRole) => {
     switch (role) {
       case UserRole.SUPER_ADMIN:
       case UserRole.ROLE_SUPER_ADMIN:
-        return 'secondary'; // Purple for SUPER_ADMIN
+        return 'secondary';
       case UserRole.ADMIN:
       case UserRole.ROLE_ADMIN:
         return 'error';
@@ -151,12 +239,19 @@ const Users: React.FC = () => {
   const columns: GridColDef[] = [
     { field: 'firstName', headerName: 'First Name', flex: 1 },
     { field: 'lastName', headerName: 'Last Name', flex: 1 },
-    { field: 'email', headerName: 'Email', flex: 1 },
-    { field: 'phoneNumber', headerName: 'Phone Number', flex: 1 },
+    { field: 'email', headerName: 'Email', flex: 1.2 },
+    { 
+      field: 'phoneNumber', 
+      headerName: 'Phone Number', 
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => (
+        <span>{formatPhoneNumber(params.value)}</span>
+      )
+    },
     { 
       field: 'role', 
       headerName: 'Role', 
-      flex: 1,
+      flex: 0.8,
       renderCell: (params: GridRenderCellParams) => (
         <Chip 
           label={params.value} 
@@ -170,7 +265,7 @@ const Users: React.FC = () => {
     {
       field: 'active',
       headerName: 'Status',
-      flex: 0.8,
+      flex: 0.7,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
           label={params.value ? 'Active' : 'Inactive'}
@@ -183,10 +278,25 @@ const Users: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1,
+      flex: 1.2,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
+          <IconButton
+            onClick={() => handleViewClick(params.row.id)}
+            size="small"
+            color="info"
+            sx={{
+              backgroundColor: 'rgba(2, 136, 209, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(2, 136, 209, 0.2)',
+              },
+              mr: 0.5
+            }}
+            title="View Details"
+          >
+            <ViewIcon fontSize="small" />
+          </IconButton>
           <IconButton
             onClick={() => handleEditClick(params.row as User)}
             size="small"
@@ -196,10 +306,11 @@ const Users: React.FC = () => {
               '&:hover': {
                 backgroundColor: 'rgba(25, 118, 210, 0.2)',
               },
-              mr: 1
+              mr: 0.5
             }}
+            title="Edit User"
           >
-            <EditIcon />
+            <EditIcon fontSize="small" />
           </IconButton>
           {params.row.active ? (
             <IconButton
@@ -211,11 +322,11 @@ const Users: React.FC = () => {
                 '&:hover': {
                   backgroundColor: 'rgba(211, 47, 47, 0.2)',
                 },
-                mr: 1
+                mr: 0.5
               }}
               title="Deactivate User"
             >
-              <DeactivateIcon />
+              <DeactivateIcon fontSize="small" />
             </IconButton>
           ) : (
             <IconButton
@@ -227,11 +338,11 @@ const Users: React.FC = () => {
                 '&:hover': {
                   backgroundColor: 'rgba(46, 125, 50, 0.2)',
                 },
-                mr: 1
+                mr: 0.5
               }}
               title="Activate User"
             >
-              <ActivateIcon />
+              <ActivateIcon fontSize="small" />
             </IconButton>
           )}
           <IconButton
@@ -246,7 +357,7 @@ const Users: React.FC = () => {
             }}
             title="Move to Recycle Bin"
           >
-            <DeleteSweepIcon />
+            <DeleteSweepIcon fontSize="small" />
           </IconButton>
         </Box>
       ),
@@ -261,9 +372,11 @@ const Users: React.FC = () => {
         alignItems: 'center',
         mb: 3 
       }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>User Management</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
+          User Management
+        </Typography>
         <Box>
-          <IconButton onClick={fetchUsers} sx={{ mr: 1 }}>
+          <IconButton onClick={fetchUsers} sx={{ mr: 1 }} title="Refresh">
             <RefreshIcon />
           </IconButton>
           <Button
@@ -271,20 +384,105 @@ const Users: React.FC = () => {
             color="primary"
             startIcon={<AddIcon />}
             onClick={handleCreateClick}
-          sx={{
-            borderRadius: 2,
-            padding: '8px 16px',
-            fontWeight: 600,
-            boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-            '&:hover': {
-              boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
-            }
-          }}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+              }
+            }}
           >
             Add New User
           </Button>
         </Box>
       </Box>
+
+      {/* Search and Filter Section */}
+      <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search by name, email, or phone"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All Status</MenuItem>
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={handleClearFilters}
+              startIcon={<FilterIcon />}
+            >
+              Clear Filters
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Bulk Operations Bar */}
+      {selectedRows.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="body1" fontWeight={500}>
+              {selectedRows.length} user(s) selected
+            </Typography>
+            <Box>
+              <Button
+                variant="outlined"
+                color="success"
+                size="small"
+                onClick={() => handleBulkOperation('ACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Activate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => handleBulkOperation('DEACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Deactivate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                onClick={() => handleBulkOperation('DELETE')}
+              >
+                Delete Selected
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
       
       <Paper 
         sx={{ 
@@ -303,6 +501,12 @@ const Users: React.FC = () => {
             <DataGrid
               rows={users}
               columns={columns}
+              checkboxSelection
+              disableRowSelectionOnClick
+              onRowSelectionModelChange={(newSelection) => {
+                setSelectedRows(newSelection);
+              }}
+              rowSelectionModel={selectedRows}
               initialState={{
                 pagination: {
                   paginationModel: {
@@ -310,9 +514,7 @@ const Users: React.FC = () => {
                   },
                 },
               }}
-              pageSizeOptions={[10, 25, 50]}
-              disableRowSelectionOnClick
-              autoHeight
+              pageSizeOptions={[10, 25, 50, 100]}
               sx={{
                 '& .MuiDataGrid-columnHeaders': {
                   backgroundColor: 'rgba(25, 118, 210, 0.1)',
@@ -365,7 +567,7 @@ const Users: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 600 }}>Move User to Recycle Bin</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to move the user "{selectedUser?.firstName} {selectedUser?.lastName}" to the recycle bin? You can restore it later from the recycle bin.
+            Are you sure you want to move the user "{selectedUser?.firstName} {selectedUser?.lastName}" to the recycle bin? You can restore it later.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -385,6 +587,29 @@ const Users: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* User Details Dialog */}
+      <UserDetailsDialog
+        userId={selectedUserId}
+        open={isDetailsDialogOpen}
+        onClose={handleDetailsDialogClose}
+      />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

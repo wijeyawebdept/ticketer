@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +10,14 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
-  Chip
+  Chip,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Tooltip
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -19,12 +26,14 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
   CheckCircle as ActivateIcon,
-  Block as DeactivateIcon
+  Block as DeactivateIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import AdminForm from './components/AdminForm';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { formatPhoneNumber } from '../../utils/formatters';
 
 interface Admin {
   adminId: string;
@@ -35,6 +44,7 @@ interface Admin {
   role: 'ADMIN' | 'SUPER_ADMIN';
   active: boolean;
   createdAt: string;
+  lastLoginAt?: string;
 }
 
 const Admins: React.FC = () => {
@@ -43,13 +53,30 @@ const Admins: React.FC = () => {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
-  const { isSuperAdmin } = useAuth();
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedAdminIds, setSelectedAdminIds] = useState<string[]>([]);
+  const { isSuperAdmin, user } = useAuth();
 
-  const fetchAdmins = React.useCallback(async () => {
+  const fetchAdmins = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Starting to fetch admins...');
-      const response = await api.get<{ content: Admin[] }>('/api/admin/admins');
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      if (statusFilter !== 'all') {
+        params.append('active', statusFilter === 'active' ? '1' : '0');
+      }
+      
+      const url = params.toString() 
+        ? `/api/admin/admins?${params.toString()}`
+        : '/api/admin/admins';
+      
+      const response = await api.get<{ content: Admin[] }>(url);
       console.log('Admins data received:', response.data);
       
       const adminsData = response.data.content || [];
@@ -67,11 +94,22 @@ const Admins: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, searchQuery, statusFilter]);
 
   useEffect(() => {
     fetchAdmins();
   }, [fetchAdmins]);
+
+  // Debounce search - only trigger on statusFilter change
+  useEffect(() => {
+    if (searchQuery) {
+      const timer = setTimeout(() => {
+        fetchAdmins();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const handleCreateClick = () => {
     setSelectedAdmin(null);
@@ -128,6 +166,27 @@ const Admins: React.FC = () => {
     }
   };
 
+  const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
+    if (selectedAdminIds.length === 0) return;
+
+    try {
+      const payload = {
+        adminIds: selectedAdminIds,
+        operation: operation,
+      };
+
+      await api.post('/api/admin/admins/bulk-operation', payload);
+      setSelectedAdminIds([]);
+      fetchAdmins();
+    } catch (error) {
+      console.error('Error performing bulk operation:', error);
+    }
+  };
+
+  const handleSelectionChange = (newSelection: string[]) => {
+    setSelectedAdminIds(newSelection);
+  };
+
   const getRoleChipColor = (role: string) => {
     switch (role) {
       case 'SUPER_ADMIN':
@@ -139,23 +198,88 @@ const Admins: React.FC = () => {
     }
   };
 
+  const getRoleTooltip = (role: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'Can manage admins, users, events, and system settings';
+      case 'ADMIN':
+        return 'Can manage users, events, and organizers';
+      default:
+        return '';
+    }
+  };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDateShort = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const isCurrentAdmin = (adminId: string) => {
+    return user?.id === adminId;
+  };
+
   const columns: GridColDef[] = [
-    { field: 'firstName', headerName: 'First Name', flex: 1 },
+    { 
+      field: 'firstName', 
+      headerName: 'First Name', 
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {params.value}
+          {isCurrentAdmin(params.row.adminId) && (
+            <Chip 
+              label="You" 
+              size="small" 
+              color="primary" 
+              sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }} 
+            />
+          )}
+        </Box>
+      )
+    },
     { field: 'lastName', headerName: 'Last Name', flex: 1 },
     { field: 'email', headerName: 'Email', flex: 1.5 },
-    { field: 'phoneNumber', headerName: 'Phone', flex: 1 },
+    { 
+      field: 'phoneNumber', 
+      headerName: 'Phone', 
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2">
+          {formatPhoneNumber(params.value)}
+        </Typography>
+      )
+    },
     { 
       field: 'role', 
       headerName: 'Role', 
       flex: 1,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip 
-          label={params.value} 
-          color={getRoleChipColor(params.value as string)} 
-          variant="outlined" 
-          size="small" 
-          sx={{ fontWeight: 600 }}
-        />
+        <Tooltip title={getRoleTooltip(params.value as string)} arrow>
+          <Chip 
+            label={params.value} 
+            color={getRoleChipColor(params.value as string)} 
+            variant="outlined" 
+            size="small" 
+            sx={{ fontWeight: 600, cursor: 'help' }}
+          />
+        </Tooltip>
       )
     },
     {
@@ -170,6 +294,47 @@ const Admins: React.FC = () => {
           sx={{ fontWeight: 500 }}
         />
       )
+    },
+    {
+      field: 'lastLoginAt',
+      headerName: 'Last Login',
+      flex: 1.2,
+      renderCell: (params: GridRenderCellParams) => {
+        const fullTimestamp = formatDateTime(params.value);
+        const shortDate = formatDateShort(params.value);
+        return (
+          <Tooltip title={fullTimestamp} arrow placement="top">
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: params.value ? 'text.primary' : 'text.secondary',
+                cursor: params.value ? 'help' : 'default'
+              }}
+            >
+              {shortDate}
+            </Typography>
+          </Tooltip>
+        );
+      }
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created At',
+      flex: 1.2,
+      renderCell: (params: GridRenderCellParams) => {
+        const fullTimestamp = formatDateTime(params.value);
+        const shortDate = formatDateShort(params.value);
+        return (
+          <Tooltip title={fullTimestamp} arrow placement="top">
+            <Typography 
+              variant="body2"
+              sx={{ cursor: 'help' }}
+            >
+              {shortDate}
+            </Typography>
+          </Tooltip>
+        );
+      }
     },
     {
       field: 'actions',
@@ -281,6 +446,89 @@ const Admins: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Bulk Actions Toolbar */}
+      {selectedAdminIds.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="body1" fontWeight={500}>
+              {selectedAdminIds.length} admin(s) selected
+            </Typography>
+            <Box>
+              <Button
+                variant="outlined"
+                color="success"
+                size="small"
+                onClick={() => handleBulkOperation('ACTIVATE')}
+                disabled={!isSuperAdmin()}
+                sx={{ mr: 1 }}
+              >
+                Activate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => handleBulkOperation('DEACTIVATE')}
+                disabled={!isSuperAdmin()}
+                sx={{ mr: 1 }}
+              >
+                Deactivate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                onClick={() => handleBulkOperation('DELETE')}
+                disabled={!isSuperAdmin()}
+              >
+                Delete Selected
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
+      {/* Search and Filters */}
+      <Paper 
+        sx={{ 
+          p: 2,
+          mb: 2,
+          borderRadius: 3,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(0,0,0,0.05)'
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="inactive">Inactive</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
       
       <Paper 
         sx={{ 
@@ -300,16 +548,27 @@ const Admins: React.FC = () => {
               rows={admins}
               columns={columns}
               getRowId={(row) => row.adminId}
+              checkboxSelection
+              rowSelectionModel={selectedAdminIds}
+              onRowSelectionModelChange={(newSelection) => {
+                handleSelectionChange(newSelection as string[]);
+              }}
               initialState={{
                 pagination: {
                   paginationModel: {
                     pageSize: 10,
                   },
                 },
+                sorting: {
+                  sortModel: [{ field: 'createdAt', sort: 'desc' }],
+                },
               }}
               pageSizeOptions={[10, 25, 50]}
               disableRowSelectionOnClick
               autoHeight
+              getRowClassName={(params) => 
+                isCurrentAdmin(params.row.adminId) ? 'current-admin-row' : ''
+              }
               sx={{
                 '& .MuiDataGrid-columnHeaders': {
                   backgroundColor: 'rgba(211, 47, 47, 0.1)',
@@ -320,6 +579,12 @@ const Admins: React.FC = () => {
                 },
                 '& .MuiDataGrid-row:hover': {
                   backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                },
+                '& .current-admin-row': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                  },
                 },
               }}
             />

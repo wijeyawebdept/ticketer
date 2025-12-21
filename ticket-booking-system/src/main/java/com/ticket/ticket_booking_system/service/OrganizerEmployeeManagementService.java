@@ -1,10 +1,13 @@
 package com.ticket.ticket_booking_system.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +26,7 @@ import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -40,6 +44,43 @@ public class OrganizerEmployeeManagementService {
     public Page<OrganizerEmployeeDTO> getAllEmployees(Pageable pageable) {
         return employeeRepository.findByActiveNot(-1, pageable)
                 .map(this::convertToDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrganizerEmployeeDTO> searchEmployees(String search, Integer active, UUID organizerId, Pageable pageable) {
+        Specification<OrganizerEmployee> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // Exclude deleted employees
+            predicates.add(criteriaBuilder.notEqual(root.get("active"), -1));
+            
+            // Search filter (firstName, lastName, email)
+            if (search != null && !search.trim().isEmpty()) {
+                String searchPattern = "%" + search.toLowerCase() + "%";
+                Predicate firstNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("firstName")), searchPattern);
+                Predicate lastNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("lastName")), searchPattern);
+                Predicate emailPredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("email")), searchPattern);
+                
+                predicates.add(criteriaBuilder.or(firstNamePredicate, lastNamePredicate, emailPredicate));
+            }
+            
+            // Active/Inactive filter
+            if (active != null) {
+                predicates.add(criteriaBuilder.equal(root.get("active"), active));
+            }
+            
+            // Organizer filter
+            if (organizerId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("organizer").get("organizerId"), organizerId));
+            }
+            
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        return employeeRepository.findAll(spec, pageable).map(this::convertToDTO);
     }
 
     @Transactional(readOnly = true)

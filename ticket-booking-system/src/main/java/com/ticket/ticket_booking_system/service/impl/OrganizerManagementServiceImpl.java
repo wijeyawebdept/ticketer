@@ -1,10 +1,12 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,8 @@ import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.OrganizerManagementService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class OrganizerManagementServiceImpl implements OrganizerManagementService {
@@ -93,6 +97,43 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
     @Transactional(readOnly = true)
     public Page<OrganizerResponse> getAllOrganizers(Pageable pageable) {
         Page<Organizer> organizers = organizerRepository.findByActiveNot(-1, pageable);
+        return organizers.map(this::mapOrganizerToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrganizerResponse> searchOrganizers(String searchTerm, Integer active, Pageable pageable) {
+        Specification<Organizer> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Search in firstName, lastName, email, and organizationName
+            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+                String searchPattern = "%" + searchTerm.toLowerCase() + "%";
+                Predicate firstNamePredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("firstName")), searchPattern);
+                Predicate lastNamePredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("lastName")), searchPattern);
+                Predicate emailPredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("email")), searchPattern);
+                Predicate organizationPredicate = criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("organizationName")), searchPattern);
+                
+                predicates.add(criteriaBuilder.or(firstNamePredicate, lastNamePredicate, 
+                        emailPredicate, organizationPredicate));
+            }
+
+            // Filter by active status
+            if (active != null) {
+                predicates.add(criteriaBuilder.equal(root.get("active"), active));
+            } else {
+                // Default: exclude soft-deleted organizers
+                predicates.add(criteriaBuilder.notEqual(root.get("active"), -1));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Organizer> organizers = organizerRepository.findAll(spec, pageable);
         return organizers.map(this::mapOrganizerToResponse);
     }
 

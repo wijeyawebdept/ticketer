@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -16,7 +16,10 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Autocomplete
+  Autocomplete,
+  Chip,
+  Tooltip,
+  InputAdornment
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { 
@@ -25,9 +28,12 @@ import {
   Delete as DeleteIcon, 
   Refresh as RefreshIcon,
   CheckCircle as ActivateIcon,
-  Block as DeactivateIcon
+  Block as DeactivateIcon,
+  Search as SearchIcon,
+  DeleteSweep as DeleteSweepIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
+import { formatPhoneNumber } from '../../utils/formatters';
 
 interface OrganizerEmployee {
   employeeId: string;
@@ -75,6 +81,9 @@ const OrganizerEmployees: React.FC = () => {
   const [employees, setEmployees] = useState<OrganizerEmployee[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -95,35 +104,49 @@ const OrganizerEmployees: React.FC = () => {
     hireDate: ''
   });
 
-  useEffect(() => {
-    fetchEmployees();
-    fetchOrganizers();
-  }, []);
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [selectedOrganizerId]);
-
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      let response;
+      const params = new URLSearchParams();
+      params.append('page', '0');
+      params.append('size', '1000');
+      
       if (selectedOrganizerId) {
-        response = await api.get<{ content: OrganizerEmployee[] }>(`/api/admin/organizer-employees/by-organizer/${selectedOrganizerId}`, {
-          params: { page: 0, size: 1000 }
-        });
-      } else {
-        response = await api.get<{ content: OrganizerEmployee[] }>('/api/admin/organizer-employees', {
-          params: { page: 0, size: 1000 }
-        });
+        params.append('organizerId', selectedOrganizerId);
       }
-      setEmployees(response.data.content);
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      if (statusFilter !== 'all') {
+        params.append('active', statusFilter === 'active' ? '1' : '0');
+      }
+      
+      const response = await api.get<{ content: OrganizerEmployee[] }>(
+        `/api/admin/organizer-employees?${params.toString()}`
+      );
+      setEmployees(response.data.content || []);
     } catch (err: any) {
       setError(err.response?.data || 'Failed to fetch organizer employees');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedOrganizerId, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchOrganizers();
+  }, [fetchEmployees]);
+
+  // Debounce search
+  useEffect(() => {
+    if (searchQuery) {
+      const timer = setTimeout(() => {
+        fetchEmployees();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const fetchOrganizers = async () => {
     try {
@@ -251,22 +274,78 @@ const OrganizerEmployees: React.FC = () => {
     }
   };
 
+  const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
+    if (selectedEmployeeIds.length === 0) return;
+
+    try {
+      for (const employeeId of selectedEmployeeIds) {
+        if (operation === 'ACTIVATE') {
+          await api.patch(`/api/admin/organizer-employees/${employeeId}/activate`);
+        } else if (operation === 'DEACTIVATE') {
+          await api.patch(`/api/admin/organizer-employees/${employeeId}/deactivate`);
+        } else if (operation === 'DELETE') {
+          await api.delete(`/api/admin/organizer-employees/${employeeId}`);
+        }
+      }
+      setSelectedEmployeeIds([]);
+      setSuccess(`Bulk operation completed for ${selectedEmployeeIds.length} employee(s)`);
+      fetchEmployees();
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to perform bulk operation');
+    }
+  };
+
+  const handleSelectionChange = (newSelection: string[]) => {
+    setSelectedEmployeeIds(newSelection);
+  };
+
   const columns: GridColDef[] = [
     { field: 'firstName', headerName: 'First Name', width: 120 },
     { field: 'lastName', headerName: 'Last Name', width: 120 },
     { field: 'email', headerName: 'Email', width: 200 },
-    { field: 'organizationName', headerName: 'Organization', width: 180 },
+    { 
+      field: 'organizationName', 
+      headerName: 'Organization', 
+      width: 180,
+      renderCell: (params: GridRenderCellParams) => (
+        <Tooltip title={params.value || 'N/A'} arrow placement="top">
+          <Typography 
+            variant="body2"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              cursor: 'help'
+            }}
+          >
+            {params.value || 'N/A'}
+          </Typography>
+        </Tooltip>
+      )
+    },
     { field: 'employeePosition', headerName: 'Position', width: 150 },
     { field: 'department', headerName: 'Department', width: 130 },
-    { field: 'phoneNumber', headerName: 'Phone', width: 130 },
+    { 
+      field: 'phoneNumber', 
+      headerName: 'Phone', 
+      width: 130,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography variant="body2">
+          {formatPhoneNumber(params.value)}
+        </Typography>
+      )
+    },
     {
       field: 'active',
       headerName: 'Status',
       width: 100,
       renderCell: (params: GridRenderCellParams) => (
-        <Box component="span" sx={{ color: params.value ? 'success.main' : 'error.main' }}>
-          {params.value ? 'Active' : 'Inactive'}
-        </Box>
+        <Chip
+          label={params.value ? 'Active' : 'Inactive'}
+          color={params.value ? 'success' : 'default'}
+          size="small"
+          sx={{ fontWeight: 500 }}
+        />
       )
     },
     {
@@ -276,31 +355,37 @@ const OrganizerEmployees: React.FC = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
-            <EditIcon />
-          </IconButton>
+          <Tooltip title="Edit Employee" arrow>
+            <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
           {params.row.active ? (
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handleDeactivateEmployee(params.row.employeeId)}
-              title="Deactivate Employee"
-            >
-              <DeactivateIcon />
-            </IconButton>
+            <Tooltip title="Deactivate Employee" arrow>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => handleDeactivateEmployee(params.row.employeeId)}
+              >
+                <DeactivateIcon />
+              </IconButton>
+            </Tooltip>
           ) : (
-            <IconButton
-              size="small"
-              color="success"
-              onClick={() => handleActivateEmployee(params.row.employeeId)}
-              title="Activate Employee"
-            >
-              <ActivateIcon />
-            </IconButton>
+            <Tooltip title="Activate Employee" arrow>
+              <IconButton
+                size="small"
+                color="success"
+                onClick={() => handleActivateEmployee(params.row.employeeId)}
+              >
+                <ActivateIcon />
+              </IconButton>
+            </Tooltip>
           )}
-          <IconButton size="small" color="warning" onClick={() => handleDeleteClick(params.row)}>
-            <DeleteIcon />
-          </IconButton>
+          <Tooltip title="Delete Employee" arrow>
+            <IconButton size="small" color="warning" onClick={() => handleDeleteClick(params.row)}>
+              <DeleteSweepIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
       )
     }
@@ -331,9 +416,11 @@ const OrganizerEmployees: React.FC = () => {
               isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
             />
           )}
-          <IconButton onClick={fetchEmployees} sx={{ mr: 1 }}>
-            <RefreshIcon />
-          </IconButton>
+          <Tooltip title="Refresh" arrow>
+            <IconButton onClick={fetchEmployees} sx={{ mr: 1 }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -344,6 +431,78 @@ const OrganizerEmployees: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Search and Filter Section */}
+      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          size="small"
+          placeholder="Search by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ flexGrow: 1, maxWidth: 400 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="inactive">Inactive</MenuItem>
+          </Select>
+        </FormControl>
+        <Typography variant="body2" color="text.secondary">
+          Total: {employees.length} employee{employees.length !== 1 ? 's' : ''}
+        </Typography>
+      </Box>
+
+      {/* Bulk Operations Toolbar */}
+      {selectedEmployeeIds.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="body1" fontWeight={500}>
+              {selectedEmployeeIds.length} employee{selectedEmployeeIds.length !== 1 ? 's' : ''} selected
+            </Typography>
+            <Box>
+              <Button
+                variant="outlined"
+                color="success"
+                size="small"
+                onClick={() => handleBulkOperation('ACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Activate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() => handleBulkOperation('DEACTIVATE')}
+                sx={{ mr: 1 }}
+              >
+                Deactivate Selected
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                onClick={() => handleBulkOperation('DELETE')}
+              >
+                Delete Selected
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
+
       <Paper sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={employees}
@@ -351,6 +510,9 @@ const OrganizerEmployees: React.FC = () => {
           getRowId={(row) => row.employeeId}
           loading={loading}
           pageSizeOptions={[10, 25, 50]}
+          checkboxSelection
+          onRowSelectionModelChange={(newSelection) => handleSelectionChange(newSelection as string[])}
+          rowSelectionModel={selectedEmployeeIds}
           initialState={{
             pagination: { paginationModel: { pageSize: 10 } },
           }}

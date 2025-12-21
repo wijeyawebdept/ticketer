@@ -1,12 +1,15 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.ticket.ticket_booking_system.dto.request.BulkUserOperationRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.UserDetailResponse;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
 
 public interface UserService {
@@ -23,6 +26,16 @@ public interface UserService {
     
     Page<UserResponse> searchUsers(String query, Pageable pageable);
     
+    /**
+     * Advanced search with multiple filters
+     */
+    Page<UserResponse> searchUsersAdvanced(String searchTerm, String role, Boolean active, Pageable pageable);
+    
+    /**
+     * Get detailed user information including bookings and activity logs
+     */
+    UserDetailResponse getUserDetails(UUID id);
+    
     UserResponse updateUser(UUID id, UserUpdateRequest request);
     
     void softDeleteUser(UUID id);
@@ -36,6 +49,11 @@ public interface UserService {
     UserResponse deactivateUser(UUID id);
     
     void changeUserRole(UUID id, String role);
+    
+    /**
+     * Perform bulk operations on multiple users
+     */
+    Map<String, Object> bulkOperation(BulkUserOperationRequest request);
     
     void resetPassword(UUID id, String newPassword);
     

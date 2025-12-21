@@ -1,33 +1,44 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ticket.ticket_booking_system.dto.request.BulkUserOperationRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.UserUpdateRequest;
+import com.ticket.ticket_booking_system.dto.response.UserDetailResponse;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.Role;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.RoleRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.UserService;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -37,6 +48,7 @@ public class UserServiceImpl implements UserService {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
+    private final BookingRepository bookingRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecycleBinService recycleBinService;
 
@@ -46,6 +58,7 @@ public class UserServiceImpl implements UserService {
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
             OrganizerEmployeeRepository employeeRepository,
+            BookingRepository bookingRepository,
             PasswordEncoder passwordEncoder,
             RecycleBinService recycleBinService) {
         this.userRepository = userRepository;
@@ -53,6 +66,7 @@ public class UserServiceImpl implements UserService {
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
+        this.bookingRepository = bookingRepository;
         this.passwordEncoder = passwordEncoder;
         this.recycleBinService = recycleBinService;
     }
@@ -469,5 +483,152 @@ public class UserServiceImpl implements UserService {
                 .createdAt(employee.getCreatedAt())
                 .lastLoginAt(employee.getLastLoginAt())
                 .build();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponse> searchUsersAdvanced(String searchTerm, String role, Boolean active, Pageable pageable) {
+        Specification<User> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // Search term filter (searches in firstName, lastName, email, phoneNumber)
+            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+                String searchPattern = "%" + searchTerm.toLowerCase() + "%";
+                Predicate searchPredicate = criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchPattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), searchPattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchPattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("phoneNumber")), searchPattern)
+                );
+                predicates.add(searchPredicate);
+            }
+            
+            // Role filter
+            if (role != null && !role.trim().isEmpty()) {
+                try {
+                    User.Role enumRole = User.Role.valueOf(role.toUpperCase());
+                    predicates.add(criteriaBuilder.equal(root.get("role"), enumRole));
+                } catch (IllegalArgumentException e) {
+                    // Invalid role, ignore this filter
+                }
+            }
+            
+            // Active status filter
+            if (active != null) {
+                predicates.add(criteriaBuilder.equal(root.get("active"), active ? 1 : 0));
+            }
+            
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        Page<User> users = userRepository.findAll(spec, pageable);
+        return users.map(this::mapUserToResponse);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetailResponse getUserDetails(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        
+        // Get user bookings
+        Page<Booking> bookingsPage = bookingRepository.findByUser(user, Pageable.ofSize(10));
+        List<Booking> bookings = bookingsPage.getContent();
+        
+        // Map bookings to summary
+        List<UserDetailResponse.BookingSummary> bookingSummaries = bookings.stream()
+                .map(booking -> UserDetailResponse.BookingSummary.builder()
+                        .bookingId(booking.getBookingId())
+                        .eventName(booking.getEvent() != null ? booking.getEvent().getName() : "N/A")
+                        .bookingDate(booking.getBookingTime())
+                        .status(booking.getStatus().name())
+                        .totalAmount(booking.getTotalAmount())
+                        .ticketCount(booking.getBookingSeats() != null ? booking.getBookingSeats().size() : 0)
+                        .build())
+                .toList();
+        
+        // Create activity logs (simplified - you can expand this based on your audit log system)
+        List<UserDetailResponse.ActivityLog> activityLogs = new ArrayList<>();
+        activityLogs.add(UserDetailResponse.ActivityLog.builder()
+                .action("ACCOUNT_CREATED")
+                .timestamp(user.getCreatedAt())
+                .description("User account was created")
+                .build());
+        
+        if (user.getLastLoginAt() != null) {
+            activityLogs.add(UserDetailResponse.ActivityLog.builder()
+                    .action("LAST_LOGIN")
+                    .timestamp(user.getLastLoginAt())
+                    .description("User last logged in")
+                    .build());
+        }
+        
+        // Build detailed response
+        return UserDetailResponse.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .dateOfBirth(user.getDateOfBirth())
+                .role(user.getRole().name())
+                .active(user.isActive())
+                .emailVerified(user.isEmailVerified())
+                .createdAt(user.getCreatedAt())
+                .lastLoginAt(user.getLastLoginAt())
+                .totalBookings((int) bookingsPage.getTotalElements())
+                .recentBookings(bookingSummaries)
+                .activityLogs(activityLogs)
+                .build();
+    }
+    
+    @Override
+    @Transactional
+    public Map<String, Object> bulkOperation(BulkUserOperationRequest request) {
+        List<UUID> successfulIds = new ArrayList<>();
+        List<Map<String, String>> errors = new ArrayList<>();
+        
+        for (UUID userId : request.getUserIds()) {
+            try {
+                switch (request.getOperation()) {
+                    case ACTIVATE:
+                        activateUser(userId);
+                        successfulIds.add(userId);
+                        break;
+                    case DEACTIVATE:
+                        deactivateUser(userId);
+                        successfulIds.add(userId);
+                        break;
+                    case CHANGE_ROLE:
+                        if (request.getNewRole() == null || request.getNewRole().trim().isEmpty()) {
+                            throw new IllegalArgumentException("New role is required for role change operation");
+                        }
+                        changeUserRole(userId, request.getNewRole());
+                        successfulIds.add(userId);
+                        break;
+                    case DELETE:
+                        softDeleteUser(userId);
+                        successfulIds.add(userId);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unknown operation type: " + request.getOperation());
+                }
+            } catch (Exception e) {
+                Map<String, String> error = new HashMap<>();
+                error.put("userId", userId.toString());
+                error.put("error", e.getMessage());
+                errors.add(error);
+            }
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("successful", successfulIds.size());
+        result.put("failed", errors.size());
+        result.put("successfulIds", successfulIds);
+        result.put("errors", errors);
+        result.put("message", String.format("Bulk operation completed: %d successful, %d failed", 
+                successfulIds.size(), errors.size()));
+        
+        return result;
     }
 }

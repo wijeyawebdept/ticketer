@@ -1,12 +1,14 @@
 package com.ticket.ticket_booking_system.service;
 
-import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
-import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
-import com.ticket.ticket_booking_system.dto.response.AdminResponse;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.UUID;
+import com.ticket.ticket_booking_system.dto.request.AdminCreateRequest;
+import com.ticket.ticket_booking_system.dto.request.AdminUpdateRequest;
+import com.ticket.ticket_booking_system.dto.request.BulkAdminOperationRequest;
+import com.ticket.ticket_booking_system.dto.response.AdminResponse;
 
 public interface AdminManagementService {
     
@@ -23,6 +25,15 @@ public interface AdminManagementService {
      * @return Page of admin responses
      */
     Page<AdminResponse> getAllAdmins(Pageable pageable);
+    
+    /**
+     * Search admins with filters
+     * @param searchTerm Search term for name/email
+     * @param active Active status filter
+     * @param pageable Pagination information
+     * @return Page of admin responses
+     */
+    Page<AdminResponse> searchAdmins(String searchTerm, Boolean active, Pageable pageable);
     
     /**
      * Get admin by ID
@@ -65,4 +76,11 @@ public interface AdminManagementService {
      * @return Updated admin response
      */
     AdminResponse deactivateAdmin(UUID adminId);
+    
+    /**
+     * Perform bulk operations on multiple admins
+     * @param request Bulk operation request with admin IDs and operation type
+     * @return Number of successfully processed admins
+     */
+    int bulkOperation(BulkAdminOperationRequest request);
 }

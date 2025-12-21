@@ -285,6 +285,7 @@ const RoleManagement: React.FC = () => {
                       size="small"
                       color="primary"
                       onClick={() => handleOpenDialog(role)}
+                      title="Edit Role"
                     >
                       <EditIcon />
                     </IconButton>
@@ -292,6 +293,7 @@ const RoleManagement: React.FC = () => {
                       size="small"
                       color="secondary"
                       onClick={() => handleToggleStatus(role.roleId)}
+                      title={role.isActive ? 'Deactivate Role' : 'Activate Role'}
                     >
                       {role.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
                     </IconButton>
@@ -300,6 +302,7 @@ const RoleManagement: React.FC = () => {
                       color="error"
                       onClick={() => handleDeleteClick(role)}
                       disabled={role.isSystemRole || role.roleName === 'SUPER_ADMIN'}
+                      title={(role.isSystemRole || role.roleName === 'SUPER_ADMIN') ? 'Cannot delete system role' : 'Delete Role'}
                     >
                       <DeleteIcon />
                     </IconButton>

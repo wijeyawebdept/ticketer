@@ -7,12 +7,13 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 
 @Repository
-public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmployee, UUID> {
+public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmployee, UUID>, JpaSpecificationExecutor<OrganizerEmployee> {
     Optional<OrganizerEmployee> findByEmail(String email);
     
     boolean existsByEmail(String email);
