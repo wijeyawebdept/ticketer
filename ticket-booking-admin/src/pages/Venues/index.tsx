@@ -291,8 +291,9 @@ const VenuesPage = () => {
           if (operation === 'ACTIVATE' || operation === 'DEACTIVATE') {
             const venue = venues.find(v => v.id === venueId);
             if (venue) {
-              const shouldToggle = (operation === 'ACTIVATE' && venue.status !== 1) || 
-                                  (operation === 'DEACTIVATE' && venue.status === 1);
+              const currentStatus = venue.status ?? 1; // Default to active if not set
+              const shouldToggle = (operation === 'ACTIVATE' && currentStatus !== 1) || 
+                                  (operation === 'DEACTIVATE' && currentStatus === 1);
               if (shouldToggle) {
                 await VenueService.toggleVenueStatus(venueId);
               }
@@ -498,7 +499,7 @@ const VenuesPage = () => {
               </IconButton>
             </span>
           </Tooltip>
-          {params.row.status === 1 ? (
+          {(params.row.status ?? 1) === 1 ? (
             <Tooltip title={isOrganizer ? "Organizers cannot deactivate venues" : "Deactivate Venue"}>
               <span>
                 <IconButton
@@ -711,12 +712,18 @@ const VenuesPage = () => {
         open={openForm}
         onClose={handleFormClose}
         fullWidth
-        maxWidth="md"
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, fontSize: '1.5rem', pb: 1 }}>
           {selectedVenue ? 'Edit Venue' : 'Add New Venue'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 2 }}>
           <VenueForm
             venue={selectedVenue}
             onClose={handleFormClose}
@@ -810,8 +817,8 @@ const VenuesPage = () => {
                     Status
                   </Typography>
                   <Chip
-                    label={infoVenue.status === 1 ? 'Active' : 'Inactive'}
-                    color={infoVenue.status === 1 ? 'success' : 'default'}
+                    label={(infoVenue.status ?? 1) === 1 ? 'Active' : 'Inactive'}
+                    color={(infoVenue.status ?? 1) === 1 ? 'success' : 'default'}
                     size="small"
                   />
                 </Box>

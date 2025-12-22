@@ -36,6 +36,11 @@ import AdminEventAssignments from './pages/AdminEventAssignments';
 import OrganizerAssignment from './pages/OrganizerAssignment';
 import { UserRole } from './types';
 
+// Public pages
+import Home from './pages/Public/Home';
+import EventDetails from './pages/Public/EventDetails';
+import Gallery from './pages/Public/Gallery';
+
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
 const AuthTesterPage = lazy(() => import('./pages/AuthTester'));
@@ -169,7 +174,14 @@ function App() {
         <CurrencyProvider>
           <Router>
           <Routes>
+            {/* Public customer-facing routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/event/:id" element={<EventDetails />} />
+            <Route path="/gallery" element={<Gallery />} />
+            
             {/* Public authentication routes */}
+            <Route path="/admin/login" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/login/restricted" element={<RestrictedLogin />} />
             <Route path="/register" element={<Register />} />
@@ -188,23 +200,41 @@ function App() {
             {/* Admin routes - ONLY for ADMIN users */}
             <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
               <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="/admin/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/admin/events" element={<Events />} />
                 <Route path="/events/:eventId/schedules" element={<EventSchedules />} />
+                <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/users" element={<Users />} />
+                <Route path="/admin/users" element={<Users />} />
                 <Route path="/admins" element={<Admins />} />
+                <Route path="/admin/admins" element={<Admins />} />
                 <Route path="/organizers" element={<Organizers />} />
+                <Route path="/admin/organizers" element={<Organizers />} />
                 <Route path="/organizer-employees" element={<OrganizerEmployees />} />
+                <Route path="/admin/organizer-employees" element={<OrganizerEmployees />} />
                 <Route path="/event-assignments" element={<AdminEventAssignments />} />
+                <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
                 <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
+                <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
                 <Route path="/venues" element={<Venues />} />
+                <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
+                <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/bookings" element={<Bookings />} />
+                <Route path="/admin/bookings" element={<Bookings />} />
                 <Route path="/transactions" element={<Transactions />} />
+                <Route path="/admin/transactions" element={<Transactions />} />
                 <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
+                <Route path="/admin/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/admin/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/admin/settings" element={<Settings />} />
                 <Route path="/recycle-bin" element={<RecycleBin />} />
+                <Route path="/admin/recycle-bin" element={<RecycleBin />} />
               </Route>
             </Route>
 
@@ -258,8 +288,8 @@ function App() {
             </Route>
 
             {/* Default redirect - use role-based routing */}
-            <Route path="/" element={<RoleBasedRedirect />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="/admin-portal" element={<RoleBasedRedirect />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
         </CurrencyProvider>

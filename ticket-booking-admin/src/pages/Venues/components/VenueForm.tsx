@@ -6,8 +6,11 @@ import {
   Grid, 
   Typography,
   Divider,
-  Alert
+  Alert,
+  CircularProgress,
+  Chip
 } from '@mui/material';
+import { Lock as LockIcon } from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { VenueService } from '../../../services';
@@ -25,8 +28,8 @@ interface FormValues {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
-  capacity: number;
+  postalCode: string;
+  capacity: number | '';
 }
 
 const validationSchema = Yup.object({
@@ -47,16 +50,18 @@ const validationSchema = Yup.object({
     .min(2, 'City must be at least 2 characters')
     .max(100, 'City must be less than 100 characters'),
   state: Yup.string()
-    .required('State is required')
-    .min(2, 'State must be at least 2 characters')
-    .max(100, 'State must be less than 100 characters'),
-  zipCode: Yup.string()
-    .required('ZIP code is required')
-    .matches(/^\d{5}(-\d{4})?$/, 'ZIP code must be in format 12345 or 12345-6789'),
+    .required('State/Province is required')
+    .min(2, 'State/Province must be at least 2 characters')
+    .max(100, 'State/Province must be less than 100 characters'),
+  postalCode: Yup.string()
+    .required('Postal code is required')
+    .min(3, 'Postal code must be at least 3 characters')
+    .max(10, 'Postal code must be less than 10 characters'),
   capacity: Yup.number()
     .required('Capacity is required')
     .min(1, 'Capacity must be at least 1')
     .max(1000000, 'Capacity must be less than 1,000,000')
+    .typeError('Capacity must be a valid number')
 });
 
 const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
@@ -66,8 +71,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
     address: venue?.address || '',
     city: venue?.city || '',
     state: venue?.state || '',
-    zipCode: venue?.zipCode || '',
-    capacity: venue?.capacity || 0
+    postalCode: venue?.zipCode || '',
+    capacity: venue?.capacity || ''
   };
 
   console.log('VenueForm - Editing venue:', venue);
@@ -89,8 +94,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
             address: values.address,
             city: values.city,
             state: values.state,
-            zipCode: values.zipCode,
-            capacity: values.capacity
+            zipCode: values.postalCode,
+            capacity: Number(values.capacity)
           };
 
           if (venue?.id) {
@@ -116,18 +121,44 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
         }
       }}
     >
-      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
+      {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => {
+        const isFormValid = Object.keys(errors).length === 0 && 
+          values.name && values.description && values.address && values.city && 
+          values.state && values.postalCode && values.capacity;
+        const hasChanges = JSON.stringify(values) !== JSON.stringify(initialValues);
+
+        return (
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Venue Information</Typography>
+          {/* Admin Context Banner */}
+          <Alert 
+            severity="info" 
+            icon={<LockIcon />} 
+            sx={{ 
+              mb: 3,
+              bgcolor: 'rgba(25, 118, 210, 0.08)',
+              '& .MuiAlert-icon': {
+                color: '#1976d2'
+              }
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              <strong>Admin Only:</strong> Creating and managing venues is restricted to administrators.
+            </Typography>
+          </Alert>
+
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Venue Information</Typography>
+            {venue?.id && <Chip label="Editing" size="small" color="primary" />}
+          </Box>
           <Divider sx={{ mb: 3 }} />
 
           {venue?.id && (
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Alert severity="info" sx={{ mb: 3 }}>
               After saving, you can configure seating arrangements for this venue in the separate seating management page.
             </Alert>
           )}
 
-          <Grid container spacing={2}>
+          <Grid container spacing={2.5}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -139,6 +170,16 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 error={touched.name && Boolean(errors.name)}
                 helperText={touched.name && errors.name ? errors.name as string : undefined}
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
@@ -148,14 +189,28 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 label="Description"
                 name="description"
                 multiline
-                rows={3}
+                rows={4}
                 value={values.description}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.description && Boolean(errors.description)}
-                helperText={touched.description && errors.description ? errors.description as string : undefined}
-                placeholder="Describe the venue (e.g., features, amenities, atmosphere, etc.)"
+                helperText={
+                  touched.description && errors.description 
+                    ? errors.description as string 
+                    : `${values.description.length}/500 characters`
+                }
+                placeholder="Brief description of the venue, facilities, seating type, amenities, parking availability, accessibility features, etc."
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
@@ -169,7 +224,18 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 onBlur={handleBlur}
                 error={touched.address && Boolean(errors.address)}
                 helperText={touched.address && errors.address ? errors.address as string : undefined}
+                placeholder="Street address, building number, etc."
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
@@ -184,13 +250,23 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 error={touched.city && Boolean(errors.city)}
                 helperText={touched.city && errors.city ? errors.city as string : undefined}
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="State"
+                label="State / Province"
                 name="state"
                 value={values.state}
                 onChange={handleChange}
@@ -198,20 +274,41 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 error={touched.state && Boolean(errors.state)}
                 helperText={touched.state && errors.state ? errors.state as string : undefined}
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="ZIP Code"
-                name="zipCode"
-                value={values.zipCode}
+                label="Postal Code"
+                name="postalCode"
+                value={values.postalCode}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                error={touched.zipCode && Boolean(errors.zipCode)}
-                helperText={touched.zipCode && errors.zipCode ? errors.zipCode as string : undefined}
+                error={touched.postalCode && Boolean(errors.postalCode)}
+                helperText={touched.postalCode && errors.postalCode ? errors.postalCode as string : 'Enter postal/ZIP code'}
+                placeholder="e.g., 12345 or A1B 2C3"
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
@@ -225,25 +322,58 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.capacity && Boolean(errors.capacity)}
-                helperText={touched.capacity && errors.capacity ? errors.capacity as string : undefined}
+                helperText={touched.capacity && errors.capacity ? errors.capacity as string : 'Maximum number of attendees'}
+                placeholder="e.g., 500"
                 required
+                inputProps={{ min: 1 }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: 2
+                      }
+                    }
+                  }
+                }}
               />
             </Grid>
 
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                 <Button
                   onClick={onClose}
                   disabled={isSubmitting}
                   variant="outlined"
+                  sx={{
+                    minWidth: 100,
+                    fontWeight: 600
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isFormValid || !hasChanges}
                   variant="contained"
                   color="primary"
+                  startIcon={isSubmitting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : null}
+                  sx={{
+                    minWidth: 150,
+                    fontWeight: 600,
+                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                    '&:hover': {
+                      boxShadow: '0 6px 16px rgba(25, 118, 210, 0.4)',
+                    },
+                    '&:disabled': {
+                      bgcolor: '#ccc',
+                      color: '#666'
+                    }
+                  }}
                 >
                   {getButtonText(isSubmitting, !!venue?.id)}
                 </Button>
@@ -251,7 +381,8 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
             </Grid>
           </Grid>
         </Box>
-      )}
+        );
+      }}
     </Formik>
   );
 };

@@ -1,9 +1,5 @@
 /**
  * Format phone number to a readable format
- * Examples:
- *   0712345678 -> 071 234 5678
- *   +94712345678 -> +94 71 234 5678
- *   1234567890 -> 123 456 7890
  */
 export const formatPhoneNumber = (phoneNumber: string | undefined | null): string => {
   if (!phoneNumber) return 'N/A';

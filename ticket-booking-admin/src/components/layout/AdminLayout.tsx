@@ -165,7 +165,6 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/bookings' },
     { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/recycle-bin' },
-    { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/profile' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/settings' },
   ];
 
@@ -218,7 +217,7 @@ const AdminLayout: React.FC = () => {
               onClose={handleClose}
               sx={{ mt: 1 }}
             >
-              <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
+              <MenuItem onClick={() => { handleClose(); navigate('/settings'); }}>
                 <ListItemIcon>
                   <AccountCircleIcon fontSize="small" />
                 </ListItemIcon>
