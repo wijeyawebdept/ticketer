@@ -48,6 +48,8 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/uploads/**",
                     "/uploads/profile-pictures/**",
+                    "/api/public/**",
+                    "/api/venues/**",
                     "/error"
                 ).permitAll()
                 .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")

@@ -49,4 +49,13 @@ public interface EventService {
     EventResponse activateEvent(UUID eventId);
 
     EventResponse deactivateEvent(UUID eventId);
+    
+    // Public event methods (no authentication required)
+    Page<EventResponse> getPublishedEvents(Pageable pageable);
+    
+    Page<EventResponse> getUpcomingPublishedEvents(Pageable pageable);
+    
+    EventResponse getPublishedEventById(UUID eventId);
+    
+    Page<EventResponse> searchPublishedEvents(String query, Pageable pageable);
 }

@@ -85,12 +85,6 @@ const SeatingArrangement: React.FC = () => {
   const [openSeatDialog, setOpenSeatDialog] = useState(false);
   const [showScreen, setShowScreen] = useState(true);
 
-  // Determine if user is admin based on URL path or user role
-  const isAdmin = location.pathname.includes('/admin/') || 
-                 location.pathname.includes('/organizer/') || 
-                 (user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || 
-                  user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER');
-  
   // Initialize WebSocket connection for real-time updates
   const { updateSeatStatus } = useSeatWebSocket(id || '');
 

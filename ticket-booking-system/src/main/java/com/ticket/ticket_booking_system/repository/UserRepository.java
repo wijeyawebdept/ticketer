@@ -18,7 +18,11 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     
     Optional<User> findByEmail(String email);
     
+    Optional<User> findByGoogleId(String googleId);
+    
     boolean existsByEmail(String email);
+    
+    boolean existsByGoogleId(String googleId);
     
     Page<User> findByRole(User.Role role, Pageable pageable);
     

@@ -21,6 +21,8 @@ import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.dto.request.HoldSeatsRequest;
 import com.ticket.ticket_booking_system.dto.response.SeatResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.BookingService;
 import com.ticket.ticket_booking_system.service.SeatService;
 import com.ticket.ticket_booking_system.service.VenueSeatingService;
@@ -42,6 +44,7 @@ public class BookingFlowController {
     private final SeatService seatService;
     private final VenueSeatingService venueSeatingService;
     private final BookingService bookingService;
+    private final UserRepository userRepository;
     
     /**
      * Get all seats for an event with their availability status
@@ -192,20 +195,30 @@ public class BookingFlowController {
     }
     
     /**
+     * Get current user's bookings
+     * GET /api/bookings
+     */
+    @GetMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<Booking>> getMyBookings(Authentication authentication) {
+        UUID userId = extractUserIdFromAuth(authentication);
+        
+        log.info("Fetching bookings for user: {}", userId);
+        List<Booking> bookings = bookingService.getBookingsByUserId(userId);
+        return ResponseEntity.ok(bookings);
+    }
+    
+    /**
      * Extract user ID from authentication context
-     * This needs to be adapted based on your authentication implementation
+     * Fetches user by email from authentication principal
      */
     private UUID extractUserIdFromAuth(Authentication authentication) {
-        // TODO: Implement based on your CustomUserDetails implementation
-        // For now, returning a placeholder
-        // You might have something like:
-        // CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        // return userDetails.getUserId();
+        String email = authentication.getName();
+        log.info("Extracting user ID for email: {}", email);
         
-        try {
-            return UUID.fromString(authentication.getName());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Invalid user ID format");
-        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found with email: " + email));
+        
+        return user.getUserId();
     }
 }

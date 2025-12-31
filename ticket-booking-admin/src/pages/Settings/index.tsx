@@ -1291,6 +1291,7 @@ const Settings: React.FC = () => {
 
         {/* System Settings */}
         <TabPanel value={activeTab} index={4}>
+          <Box sx={{ maxWidth: 900, mx: 'auto' }}>
           <Grid container spacing={3}>
             {success && <Grid item xs={12}><Alert severity="success">{success}</Alert></Grid>}
             {error && <Grid item xs={12}><Alert severity="error">{error}</Alert></Grid>}
@@ -1381,6 +1382,7 @@ const Settings: React.FC = () => {
               </Button>
             </Grid>
           </Grid>
+          </Box>
         </TabPanel>
 
         {/* Role Management */}

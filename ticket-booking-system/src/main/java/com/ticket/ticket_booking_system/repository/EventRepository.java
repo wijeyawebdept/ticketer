@@ -47,4 +47,22 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     
     // Delete all events of a specific organizer
     void deleteByOrganizer_OrganizerId(UUID organizerId);
+    
+    // Public event queries (no authentication required)
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
+           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+           "ORDER BY e.createdAt DESC")
+    Page<Event> findAllPublishedEvents(Pageable pageable);
+    
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
+           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+           "ORDER BY e.createdAt DESC")
+    Page<Event> findUpcomingPublishedEvents(Pageable pageable);
+    
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
+           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+           "AND (LOWER(e.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY e.createdAt DESC")
+    Page<Event> searchPublishedEvents(String query, Pageable pageable);
 }

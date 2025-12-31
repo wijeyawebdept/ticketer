@@ -23,6 +23,7 @@ import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
+import AuthService from '../../services/auth.service';
 
 // Add this for better type checking
 type FormikBag<V> = {
@@ -73,15 +74,19 @@ const RestrictedLogin: React.FC = () => {
       setError(null);
       console.log('Attempting restricted login with:', { email: values.email });
       
-      // Clear any existing tokens before login attempt
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
+      // Set storage type to sessionStorage for restricted logins (tab-specific)
+      AuthService.setStorageType('sessionStorage');
+      
+      // Clear only sessionStorage tokens (don't touch localStorage for customer sessions)
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('user_data');
+      sessionStorage.removeItem('user');
       
       await login(values.email, values.password);
-      console.log('Login successful, token stored:', !!localStorage.getItem('auth_token'));
+      console.log('Restricted login successful, token stored in sessionStorage:', !!sessionStorage.getItem('auth_token'));
       
       // Redirect based on user role - only allow restricted roles
-      const userData = localStorage.getItem('user');
+      const userData = sessionStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
         console.log('User role after login:', user.role);
@@ -99,8 +104,9 @@ const RestrictedLogin: React.FC = () => {
           navigate('/dashboard');
         } else {
           // If user is a regular USER, deny access
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('auth_token');
+          sessionStorage.removeItem('user');
+          sessionStorage.removeItem('user_data');
           setError('Access denied. This login is only for administrators, organizers, and organizer employees.');
           return;
         }
@@ -115,11 +121,27 @@ const RestrictedLogin: React.FC = () => {
       
       let errorMessage = 'Login failed. Please try again.';
       
-      // Handle specific error cases
+      // Handle specific error cases with detailed messages
       if (err.response?.status === 401) {
-        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        const responseMessage = err.response?.data?.message?.toLowerCase() || '';
+        const errorCode = err.response?.data?.error_code || '';
+        
+        // Check specific error codes from backend
+        if (errorCode === 'INVALID_CREDENTIALS') {
+          errorMessage = '❌ Invalid email or password. Please check your admin credentials and try again.';
+        } else if (errorCode === 'USER_DISABLED') {
+          errorMessage = '⚠️ Your account has been disabled. Please contact the system administrator.';
+        } else if (responseMessage.includes('user not found') || responseMessage.includes('no user') || responseMessage.includes('does not exist')) {
+          errorMessage = '📧 No admin account found with this email address.';
+        } else {
+          errorMessage = '❌ Invalid email or password. Please verify your admin login credentials.';
+        }
       } else if (err.response?.status === 403) {
-        errorMessage = 'Account not activated. Please contact administrator.';
+        errorMessage = '🔒 Access denied. Your account may not be activated or you lack the required permissions.';
+      } else if (err.response?.status === 404) {
+        errorMessage = '📧 No account found with this email address. Please verify your email.';
+      } else if (err.response?.status === 500) {
+        errorMessage = '⚠️ Server error occurred. Please try again later or contact support.';
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {

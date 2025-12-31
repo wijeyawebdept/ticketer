@@ -7,9 +7,12 @@ import {
   Grid,
   useMediaQuery,
   useTheme,
+  CircularProgress,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import EventService from '../../../services/event.service';
+import { Event } from '../../../types';
 
 // Import carousel images from public folder
 const carouselImages = [
@@ -207,8 +210,30 @@ const EventCard: React.FC<EventCardProps> = ({
 
 const Home: React.FC = () => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const navigate = useNavigate();
+
+  // Load upcoming events
+  useEffect(() => {
+    const loadUpcomingEvents = async () => {
+      try {
+        setLoading(true);
+        const response = await EventService.getUpcomingPublishedEvents(0, 6);
+        console.log('Upcoming events response:', response);
+        console.log('First upcoming event:', response.content?.[0]);
+        setEvents(response.content || []);
+      } catch (error) {
+        console.error('Error loading events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUpcomingEvents();
+  }, []);
 
   // Auto-rotate carousel
   useEffect(() => {
@@ -311,31 +336,55 @@ const Home: React.FC = () => {
           Upcoming Events
         </Typography>
 
-        <Grid container>
-          <Grid item xs={12}>
-            <EventCard
-              title="DJ Bold Shark"
-              artists="DJ Sanya, DJ Doe, DJ Flower, Hosted by: MC Vartan"
-              venue="BMICH"
-              tickets="Tickets 2000/=, 3000/=, 5000/="
-              date="12/<strong>25</strong>"
-              day="Tuesday"
-              backgroundImage="/images/home-upcoming-events1.jpg"
-              eventId="1"
-            />
-
-            <EventCard
-              title="නැතිව බැරි මිනිහෙක්"
-              artists="රාජිත දිසානායක නාට්‍ය නිර්මාණයක්"
-              venue="කොළඹ  නව නගර ශාලාවේදී :: සවස 3.30 - 6.30"
-              tickets="Tickets 2000/=, 3000/=, 5000/="
-              date="12/<strong>25</strong>"
-              day="Tuesday"
-              backgroundImage="/images/home-upcoming-events2.jpg"
-              eventId="2"
-            />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress sx={{ color: '#ff1955' }} />
+          </Box>
+        ) : events.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" sx={{ color: '#666', fontFamily: 'Raleway, sans-serif' }}>
+              No upcoming events at the moment. Check back soon!
+            </Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {events.map((event) => (
+              <Grid item xs={12} key={event.id || event.eventId}>
+                <EventCard
+                  title={event.name}
+                  artists={event.description?.substring(0, 100) || ''}
+                  venue={event.venue?.name || 'TBA'}
+                  tickets={`From LKR ${event.basePrice || 'TBA'}`}
+                  date={new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                  day={new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' })}
+                  backgroundImage={event.imageUrl || '/images/default-event.jpg'}
+                  eventId={event.id || event.eventId}
+                />
+              </Grid>
+            ))}
           </Grid>
-        </Grid>
+        )}
+
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/events')}
+            sx={{
+              backgroundColor: '#ff1955',
+              color: '#fff',
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              px: 4,
+              py: 1.5,
+              '&:hover': {
+                backgroundColor: '#e01545',
+              },
+            }}
+          >
+            View All Events
+          </Button>
+        </Box>
       </Container>
     </Box>
   );

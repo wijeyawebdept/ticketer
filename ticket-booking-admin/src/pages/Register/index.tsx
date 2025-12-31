@@ -13,7 +13,9 @@ import {
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Formik, Form, FormikHelpers } from 'formik';
@@ -21,6 +23,7 @@ import * as Yup from 'yup';
 import { AuthService } from '../../services';
 import { RegisterRequest } from '../../services/auth.service';
 import { UserRole } from '../../types';
+import PublicNavbar from '../../components/public/PublicNavbar';
 
 // Extend the RegisterRequest interface to include new fields
 interface ExtendedRegisterRequest extends Omit<RegisterRequest, 'role'> {
@@ -70,6 +73,12 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasNumber: false,
+    hasSymbol: false
+  });
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
@@ -77,6 +86,19 @@ const Register: React.FC = () => {
 
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>, formikHandleChange: any) => {
+    const password = e.target.value;
+    formikHandleChange(e);
+
+    // Real-time password validation
+    setPasswordValidation({
+      minLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSymbol: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    });
   };
 
   const handleSubmit = async (
@@ -95,22 +117,41 @@ const Register: React.FC = () => {
       await AuthService.register(formData);
       navigate('/login', { state: { message: 'Registration successful! You can now log in.' } });
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || 
-        'Registration failed. Please check your information and try again.'
-      );
       console.error('Registration error details:', err);
       if (err.response?.data?.errors) {
         console.error('Validation errors:', err.response.data.errors);
       }
+      
+      let errorMessage = 'Registration failed. Please check your information and try again.';
+      const responseMessage = err.response?.data?.message?.toLowerCase() || '';
+      
+      // Check if error is due to email already exists
+      if (responseMessage.includes('email already') || responseMessage.includes('already exists') || responseMessage.includes('already registered')) {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="md">
-      <Paper elevation={6} sx={{ marginTop: 8, padding: 4 }}>
+    <Box
+      sx={{
+        backgroundColor: '#242a33',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: 4,
+      }}
+    >
+      <PublicNavbar />
+      <Container component="main" maxWidth="sm">
+        <Paper elevation={6} sx={{ padding: 4, backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 2 }}>
         <Box
           sx={{
             display: 'flex',
@@ -118,16 +159,41 @@ const Register: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
-            Ticket Booking Admin
+          <Typography 
+            component="h1" 
+            variant="h5" 
+            sx={{ 
+              mb: 1,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 700,
+              color: '#2c3e50',
+            }}
+          >
+            Welcome to Tickets.lk
           </Typography>
-          <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
-            Create New Account
+          <Typography 
+            component="h2" 
+            variant="h6" 
+            sx={{ 
+              mb: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 600,
+              color: '#2c3e50',
+            }}
+          >
+            Join Us Today
           </Typography>
           
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
               {error}
+              {error.includes('already registered') && (
+                <Box sx={{ mt: 1 }}>
+                  <Link to="/login" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
+                    Sign in here
+                  </Link>
+                </Box>
+              )}
             </Alert>
           )}
           
@@ -200,7 +266,7 @@ const Register: React.FC = () => {
                   label="Password"
                   type={showPassword ? 'text' : 'password'}
                   value={values.password}
-                  onChange={handleChange}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePasswordChange(e, handleChange)}
                   onBlur={handleBlur}
                   error={touched.password && Boolean(errors.password)}
                   helperText={touched.password && errors.password as string}
@@ -221,6 +287,57 @@ const Register: React.FC = () => {
                     ),
                   }}
                 />
+
+                {/* Password Requirements */}
+                {values.password && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
+                      Password Requirements:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {passwordValidation.minLength ? (
+                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        ) : (
+                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: passwordValidation.minLength ? 'success.main' : 'text.secondary' }}>
+                          Minimum 8 characters
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {passwordValidation.hasUppercase ? (
+                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        ) : (
+                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: passwordValidation.hasUppercase ? 'success.main' : 'text.secondary' }}>
+                          At least 1 uppercase letter
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {passwordValidation.hasNumber ? (
+                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        ) : (
+                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: passwordValidation.hasNumber ? 'success.main' : 'text.secondary' }}>
+                          At least 1 number
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {passwordValidation.hasSymbol ? (
+                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        ) : (
+                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: passwordValidation.hasSymbol ? 'success.main' : 'text.secondary' }}>
+                          At least 1 special character (!@#$%^&*...)
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
 
                 <TextField
                   fullWidth
@@ -256,17 +373,29 @@ const Register: React.FC = () => {
                   type="submit"
                   fullWidth
                   variant="contained"
-                  color="primary"
                   disabled={isSubmitting}
-                  sx={{ mt: 3, mb: 2, py: 1.5 }}
+                  sx={{ 
+                    mt: 3, 
+                    mb: 2, 
+                    py: 1.5,
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 700,
+                    backgroundColor: '#ff1955',
+                    color: '#fff',
+                    fontSize: '1rem',
+                    letterSpacing: '1px',
+                    '&:hover': {
+                      backgroundColor: '#e01545',
+                    },
+                  }}
                 >
-                  {isSubmitting ? <CircularProgress size={24} /> : 'Register'}
+                  {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Register'}
                 </Button>
 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>
                     Already have an account?{' '}
-                    <Link to="/login" style={{ textDecoration: 'none' }}>
+                    <Link to="/login" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
                       Sign in
                     </Link>
                   </Typography>
@@ -277,6 +406,7 @@ const Register: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+    </Box>
   );
 };
 

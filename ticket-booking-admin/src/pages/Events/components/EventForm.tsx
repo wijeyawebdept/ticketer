@@ -255,11 +255,17 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   }, []);
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
+    console.log('=== IMAGE CHANGE HANDLER CALLED ===');
     const file = e.target.files?.[0];
+    console.log('Selected file:', file);
+    
     if (file) {
+      console.log('File details:', { name: file.name, type: file.type, size: file.size });
+      
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
+        console.log('Invalid file type:', file.type);
         setValidationError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
         e.target.value = ''; // Clear the input
         return;
@@ -268,21 +274,28 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB in bytes
       if (file.size > maxSize) {
+        console.log('File too large:', file.size);
         setValidationError('Image size must not exceed 5MB. Please choose a smaller file.');
         e.target.value = ''; // Clear the input
         return;
       }
       
+      console.log('File validation passed, setting image states...');
       setValidationError(null);
       setSelectedImage(file);
       setFieldValue('imageFile', file);
+      console.log('selectedImage state updated, imageFile field set');
       
       // Create a preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string || null);
+        const preview = e.target?.result as string || null;
+        console.log('Preview created:', preview ? 'Yes' : 'No');
+        setImagePreview(preview);
       };
       reader.readAsDataURL(file);
+    } else {
+      console.log('No file selected');
     }
   };
 
@@ -410,6 +423,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         })
       })}
       onSubmit={async (values: FormValues, { setSubmitting, resetForm, setErrors, validateForm, setTouched }: FormikHelpers<FormValues>) => {
+        console.log('=== FORM SUBMISSION STARTED ===');
+        console.log('Form values:', values);
+        console.log('Is editing existing event:', !!event?.id);
+        console.log('Event ID:', event?.id);
+        console.log('Selected image:', selectedImage);
+        
         try {
           // Validate all steps before submission
           const allErrors: { [key: number]: string[] } = {};
@@ -479,27 +498,40 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           
           if (event?.id) {
             // Update existing event
+            console.log('Updating event with ID:', event.id);
+            console.log('Event data:', eventDataForApi);
             savedEvent = await EventService.updateEvent(event.id, eventDataForApi);
+            console.log('Event updated successfully:', savedEvent);
           } else {
             // Create new event
+            console.log('Creating new event');
+            console.log('Event data:', eventDataForApi);
             savedEvent = await EventService.createEvent(eventDataForApi);
+            console.log('Event created successfully:', savedEvent);
           }
           
           // Upload the image if one is selected
           if (selectedImage && savedEvent.id) {
+            console.log('Uploading image for event ID:', savedEvent.id);
             const formData = new FormData();
             formData.append('file', selectedImage);
-            await EventService.uploadEventImage(savedEvent.id, formData);
+            const imageUrl = await EventService.uploadEventImage(savedEvent.id, formData);
+            console.log('Image uploaded successfully:', imageUrl);
           }
           
           setValidationError(null);
           resetForm();
+          setSelectedImage(null);
+          setImagePreview(null);
           if (onSuccess) onSuccess();
         } catch (error) {
+          console.error('=== FORM SUBMISSION ERROR ===');
           console.error(`Error ${event ? 'updating' : 'creating'} event:`, error);
           
           // Extract error message from API response
           const apiError = error as ApiError;
+          console.error('API Error response:', apiError.response);
+          
           if (apiError.response?.data?.message) {
             setValidationError(apiError.response.data.message);
           } else {
@@ -972,12 +1004,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             {/* Admin Context Banner */}
             {user && (
               <Alert severity="info" icon={<LockIcon />} sx={{ mb: 3 }}>
-                <Typography variant="body2">
-                  <strong>Admin Context:</strong> Creating event as <Chip label={user.role} size="small" color="primary" sx={{ mx: 0.5 }} /> ({user.email})
-                  {user.role.includes('ORGANIZER') && (
-                    <> - Events will be associated with your organizer account</>
-                  )}
-                </Typography>
+                <Box>
+                  <Typography variant="body2" component="div">
+                    <strong>Admin Context:</strong> Creating event as <Chip label={user.role} size="small" color="primary" sx={{ mx: 0.5 }} /> ({user.email})
+                    {user.role.includes('ORGANIZER') && (
+                      <> - Events will be associated with your organizer account</>
+                    )}
+                  </Typography>
+                </Box>
               </Alert>
             )}
             
@@ -1060,6 +1094,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     color="primary"
                     disabled={isSubmitting || uploading}
                     startIcon={uploading ? <CircularProgress size={20} /> : <SaveIcon />}
+                    onClick={() => {
+                      console.log('=== SUBMIT BUTTON CLICKED ===');
+                      console.log('Active step:', activeStep);
+                      console.log('Steps length:', steps.length);
+                      console.log('Is submitting:', isSubmitting);
+                      console.log('Is uploading:', uploading);
+                      console.log('Button disabled:', isSubmitting || uploading);
+                    }}
                   >
                     {getButtonText(uploading, isSubmitting, values.status)}
                   </Button>

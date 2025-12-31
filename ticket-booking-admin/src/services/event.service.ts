@@ -51,6 +51,12 @@ class EventService {
     return response.data;
   }
 
+  // Public endpoint - no authentication required
+  async getPublicEventById(id: string): Promise<Event> {
+    const response = await api.get<Event>(`/api/public/events/${id}`);
+    return response.data;
+  }
+
   async getEventById(id: string): Promise<Event> {
     const basePath = this.getBasePath();
     const response = await api.get<Event>(`${basePath}/events/${id}`);
@@ -126,6 +132,27 @@ class EventService {
   async getEventStatistics(eventId: string): Promise<any> {
     const basePath = this.getBasePath();
     const response = await api.get<any>(`${basePath}/events/${eventId}/statistics`);
+    return response.data;
+  }
+
+  // Public event methods (no authentication required)
+  async getPublishedEvents(page: number = 0, size: number = 20): Promise<any> {
+    const response = await api.get<any>(`/api/public/events?page=${page}&size=${size}`);
+    return response.data;
+  }
+
+  async getUpcomingPublishedEvents(page: number = 0, size: number = 20): Promise<any> {
+    const response = await api.get<any>(`/api/public/events/upcoming?page=${page}&size=${size}`);
+    return response.data;
+  }
+
+  async getPublishedEventById(eventId: string): Promise<Event> {
+    const response = await api.get<Event>(`/api/public/events/${eventId}`);
+    return response.data;
+  }
+
+  async searchPublishedEvents(query: string, page: number = 0, size: number = 20): Promise<any> {
+    const response = await api.get<any>(`/api/public/events/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`);
     return response.data;
   }
 

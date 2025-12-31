@@ -60,8 +60,11 @@ const EventSchedules: React.FC = () => {
       return '/organizer/events';
     } else if (pathname.startsWith('/employee/')) {
       return '/employee/events';
+    } else if (pathname.startsWith('/admin/')) {
+      return '/admin/events';
     } else {
-      return '/events'; // Admin route
+      // Default to admin events (this page should only be accessed by admin/organizer/employee)
+      return '/admin/events';
     }
   };
 

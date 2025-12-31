@@ -3,9 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
 import AdminLayout from './components/layout/AdminLayout';
 import UserLayout from './components/layout/UserLayout';
@@ -40,10 +42,16 @@ import { UserRole } from './types';
 import Home from './pages/Public/Home';
 import EventDetails from './pages/Public/EventDetails';
 import Gallery from './pages/Public/Gallery';
+import PublicEvents from './pages/Public/Events';
+import UserProfile from './pages/Public/UserProfile';
+import UserBookings from './pages/Public/UserBookings';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
 const AuthTesterPage = lazy(() => import('./pages/AuthTester'));
+
+// Google OAuth Client ID - Replace with your actual Client ID
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE';
 
 // Create enhanced theme
 const theme = createTheme({
@@ -168,68 +176,59 @@ const theme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <CurrencyProvider>
-          <Router>
-          <Routes>
-            {/* Public customer-facing routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/event/:id" element={<EventDetails />} />
-            <Route path="/gallery" element={<Gallery />} />
-            
-            {/* Public authentication routes */}
-            <Route path="/admin/login" element={<Login />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/login/restricted" element={<RestrictedLogin />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/integration-test" element={<IntegrationTest />} />
-            <Route path="/auth-debug" element={
-              <Suspense fallback={<div>Loading debug tools...</div>}>
-                <AuthDebugPage />
-              </Suspense>
-            } />
-            <Route path="/auth-tester" element={
-              <Suspense fallback={<div>Loading API tester...</div>}>
-                <AuthTesterPage />
-              </Suspense>
-            } />
-            
-            {/* Admin routes - ONLY for ADMIN users */}
-            <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/admin/events" element={<Events />} />
-                <Route path="/events/:eventId/schedules" element={<EventSchedules />} />
-                <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/admin/users" element={<Users />} />
-                <Route path="/admins" element={<Admins />} />
-                <Route path="/admin/admins" element={<Admins />} />
-                <Route path="/organizers" element={<Organizers />} />
-                <Route path="/admin/organizers" element={<Organizers />} />
-                <Route path="/organizer-employees" element={<OrganizerEmployees />} />
-                <Route path="/admin/organizer-employees" element={<OrganizerEmployees />} />
-                <Route path="/event-assignments" element={<AdminEventAssignments />} />
-                <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
-                <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
-                <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <CurrencyProvider>
+            <Router>
+            <Routes>
+              {/* Public authentication routes - must come before protected routes */}
+              <Route path="/admin/login" element={<Login />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/login/restricted" element={<RestrictedLogin />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/integration-test" element={<IntegrationTest />} />
+              <Route path="/auth-debug" element={
+                <Suspense fallback={<div>Loading debug tools...</div>}>
+                  <AuthDebugPage />
+                </Suspense>
+              } />
+              <Route path="/auth-tester" element={
+                <Suspense fallback={<div>Loading API tester...</div>}>
+                  <AuthTesterPage />
+                </Suspense>
+              } />
+              
+              {/* Admin routes - ONLY for ADMIN users */}
+              <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                  <Route path="/admin/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/admin/events" element={<Events />} />
+                  <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
+                  <Route path="/admin/users" element={<Users />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/admin/admins" element={<Admins />} />
+                  <Route path="/admins" element={<Admins />} />
+                  <Route path="/admin/organizers" element={<Organizers />} />
+                  <Route path="/organizers" element={<Organizers />} />
+                  <Route path="/admin/organizer-employees" element={<OrganizerEmployees />} />
+                  <Route path="/organizer-employees" element={<OrganizerEmployees />} />
+                  <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
+                  <Route path="/event-assignments" element={<AdminEventAssignments />} />
+                  <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
+                  <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
                 <Route path="/venues" element={<Venues />} />
                 <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
-                <Route path="/bookings" element={<Bookings />} />
                 <Route path="/admin/bookings" element={<Bookings />} />
                 <Route path="/transactions" element={<Transactions />} />
                 <Route path="/admin/transactions" element={<Transactions />} />
                 <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/admin/seats" element={<SeatManagement isAdmin={true} />} />
-                <Route path="/profile" element={<Profile />} />
                 <Route path="/admin/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/settings" element={<Settings />} />
@@ -277,14 +276,30 @@ function App() {
             {/* User routes - ONLY for USER users */}
             <Route element={<ProtectedRoute requiredRole={UserRole.USER} />}>
               <Route element={<UserLayout />}>
-                <Route path="/user/*" element={<Navigate to="/user/home" replace />} />
-                <Route path="/user/home" element={<Dashboard />} />
-                <Route path="/user/events" element={<Events />} />
+                <Route path="/user/*" element={<Navigate to="/events" replace />} />
+                <Route path="/user/home" element={<Navigate to="/events" replace />} />
+                <Route path="/user/events" element={<Navigate to="/events" replace />} />
                 <Route path="/user/bookings" element={<Bookings />} />
                 <Route path="/user/seats" element={<SeatManagement isAdmin={false} />} />
                 <Route path="/user/profile" element={<Profile />} />
                 <Route path="/user/settings" element={<Settings />} />
               </Route>
+            </Route>
+            
+            {/* Simple user routes without layout - for public-facing user access */}
+            <Route element={<ProtectedRoute requiredRole={UserRole.USER} />}>
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/bookings" element={<UserBookings />} />
+            </Route>
+
+            {/* Public routes - wrapped in PublicRoute to block admin/organizer/employee access
+                MUST be at the END so protected routes match first */}
+            <Route element={<PublicRoute />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/events" element={<PublicEvents />} />
+              <Route path="/event/:id" element={<EventDetails />} />
+              <Route path="/gallery" element={<Gallery />} />
             </Route>
 
             {/* Default redirect - use role-based routing */}
@@ -292,23 +307,24 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
-        </CurrencyProvider>
-      </AuthProvider>
-      
-      {/* Toast Container for notifications */}
-      <ToastContainer
-        position="top-right"
-        autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
-    </ThemeProvider>
+          </CurrencyProvider>
+        </AuthProvider>
+        
+        {/* Toast Container for notifications */}
+        <ToastContainer
+          position="top-right"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

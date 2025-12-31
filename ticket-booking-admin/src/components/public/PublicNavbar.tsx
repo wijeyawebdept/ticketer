@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -14,26 +14,63 @@ import {
   useTheme,
   Menu,
   MenuItem,
+  Avatar,
+  ListItemIcon,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import PersonIcon from '@mui/icons-material/Person';
+import HistoryIcon from '@mui/icons-material/History';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { profileService } from '../../services/profile.service';
+import { ProfileDTO } from '../../types';
 
 const PublicNavbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [portfolioAnchor, setPortfolioAnchor] = useState<null | HTMLElement>(null);
   const [blogAnchor, setBlogAnchor] = useState<null | HTMLElement>(null);
   const [otherPagesAnchor, setOtherPagesAnchor] = useState<null | HTMLElement>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [profile, setProfile] = useState<ProfileDTO | null>(null);
   
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, isAuthenticated, isCustomerUser, logout } = useAuth();
+
+  // Fetch user profile when authenticated
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (isAuthenticated() && isCustomerUser()) {
+        try {
+          const profileData = await profileService.getProfile();
+          setProfile(profileData);
+        } catch (error) {
+          console.error('Failed to fetch profile:', error);
+        }
+      } else {
+        setProfile(null);
+      }
+    };
+
+    fetchProfile();
+  }, [isAuthenticated, isCustomerUser]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleLogout = () => {
+    logout();
+    setUserMenuAnchor(null);
+    navigate('/');
+  };
+
   const navItems = [
+    { label: 'Events', path: '/events' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
     { label: 'Contact', path: '/contact' },
@@ -59,6 +96,7 @@ const PublicNavbar: React.FC = () => {
     { label: 'FAQ', path: '/faq' },
     { label: '404', path: '/404' },
     { label: 'Pricing Table', path: '/pricing' },
+    { label: 'Gallery', path: '/gallery' },
   ];
 
   const drawer = (
@@ -280,6 +318,143 @@ const PublicNavbar: React.FC = () => {
                   ))}
                 </Menu>
               </Box>
+
+              {/* User Menu or Register/Sign In Buttons */}
+              {isAuthenticated() && isCustomerUser() ? (
+                <Box sx={{ ml: 2 }}>
+                  <Button
+                    onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+                    endIcon={<ArrowDropDownIcon />}
+                    startIcon={
+                      profile?.profilePicture ? (
+                        <Avatar 
+                          src={`http://localhost:8081${profile.profilePicture.startsWith('/') ? profile.profilePicture : '/' + profile.profilePicture}`}
+                          alt={profile.firstName}
+                          sx={{ 
+                            width: 32, 
+                            height: 32,
+                            border: '2px solid rgba(255, 25, 85, 0.5)'
+                          }}
+                        />
+                      ) : (
+                        <Avatar 
+                          sx={{ 
+                            width: 32, 
+                            height: 32,
+                            bgcolor: '#ff1955',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          {profile?.firstName?.[0] || user?.email?.[0] || 'U'}
+                        </Avatar>
+                      )
+                    }
+                    sx={{
+                      color: '#fff',
+                      fontFamily: 'Raleway, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '1rem',
+                      textTransform: 'none',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                    }}
+                  >
+                    {profile?.firstName || user?.email?.split('@')[0] || 'User'}
+                  </Button>
+                  <Menu
+                    anchorEl={userMenuAnchor}
+                    open={Boolean(userMenuAnchor)}
+                    onClose={() => setUserMenuAnchor(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    PaperProps={{
+                      sx: {
+                        minWidth: 200,
+                        mt: 1,
+                      }
+                    }}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        navigate('/profile');
+                        setUserMenuAnchor(null);
+                      }}
+                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
+                    >
+                      <ListItemIcon>
+                        <PersonIcon fontSize="small" />
+                      </ListItemIcon>
+                      View profile
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        navigate('/bookings');
+                        setUserMenuAnchor(null);
+                      }}
+                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
+                    >
+                      <ListItemIcon>
+                        <HistoryIcon fontSize="small" />
+                      </ListItemIcon>
+                      Booking history
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={handleLogout}
+                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
+                    >
+                      <ListItemIcon>
+                        <LogoutIcon fontSize="small" />
+                      </ListItemIcon>
+                      Log out
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                  <Button
+                    onClick={() => navigate('/register')}
+                    variant="outlined"
+                    sx={{
+                      color: '#fff',
+                      borderColor: 'rgba(255, 255, 255, 0.55)',
+                      fontFamily: 'Raleway, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '0.95rem',
+                      textTransform: 'none',
+                      padding: '0.375rem 1rem',
+                      '&:hover': {
+                        borderColor: '#fff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    Register
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/login')}
+                    variant="contained"
+                    sx={{
+                      backgroundColor: '#ff1955',
+                      color: '#fff',
+                      fontFamily: 'Raleway, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '0.95rem',
+                      textTransform: 'none',
+                      padding: '0.375rem 1rem',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        backgroundColor: '#e01545',
+                        boxShadow: 'none',
+                      },
+                    }}
+                  >
+                    Sign In
+                  </Button>
+                </Box>
+              )}
             </Box>
           )}
         </Toolbar>

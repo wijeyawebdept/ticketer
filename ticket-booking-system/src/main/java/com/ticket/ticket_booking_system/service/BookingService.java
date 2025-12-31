@@ -16,10 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
+import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
-import com.ticket.ticket_booking_system.service.EventScheduleService;
+import com.ticket.ticket_booking_system.repository.UserRepository;
 
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class BookingService {
     private final EventRepository eventRepository;
     private final EventScheduleRepository eventScheduleRepository;
     private final EventScheduleService eventScheduleService;
+    private final UserRepository userRepository;
 
     /**
      * Get all bookings for admin with filters
@@ -135,6 +137,17 @@ public class BookingService {
         UUID scheduleUuid = UUID.fromString(scheduleId);
         
         return bookingRepository.findByEventAndSchedule(eventUuid, scheduleUuid);
+    }
+    
+    /**
+     * Get bookings by user ID
+     */
+    public List<Booking> getBookingsByUserId(UUID userId) {
+        log.info("Fetching bookings for user: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        
+        return bookingRepository.findByUser(user, Pageable.unpaged()).getContent();
     }
 
     /**

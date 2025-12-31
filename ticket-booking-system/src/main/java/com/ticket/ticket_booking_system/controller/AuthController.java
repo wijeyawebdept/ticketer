@@ -1,7 +1,10 @@
 package com.ticket.ticket_booking_system.controller;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +13,21 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ticket.ticket_booking_system.config.JwtService;
+import com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest;
 import com.ticket.ticket_booking_system.dto.request.LoginRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.GoogleOAuthService;
 import com.ticket.ticket_booking_system.service.UserService;
 
 import jakarta.validation.Valid;
@@ -30,11 +39,23 @@ public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final GoogleOAuthService googleOAuthService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
-    public AuthController(UserService userService, AuthenticationManager authenticationManager, JwtService jwtService) {
+    public AuthController(
+            UserService userService, 
+            AuthenticationManager authenticationManager, 
+            JwtService jwtService,
+            GoogleOAuthService googleOAuthService,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.googleOAuthService = googleOAuthService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/register")

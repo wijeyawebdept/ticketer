@@ -304,14 +304,18 @@ const Events: React.FC = () => {
               const idToUse = params.row.eventId || params.row.id;
               if (idToUse && idToUse !== 'undefined') {
                 // Detect user role and navigate to appropriate path
-                const userStr = localStorage.getItem('user');
+                // Check sessionStorage first (admin), then localStorage (organizers)
+                const sessionUserStr = sessionStorage.getItem('user');
+                const localUserStr = localStorage.getItem('user');
+                const userStr = sessionUserStr || localUserStr;
+                
                 let basePath = '/organizer';
                 if (userStr) {
                   try {
                     const user = JSON.parse(userStr);
                     if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
                         user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
-                      basePath = '';
+                      basePath = '/admin';
                     }
                   } catch (e) {
                     console.error('Error parsing user:', e);

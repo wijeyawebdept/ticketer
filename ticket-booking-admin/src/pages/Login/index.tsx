@@ -11,16 +11,23 @@ import {
   IconButton,
   InputAdornment,
   Link as MuiLink,
-  Chip
+  Chip,
+  Divider,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
+import GoogleIcon from '@mui/icons-material/Google';
+import { useGoogleLogin } from '@react-oauth/google';
 import { Formik, Form, Field, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import PublicNavbar from '../../components/public/PublicNavbar';
+import AuthService from '../../services/auth.service';
 
 // Add this for better type checking
 type FormikBag<V> = {
@@ -43,16 +50,22 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
 
-  // Check for success message from registration
+  // Check for success message from registration and load remember me preference
   useEffect(() => {
     const state = location.state as { message?: string } | undefined;
     if (state?.message) {
       setSuccessMessage(state.message);
     }
+    
+    // Load remember me preference
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    setRememberMe(savedRememberMe);
   }, [location]);
 
   const handleClickShowPassword = () => {
@@ -63,20 +76,65 @@ const Login: React.FC = () => {
     event.preventDefault();
   };
 
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsGoogleLoading(true);
+      setError(null);
+      try {
+        console.log('Google login successful, token received');
+        
+        // Set storage type to localStorage for customer logins
+        AuthService.setStorageType('localStorage');
+        
+        // Exchange Google token for our backend JWT token
+        const response = await AuthService.googleLogin(tokenResponse.access_token);
+        
+        if (response.user) {
+          const normalizedRole = response.user.role.replace('ROLE_', '');
+          
+          // Only allow USER role on this login page
+          if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
+            navigate('/events');
+          } else {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('user_data');
+            setError('Access denied. Please use the restricted login page for administrators and organizers.');
+          }
+        }
+      } catch (err: any) {
+        console.error('Google login error:', err);
+        setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    },
+    onError: () => {
+      setError('Google sign-in was cancelled or failed.');
+    },
+  });
+
   const handleSubmit = async (
     values: LoginFormValues, 
     { setSubmitting }: FormikHelpers<LoginFormValues>
   ) => {
     try {
       setError(null);
-      console.log('Attempting login with:', { email: values.email });
+      console.log('Attempting login with:', { email: values.email, rememberMe });
       
-      // Clear any existing tokens before login attempt
+      // Set storage type to localStorage for customer logins (shared across tabs)
+      AuthService.setStorageType('localStorage');
+      
+      // Save remember me preference
+      localStorage.setItem('rememberMe', rememberMe.toString());
+      
+      // Clear only localStorage tokens (don't touch sessionStorage for admin sessions)
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
+      localStorage.removeItem('user');
       
       await login(values.email, values.password);
-      console.log('Login successful, token stored:', !!localStorage.getItem('auth_token'));
+      console.log('Login successful, token stored in localStorage:', !!localStorage.getItem('auth_token'));
       
       // Redirect based on user role
       const userData = localStorage.getItem('user');
@@ -88,11 +146,12 @@ const Login: React.FC = () => {
         
         // Only allow USER role on this login page
         if (normalizedRole === 'USER' || user.role === 'ROLE_USER') {
-          navigate('/user/home');
+          navigate('/events');
         } else {
           // If user is admin, organizer, or organizer employee, deny access
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
+          localStorage.removeItem('user_data');
           setError('Access denied. Please use the restricted login page for administrators and organizers.');
           return;
         }
@@ -107,11 +166,27 @@ const Login: React.FC = () => {
       
       let errorMessage = 'Login failed. Please try again.';
       
-      // Handle specific error cases
+      // Handle specific error cases with detailed messages
       if (err.response?.status === 401) {
-        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        const responseMessage = err.response?.data?.message?.toLowerCase() || '';
+        const errorCode = err.response?.data?.error_code || '';
+        
+        // Check specific error codes from backend
+        if (errorCode === 'INVALID_CREDENTIALS') {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (errorCode === 'USER_DISABLED') {
+          errorMessage = 'Your account has been disabled. Please contact the administrator.';
+        } else if (responseMessage.includes('user not found') || responseMessage.includes('no user') || responseMessage.includes('does not exist')) {
+          errorMessage = 'This email is not registered. Please create an account first.';
+        } else {
+          errorMessage = 'Invalid email or password. Please verify your login credentials.';
+        }
       } else if (err.response?.status === 403) {
-        errorMessage = 'Account not activated. Please contact administrator.';
+        errorMessage = 'Account not activated. Please contact the administrator.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'No account found with this email address. Please register first.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error occurred. Please try again later.';
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -130,16 +205,26 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper 
-        elevation={6} 
-        sx={{ 
-          marginTop: 8, 
-          padding: 4,
-          border: '2px solid #4caf50',
-          borderRadius: 2
-        }}
-      >
+    <Box
+      sx={{
+        backgroundColor: '#242a33',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: 4,
+      }}
+    >
+      <PublicNavbar />
+      <Container component="main" maxWidth="xs">
+        <Paper 
+          elevation={6} 
+          sx={{ 
+            padding: 4,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: 2
+          }}
+        >
         <Box
           sx={{
             display: 'flex',
@@ -147,17 +232,29 @@ const Login: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-            Ticket Booking System
+          <Typography 
+            component="h1" 
+            variant="h5" 
+            sx={{ 
+              mb: 2,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 700,
+              color: '#2c3e50',
+            }}
+          >
+            Welcome Back!
           </Typography>
           
-          <Chip 
-            label="Customer Login" 
-            color="success" 
-            sx={{ mb: 2, fontWeight: 'bold' }}
-          />
-          
-          <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
+          <Typography 
+            component="h2" 
+            variant="h6" 
+            sx={{ 
+              mb: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 600,
+              color: '#2c3e50',
+            }}
+          >
             Sign in
           </Typography>
           
@@ -170,6 +267,13 @@ const Login: React.FC = () => {
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
               {error}
+              {error.includes('not registered') && (
+                <Box sx={{ mt: 1 }}>
+                  <Link to="/register" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
+                    Create an account here
+                  </Link>
+                </Box>
+              )}
             </Alert>
           )}
           
@@ -224,32 +328,98 @@ const Login: React.FC = () => {
                   />
                 </Box>
                 
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        sx={{
+                          color: '#ff1955',
+                          '&.Mui-checked': {
+                            color: '#ff1955',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.9rem', color: '#2c3e50' }}>
+                        Remember Me
+                      </Typography>
+                    }
+                  />
+                  <MuiLink
+                    component="button"
+                    type="button"
+                    onClick={handleForgotPassword}
+                    sx={{
+                      fontFamily: 'Raleway, sans-serif',
+                      fontSize: '0.9rem',
+                      color: '#ff1955',
+                      textDecoration: 'none',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Forgot Password?
+                  </MuiLink>
+                </Box>
+                
                 <Button
                   type="submit"
                   fullWidth
                   variant="contained"
-                  color="primary"
                   disabled={isSubmitting}
-                  sx={{ py: 1.5 }}
+                  sx={{ 
+                    py: 1.5,
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 700,
+                    backgroundColor: '#ff1955',
+                    color: '#fff',
+                    fontSize: '1rem',
+                    letterSpacing: '1px',
+                    '&:hover': {
+                      backgroundColor: '#e01545',
+                    },
+                  }}
                 >
-                  {isSubmitting ? <CircularProgress size={24} /> : 'Sign In'}
+                  {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Sign In'}
                 </Button>
                 
-                <Box sx={{ textAlign: 'right', mt: 1 }}>
-                  <MuiLink 
-                    component="button" 
-                    variant="body2" 
-                    onClick={handleForgotPassword}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    Forgot password?
-                  </MuiLink>
-                </Box>
+                <Divider sx={{ my: 3 }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
+                    OR
+                  </Typography>
+                </Divider>
+                
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<GoogleIcon />}
+                  onClick={() => handleGoogleLogin()}
+                  disabled={isGoogleLoading}
+                  sx={{ 
+                    py: 1.5,
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 600,
+                    color: '#2c3e50',
+                    borderColor: '#dadce0',
+                    fontSize: '0.95rem',
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: '#f8f9fa',
+                      borderColor: '#dadce0',
+                    },
+                  }}
+                >
+                  {isGoogleLoading ? <CircularProgress size={24} /> : 'Sign in with Google'}
+                </Button>
                 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>
                     Don't have an account?{' '}
-                    <Link to="/register" style={{ textDecoration: 'none' }}>
+                    <Link to="/register" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
                       Register here
                     </Link>
                   </Typography>
@@ -275,6 +445,7 @@ const Login: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+    </Box>
   );
 };
 

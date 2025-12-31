@@ -51,6 +51,44 @@ interface DecodedToken {
 }
 
 class AuthService {
+  private storageType: 'localStorage' | 'sessionStorage' = 'localStorage';
+
+  constructor() {
+    // Auto-detect storage type based on current page URL
+    this.detectStorageType();
+  }
+
+  private detectStorageType() {
+    const currentPath = window.location.pathname;
+    // If on admin, organizer, or employee routes, use sessionStorage
+    // Otherwise use localStorage for customer routes
+    if (currentPath.includes('/dashboard') || 
+        currentPath.includes('/admin') || 
+        currentPath.includes('/organizer') || 
+        currentPath.includes('/employee') ||
+        currentPath.includes('/users') ||
+        currentPath.includes('/admins') ||
+        currentPath.includes('/venues') ||
+        currentPath.includes('/seats') ||
+        currentPath.includes('/recycle-bin') ||
+        currentPath.includes('/settings') ||
+        currentPath.includes('/event-assignments') ||
+        currentPath.includes('/organizer-assignment') ||
+        currentPath === '/restricted-login') {
+      this.storageType = 'sessionStorage';
+    } else {
+      this.storageType = 'localStorage';
+    }
+  }
+
+  setStorageType(type: 'localStorage' | 'sessionStorage') {
+    this.storageType = type;
+  }
+
+  private getStorage(): Storage {
+    return this.storageType === 'sessionStorage' ? sessionStorage : localStorage;
+  }
+
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
       console.log('Registering user with endpoint: /api/auth/register');
@@ -72,7 +110,9 @@ class AuthService {
       console.log('Login response:', response.status, response.statusText);
       
       if (response.data.token) {
-        localStorage.setItem('auth_token', response.data.token);
+        const storage = this.getStorage();
+        storage.setItem('auth_token', response.data.token);
+        console.log('Token stored in:', this.storageType);
         
         // Debug the JWT token and get role from it
         let userRole = '';
@@ -89,18 +129,22 @@ class AuthService {
           console.error('Error decoding JWT token:', err);
         }
         
-        // Store user data in localStorage with role from JWT token
+        // Store user data with role from JWT token
         if (response.data.user) {
+          // Normalize the role by removing ROLE_ prefix if present
+          const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
+          
           const userData = {
             id: response.data.user.id,
             email: response.data.user.email,
             firstName: response.data.user.firstName,
             lastName: response.data.user.lastName,
-            role: userRole || response.data.user.role // Use JWT role primarily
+            role: normalizedRole // Use normalized role
           };
-          localStorage.setItem('user_data', JSON.stringify({ email: userData.email }));
-          localStorage.setItem('user', JSON.stringify(userData)); // Store for role-based redirect
-          console.log('Stored user data in localStorage:', userData);
+          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          storage.setItem('user', JSON.stringify(userData)); // Store for role-based redirect
+          console.log('Stored user data in', this.storageType, ':', userData);
+          console.log('Normalized role stored:', normalizedRole);
         }
       }
       
@@ -128,14 +172,32 @@ class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('user');
+    const storage = this.getStorage();
+    storage.removeItem('auth_token');
+    storage.removeItem('user_data');
+    storage.removeItem('user');
+    console.log('Logged out from', this.storageType);
   }
 
   getCurrentUser(): LoginResponse | null {
     try {
-      const token = localStorage.getItem('auth_token');
+      // Auto-detect storage type based on current page
+      this.detectStorageType();
+      
+      // Check current storage type first, then fallback to the other
+      const storage = this.getStorage();
+      let token = storage.getItem('auth_token');
+      let userStorage: Storage = storage;
+      
+      // If not found in current storage, check the other one
+      if (!token) {
+        const alternateStorage = this.storageType === 'sessionStorage' ? localStorage : sessionStorage;
+        token = alternateStorage.getItem('auth_token');
+        if (token) {
+          userStorage = alternateStorage;
+        }
+      }
+      
       if (token) {
         const decoded = jwt_decode<DecodedToken>(token);
         
@@ -146,22 +208,24 @@ class AuthService {
           return null;
         }
         
-        // Try to get user details from localStorage
+        // Try to get user details from storage
         let email = '';
         try {
-          const userData = localStorage.getItem('user_data');
+          const userData = userStorage.getItem('user_data');
           if (userData) {
             const user = JSON.parse(userData);
             email = user.email || '';
           }
         } catch (e) {
-          // If we can't get email from localStorage, use a default or empty string
-          console.error('Error parsing user data from localStorage:', e);
+          console.error('Error parsing user data from storage:', e);
         }
+
+        // Normalize the role by removing ROLE_ prefix if present
+        const normalizedRole = decoded.role.replace(/^ROLE_/, '');
 
         return {
           id: decoded.sub,
-          role: decoded.role,
+          role: normalizedRole,
           email: email
         };
       }
@@ -174,11 +238,19 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    const token = localStorage.getItem('auth_token');
+    const storage = this.getStorage();
+    let token = storage.getItem('auth_token');
+    
+    // Also check the alternate storage
+    if (!token) {
+      const alternateStorage = this.storageType === 'sessionStorage' ? localStorage : sessionStorage;
+      token = alternateStorage.getItem('auth_token');
+    }
+    
     const user = this.getCurrentUser();
     
     // For debugging
-    console.log('Auth check - token exists:', !!token);
+    console.log('Auth check - token exists:', !!token, '(storage:', this.storageType, ')');
     console.log('Auth check - valid user object:', !!user);
     
     return token !== null && user !== null;
@@ -188,6 +260,50 @@ class AuthService {
     const user = this.getCurrentUser();
     // Check for both formats: with and without the ROLE_ prefix
     return user !== null && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
+  }
+
+  async googleLogin(googleToken: string): Promise<LoginResponse> {
+    try {
+      console.log('Logging in with Google token');
+      const response = await axios.post<LoginResponse>('/api/auth/google-login', {
+        token: googleToken
+      });
+      
+      console.log('Google login response:', response.status, response.statusText);
+      
+      if (response.data.token) {
+        const storage = this.getStorage();
+        storage.setItem('auth_token', response.data.token);
+        
+        // Decode JWT token to get user role
+        let userRole = '';
+        try {
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          console.log('JWT Token decoded:', decoded);
+          userRole = decoded.role;
+        } catch (err) {
+          console.error('Error decoding JWT token:', err);
+        }
+        
+        // Store user data
+        if (response.data.user) {
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            role: userRole || response.data.user.role
+          };
+          storage.setItem('user', JSON.stringify(userData));
+          console.log('User data stored in', this.storageType, ':', userData);
+        }
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      throw error;
+    }
   }
 }
 

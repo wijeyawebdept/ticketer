@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -19,11 +19,14 @@ import {
   TextField,
   IconButton,
   Divider,
-  ToggleButtonGroup,
-  ToggleButton,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useParams, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import EventService from '../../../services/event.service';
+import { Event } from '../../../types';
 
 interface TicketCategory {
   name: string;
@@ -32,12 +35,17 @@ interface TicketCategory {
 }
 
 const EventDetails: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  
+  console.log('EventDetails - URL param id:', id);
+  
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [selectedShowtime, setSelectedShowtime] = useState('1');
-  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({
-    'Ground Floor Reserved Seating': 0,
-    'Balcony Reserved Seating': 0,
-    'Standing Tickets': 0,
-  });
+  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
   const [customerInfo, setCustomerInfo] = useState({
@@ -47,11 +55,38 @@ const EventDetails: React.FC = () => {
     nic: '',
   });
 
-  const ticketCategories: TicketCategory[] = [
-    { name: 'Ground Floor Reserved Seating', price: 5000, quantity: 0 },
-    { name: 'Balcony Reserved Seating', price: 3000, quantity: 0 },
-    { name: 'Standing Tickets', price: 1000, quantity: 0 },
-  ];
+  // Fetch event data
+  useEffect(() => {
+    const fetchEvent = async () => {
+      console.log('fetchEvent called with id:', id);
+      
+      if (!id || id === 'undefined') {
+        console.error('Invalid event ID:', id);
+        setError('Event ID is missing or invalid');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Calling getPublicEventById with:', id);
+        const eventData = await EventService.getPublicEventById(id);
+        console.log('Received event data:', eventData);
+        setEvent(eventData);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching event:', err);
+        setError(err.response?.data?.message || 'Failed to load event details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [id]);
+
+  // Get ticket categories from event data
+  const ticketCategories = event?.ticketCategories || [];
 
   const handleShowtimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedShowtime(event.target.value);
@@ -74,8 +109,10 @@ const EventDetails: React.FC = () => {
 
   const calculateTotal = () => {
     let total = 0;
-    ticketCategories.forEach((category) => {
-      total += category.price * (ticketQuantities[category.name] || 0);
+    ticketCategories.forEach((category: any) => {
+      const categoryName = category.categoryName || category.name;
+      const categoryPrice = category.price || 0;
+      total += categoryPrice * (ticketQuantities[categoryName] || 0);
     });
     return total;
   };
@@ -95,6 +132,87 @@ const EventDetails: React.FC = () => {
       [field]: value,
     });
   };
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Date TBA';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Date TBA';
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Time TBA';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Time TBA';
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          backgroundImage: 'url(/images/mt-0390-tickets-bg.jpg)',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'top center',
+          backgroundSize: 'cover',
+          minHeight: '100vh',
+          width: '100%',
+        }}
+      >
+        <PublicNavbar />
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+            <CircularProgress sx={{ color: '#ff1955' }} />
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error || !event) {
+    return (
+      <Box
+        sx={{
+          backgroundImage: 'url(/images/mt-0390-tickets-bg.jpg)',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'top center',
+          backgroundSize: 'cover',
+          minHeight: '100vh',
+          width: '100%',
+        }}
+      >
+        <PublicNavbar />
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Box sx={{ mt: 10 }}>
+            <Alert severity="error">
+              {error || 'Event not found'}
+            </Alert>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/events')}
+              sx={{
+                mt: 2,
+                backgroundColor: '#ff1955',
+                '&:hover': { backgroundColor: '#e01545' },
+              }}
+            >
+              Back to Events
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -141,8 +259,22 @@ const EventDetails: React.FC = () => {
                   lineHeight: 1.2,
                 }}
               >
-                Events Information
+                Event Information
               </Typography>
+              
+              <Typography
+                component="h2"
+                sx={{
+                  marginBottom: '1rem',
+                  fontWeight: 700,
+                  color: '#ff1955',
+                  fontFamily: 'Raleway, sans-serif',
+                  fontSize: '24px',
+                }}
+              >
+                {event.name}
+              </Typography>
+
               <Typography
                 component="p"
                 sx={{
@@ -150,60 +282,61 @@ const EventDetails: React.FC = () => {
                   marginBottom: '1rem',
                   color: '#fff',
                   fontFamily: 'Raleway, sans-serif',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
                 }}
               >
-                Lorem ipsum dolor sit amet, quo possit insolens no, nam te prima
-                explicari, ex vel ancillae conclusionemque. Vel discere fastidii ex.
-                Mea homero aeterno id. At quas facete sadipscing pro. Eam primis
-                iuvaret ei, at vim lucilius recteque, eius nominavi definiebas eu est.
+                {event.description || 'No description available for this event.'}
               </Typography>
-              <Typography
-                component="p"
-                sx={{
-                  marginTop: 0,
-                  marginBottom: '1rem',
-                  color: '#fff',
-                  fontFamily: 'Raleway, sans-serif',
-                }}
-              >
-                <Box
-                  component="img"
-                  src="http://static.lankadeepa.lk/admin/wp-content/uploads/2017/10/20171002Sanda-1.jpg"
-                  alt=""
+
+              {event.imageUrl && (
+                <Typography
+                  component="p"
                   sx={{
-                    display: 'block',
-                    maxWidth: '100%',
-                    height: 'auto',
+                    marginTop: 0,
+                    marginBottom: '1rem',
+                    color: '#fff',
+                    fontFamily: 'Raleway, sans-serif',
                   }}
-                />
-              </Typography>
-              <Typography
-                component="p"
-                sx={{
-                  marginTop: 0,
-                  marginBottom: '1rem',
-                  color: '#fff',
-                  fontFamily: 'Raleway, sans-serif',
-                }}
-              >
-                Mei odio appareat suscipiantur ad, fabulas salutandi id his. Possit
-                civibus scripserit mei ne. Dicant habemus suscipiantur quo ne.
-                Persecuti posidonium adversarium vis et.
-              </Typography>
-              <Typography
-                component="p"
-                sx={{
-                  marginTop: 0,
-                  marginBottom: '1rem',
-                  color: '#fff',
-                  fontFamily: 'Raleway, sans-serif',
-                }}
-              >
-                Velit causae cu usu. Eum eu elitr exerci, ius ei insolens deseruisse.
-                In cum sanctus detracto. Mea te oporteat inciderint instructior, summo
-                elaboraret id nam, cu omnesque disputando vel. Ut homero epicuri pri,
-                dicta detracto voluptatum in has.
-              </Typography>
+                >
+                  <Box
+                    component="img"
+                    src={event.imageUrl}
+                    alt={event.name}
+                    sx={{
+                      display: 'block',
+                      maxWidth: '100%',
+                      height: 'auto',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </Typography>
+              )}
+
+              <Box sx={{ mt: 2 }}>
+                <Typography sx={{ color: '#fcd0a5', fontWeight: 600, mb: 1 }}>
+                  Event Details:
+                </Typography>
+                <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                  <strong>Date:</strong> {formatDate(event.startDateTime)}
+                </Typography>
+                <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                  <strong>Time:</strong> {formatTime(event.startDateTime)}
+                </Typography>
+                <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                  <strong>Venue:</strong> {event.venue?.name || 'TBA'}
+                </Typography>
+                {event.venue?.address && (
+                  <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                    <strong>Address:</strong> {event.venue.address}, {event.venue.city}
+                  </Typography>
+                )}
+                <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                  <strong>Category:</strong> {event.category || 'General'}
+                </Typography>
+              </Box>
             </Box>
           </Grid>
 
@@ -222,7 +355,7 @@ const EventDetails: React.FC = () => {
                 display: { xs: 'none', sm: 'block' },
               }}
             >
-              Sanda Sisila @ Nelumpokuna Theater Colombo
+              {event.name}
             </Typography>
 
             <Box
@@ -259,7 +392,7 @@ const EventDetails: React.FC = () => {
                         fontSize: '14px',
                       }}
                     >
-                      show Time (2017 - 12 - 12)
+                      Show Time ({formatDate(event.startDateTime)})
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
@@ -272,15 +405,17 @@ const EventDetails: React.FC = () => {
                       <FormControlLabel
                         value="1"
                         control={<Radio size="small" />}
-                        label="2.30 PM"
+                        label={formatTime(event.startDateTime)}
                         sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
                       />
-                      <FormControlLabel
-                        value="2"
-                        control={<Radio size="small" />}
-                        label="6.30 PM"
-                        sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-                      />
+                      {event.endDateTime && (
+                        <FormControlLabel
+                          value="2"
+                          control={<Radio size="small" />}
+                          label={formatTime(event.endDateTime)}
+                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
+                        />
+                      )}
                     </RadioGroup>
                   </Grid>
                 </Grid>
@@ -307,40 +442,52 @@ const EventDetails: React.FC = () => {
               </Grid>
 
               {/* Ticket Categories */}
-              {ticketCategories.map((category, index) => (
-                <Grid
-                  key={index}
-                  container
-                  sx={{
-                    borderBottom: '1px solid #444',
-                    pb: 2,
-                    mb: 2,
-                  }}
-                >
-                  <Grid item xs={4}>
-                    <Typography variant="body2">{category.name}</Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="body2">Rs.{category.price.toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <FormControl fullWidth size="small">
-                      <Select
-                        value={ticketQuantities[category.name]?.toString() || '0'}
-                        onChange={(e: SelectChangeEvent) =>
-                          handleQuantityChange(category.name, e.target.value)
-                        }
-                      >
-                        {[0, 1, 2, 3, 4, 5].map((num) => (
-                          <MenuItem key={num} value={num.toString()}>
-                            {num}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-              ))}
+              {ticketCategories.length > 0 ? (
+                ticketCategories.map((category: any, index: number) => {
+                  const categoryName = category.categoryName || category.name;
+                  const categoryPrice = category.price || 0;
+                  const maxCapacity = Math.min(category.capacity || 10, 10);
+                  
+                  return (
+                    <Grid
+                      key={index}
+                      container
+                      sx={{
+                        borderBottom: '1px solid #444',
+                        pb: 2,
+                        mb: 2,
+                      }}
+                    >
+                      <Grid item xs={4}>
+                        <Typography variant="body2">{categoryName}</Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <FormControl fullWidth size="small">
+                          <Select
+                            value={ticketQuantities[categoryName]?.toString() || '0'}
+                            onChange={(e: SelectChangeEvent) =>
+                              handleQuantityChange(categoryName, e.target.value)
+                            }
+                          >
+                            {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
+                              <MenuItem key={num} value={num.toString()}>
+                                {num}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  );
+                })
+              ) : (
+                <Typography variant="body2" sx={{ textAlign: 'center', py: 2, color: '#666' }}>
+                  No ticket categories available for this event
+                </Typography>
+              )}
 
               {/* Total Summary */}
               <Box
@@ -350,12 +497,14 @@ const EventDetails: React.FC = () => {
                   mb: 2,
                 }}
               >
-                {ticketCategories.map((category) => {
-                  const qty = ticketQuantities[category.name] || 0;
+                {ticketCategories.map((category: any) => {
+                  const categoryName = category.categoryName || category.name;
+                  const categoryPrice = category.price || 0;
+                  const qty = ticketQuantities[categoryName] || 0;
                   if (qty > 0) {
                     return (
-                      <Typography key={category.name} variant="body2">
-                        {category.name} {qty} x {category.price}/=
+                      <Typography key={categoryName} variant="body2">
+                        {categoryName} {qty} x {categoryPrice}/=
                       </Typography>
                     );
                   }

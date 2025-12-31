@@ -35,7 +35,7 @@ const RoleBasedRedirect: React.FC = () => {
   } else if (userRole === UserRole.ORGANIZER_EMPLOYEE || userRole === UserRole.ROLE_ORGANIZER_EMPLOYEE) {
     return <Navigate to="/employee/dashboard" replace />;
   } else if (userRole === UserRole.USER || userRole === UserRole.ROLE_USER) {
-    return <Navigate to="/user/home" replace />;
+    return <Navigate to="/events" replace />;
   } else {
     // Fallback - redirect to login if role is unrecognized
     return <Navigate to="/login" replace />;

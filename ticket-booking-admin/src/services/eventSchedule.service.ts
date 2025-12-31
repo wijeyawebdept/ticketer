@@ -5,15 +5,25 @@ import AuthService from './auth.service';
 class EventScheduleService {
   private getBasePath(): string {
     const user = AuthService.getCurrentUser();
-    if (!user) return '/api/admin';
+    console.log('EventScheduleService - getCurrentUser returned:', user);
+    
+    if (!user) {
+      console.log('EventScheduleService - No user found, defaulting to /api/admin');
+      return '/api/admin';
+    }
     
     const role = user.role;
+    console.log('EventScheduleService - User role:', role);
+    
     if (role === 'ORGANIZER' || role === 'ROLE_ORGANIZER' ||
         role === 'ORGANIZER_EMPLOYEE' || role === 'ROLE_ORGANIZER_EMPLOYEE') {
+      console.log('EventScheduleService - Returning /api/organizer');
       return '/api/organizer';
     } else if (role === 'ADMIN' || role === 'ROLE_ADMIN' || role === 'SUPER_ADMIN' || role === 'ROLE_SUPER_ADMIN') {
+      console.log('EventScheduleService - Returning /api/admin');
       return '/api/admin';
     } else {
+      console.log('EventScheduleService - Defaulting to /api/user for role:', role);
       return '/api/user';
     }
   }

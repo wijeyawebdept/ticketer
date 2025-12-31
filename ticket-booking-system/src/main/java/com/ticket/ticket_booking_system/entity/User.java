@@ -62,6 +62,9 @@ public class User implements UserDetails {
 
     @Column(name = "profile_picture")
     private String profilePicture;
+    
+    @Column(name = "google_id", unique = true)
+    private String googleId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

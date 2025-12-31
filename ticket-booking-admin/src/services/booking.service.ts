@@ -4,19 +4,45 @@ import { Booking, BookingStatus, UserRole } from '../types';
 class BookingService {
   // Helper method to get the base path based on user role
   private getBasePath(): string {
-    const userStr = localStorage.getItem('user');
+    // Check both sessionStorage (admin) and localStorage (customer) for user data
+    let userStr = sessionStorage.getItem('user');
+    let storageType = 'sessionStorage';
+    
+    if (!userStr) {
+      userStr = localStorage.getItem('user');
+      storageType = 'localStorage';
+    }
+    
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
+        console.log('BookingService - User role from', storageType, ':', user.role);
+        
+        // Check for organizer roles
         if (user.role === UserRole.ORGANIZER || user.role === 'ROLE_ORGANIZER' ||
             user.role === UserRole.ORGANIZER_EMPLOYEE || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
           return '/api/organizer';
+        }
+        
+        // Check for admin roles
+        if (user.role === UserRole.ADMIN || user.role === 'ROLE_ADMIN' ||
+            user.role === UserRole.SUPER_ADMIN || user.role === 'ROLE_SUPER_ADMIN' ||
+            user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+          return '/api/admin';
+        }
+        
+        // For regular customers, use /api (will be appended with /bookings to become /api/bookings)
+        if (user.role === UserRole.USER || user.role === 'ROLE_USER' || user.role === 'USER') {
+          return '/api';
         }
       } catch (e) {
         console.error('Error parsing user role:', e);
       }
     }
-    return '/api/admin';
+    
+    // Default fallback to /api (will be appended with /bookings for endpoint path)
+    console.warn('No user role found, defaulting to /api');
+    return '/api';
   }
 
   async getAllBookings(): Promise<Booking[]> {

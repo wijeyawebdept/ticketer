@@ -624,4 +624,44 @@ public class EventServiceImpl implements EventService {
         
         return mapEventToResponse(savedEvent);
     }
+    
+    // Public event methods (no authentication required)
+    @Override
+    public Page<EventResponse> getPublishedEvents(Pageable pageable) {
+        Page<Event> events = eventRepository.findAllPublishedEvents(pageable);
+        return events.map(this::mapEventToResponse);
+    }
+    
+    @Override
+    public Page<EventResponse> getUpcomingPublishedEvents(Pageable pageable) {
+        Page<Event> events = eventRepository.findUpcomingPublishedEvents(pageable);
+        return events.map(this::mapEventToResponse);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public EventResponse getPublishedEventById(UUID eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+        
+        if (event.getStatus() != Event.EventStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Published Event", "id", eventId.toString());
+        }
+        
+        // Trigger lazy loading within transaction
+        if (event.getVenue() != null) {
+            event.getVenue().getName(); // Force initialization
+        }
+        if (event.getOrganizer() != null) {
+            event.getOrganizer().getOrganizationName(); // Force initialization
+        }
+        
+        return mapEventToResponse(event);
+    }
+    
+    @Override
+    public Page<EventResponse> searchPublishedEvents(String query, Pageable pageable) {
+        Page<Event> events = eventRepository.searchPublishedEvents(query, pageable);
+        return events.map(this::mapEventToResponse);
+    }
 }
