@@ -41,7 +41,15 @@ const Events: React.FC = () => {
       
       console.log('Events response:', response);
       console.log('First event:', response.content?.[0]);
-      setEvents(response.content || []);
+      
+      // Sort events to show deals first
+      const sortedEvents = (response.content || []).sort((a: Event, b: Event) => {
+        if (a.hasDeal && !b.hasDeal) return -1;
+        if (!a.hasDeal && b.hasDeal) return 1;
+        return 0;
+      });
+      
+      setEvents(sortedEvents);
       setTotalPages(response.totalPages || 0);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -70,15 +78,26 @@ const Events: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'TBA';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'TBA';
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'TBA';
+    }
+  };
+
+  const formatPrice = (price: number | null | undefined) => {
+    if (!price || price === 0) return 'Free';
+    return `LKR ${price.toLocaleString()}`;
   };
 
   return (
@@ -194,6 +213,7 @@ const Events: React.FC = () => {
                       borderRadius: 2,
                       transition: 'transform 0.2s, box-shadow 0.2s',
                       cursor: 'pointer',
+                      position: 'relative',
                       '&:hover': {
                         transform: 'translateY(-4px)',
                         boxShadow: '0 8px 24px rgba(255, 25, 85, 0.3)',
@@ -201,10 +221,37 @@ const Events: React.FC = () => {
                     }}
                     onClick={() => handleEventClick(event)}
                   >
+                    {/* Badges */}
+                    <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', gap: 1, flexDirection: 'row-reverse' }}>
+                      {event.hasDeal && (
+                        <Chip
+                          label="Deal"
+                          size="small"
+                          sx={{
+                            backgroundColor: '#00c853',
+                            color: '#fff',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                          }}
+                        />
+                      )}
+                      {event.ticketsAvailable === 0 && (
+                        <Chip
+                          label="Sold Out"
+                          size="small"
+                          sx={{
+                            backgroundColor: '#dc3545',
+                            color: '#fff',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                          }}
+                        />
+                      )}
+                    </Box>
                     <CardMedia
                       component="img"
                       height="200"
-                      image={event.imageUrl || '/images/default-event.jpg'}
+                      image={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
                       alt={event.name}
                       sx={{ objectFit: 'cover' }}
                     />
@@ -252,17 +299,30 @@ const Events: React.FC = () => {
                         </Typography>
                       </Box>
 
-                      <Box sx={{ mt: 'auto' }}>
-                        <Chip
-                          label={event.status}
-                          size="small"
+                      {/* Base Price */}
+                      <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                        <Typography
+                          variant="body2"
                           sx={{
-                            backgroundColor: '#ff1955',
-                            color: '#fff',
-                            fontWeight: 600,
                             fontFamily: 'Raleway, sans-serif',
+                            color: '#999',
+                            fontSize: '0.75rem',
+                            mb: 0.5,
                           }}
-                        />
+                        >
+                          Starting from
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontFamily: 'Raleway, sans-serif',
+                            fontWeight: 700,
+                            color: '#ff1955',
+                            fontSize: '1.25rem',
+                          }}
+                        >
+                          {formatPrice(event.basePrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                        </Typography>
                       </Box>
                     </CardContent>
                   </Card>

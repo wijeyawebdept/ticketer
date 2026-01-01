@@ -57,9 +57,6 @@ public class Event {
     @Column(name = "venue_address", columnDefinition = "TEXT")
     private String venueAddress;
 
-    @Column(length = 100)
-    private String category;
-
     @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice;
 

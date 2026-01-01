@@ -1,10 +1,7 @@
 package com.ticket.ticket_booking_system.controller;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ticket.ticket_booking_system.config.JwtService;
-import com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest;
 import com.ticket.ticket_booking_system.dto.request.LoginRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
-import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.GoogleOAuthService;
 import com.ticket.ticket_booking_system.service.UserService;
@@ -166,6 +160,146 @@ public class AuthController {
                 "role", user.getRole(),
                 "email", user.getEmail(),
                 "isSuperAdmin", "SUPER_ADMIN".equals(userRole)
+            ));
+            
+            return ResponseEntity.ok(response);
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Account is disabled. Please contact administrator.");
+            response.put("error_code", "USER_DISABLED");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid email or password");
+            response.put("error_code", "INVALID_CREDENTIALS");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Login failed: " + e.getMessage());
+            response.put("error_code", "AUTHENTICATION_ERROR");
+            response.put("error_details", e.getClass().getSimpleName());
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
+
+    @PostMapping("/organizer/login")
+    public ResponseEntity<Map<String, Object>> organizerLogin(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            // Authenticate the user
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getEmail(),
+                    loginRequest.getPassword()
+                )
+            );
+            
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // Get user details
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
+            
+            // Check if user has ORGANIZER role
+            String userRole = user.getRole();
+            if (!"ORGANIZER".equals(userRole)) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Access denied. Only organizers can access the organizer panel.");
+                response.put("error_code", "INSUFFICIENT_PRIVILEGES");
+                
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+            
+            // Generate JWT token
+            String token = jwtService.generateToken(userDetails);
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Organizer login successful");
+            response.put("token", token);
+            response.put("user", Map.of(
+                "id", user.getId(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole(),
+                "email", user.getEmail()
+            ));
+            
+            return ResponseEntity.ok(response);
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Account is disabled. Please contact administrator.");
+            response.put("error_code", "USER_DISABLED");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid email or password");
+            response.put("error_code", "INVALID_CREDENTIALS");
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Login failed: " + e.getMessage());
+            response.put("error_code", "AUTHENTICATION_ERROR");
+            response.put("error_details", e.getClass().getSimpleName());
+            
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
+
+    @PostMapping("/organizer-employee/login")
+    public ResponseEntity<Map<String, Object>> organizerEmployeeLogin(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            // Authenticate the user
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getEmail(),
+                    loginRequest.getPassword()
+                )
+            );
+            
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // Get user details
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
+            
+            // Check if user has ORGANIZER_EMPLOYEE role
+            String userRole = user.getRole();
+            if (!"ORGANIZER_EMPLOYEE".equals(userRole)) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Access denied. Only organizer employees can access this panel.");
+                response.put("error_code", "INSUFFICIENT_PRIVILEGES");
+                
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+            
+            // Generate JWT token
+            String token = jwtService.generateToken(userDetails);
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Organizer employee login successful");
+            response.put("token", token);
+            response.put("user", Map.of(
+                "id", user.getId(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole(),
+                "email", user.getEmail()
             ));
             
             return ResponseEntity.ok(response);

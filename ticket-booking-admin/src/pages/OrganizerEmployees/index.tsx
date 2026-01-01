@@ -22,7 +22,7 @@ import {
   InputAdornment
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { 
+import {
   Add as AddIcon, 
   Edit as EditIcon, 
   Delete as DeleteIcon, 
@@ -30,7 +30,9 @@ import {
   CheckCircle as ActivateIcon,
   Block as DeactivateIcon,
   Search as SearchIcon,
-  DeleteSweep as DeleteSweepIcon
+  DeleteSweep as DeleteSweepIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
@@ -69,6 +71,7 @@ interface FormData {
   lastName: string;
   email: string;
   password: string;
+  newPassword: string;
   phoneNumber: string;
   dateOfBirth: string;
   organizerId: string;
@@ -96,6 +99,7 @@ const OrganizerEmployees: React.FC = () => {
     lastName: '',
     email: '',
     password: '',
+    newPassword: '',
     phoneNumber: '',
     dateOfBirth: '',
     organizerId: '',
@@ -103,6 +107,8 @@ const OrganizerEmployees: React.FC = () => {
     department: '',
     hireDate: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
@@ -167,6 +173,7 @@ const OrganizerEmployees: React.FC = () => {
         lastName: employee.lastName,
         email: employee.email,
         password: '',
+        newPassword: '',
         phoneNumber: employee.phoneNumber || '',
         dateOfBirth: employee.dateOfBirth || '',
         organizerId: employee.organizerId,
@@ -181,6 +188,7 @@ const OrganizerEmployees: React.FC = () => {
         lastName: '',
         email: '',
         password: '',
+        newPassword: '',
         phoneNumber: '',
         dateOfBirth: '',
         organizerId: '',
@@ -189,6 +197,8 @@ const OrganizerEmployees: React.FC = () => {
         hireDate: ''
       });
     }
+    setShowPassword(false);
+    setShowNewPassword(false);
     setOpenDialog(true);
   };
 
@@ -217,7 +227,16 @@ const OrganizerEmployees: React.FC = () => {
     try {
       if (editingEmployee) {
         await api.put(`/api/admin/organizer-employees/${editingEmployee.employeeId}`, formData);
-        setSuccess('Organizer employee updated successfully');
+        
+        // If new password is provided, change the password
+        if (formData.newPassword && formData.newPassword.trim()) {
+          await api.post(`/api/admin/organizer-employees/${editingEmployee.employeeId}/change-password`, {
+            newPassword: formData.newPassword
+          });
+          setSuccess('Organizer employee and password updated successfully');
+        } else {
+          setSuccess('Organizer employee updated successfully');
+        }
       } else {
         await api.post('/api/admin/organizer-employees', formData);
         setSuccess('Organizer employee created successfully');
@@ -555,10 +574,46 @@ const OrganizerEmployees: React.FC = () => {
                 fullWidth
                 label="Password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={handleInputChange}
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+            )}
+            {editingEmployee && (
+              <TextField
+                fullWidth
+                label="New Password (leave empty to keep current)"
+                name="newPassword"
+                type={showNewPassword ? 'text' : 'password'}
+                value={formData.newPassword}
+                onChange={handleInputChange}
+                placeholder="Enter new password to change"
+                helperText="Only fill this if you want to change the employee's password"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        edge="end"
+                      >
+                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
               />
             )}
             <TextField

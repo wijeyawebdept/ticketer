@@ -26,7 +26,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import EventService from '../../../services/event.service';
-import { Event } from '../../../types';
+import EventScheduleService from '../../../services/eventSchedule.service';
+import { Event, EventSchedule } from '../../../types';
+import { useAuth } from '../../../context/AuthContext';
 
 interface TicketCategory {
   name: string;
@@ -37,14 +39,16 @@ interface TicketCategory {
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   
   console.log('EventDetails - URL param id:', id);
   
   const [event, setEvent] = useState<Event | null>(null);
+  const [schedules, setSchedules] = useState<EventSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [selectedShowtime, setSelectedShowtime] = useState('1');
+  const [selectedShowtime, setSelectedShowtime] = useState('');
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
@@ -73,6 +77,30 @@ const EventDetails: React.FC = () => {
         const eventData = await EventService.getPublicEventById(id);
         console.log('Received event data:', eventData);
         setEvent(eventData);
+        
+        // Fetch bookable schedules for this event
+        try {
+          const schedulesData = await EventScheduleService.getPublicBookableSchedulesForEvent(id);
+          console.log('Received schedules data:', schedulesData);
+          setSchedules(schedulesData);
+          // Set the first non-past schedule as default selected
+          if (schedulesData.length > 0) {
+            const firstFutureSchedule = schedulesData.find(schedule => {
+              const scheduleDate = new Date(schedule.scheduleDate);
+              const [hours, minutes] = schedule.endTime.split(':');
+              scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+              return scheduleDate >= new Date();
+            });
+            if (firstFutureSchedule) {
+              setSelectedShowtime(firstFutureSchedule.scheduleId);
+            }
+          }
+        } catch (schedErr) {
+          console.error('Error fetching schedules:', schedErr);
+          // Don't fail the whole page if schedules can't be loaded
+          setSchedules([]);
+        }
+        
         setError(null);
       } catch (err: any) {
         console.error('Error fetching event:', err);
@@ -84,6 +112,44 @@ const EventDetails: React.FC = () => {
 
     fetchEvent();
   }, [id]);
+
+  // Restore booking state after login
+  useEffect(() => {
+    const pendingBooking = sessionStorage.getItem('pendingBooking');
+    
+    if (pendingBooking && isAuthenticated()) {
+      try {
+        const bookingData = JSON.parse(pendingBooking);
+        
+        // Only restore if we're on the same event page
+        if (bookingData.eventId === id) {
+          console.log('Restoring booking state:', bookingData);
+          
+          // Restore booking selections
+          if (bookingData.scheduleId) {
+            setSelectedShowtime(bookingData.scheduleId);
+          }
+          if (bookingData.ticketQuantities) {
+            setTicketQuantities(bookingData.ticketQuantities);
+          }
+          if (bookingData.customerInfo) {
+            setCustomerInfo(bookingData.customerInfo);
+          }
+          
+          // Auto-open payment modal
+          setTimeout(() => {
+            setPaymentModalOpen(true);
+          }, 500); // Small delay to ensure state is set
+          
+          // Clear the stored booking state
+          sessionStorage.removeItem('pendingBooking');
+        }
+      } catch (error) {
+        console.error('Error restoring booking state:', error);
+        sessionStorage.removeItem('pendingBooking');
+      }
+    }
+  }, [isAuthenticated, id]);
 
   // Get ticket categories from event data
   const ticketCategories = event?.ticketCategories || [];
@@ -100,6 +166,26 @@ const EventDetails: React.FC = () => {
   };
 
   const handleNextClick = () => {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      // Save booking state before redirecting to login
+      const bookingState = {
+        eventId: id,
+        scheduleId: selectedShowtime,
+        ticketQuantities: ticketQuantities,
+        customerInfo: customerInfo,
+        returnUrl: window.location.pathname
+      };
+      
+      console.log('Saving booking state before login:', bookingState);
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingState));
+      
+      // Redirect to login page
+      navigate('/login', { state: { from: window.location.pathname } });
+      return;
+    }
+    
+    // If authenticated, open payment modal directly
     setPaymentModalOpen(true);
   };
 
@@ -153,6 +239,35 @@ const EventDetails: React.FC = () => {
       minute: '2-digit',
       hour12: true,
     });
+  };
+
+  const formatScheduleTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}.${minutes}${ampm}`;
+  };
+
+  const formatScheduleDisplay = (schedule: EventSchedule) => {
+    const date = new Date(schedule.scheduleDate);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const startTime = formatScheduleTime(schedule.startTime);
+    const endTime = formatScheduleTime(schedule.endTime);
+    return `Show Time (${formattedDate}) ${startTime}-${endTime}`;
+  };
+
+  const isSchedulePast = (schedule: EventSchedule) => {
+    // Combine date and end time to check if schedule has completely passed
+    const scheduleDate = new Date(schedule.scheduleDate);
+    const [hours, minutes] = schedule.endTime.split(':');
+    scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return scheduleDate < new Date();
   };
 
   // Loading state
@@ -303,7 +418,7 @@ const EventDetails: React.FC = () => {
                 >
                   <Box
                     component="img"
-                    src={event.imageUrl}
+                    src={`http://localhost:8081/${event.imageUrl}`}
                     alt={event.name}
                     sx={{
                       display: 'block',
@@ -319,13 +434,53 @@ const EventDetails: React.FC = () => {
                 <Typography sx={{ color: '#fcd0a5', fontWeight: 600, mb: 1 }}>
                   Event Details:
                 </Typography>
-                <Typography sx={{ color: '#fff', mb: 0.5 }}>
-                  <strong>Date:</strong> {formatDate(event.startDateTime)}
-                </Typography>
-                <Typography sx={{ color: '#fff', mb: 0.5 }}>
-                  <strong>Time:</strong> {formatTime(event.startDateTime)}
-                </Typography>
-                <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                
+                {/* Display schedules if available */}
+                {schedules.length > 0 ? (
+                  <>
+                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 1, mt: 2 }}>
+                      Show Times:
+                    </Typography>
+                    {schedules.map((schedule, index) => {
+                      const date = new Date(schedule.scheduleDate);
+                      const formattedDate = date.toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+                      const startTime = formatScheduleTime(schedule.startTime);
+                      const endTime = formatScheduleTime(schedule.endTime);
+                      const isPast = isSchedulePast(schedule);
+                      
+                      return (
+                        <Typography 
+                          key={schedule.scheduleId} 
+                          sx={{ 
+                            color: isPast ? 'rgba(255, 255, 255, 0.4)' : '#fff', 
+                            mb: 0.5, 
+                            pl: 2,
+                            textDecoration: isPast ? 'line-through' : 'none',
+                            fontStyle: isPast ? 'italic' : 'normal'
+                          }}
+                        >
+                          <strong>Schedule {index + 1}:</strong> {formattedDate} • {startTime} - {endTime}
+                          {isPast && <span style={{ marginLeft: '8px', fontSize: '0.85em' }}>(Past)</span>}
+                        </Typography>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <>
+                    <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                      <strong>Date:</strong> {formatDate(event.startDateTime)}
+                    </Typography>
+                    <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                      <strong>Time:</strong> {formatTime(event.startDateTime)}
+                    </Typography>
+                  </>
+                )}
+                
+                <Typography sx={{ color: '#fff', mb: 0.5, mt: 2 }}>
                   <strong>Venue:</strong> {event.venue?.name || 'TBA'}
                 </Typography>
                 {event.venue?.address && (
@@ -333,9 +488,7 @@ const EventDetails: React.FC = () => {
                     <strong>Address:</strong> {event.venue.address}, {event.venue.city}
                   </Typography>
                 )}
-                <Typography sx={{ color: '#fff', mb: 0.5 }}>
-                  <strong>Category:</strong> {event.category || 'General'}
-                </Typography>
+
               </Box>
             </Box>
           </Grid>
@@ -371,55 +524,83 @@ const EventDetails: React.FC = () => {
               }}
             >
               {/* Showtime Selection */}
-              <Box
-                sx={{
-                  marginTop: '20px',
-                  backgroundColor: '#eee',
-                  paddingTop: '10px',
-                  paddingBottom: '10px',
-                  paddingLeft: '15px',
-                  paddingRight: '15px',
-                  marginBottom: '10px',
-                }}
-              >
-                <Grid container alignItems="center">
-                  <Grid item xs={12} sm={8}>
-                    <Typography
-                      sx={{
-                        marginTop: '15px',
-                        fontWeight: 700,
-                        fontFamily: 'Raleway, sans-serif',
-                        fontSize: '14px',
-                      }}
-                    >
-                      Show Time ({formatDate(event.startDateTime)})
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <RadioGroup
-                      row
-                      value={selectedShowtime}
-                      onChange={handleShowtimeChange}
-                      sx={{ justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}
-                    >
-                      <FormControlLabel
-                        value="1"
-                        control={<Radio size="small" />}
-                        label={formatTime(event.startDateTime)}
-                        sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-                      />
-                      {event.endDateTime && (
+              {schedules.length > 0 ? (
+                <Box
+                  sx={{
+                    marginTop: '20px',
+                    backgroundColor: '#eee',
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    paddingLeft: '15px',
+                    paddingRight: '15px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      marginTop: '15px',
+                      marginBottom: '10px',
+                      fontWeight: 700,
+                      fontFamily: 'Raleway, sans-serif',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Select Show Time:
+                  </Typography>
+                  <RadioGroup
+                    value={selectedShowtime}
+                    onChange={handleShowtimeChange}
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    {schedules.map((schedule) => {
+                      const isPast = isSchedulePast(schedule);
+                      return (
                         <FormControlLabel
-                          value="2"
+                          key={schedule.scheduleId}
+                          value={schedule.scheduleId}
                           control={<Radio size="small" />}
-                          label={formatTime(event.endDateTime)}
-                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
+                          label={formatScheduleDisplay(schedule) + (isPast ? ' (Past)' : '')}
+                          disabled={isPast}
+                          sx={{ 
+                            '& .MuiFormControlLabel-label': { 
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              textDecoration: isPast ? 'line-through' : 'none',
+                              color: isPast ? 'rgba(0, 0, 0, 0.4)' : 'inherit',
+                              fontStyle: isPast ? 'italic' : 'normal'
+                            },
+                            opacity: isPast ? 0.5 : 1
+                          }}
                         />
-                      )}
-                    </RadioGroup>
-                  </Grid>
-                </Grid>
-              </Box>
+                      );
+                    })}
+                  </RadioGroup>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    marginTop: '20px',
+                    backgroundColor: '#eee',
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    paddingLeft: '15px',
+                    paddingRight: '15px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      marginTop: '15px',
+                      fontWeight: 700,
+                      fontFamily: 'Raleway, sans-serif',
+                      fontSize: '14px',
+                      color: '#666',
+                    }}
+                  >
+                    Show times to be announced
+                  </Typography>
+                </Box>
+              )}
 
               {/* Table Header */}
               <Grid

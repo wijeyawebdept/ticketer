@@ -608,17 +608,6 @@ const UserProfile: React.FC = () => {
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#fff' }}>
                     {profile.firstName} {profile.lastName}
                   </Typography>
-                  
-                  <Chip
-                    label={profile.role}
-                    sx={{
-                      backgroundColor: '#ff1955',
-                      color: 'white',
-                      fontWeight: 600,
-                      px: 2,
-                      borderRadius: '16px'
-                    }}
-                  />
                 </CardContent>
               </Card>
             </Grid>

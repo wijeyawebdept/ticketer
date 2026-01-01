@@ -139,13 +139,6 @@ const Settings: React.FC = () => {
   };
 
   // Form states
-  const [accountSettings, setAccountSettings] = useState({
-    email: user?.email || '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: ''
-  });
-
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     smsNotifications: false,
@@ -284,13 +277,6 @@ const Settings: React.FC = () => {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAccountSettings({
-      ...accountSettings,
-      [e.target.name]: e.target.value
-    });
   };
 
   const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,22 +426,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleSaveAccount = async () => {
-    setSaving(true);
-    setSuccess(null);
-    setError(null);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess(t('settings.account.successMessage'));
-    } catch (err: unknown) {
-      console.error('Error updating account settings:', err);
-      setError(t('settings.account.errorMessage'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSaveNotifications = async () => {
     setSaving(true);
     setSuccess(null);
@@ -583,11 +553,10 @@ const Settings: React.FC = () => {
             }}
           >
             <Tab label="Profile" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
-            <Tab label={t('settings.tabs.account')} id="settings-tab-1" aria-controls="settings-tabpanel-1" />
-            <Tab label={t('settings.tabs.notifications')} id="settings-tab-2" aria-controls="settings-tabpanel-2" />
-            <Tab label={t('settings.tabs.security')} id="settings-tab-3" aria-controls="settings-tabpanel-3" />
-            <Tab label={t('settings.tabs.system')} id="settings-tab-4" aria-controls="settings-tabpanel-4" />
-            {isAdmin && <Tab label={t('settings.tabs.roles')} id="settings-tab-5" aria-controls="settings-tabpanel-5" />}
+            <Tab label={t('settings.tabs.notifications')} id="settings-tab-1" aria-controls="settings-tabpanel-1" />
+            <Tab label={t('settings.tabs.security')} id="settings-tab-2" aria-controls="settings-tabpanel-2" />
+            <Tab label={t('settings.tabs.system')} id="settings-tab-3" aria-controls="settings-tabpanel-3" />
+            {isAdmin && <Tab label={t('settings.tabs.roles')} id="settings-tab-4" aria-controls="settings-tabpanel-4" />}
           </Tabs>
         </Box>
 
@@ -903,85 +872,8 @@ const Settings: React.FC = () => {
           )}
         </TabPanel>
 
-        {/* Account Settings */}
-        <TabPanel value={activeTab} index={1}>
-          <Grid container spacing={3}>
-            {success && <Grid item xs={12}><Alert severity="success">{success}</Alert></Grid>}
-            {error && <Grid item xs={12}><Alert severity="error">{error}</Alert></Grid>}
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label={t('settings.account.firstName')}
-                name="firstName"
-                value={accountSettings.firstName}
-                onChange={handleAccountChange}
-                fullWidth
-                variant="outlined"
-                margin="normal"
-                sx={{ borderRadius: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label={t('settings.account.lastName')}
-                name="lastName"
-                value={accountSettings.lastName}
-                onChange={handleAccountChange}
-                fullWidth
-                variant="outlined"
-                margin="normal"
-                sx={{ borderRadius: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label={t('settings.account.email')}
-                name="email"
-                type="email"
-                value={accountSettings.email}
-                onChange={handleAccountChange}
-                fullWidth
-                variant="outlined"
-                margin="normal"
-                sx={{ borderRadius: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label={t('settings.account.phoneNumber')}
-                name="phoneNumber"
-                value={accountSettings.phoneNumber}
-                onChange={handleAccountChange}
-                fullWidth
-                variant="outlined"
-                margin="normal"
-                sx={{ borderRadius: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                onClick={handleSaveAccount}
-                disabled={saving}
-                sx={{
-                  borderRadius: 2,
-                  padding: '8px 16px',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-                  '&:hover': {
-                    boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
-                  }
-                }}
-              >
-                {saving ? <CircularProgress size={24} /> : t('settings.account.saveChanges')}
-              </Button>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
         {/* Notification Settings */}
-        <TabPanel value={activeTab} index={2}>
+        <TabPanel value={activeTab} index={1}>
           <Grid container spacing={3}>
             {success && <Grid item xs={12}><Alert severity="success">{success}</Alert></Grid>}
             {error && <Grid item xs={12}><Alert severity="error">{error}</Alert></Grid>}
@@ -1058,7 +950,7 @@ const Settings: React.FC = () => {
         </TabPanel>
 
         {/* Security Settings */}
-        <TabPanel value={activeTab} index={3}>
+        <TabPanel value={activeTab} index={2}>
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             {success && (
               <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 3 }}>
@@ -1547,7 +1439,7 @@ const Settings: React.FC = () => {
         </TabPanel>
 
         {/* System Settings */}
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={3}>
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
           <Grid container spacing={3}>
             {success && <Grid item xs={12}><Alert severity="success">{success}</Alert></Grid>}
@@ -1644,7 +1536,7 @@ const Settings: React.FC = () => {
 
         {/* Role Management */}
         {isAdmin && (
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={4}>
             <RoleManagement />
           </TabPanel>
         )}

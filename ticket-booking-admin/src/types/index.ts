@@ -56,8 +56,9 @@ export interface Event {
   eventId: string; // For backward compatibility
   name: string;
   description: string;
-  startDateTime: string; // Changed from eventDate to match backend
-  endDateTime: string;   // Added to match backend
+  startDateTime: string; // Next/earliest schedule date-time
+  endDateTime: string;   // Next/earliest schedule end time
+  nextSchedule?: EventSchedule; // Next upcoming schedule
   venue: Venue;
   category?: string; // Made optional since backend doesn't support event categories
   status: EventStatus;
@@ -70,6 +71,10 @@ export interface Event {
   ticketsAvailable: number;
   ticketPrice: number;
   ticketCategories?: TicketCategory[]; // Added ticket categories
+  hasDeal?: boolean; // Indicates if event has special deals
+  dealType?: string; // e.g., 'DISCOUNT', 'BUY_X_GET_Y', 'CREDIT_CARD', 'EARLY_BIRD'
+  dealDescription?: string; // e.g., "Buy 11 Get 1 Off", "20% Off with Visa"
+  discountPercentage?: number; // Percentage discount if applicable
 }
 
 export enum EventStatus {

@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   TextField, 
   Button, 
   Grid,
   Typography,
-  Divider
+  Divider,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { UserService } from '../../../services';
@@ -58,6 +64,8 @@ const handleApiError = (
 };
 
 const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <Formik
       initialValues={{
@@ -207,7 +215,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 id="password"
                 name="password"
                 label={user ? "Password (leave blank to keep current)" : "Password"}
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={values.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -216,6 +224,18 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
                 variant="outlined"
                 margin="normal"
                 required={!user}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
             <Grid item xs={12}>

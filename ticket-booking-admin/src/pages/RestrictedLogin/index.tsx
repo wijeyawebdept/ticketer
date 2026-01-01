@@ -82,8 +82,57 @@ const RestrictedLogin: React.FC = () => {
       sessionStorage.removeItem('user_data');
       sessionStorage.removeItem('user');
       
-      await login(values.email, values.password);
+      // Try different login endpoints in order: admin -> organizer -> organizer-employee
+      let loginResponse = null;
+      let userRole = '';
+      
+      try {
+        // Try admin login first
+        console.log('Trying admin login...');
+        loginResponse = await AuthService.adminLogin({ email: values.email, password: values.password });
+        userRole = loginResponse.user?.role || loginResponse.role || '';
+        console.log('Admin login successful, role:', userRole);
+      } catch (adminError: any) {
+        // Any 403 error means wrong role/insufficient privileges, try next login type
+        if (adminError.response?.status === 403) {
+          // Not an admin, try organizer
+          try {
+            console.log('Not an admin (403), trying organizer login...');
+            loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
+            userRole = loginResponse.user?.role || loginResponse.role || '';
+            console.log('Organizer login successful, role:', userRole);
+          } catch (organizerError: any) {
+            // Any 403 error means wrong role, try organizer employee
+            if (organizerError.response?.status === 403) {
+              // Not an organizer, try organizer employee
+              try {
+                console.log('Not an organizer (403), trying organizer employee login...');
+                loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
+                userRole = loginResponse.user?.role || loginResponse.role || '';
+                console.log('Organizer employee login successful, role:', userRole);
+              } catch (employeeError: any) {
+                // If all three failed, throw the last error
+                throw employeeError;
+              }
+            } else {
+              // If it's not a 403, it's a different error (401, 500, etc.), throw it
+              throw organizerError;
+            }
+          }
+        } else {
+          // If it's not a 403, it's a different error (401, 500, etc.), throw it
+          throw adminError;
+        }
+      }
+      
+      if (!loginResponse) {
+        throw new Error('Login failed - no valid response received');
+      }
+      
       console.log('Restricted login successful, token stored in sessionStorage:', !!sessionStorage.getItem('auth_token'));
+      
+      // Trigger auth refresh event to update AuthContext
+      window.dispatchEvent(new Event('authRefresh'));
       
       // Redirect based on user role - only allow restricted roles
       const userData = sessionStorage.getItem('user');

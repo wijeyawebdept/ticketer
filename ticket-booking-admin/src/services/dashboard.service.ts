@@ -4,7 +4,8 @@ import { DashboardOverview, UserRole } from '../types';
 class DashboardService {
   // Helper method to get the base path based on user role
   private getBasePath(): string {
-    const userStr = localStorage.getItem('user');
+    // Check both sessionStorage and localStorage for user data
+    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);

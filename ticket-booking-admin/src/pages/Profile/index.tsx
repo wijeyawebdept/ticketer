@@ -296,16 +296,6 @@ const Profile: React.FC = () => {
 
               <Divider sx={{ mb: 3 }} />
 
-              {/* User ID (Non-editable) */}
-              <Box mb={3}>
-                <Typography variant="subtitle2" color="textSecondary" gutterBottom sx={{ fontWeight: 500 }}>
-                  User ID (Read-only)
-                </Typography>
-                <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1.5, borderRadius: 2 }}>
-                  {profile.userId}
-                </Typography>
-              </Box>
-
               {editing ? (
                 <Formik
                   initialValues={initialValues}

@@ -149,7 +149,6 @@ const OrganizerEmployeeLayout: React.FC = () => {
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/employee/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/employee/bookings' },
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/employee/recycle-bin' },
-    { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/employee/profile' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/employee/settings' },
   ];
 

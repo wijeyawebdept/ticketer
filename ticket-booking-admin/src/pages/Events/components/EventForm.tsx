@@ -944,30 +944,46 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     <Typography variant="subtitle1" gutterBottom fontWeight="bold">
                       Event Image (Optional)
                     </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Upload an eye-catching image to attract more attendees. Recommended size: 1920x1080px
+                    </Typography>
                     
-                    <Card sx={{ p: 2, borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
-                      <Button
-                        variant="outlined"
-                        component="label"
-                        startIcon={<CloudUploadIcon />}
-                        fullWidth
-                        sx={{ mb: imagePreview ? 2 : 0 }}
-                      >
-                        {imagePreview ? 'Change Image' : 'Upload Image'}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                          hidden
-                          onChange={(e) => handleImageChange(e, setFieldValue)}
-                        />
-                      </Button>
-                      <FormHelperText sx={{ textAlign: 'center' }}>
-                        Upload a promotional image for your event (JPEG, PNG, GIF, or WebP, max 5MB)
-                      </FormHelperText>
+                    <Card sx={{ p: 3, borderRadius: 2, border: '2px dashed', borderColor: imagePreview ? 'success.main' : 'divider', bgcolor: imagePreview ? 'success.50' : 'background.paper' }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <CloudUploadIcon sx={{ fontSize: 48, color: imagePreview ? 'success.main' : 'text.secondary', mb: 2 }} />
+                        <Button
+                          variant={imagePreview ? "outlined" : "contained"}
+                          component="label"
+                          startIcon={imagePreview ? <CheckCircleIcon /> : <CloudUploadIcon />}
+                          color={imagePreview ? "success" : "primary"}
+                          size="large"
+                          sx={{ mb: 1 }}
+                        >
+                          {imagePreview ? 'Image Selected - Change' : 'Choose Event Image'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            hidden
+                            onChange={(e) => handleImageChange(e, setFieldValue)}
+                          />
+                        </Button>
+                        <FormHelperText sx={{ textAlign: 'center', fontSize: '0.875rem' }}>
+                          Supported formats: JPEG, PNG, GIF, WebP (max 5MB)
+                        </FormHelperText>
+                      </Box>
                       
                       {imagePreview && (
-                        <Box sx={{ mt: 2 }}>
+                        <Box sx={{ mt: 3 }}>
+                          <Typography variant="subtitle2" gutterBottom sx={{ textAlign: 'center', color: 'success.main', mb: 2 }}>
+                            <CheckCircleIcon sx={{ fontSize: 18, verticalAlign: 'middle', mr: 0.5 }} />
+                            Preview:
+                          </Typography>
                           <ImagePreview src={imagePreview} alt="Event preview" />
+                          {selectedImage && (
+                            <Typography variant="caption" display="block" sx={{ textAlign: 'center', mt: 1, color: 'text.secondary' }}>
+                              {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
+                            </Typography>
+                          )}
                         </Box>
                       )}
                     </Card>

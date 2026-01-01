@@ -21,6 +21,7 @@ import {
   TextField,
   Grid,
   Autocomplete,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,6 +32,8 @@ import {
   ToggleOff as DeactivateIcon,
   ToggleOn as ActivateIcon,
   DeleteSweep as DeleteSweepIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import EmployeeService, { OrganizerEmployee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../../services/employee.service';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
@@ -52,9 +55,10 @@ const Employees: React.FC = () => {
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [formData, setFormData] = useState<CreateEmployeeRequest>({
+  const [formData, setFormData] = useState<CreateEmployeeRequest & { newPassword?: string }>({
     email: '',
     password: '',
+    newPassword: '',
     firstName: '',
     lastName: '',
     phoneNumber: '',
@@ -62,6 +66,8 @@ const Employees: React.FC = () => {
     employeePosition: '',
     department: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   useEffect(() => {
     checkUserRole();
@@ -135,6 +141,7 @@ const Employees: React.FC = () => {
     setFormData({
       email: '',
       password: '',
+      newPassword: '',
       firstName: '',
       lastName: '',
       phoneNumber: '',
@@ -142,6 +149,8 @@ const Employees: React.FC = () => {
       employeePosition: '',
       department: '',
     });
+    setShowPassword(false);
+    setShowNewPassword(false);
     setOpenDialog(true);
   };
 
@@ -151,6 +160,7 @@ const Employees: React.FC = () => {
     setFormData({
       email: employee.email,
       password: '', // Password not needed for edit
+      newPassword: '',
       firstName: employee.firstName,
       lastName: employee.lastName,
       phoneNumber: employee.phoneNumber || '',
@@ -158,6 +168,8 @@ const Employees: React.FC = () => {
       employeePosition: employee.employeePosition || '',
       department: employee.department || '',
     });
+    setShowPassword(false);
+    setShowNewPassword(false);
     setOpenDialog(true);
   };
 
@@ -185,7 +197,14 @@ const Employees: React.FC = () => {
           employeePosition: formData.employeePosition,
         };
         await EmployeeService.updateEmployee(currentEmployeeId, updateData);
-        setSuccess('Employee updated successfully');
+        
+        // If new password is provided, change the password
+        if (formData.newPassword && formData.newPassword.trim()) {
+          await EmployeeService.changeEmployeePassword(currentEmployeeId, formData.newPassword);
+          setSuccess('Employee and password updated successfully');
+        } else {
+          setSuccess('Employee updated successfully');
+        }
       } else {
         // Create new employee
         await EmployeeService.createEmployee(formData);
@@ -480,10 +499,43 @@ const Employees: React.FC = () => {
                   fullWidth
                   label="Password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
                   required
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    ),
+                  }}
+                />
+              </Grid>
+            )}
+            {editMode && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="New Password (Optional)"
+                  name="newPassword"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  helperText="Leave blank to keep current password"
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        edge="end"
+                      >
+                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    ),
+                  }}
                 />
               </Grid>
             )}

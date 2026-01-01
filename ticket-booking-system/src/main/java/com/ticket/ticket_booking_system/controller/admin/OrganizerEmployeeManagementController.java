@@ -148,4 +148,20 @@ public class OrganizerEmployeeManagementController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+    
+    @PostMapping("/{employeeId}/change-password")
+    public ResponseEntity<?> changeEmployeePassword(
+            @PathVariable UUID employeeId,
+            @RequestBody java.util.Map<String, String> request) {
+        try {
+            String newPassword = request.get("newPassword");
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("New password is required");
+            }
+            employeeService.changeEmployeePassword(employeeId, newPassword);
+            return ResponseEntity.ok("Password changed successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

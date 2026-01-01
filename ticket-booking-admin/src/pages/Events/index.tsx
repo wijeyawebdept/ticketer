@@ -50,6 +50,7 @@ const Events: React.FC = () => {
   const [contextMenuEvent, setContextMenuEvent] = useState<Event | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetchEvents();
@@ -179,11 +180,11 @@ const Events: React.FC = () => {
 
   const handleBulkDelete = async () => {
     if (selectedEventIds.length === 0) return;
-    
-    if (!window.confirm(`Are you sure you want to delete ${selectedEventIds.length} event(s)?`)) {
-      return;
-    }
-    
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleteDialogOpen(false);
     try {
       await Promise.all(
         selectedEventIds.map(id => EventService.moveToRecycleBin(id))
@@ -304,7 +305,7 @@ const Events: React.FC = () => {
               const idToUse = params.row.eventId || params.row.id;
               if (idToUse && idToUse !== 'undefined') {
                 // Detect user role and navigate to appropriate path
-                // Check sessionStorage first (admin), then localStorage (organizers)
+                // Check sessionStorage first (admin), then localStorage (organizers/employees)
                 const sessionUserStr = sessionStorage.getItem('user');
                 const localUserStr = localStorage.getItem('user');
                 const userStr = sessionUserStr || localUserStr;
@@ -316,6 +317,8 @@ const Events: React.FC = () => {
                     if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
                         user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
                       basePath = '/admin';
+                    } else if (user.role === UserRole.ORGANIZER_EMPLOYEE || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
+                      basePath = '/employee';
                     }
                   } catch (e) {
                     console.error('Error parsing user:', e);
@@ -619,6 +622,42 @@ const Events: React.FC = () => {
             sx={{ fontWeight: 500 }}
           >
             Move to Recycle Bin
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ backgroundColor: '#f5f5f5', fontWeight: 600 }}>
+          Confirm Bulk Delete
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            Are you sure you want to delete {selectedEventIds.length} event(s)?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action will move the selected events to the recycle bin.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+          <Button 
+            onClick={() => setIsBulkDeleteDialogOpen(false)}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={confirmBulkDelete}
+            sx={{ fontWeight: 500 }}
+          >
+            Delete {selectedEventIds.length} Event(s)
           </Button>
         </DialogActions>
       </Dialog>

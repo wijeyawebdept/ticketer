@@ -66,7 +66,8 @@ class EmployeeService {
    * Get the base path based on user role
    */
   private getBasePath(): string {
-    const userStr = localStorage.getItem('user');
+    // Check both sessionStorage and localStorage for user data
+    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
@@ -213,6 +214,17 @@ class EmployeeService {
   async getEmployeeStatistics(): Promise<EmployeeStatistics> {
     const response = await api.get<EmployeeStatistics>('/api/organizer/employees/statistics');
     return response.data;
+  }
+
+  /**
+   * Change employee password
+   */
+  async changeEmployeePassword(employeeId: string, newPassword: string): Promise<void> {
+    const basePath = this.getBasePath();
+    await api.post(
+      `${basePath === '/api/organizer' ? `${basePath}/employees/${employeeId}/change-password` : `${basePath}/organizer-employees/${employeeId}/change-password`}`,
+      { newPassword }
+    );
   }
 }
 

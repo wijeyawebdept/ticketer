@@ -3,7 +3,8 @@ import { Venue, UserRole } from '../types';
 
 // Helper function to get the base path based on user role
 const getBasePath = (): string => {
-  const userStr = localStorage.getItem('user');
+  // Check both sessionStorage and localStorage for user data
+  const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
   if (userStr) {
     try {
       const user = JSON.parse(userStr);

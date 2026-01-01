@@ -11,8 +11,9 @@ public class EventResponse {
     private String name;
     private String description;
     private VenueBasicResponse venue;
-    private LocalDateTime startDateTime;
-    private LocalDateTime endDateTime;
+    private LocalDateTime startDateTime; // Earliest schedule date/time
+    private LocalDateTime endDateTime;   // Latest schedule date/time
+    private EventScheduleResponse nextSchedule; // Next upcoming schedule
     private BigDecimal basePrice;
     private Integer totalCapacity;
     private Integer availableSeats;
@@ -161,6 +162,14 @@ public class EventResponse {
         this.ticketCategories = ticketCategories;
     }
 
+    public EventScheduleResponse getNextSchedule() {
+        return nextSchedule;
+    }
+
+    public void setNextSchedule(EventScheduleResponse nextSchedule) {
+        this.nextSchedule = nextSchedule;
+    }
+
     // Builder class
     public static class Builder {
         private final EventResponse eventResponse = new EventResponse();
@@ -243,6 +252,11 @@ public class EventResponse {
         // Added builder method for ticketCategories
         public Builder ticketCategories(List<TicketCategoryResponse> ticketCategories) {
             eventResponse.setTicketCategories(ticketCategories);
+            return this;
+        }
+
+        public Builder nextSchedule(EventScheduleResponse nextSchedule) {
+            eventResponse.setNextSchedule(nextSchedule);
             return this;
         }
 

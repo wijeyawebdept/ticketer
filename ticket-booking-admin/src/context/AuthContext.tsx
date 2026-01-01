@@ -12,6 +12,7 @@ interface AuthContextType {
   isSuperAdmin: () => boolean;
   isRestrictedUser: () => boolean;
   isCustomerUser: () => boolean;
+  refreshUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,22 +25,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<{ id: string; email: string; role: UserRole } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadUser = React.useCallback(() => {
+    try {
+      const currentUser = AuthService.getCurrentUser();
+      console.log('AuthContext loading user:', currentUser);
+      setUser(currentUser ? { 
+        id: currentUser.id, 
+        email: currentUser.email || '',
+        role: currentUser.role as UserRole 
+      } : null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load user on mount
   useEffect(() => {
-    const loadUser = () => {
-      try {
-        const currentUser = AuthService.getCurrentUser();
-        setUser(currentUser ? { 
-          id: currentUser.id, 
-          email: currentUser.email || '',
-          role: currentUser.role as UserRole 
-        } : null);
-      } finally {
-        setLoading(false);
-      }
+    loadUser();
+  }, [loadUser]);
+
+  // Listen for custom auth refresh events (triggered after login/logout)
+  useEffect(() => {
+    const handleAuthRefresh = () => {
+      console.log('Auth refresh event received');
+      loadUser();
     };
 
-    loadUser();
-  }, []);
+    window.addEventListener('authRefresh', handleAuthRefresh);
+    return () => window.removeEventListener('authRefresh', handleAuthRefresh);
+  }, [loadUser]);
 
   const login = React.useCallback(async (email: string, password: string): Promise<void> => {
     try {
@@ -71,6 +85,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     AuthService.logout();
     setUser(null);
   }, []);
+
+  const refreshUser = React.useCallback((): void => {
+    loadUser();
+  }, [loadUser]);
 
   const isAuthenticated = React.useCallback((): boolean => {
     return user !== null;
@@ -124,8 +142,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isSuperAdmin,
       isRestrictedUser,
       isCustomerUser,
+      refreshUser,
     }),
-    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin, isRestrictedUser, isCustomerUser]
+    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin, isRestrictedUser, isCustomerUser, refreshUser]
   );
 
   return (

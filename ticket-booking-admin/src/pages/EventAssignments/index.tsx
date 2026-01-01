@@ -64,6 +64,8 @@ const EventAssignments: React.FC = () => {
   const [roleDescription, setRoleDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [editingAssignment, setEditingAssignment] = useState<EventEmployeeAssignment | null>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [assignmentToRemove, setAssignmentToRemove] = useState<{ eventId: string; employeeId: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -131,14 +133,25 @@ const EventAssignments: React.FC = () => {
   };
 
   const handleRemoveAssignment = async (eventId: string, employeeId: string) => {
-    if (!window.confirm('Are you sure you want to remove this assignment?')) return;
+    setAssignmentToRemove({ eventId, employeeId });
+    setRemoveDialogOpen(true);
+  };
+
+  const confirmRemoveAssignment = async () => {
+    if (!assignmentToRemove) return;
+    setRemoveDialogOpen(false);
 
     try {
-      await EventAssignmentService.removeEmployeeFromEvent(eventId, employeeId);
+      await EventAssignmentService.removeEmployeeFromEvent(
+        assignmentToRemove.eventId,
+        assignmentToRemove.employeeId
+      );
       showSuccessToast('Assignment removed successfully');
       fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to remove assignment');
+    } finally {
+      setAssignmentToRemove(null);
     }
   };
 
@@ -338,6 +351,42 @@ const EventAssignments: React.FC = () => {
           <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
           <Button onClick={handleUpdateAssignment} variant="contained">
             Update
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove Assignment Confirmation Dialog */}
+      <Dialog
+        open={removeDialogOpen}
+        onClose={() => setRemoveDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ backgroundColor: '#f5f5f5', fontWeight: 600 }}>
+          Confirm Remove Assignment
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            Are you sure you want to remove this assignment?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action will remove the employee from this event.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+          <Button 
+            onClick={() => setRemoveDialogOpen(false)}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={confirmRemoveAssignment}
+            sx={{ fontWeight: 500 }}
+          >
+            Remove Assignment
           </Button>
         </DialogActions>
       </Dialog>

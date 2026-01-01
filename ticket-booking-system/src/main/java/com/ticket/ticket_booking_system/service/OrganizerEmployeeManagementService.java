@@ -313,4 +313,17 @@ public class OrganizerEmployeeManagementService {
         
         return convertToDTO(updatedEmployee);
     }
+    
+    @Transactional
+    public void changeEmployeePassword(UUID employeeId, String newPassword) {
+        OrganizerEmployee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
+        
+        // Encode the new password
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        employee.setPassword(encodedPassword);
+        employee.setUpdatedAt(LocalDateTime.now());
+        
+        employeeRepository.save(employee);
+    }
 }

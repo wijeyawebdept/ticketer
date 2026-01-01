@@ -263,6 +263,40 @@ public class OrganizerEmployeeController {
     }
 
     /**
+     * Change employee password
+     */
+    @PostMapping("/{employeeId}/change-password")
+    public ResponseEntity<?> changeEmployeePassword(
+            @PathVariable UUID employeeId,
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unable to identify organizer");
+        }
+        
+        // Verify employee belongs to current organizer
+        if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to change this employee's password");
+        }
+        
+        String newPassword = request.get("newPassword");
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("New password is required");
+        }
+        
+        try {
+            employeeService.changeEmployeePassword(employeeId, newPassword);
+            return ResponseEntity.ok("Password changed successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
      * Get count of active employees for the current organizer
      */
     @GetMapping("/count")

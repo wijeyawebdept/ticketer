@@ -15,6 +15,18 @@ const axiosInstance = axios.create({
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Don't send tokens for login/register endpoints - we're trying to get a new token
+    const isAuthEndpoint = config.url?.includes('/api/auth/login') || 
+                          config.url?.includes('/api/auth/register') ||
+                          config.url?.includes('/api/auth/admin/login') ||
+                          config.url?.includes('/api/auth/organizer/login') ||
+                          config.url?.includes('/api/auth/organizer-employee/login');
+    
+    if (isAuthEndpoint) {
+      console.log('🚫 Skipping token for auth endpoint:', config.url);
+      return config;
+    }
+    
     // Detect which storage to use based on current page
     const currentPath = window.location.pathname;
     const isRestrictedRoute = currentPath.includes('/dashboard') || 
@@ -104,7 +116,8 @@ axiosInstance.interceptors.response.use(
       console.error('Authorization error: You do not have permission to access this resource.');
     }
     
-    return Promise.reject(new Error(error.response?.data?.message || 'Request failed'));
+    // Preserve the original error object so that status codes and response data are accessible
+    return Promise.reject(error);
   }
 );
 

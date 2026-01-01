@@ -21,6 +21,7 @@ import com.ticket.ticket_booking_system.entity.RecycleBin;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.EventEmployeeAssignmentRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
@@ -44,6 +45,7 @@ public class RecycleBinService {
     private final VenueRepository venueRepository;
     private final SeatRepository seatRepository;
     private final TicketCategoryRepository ticketCategoryRepository;
+    private final EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository;
     private final ObjectMapper objectMapper;
 
     public RecycleBinService(
@@ -56,7 +58,8 @@ public class RecycleBinService {
             EventScheduleRepository eventScheduleRepository,
             VenueRepository venueRepository,
             SeatRepository seatRepository,
-            TicketCategoryRepository ticketCategoryRepository) {
+            TicketCategoryRepository ticketCategoryRepository,
+            EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository) {
         this.recycleBinRepository = recycleBinRepository;
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
@@ -67,6 +70,7 @@ public class RecycleBinService {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.ticketCategoryRepository = ticketCategoryRepository;
+        this.eventEmployeeAssignmentRepository = eventEmployeeAssignmentRepository;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         // Configure ObjectMapper to handle Hibernate lazy loading and empty beans
@@ -419,7 +423,13 @@ public class RecycleBinService {
                         break;
                     case "EVENT":
                         if (eventRepository.existsById(entityId)) {
-                            // Delete associated seats and ticket categories first
+                            // Delete associated event schedules first
+                            System.out.println("Deleting event schedules for event: " + entityId);
+                            eventScheduleRepository.deleteByEvent_EventId(entityId);
+                            // Delete associated employee assignments
+                            System.out.println("Deleting event employee assignments for event: " + entityId);
+                            eventEmployeeAssignmentRepository.deleteByEvent_EventId(entityId);
+                            // Delete associated seats and ticket categories
                             System.out.println("Deleting seats for event: " + entityId);
                             seatRepository.deleteByEventId(entityId);
                             System.out.println("Deleting ticket categories for event: " + entityId);
@@ -480,7 +490,13 @@ public class RecycleBinService {
                         break;
                     case "EVENT":
                         if (eventRepository.existsById(entityId)) {
-                            // Delete associated seats and ticket categories first
+                            // Delete associated event schedules first
+                            System.out.println("Deleting event schedules for event: " + entityId);
+                            eventScheduleRepository.deleteByEvent_EventId(entityId);
+                            // Delete associated employee assignments
+                            System.out.println("Deleting event employee assignments for event: " + entityId);
+                            eventEmployeeAssignmentRepository.deleteByEvent_EventId(entityId);
+                            // Delete associated seats and ticket categories
                             seatRepository.deleteByEventId(entityId);
                             ticketCategoryRepository.deleteByEventId(entityId);
                             eventRepository.deleteById(entityId);

@@ -252,8 +252,3 @@ ORDER BY difference DESC;
 
 
 
-
-
-
-
-

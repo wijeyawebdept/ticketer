@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   TextField, 
   Button, 
   Grid,
   Typography,
-  Divider
+  Divider,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import api from '../../../services/api';
@@ -39,6 +45,8 @@ const PHONE_REGEX = /^\d{10}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
 const OrganizerForm: React.FC<OrganizerFormProps> = ({ organizer, onClose, onSuccess }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <Formik
       initialValues={{
@@ -169,12 +177,24 @@ const OrganizerForm: React.FC<OrganizerFormProps> = ({ organizer, onClose, onSuc
                 id="password"
                 name="password"
                 label={organizer ? "New Password (leave blank to keep current)" : "Password"}
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={values.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={touched.password && Boolean(errors.password)}
                 helperText={touched.password && errors.password ? String(errors.password) : ''}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Grid>
 

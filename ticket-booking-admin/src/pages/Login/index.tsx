@@ -94,7 +94,17 @@ const Login: React.FC = () => {
           
           // Only allow USER role on this login page
           if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
-            navigate('/events');
+            // Check if there's a pending booking (user was redirected from event details)
+            const pendingBooking = sessionStorage.getItem('pendingBooking');
+            const from = location.state?.from;
+            
+            if (pendingBooking || from) {
+              // Redirect back to the event details page to restore booking
+              navigate(from || '/events');
+            } else {
+              // Normal login flow - go to events page
+              navigate('/events');
+            }
           } else {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
@@ -146,7 +156,17 @@ const Login: React.FC = () => {
         
         // Only allow USER role on this login page
         if (normalizedRole === 'USER' || user.role === 'ROLE_USER') {
-          navigate('/events');
+          // Check if there's a pending booking (user was redirected from event details)
+          const pendingBooking = sessionStorage.getItem('pendingBooking');
+          const from = location.state?.from;
+          
+          if (pendingBooking || from) {
+            // Redirect back to the event details page to restore booking
+            navigate(from || '/events');
+          } else {
+            // Normal login flow - go to events page
+            navigate('/events');
+          }
         } else {
           // If user is admin, organizer, or organizer employee, deny access
           localStorage.removeItem('auth_token');

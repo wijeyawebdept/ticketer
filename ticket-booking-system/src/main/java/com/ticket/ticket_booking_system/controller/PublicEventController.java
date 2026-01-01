@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
+import com.ticket.ticket_booking_system.dto.response.EventScheduleResponse;
+import com.ticket.ticket_booking_system.service.EventScheduleService;
 import com.ticket.ticket_booking_system.service.EventService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class PublicEventController {
     
     private final EventService eventService;
+    private final EventScheduleService eventScheduleService;
     
     /**
      * Get all published events (publicly accessible)
@@ -75,5 +79,15 @@ public class PublicEventController {
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         Page<EventResponse> events = eventService.searchPublishedEvents(query, pageable);
         return ResponseEntity.ok(events);
+    }
+    
+    /**
+     * Get bookable schedules for a public event (publicly accessible)
+     * Returns only schedules that are ACTIVE and have available seats
+     */
+    @GetMapping("/{eventId}/schedules/bookable")
+    public ResponseEntity<List<EventScheduleResponse>> getBookableSchedules(@PathVariable UUID eventId) {
+        List<EventScheduleResponse> schedules = eventScheduleService.getBookableSchedulesForEvent(eventId);
+        return ResponseEntity.ok(schedules);
     }
 }

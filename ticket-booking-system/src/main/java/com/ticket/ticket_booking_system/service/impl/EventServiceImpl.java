@@ -102,6 +102,16 @@ public class EventServiceImpl implements EventService {
             System.out.println("Current user: " + email + " (Role: ORGANIZER)");
         }
         
+        // Check if organizer employee
+        OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(email).orElse(null);
+        if (employee != null) {
+            createdByUserId = employee.getEmployeeId();
+            createdByType = "ORGANIZER_EMPLOYEE";
+            // Employee creates event on behalf of their parent organizer
+            eventOrganizer = employee.getOrganizer();
+            System.out.println("Current user: " + email + " (Role: ORGANIZER_EMPLOYEE, Parent Organizer: " + eventOrganizer.getOrganizerId() + ")");
+        }
+        
         if (createdByUserId == null) {
             throw new IllegalStateException("Current user not found in any authentication table");
         }
@@ -238,9 +248,13 @@ public class EventServiceImpl implements EventService {
         }
 
         if (request.getTotalCapacity() != null) {
-            event.setTotalCapacity(request.getTotalCapacity());
-            // Update available seats if total capacity changes
-            int capacityDifference = request.getTotalCapacity() - event.getTotalCapacity();
+            // Calculate capacity difference BEFORE updating
+            int oldCapacity = event.getTotalCapacity();
+            int newCapacity = request.getTotalCapacity();
+            int capacityDifference = newCapacity - oldCapacity;
+            
+            event.setTotalCapacity(newCapacity);
+            // Update available seats based on capacity change
             event.setAvailableSeats(event.getAvailableSeats() + capacityDifference);
         }
 
@@ -482,12 +496,56 @@ public class EventServiceImpl implements EventService {
                     .collect(Collectors.toList());
         }
 
+        // Get the next upcoming schedule for this event
+        List<EventSchedule> schedules = eventScheduleRepository
+                .findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(event.getEventId());
+        EventSchedule nextSchedule = schedules.stream()
+                .filter(schedule -> {
+                    java.time.LocalDateTime scheduleDateTime = java.time.LocalDateTime.of(
+                        schedule.getScheduleDate(), 
+                        schedule.getStartTime()
+                    );
+                    return scheduleDateTime.isAfter(java.time.LocalDateTime.now());
+                })
+                .min((s1, s2) -> {
+                    java.time.LocalDateTime dt1 = java.time.LocalDateTime.of(s1.getScheduleDate(), s1.getStartTime());
+                    java.time.LocalDateTime dt2 = java.time.LocalDateTime.of(s2.getScheduleDate(), s2.getStartTime());
+                    return dt1.compareTo(dt2);
+                })
+                .orElse(null);
+
+        // Convert next schedule to response if exists
+        com.ticket.ticket_booking_system.dto.response.EventScheduleResponse nextScheduleResponse = null;
+        java.time.LocalDateTime startDateTime = null;
+        java.time.LocalDateTime endDateTime = null;
+
+        if (nextSchedule != null) {
+            nextScheduleResponse = com.ticket.ticket_booking_system.dto.response.EventScheduleResponse.builder()
+                    .scheduleId(nextSchedule.getScheduleId())
+                    .eventId(event.getEventId())
+                    .eventName(event.getName())
+                    .scheduleDate(nextSchedule.getScheduleDate())
+                    .startTime(nextSchedule.getStartTime())
+                    .endTime(nextSchedule.getEndTime())
+                    .capacity(nextSchedule.getCapacity())
+                    .availableSeats(nextSchedule.getAvailableSeats())
+                    .priceAdjustment(nextSchedule.getPriceAdjustment())
+                    .status(nextSchedule.getStatus())
+                    .build();
+
+            startDateTime = java.time.LocalDateTime.of(nextSchedule.getScheduleDate(), nextSchedule.getStartTime());
+            endDateTime = java.time.LocalDateTime.of(nextSchedule.getScheduleDate(), nextSchedule.getEndTime());
+        }
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
                 .description(event.getDescription())
                 .venue(venueResponse)
                 .organizer(organizerResponse) // Can be NULL for ADMIN/SUPER_ADMIN events
+                .startDateTime(startDateTime) // Earliest/next schedule date-time
+                .endDateTime(endDateTime)     // Earliest/next schedule end time
+                .nextSchedule(nextScheduleResponse) // Full next schedule info
                 .basePrice(event.getBasePrice())
                 .totalCapacity(event.getTotalCapacity())
                 .availableSeats(event.getAvailableSeats())

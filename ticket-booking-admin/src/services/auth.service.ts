@@ -262,6 +262,220 @@ class AuthService {
     return user !== null && (user.role === 'ADMIN' || user.role === 'ROLE_ADMIN');
   }
 
+  async adminLogin(credentials: LoginRequest): Promise<LoginResponse> {
+    try {
+      console.log('Logging in admin with endpoint: /api/auth/admin/login');
+      const response = await axios.post<LoginResponse>('/api/auth/admin/login', credentials);
+      console.log('Admin login response:', response.status, response.statusText);
+      console.log('Admin login response data:', JSON.stringify(response.data));
+      
+      if (response.data && response.data.token) {
+        const storage = this.getStorage();
+        storage.setItem('auth_token', response.data.token);
+        console.log('Token stored in:', this.storageType);
+        
+        // Debug the JWT token and get role from it
+        let userRole = '';
+        try {
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          console.log('JWT Token decoded:', decoded);
+          console.log('User from API response:', response.data.user);
+          console.log('Role from JWT:', decoded.role);
+          userRole = decoded.role;
+          if (response.data.user) {
+            console.log('Role from API response:', response.data.user.role);
+          }
+        } catch (err) {
+          console.error('Error decoding JWT token:', err);
+        }
+        
+        // Store user data with role from JWT token
+        if (response.data.user && response.data.user.id) {
+          // Normalize the role by removing ROLE_ prefix if present
+          const normalizedRole = (userRole || response.data.user.role || '').replace(/^ROLE_/, '');
+          
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email || credentials.email,
+            firstName: response.data.user.firstName || '',
+            lastName: response.data.user.lastName || '',
+            role: normalizedRole
+          };
+          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          storage.setItem('user', JSON.stringify(userData));
+          console.log('Stored user data in', this.storageType, ':', userData);
+          console.log('Normalized role stored:', normalizedRole);
+        } else {
+          console.warn('No user object in response, creating minimal user data from JWT');
+          // If no user object, create one from JWT
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          const normalizedRole = (decoded.role || '').replace(/^ROLE_/, '');
+          const userData = {
+            id: decoded.sub || '',
+            email: credentials.email,
+            firstName: '',
+            lastName: '',
+            role: normalizedRole
+          };
+          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          storage.setItem('user', JSON.stringify(userData));
+          console.log('Stored minimal user data from JWT in', this.storageType, ':', userData);
+        }
+      }
+      
+      return {
+        id: response.data?.user?.id || '',
+        role: response.data?.user?.role || '',
+        email: response.data?.user?.email || credentials.email,
+        token: response.data?.token || '',
+        status: response.data?.status,
+        message: response.data?.message,
+        user: response.data?.user
+      };
+    } catch (error: any) {
+      console.error('Admin login error:', error);
+      if (error?.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      } else if (error?.message) {
+        console.error('Error message:', error.message);
+      }
+      throw error;
+    }
+  }
+
+  async organizerLogin(credentials: LoginRequest): Promise<LoginResponse> {
+    try {
+      console.log('Logging in organizer with endpoint: /api/auth/organizer/login');
+      const response = await axios.post<LoginResponse>('/api/auth/organizer/login', credentials);
+      console.log('Organizer login response:', response.status, response.statusText);
+      
+      if (response.data.token) {
+        const storage = this.getStorage();
+        storage.setItem('auth_token', response.data.token);
+        console.log('Token stored in:', this.storageType);
+        
+        // Debug the JWT token and get role from it
+        let userRole = '';
+        try {
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          console.log('JWT Token decoded:', decoded);
+          console.log('User from API response:', response.data.user);
+          console.log('Role from JWT:', decoded.role);
+          userRole = decoded.role;
+          if (response.data.user) {
+            console.log('Role from API response:', response.data.user.role);
+          }
+        } catch (err) {
+          console.error('Error decoding JWT token:', err);
+        }
+        
+        // Store user data with role from JWT token
+        if (response.data.user) {
+          // Normalize the role by removing ROLE_ prefix if present
+          const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
+          
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            role: normalizedRole
+          };
+          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          storage.setItem('user', JSON.stringify(userData));
+          console.log('Stored user data in', this.storageType, ':', userData);
+          console.log('Normalized role stored:', normalizedRole);
+        }
+      }
+      
+      return {
+        id: response.data.user?.id || '',
+        role: response.data.user?.role || '',
+        email: response.data.user?.email || '',
+        token: response.data.token,
+        status: response.data.status,
+        message: response.data.message,
+        user: response.data.user
+      };
+    } catch (error: any) {
+      console.error('Organizer login error:', error);
+      if (error?.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      } else if (error?.message) {
+        console.error('Error message:', error.message);
+      }
+      throw error;
+    }
+  }
+
+  async organizerEmployeeLogin(credentials: LoginRequest): Promise<LoginResponse> {
+    try {
+      console.log('Logging in organizer employee with endpoint: /api/auth/organizer-employee/login');
+      const response = await axios.post<LoginResponse>('/api/auth/organizer-employee/login', credentials);
+      console.log('Organizer employee login response:', response.status, response.statusText);
+      
+      if (response.data.token) {
+        const storage = this.getStorage();
+        storage.setItem('auth_token', response.data.token);
+        console.log('Token stored in:', this.storageType);
+        
+        // Debug the JWT token and get role from it
+        let userRole = '';
+        try {
+          const decoded = jwt_decode<DecodedToken>(response.data.token);
+          console.log('JWT Token decoded:', decoded);
+          console.log('User from API response:', response.data.user);
+          console.log('Role from JWT:', decoded.role);
+          userRole = decoded.role;
+          if (response.data.user) {
+            console.log('Role from API response:', response.data.user.role);
+          }
+        } catch (err) {
+          console.error('Error decoding JWT token:', err);
+        }
+        
+        // Store user data with role from JWT token
+        if (response.data.user) {
+          // Normalize the role by removing ROLE_ prefix if present
+          const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
+          
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email,
+            firstName: response.data.user.firstName,
+            lastName: response.data.user.lastName,
+            role: normalizedRole
+          };
+          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+          storage.setItem('user', JSON.stringify(userData));
+          console.log('Stored user data in', this.storageType, ':', userData);
+          console.log('Normalized role stored:', normalizedRole);
+        }
+      }
+      
+      return {
+        id: response.data.user?.id || '',
+        role: response.data.user?.role || '',
+        email: response.data.user?.email || '',
+        token: response.data.token,
+        status: response.data.status,
+        message: response.data.message,
+        user: response.data.user
+      };
+    } catch (error: any) {
+      console.error('Organizer employee login error:', error);
+      if (error?.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      } else if (error?.message) {
+        console.error('Error message:', error.message);
+      }
+      throw error;
+    }
+  }
+
   async googleLogin(googleToken: string): Promise<LoginResponse> {
     try {
       console.log('Logging in with Google token');
