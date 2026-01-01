@@ -94,6 +94,12 @@ const EventCard: React.FC<EventCardProps> = ({
               fontSize: '19px',
               lineHeight: 1.2,
               letterSpacing: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              wordBreak: 'break-word',
             }}
           >
             {artists}

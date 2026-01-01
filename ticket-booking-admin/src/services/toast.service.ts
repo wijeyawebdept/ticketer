@@ -134,6 +134,7 @@ export const ToastMessages = {
   // User
   PROFILE_UPDATED: 'Your profile has been updated successfully!',
   PASSWORD_CHANGED: 'Your password has been changed successfully.',
+  EMAIL_CHANGED: 'Your email has been changed successfully. Please log in with your new email.',
   PROFILE_PICTURE_UPDATED: 'Profile picture updated successfully!',
   
   // Generic

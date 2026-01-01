@@ -18,7 +18,6 @@ import {
   Tabs,
   Tab,
   Badge,
-  Paper,
   Switch,
   FormControlLabel,
   InputAdornment
@@ -36,13 +35,16 @@ import {
   Cancel as CancelIcon,
   Info as InfoIcon,
   History as HistoryIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { Formik, Form, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
+import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import { ProfileDTO, ProfileUpdateDTO } from '../../../types';
 import { profileService } from '../../../services/profile.service';
+import { useAuth } from '../../../context/AuthContext';
 
 interface ProfileFormValues {
   firstName: string;
@@ -70,6 +72,9 @@ const validationSchema = Yup.object().shape({
 });
 
 const UserProfile: React.FC = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -87,14 +92,6 @@ const UserProfile: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Account settings
-  const [accountSettings, setAccountSettings] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: ''
-  });
-
   // Notification settings
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
@@ -109,10 +106,17 @@ const UserProfile: React.FC = () => {
     confirmPassword: ''
   });
 
+  const [emailChangeSettings, setEmailChangeSettings] = useState({
+    newEmail: '',
+    confirmEmail: '',
+    passwordForEmail: ''
+  });
+
   const [showPasswords, setShowPasswords] = useState({
     currentPassword: false,
     newPassword: false,
-    confirmPassword: false
+    confirmPassword: false,
+    passwordForEmail: false
   });
 
   const [passwordValidation, setPasswordValidation] = useState({
@@ -121,6 +125,11 @@ const UserProfile: React.FC = () => {
     hasNumber: false,
     hasSymbol: false,
     passwordsMatch: false
+  });
+
+  const [emailValidation, setEmailValidation] = useState({
+    isValidEmail: false,
+    emailsMatch: false
   });
 
   const [showSecurityNotice, setShowSecurityNotice] = useState(false);
@@ -207,34 +216,6 @@ const UserProfile: React.FC = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Account handlers
-  const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAccountSettings({
-      ...accountSettings,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSaveAccount = async () => {
-    setSaving(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSnackbar({
-        open: true,
-        message: 'Account settings saved successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to save account settings',
-        severity: 'error'
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // Notification handlers
   const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNotificationSettings({
@@ -292,7 +273,7 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleClickShowPassword = (field: 'currentPassword' | 'newPassword' | 'confirmPassword') => {
+  const handleClickShowPassword = (field: 'currentPassword' | 'newPassword' | 'confirmPassword' | 'passwordForEmail') => {
     setShowPasswords({
       ...showPasswords,
       [field]: !showPasswords[field]
@@ -301,6 +282,103 @@ const UserProfile: React.FC = () => {
 
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+  };
+
+  const handleEmailChangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSettings = {
+      ...emailChangeSettings,
+      [e.target.name]: e.target.value
+    };
+    setEmailChangeSettings(newSettings);
+
+    // Real-time email validation
+    if (e.target.name === 'newEmail' || e.target.name === 'confirmEmail') {
+      const newEmail = e.target.name === 'newEmail' ? e.target.value : newSettings.newEmail;
+      const confirmEmail = e.target.name === 'confirmEmail' ? e.target.value : newSettings.confirmEmail;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      setEmailValidation({
+        isValidEmail: emailRegex.test(newEmail),
+        emailsMatch: newEmail === confirmEmail && newEmail.length > 0 && confirmEmail.length > 0
+      });
+    }
+  };
+
+  const handleSaveEmailChange = async () => {
+    setSaving(true);
+
+    // Validate all fields are filled
+    if (!emailChangeSettings.newEmail || !emailChangeSettings.confirmEmail || !emailChangeSettings.passwordForEmail) {
+      setSnackbar({
+        open: true,
+        message: 'Please fill in all email change fields',
+        severity: 'error'
+      });
+      setSaving(false);
+      return;
+    }
+
+    // Validate email format
+    if (!emailValidation.isValidEmail) {
+      setSnackbar({
+        open: true,
+        message: 'Please enter a valid email address',
+        severity: 'error'
+      });
+      setSaving(false);
+      return;
+    }
+
+    // Validate emails match
+    if (!emailValidation.emailsMatch) {
+      setSnackbar({
+        open: true,
+        message: 'Emails do not match',
+        severity: 'error'
+      });
+      setSaving(false);
+      return;
+    }
+
+    try {
+      await profileService.changeEmail(
+        emailChangeSettings.newEmail,
+        emailChangeSettings.passwordForEmail
+      );
+      setSnackbar({
+        open: true,
+        message: 'Email updated successfully. You will be logged out in 3 seconds for security.',
+        severity: 'success'
+      });
+      setEmailChangeSettings({
+        newEmail: '',
+        confirmEmail: '',
+        passwordForEmail: ''
+      });
+      setEmailValidation({
+        isValidEmail: false,
+        emailsMatch: false
+      });
+      
+      // Reload profile to show new email
+      await fetchProfile();
+      
+      // Logout after 3 seconds
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error updating email:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to update email. Please check your password.';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveSecurity = async () => {
@@ -337,10 +415,13 @@ const UserProfile: React.FC = () => {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await profileService.changePassword(
+        securitySettings.currentPassword,
+        securitySettings.newPassword
+      );
       setSnackbar({
         open: true,
-        message: 'Password updated successfully',
+        message: 'Password updated successfully. You will be logged out in 3 seconds for security.',
         severity: 'success'
       });
       setSecuritySettings({
@@ -348,10 +429,25 @@ const UserProfile: React.FC = () => {
         newPassword: '',
         confirmPassword: ''
       });
-    } catch (error) {
+      setPasswordValidation({
+        minLength: false,
+        hasUppercase: false,
+        hasNumber: false,
+        hasSymbol: false,
+        passwordsMatch: false
+      });
+      
+      // Logout after 3 seconds
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error updating password:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to update password. Please check your current password.';
       setSnackbar({
         open: true,
-        message: 'Failed to update password',
+        message: errorMessage,
         severity: 'error'
       });
     } finally {
@@ -455,7 +551,6 @@ const UserProfile: React.FC = () => {
             }}
           >
             <Tab label="PROFILE" />
-            <Tab label="ACCOUNT" />
             <Tab label="NOTIFICATIONS" />
             <Tab label="SECURITY" />
             <Tab label="SYSTEM" />
@@ -808,114 +903,11 @@ const UserProfile: React.FC = () => {
           </Grid>
         )}
 
-        {/* Account Settings Tab */}
+        {/* Notification Settings Tab */}
         {currentTab === 1 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-          <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <CardContent>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
-                    First Name
-                  </Typography>
-                  <TextField
-                    name="firstName"
-                    value={accountSettings.firstName}
-                    onChange={handleAccountChange}
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        backgroundColor: '#242a33',
-                        color: '#fff'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
-                    Last Name
-                  </Typography>
-                  <TextField
-                    name="lastName"
-                    value={accountSettings.lastName}
-                    onChange={handleAccountChange}
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        backgroundColor: '#242a33',
-                        color: '#fff'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
-                    Email
-                  </Typography>
-                  <TextField
-                    name="email"
-                    type="email"
-                    value={accountSettings.email}
-                    onChange={handleAccountChange}
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        backgroundColor: '#242a33',
-                        color: '#fff'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
-                    Phone Number
-                  </Typography>
-                  <TextField
-                    name="phoneNumber"
-                    value={accountSettings.phoneNumber}
-                    onChange={handleAccountChange}
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        backgroundColor: '#242a33',
-                        color: '#fff'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button 
-                    variant="contained" 
-                    onClick={handleSaveAccount}
-                    disabled={saving}
-                    sx={{
-                      backgroundColor: '#ff1955',
-                      '&:hover': {
-                        backgroundColor: '#e01545'
-                      }
-                    }}
-                  >
-                    {saving ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Save Changes'}
-                  </Button>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-          </Box>
-        )}
-
-        {/* Notification Settings Tab */}
-        {currentTab === 2 && (
-          <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <CardContent>
+            <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <CardContent>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <FormControlLabel
@@ -1017,10 +1009,11 @@ const UserProfile: React.FC = () => {
               </Grid>
             </CardContent>
           </Card>
+          </Box>
         )}
 
         {/* Security Settings Tab */}
-        {currentTab === 3 && (
+        {currentTab === 2 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             {showSecurityNotice && (
               <Alert 
@@ -1262,6 +1255,173 @@ const UserProfile: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Email Change Section */}
+            <Card sx={{ mt: 3, backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={1} mb={3}>
+                  <EmailIcon sx={{ color: '#ff1955', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#fcd0a5' }}>
+                    Change Email Address
+                  </Typography>
+                </Box>
+
+                <Alert severity="info" sx={{ mb: 3, backgroundColor: 'rgba(33, 150, 243, 0.1)', color: '#fff', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+                  <Typography variant="body2">
+                    <strong>Important:</strong> After changing your email, you'll be logged out and need to sign in with your new email address.
+                  </Typography>
+                </Alert>
+
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 2 }}>
+                      Current Email: <Box component="strong" sx={{ color: '#fcd0a5' }}>{profile?.email}</Box>
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
+                      New Email Address
+                    </Typography>
+                    <TextField
+                      name="newEmail"
+                      type="email"
+                      value={emailChangeSettings.newEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      size="small"
+                      error={emailChangeSettings.newEmail.length > 0 && !emailValidation.isValidEmail}
+                      helperText={
+                        emailChangeSettings.newEmail.length > 0 && !emailValidation.isValidEmail
+                          ? 'Please enter a valid email address'
+                          : ''
+                      }
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          backgroundColor: '#242a33',
+                          color: '#fff'
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: '#f44336'
+                        }
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
+                      Confirm New Email
+                    </Typography>
+                    <TextField
+                      name="confirmEmail"
+                      type="email"
+                      value={emailChangeSettings.confirmEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      size="small"
+                      error={emailChangeSettings.confirmEmail.length > 0 && !emailValidation.emailsMatch}
+                      helperText={
+                        emailChangeSettings.confirmEmail.length > 0 && !emailValidation.emailsMatch
+                          ? 'Emails do not match'
+                          : ''
+                      }
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          backgroundColor: '#242a33',
+                          color: '#fff'
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: '#f44336'
+                        }
+                      }}
+                    />
+                    
+                    {emailChangeSettings.confirmEmail && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {emailValidation.emailsMatch ? (
+                            <>
+                              <CheckCircle sx={{ fontSize: 20, color: '#4caf50' }} />
+                              <Typography variant="body2" sx={{ color: '#4caf50', fontWeight: 600 }}>
+                                Emails match!
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <CancelIcon sx={{ fontSize: 20, color: '#f44336' }} />
+                              <Typography variant="body2" sx={{ color: '#f44336', fontWeight: 600 }}>
+                                Emails don't match
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                      <Chip label="Verify Your Identity" size="small" sx={{ fontWeight: 600, backgroundColor: '#ff1955', color: '#fff' }} />
+                    </Divider>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
+                      Current Password (for verification)
+                    </Typography>
+                    <TextField
+                      name="passwordForEmail"
+                      type={showPasswords.passwordForEmail ? 'text' : 'password'}
+                      value={emailChangeSettings.passwordForEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      size="small"
+                      sx={{
+                        '& .MuiInputBase-root': {
+                          backgroundColor: '#242a33',
+                          color: '#fff'
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => handleClickShowPassword('passwordForEmail')}
+                              onMouseDown={handleMouseDownPassword}
+                              edge="end"
+                              sx={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                            >
+                              {showPasswords.passwordForEmail ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Button 
+                      variant="contained" 
+                      startIcon={saving ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <EmailIcon />}
+                      onClick={handleSaveEmailChange}
+                      disabled={saving}
+                      fullWidth
+                      sx={{
+                        backgroundColor: '#1976d2',
+                        color: '#fff',
+                        py: 1.5,
+                        fontWeight: 700,
+                        '&:hover': {
+                          backgroundColor: '#1565c0'
+                        }
+                      }}
+                    >
+                      {saving ? 'Updating Email...' : 'Update Email Address'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+
             {/* Additional Security Features */}
             <Card sx={{ mt: 3, backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)', opacity: 0.7 }}>
               <CardContent>
@@ -1305,7 +1465,7 @@ const UserProfile: React.FC = () => {
         )}
 
         {/* System Settings Tab */}
-        {currentTab === 4 && (
+        {currentTab === 3 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <CardContent>

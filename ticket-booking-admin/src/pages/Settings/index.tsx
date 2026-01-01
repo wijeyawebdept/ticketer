@@ -33,7 +33,8 @@ import {
   Cancel as CancelIcon,
   Info as InfoIcon,
   History as HistoryIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -157,10 +158,22 @@ const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
+  const [emailChangeSettings, setEmailChangeSettings] = useState({
+    newEmail: '',
+    confirmEmail: '',
+    passwordForEmail: ''
+  });
+
   const [showPasswords, setShowPasswords] = useState({
     currentPassword: false,
     newPassword: false,
-    confirmPassword: false
+    confirmPassword: false,
+    passwordForEmail: false
+  });
+
+  const [emailValidation, setEmailValidation] = useState({
+    isValidEmail: false,
+    emailsMatch: false
   });
 
   // Password validation state
@@ -318,7 +331,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleClickShowPassword = (field: 'currentPassword' | 'newPassword' | 'confirmPassword') => {
+  const handleClickShowPassword = (field: 'currentPassword' | 'newPassword' | 'confirmPassword' | 'passwordForEmail') => {
     setShowPasswords({
       ...showPasswords,
       [field]: !showPasswords[field]
@@ -345,6 +358,85 @@ const Settings: React.FC = () => {
     // Change currency immediately when currency is changed
     if (target.name === 'defaultCurrency') {
       setCurrency(target.value);
+    }
+  };
+
+  const handleEmailChangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSettings = {
+      ...emailChangeSettings,
+      [e.target.name]: e.target.value
+    };
+    setEmailChangeSettings(newSettings);
+
+    // Real-time email validation
+    if (e.target.name === 'newEmail' || e.target.name === 'confirmEmail') {
+      const newEmail = e.target.name === 'newEmail' ? e.target.value : newSettings.newEmail;
+      const confirmEmail = e.target.name === 'confirmEmail' ? e.target.value : newSettings.confirmEmail;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      setEmailValidation({
+        isValidEmail: emailRegex.test(newEmail),
+        emailsMatch: newEmail === confirmEmail && newEmail.length > 0 && confirmEmail.length > 0
+      });
+    }
+  };
+
+  const handleSaveEmailChange = async () => {
+    setSaving(true);
+    setSuccess(null);
+    setError(null);
+
+    // Validate all fields are filled
+    if (!emailChangeSettings.newEmail || !emailChangeSettings.confirmEmail || !emailChangeSettings.passwordForEmail) {
+      setError('Please fill in all email change fields');
+      setSaving(false);
+      return;
+    }
+
+    // Validate email format
+    if (!emailValidation.isValidEmail) {
+      setError('Please enter a valid email address');
+      setSaving(false);
+      return;
+    }
+
+    // Validate emails match
+    if (!emailValidation.emailsMatch) {
+      setError('Emails do not match');
+      setSaving(false);
+      return;
+    }
+
+    try {
+      await profileService.changeEmail(
+        emailChangeSettings.newEmail,
+        emailChangeSettings.passwordForEmail
+      );
+      setSuccess('Email updated successfully. You will be logged out in 3 seconds for security.');
+      setEmailChangeSettings({
+        newEmail: '',
+        confirmEmail: '',
+        passwordForEmail: ''
+      });
+      setEmailValidation({
+        isValidEmail: false,
+        emailsMatch: false
+      });
+      
+      // Reload profile to show new email
+      await loadProfile();
+      
+      // Logout after 3 seconds
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error updating email:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to update email. Please check your password.';
+      setError(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1219,6 +1311,171 @@ const Settings: React.FC = () => {
                       }}
                     >
                       {saving ? 'Updating Password...' : ' Update Password'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+
+            {/* Email Change Section */}
+            <Card sx={{ mb: 3, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box display="flex" alignItems="center" gap={1} mb={3}>
+                  <EmailIcon sx={{ color: '#1976d2', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                    Change Email Address
+                  </Typography>
+                </Box>
+
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>Important:</strong> After changing your email, you'll be logged out and need to sign in with your new email address.
+                  </Typography>
+                </Alert>
+
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Current Email: <strong>{profile?.email}</strong>
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="New Email Address"
+                      name="newEmail"
+                      type="email"
+                      value={emailChangeSettings.newEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      variant="outlined"
+                      error={emailChangeSettings.newEmail.length > 0 && !emailValidation.isValidEmail}
+                      helperText={
+                        emailChangeSettings.newEmail.length > 0 && !emailValidation.isValidEmail
+                          ? 'Please enter a valid email address'
+                          : ''
+                      }
+                      sx={{ 
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(0,0,0,0.02)'
+                        }
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Confirm New Email"
+                      name="confirmEmail"
+                      type="email"
+                      value={emailChangeSettings.confirmEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      variant="outlined"
+                      error={emailChangeSettings.confirmEmail.length > 0 && !emailValidation.emailsMatch}
+                      helperText={
+                        emailChangeSettings.confirmEmail.length > 0 && !emailValidation.emailsMatch
+                          ? 'Emails do not match'
+                          : ''
+                      }
+                      sx={{ 
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(0,0,0,0.02)'
+                        }
+                      }}
+                    />
+                    
+                    {/* Email Match Indicator */}
+                    {emailChangeSettings.confirmEmail && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {emailValidation.emailsMatch ? (
+                            <>
+                              <CheckCircleIcon sx={{ fontSize: 20, color: 'success.main' }} />
+                              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                                Emails match!
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <CancelIcon sx={{ fontSize: 20, color: 'error.main' }} />
+                              <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                Emails don't match
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }}>
+                      <Chip label="Verify Your Identity" size="small" sx={{ fontWeight: 600 }} />
+                    </Divider>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Current Password (for verification)"
+                      name="passwordForEmail"
+                      type={showPasswords.passwordForEmail ? 'text' : 'password'}
+                      value={emailChangeSettings.passwordForEmail}
+                      onChange={handleEmailChangeChange}
+                      fullWidth
+                      variant="outlined"
+                      sx={{ 
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(0,0,0,0.02)'
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => handleClickShowPassword('passwordForEmail')}
+                              onMouseDown={handleMouseDownPassword}
+                              edge="end"
+                            >
+                              {showPasswords.passwordForEmail ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      startIcon={saving ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <EmailIcon />}
+                      onClick={handleSaveEmailChange}
+                      disabled={saving}
+                      fullWidth
+                      sx={{
+                        borderRadius: 2,
+                        padding: '12px 24px',
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                        textTransform: 'none',
+                        boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                        background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                        '&:hover': {
+                          boxShadow: '0 6px 16px rgba(25, 118, 210, 0.4)',
+                          background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
+                        },
+                        '&:disabled': {
+                          background: '#ccc',
+                          color: '#666'
+                        }
+                      }}
+                    >
+                      {saving ? 'Updating Email...' : 'Update Email Address'}
                     </Button>
                   </Grid>
                 </Grid>

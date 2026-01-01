@@ -109,4 +109,40 @@ public class ProfileController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
+    
+    @PostMapping("/change-email")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> changeEmail(
+            @RequestBody Map<String, String> emailData,
+            Authentication authentication) {
+        
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String currentEmail = userDetails.getUsername();
+        
+        String newEmail = emailData.get("newEmail");
+        String password = emailData.get("password");
+        
+        if (newEmail == null || newEmail.isEmpty()) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "New email is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+        
+        if (password == null || password.isEmpty()) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Password is required for verification");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+        
+        try {
+            profileService.changeEmail(currentEmail, newEmail, password);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Email changed successfully. Please log in with your new email.");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
 }

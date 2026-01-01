@@ -16,4 +16,6 @@ public interface ProfileService {
     String uploadProfilePicture(String email, MultipartFile file) throws IOException;
     
     void changePassword(String email, String currentPassword, String newPassword);
+    
+    void changeEmail(String currentEmail, String newEmail, String password);
 }

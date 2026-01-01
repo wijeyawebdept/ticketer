@@ -308,4 +308,65 @@ public class ProfileServiceImpl implements ProfileService {
         
         throw new ResourceNotFoundException("User", "email", email);
     }
+    
+    @Override
+    public void changeEmail(String currentEmail, String newEmail, String password) {
+        // Check if new email is already in use
+        if (userRepository.findByEmail(newEmail).isPresent() ||
+            adminRepository.findByEmail(newEmail).isPresent() ||
+            organizerRepository.findByEmail(newEmail).isPresent() ||
+            employeeRepository.findByEmail(newEmail).isPresent()) {
+            throw new RuntimeException("Email address is already in use");
+        }
+        
+        // Check users table first
+        User user = userRepository.findByEmail(currentEmail).orElse(null);
+        if (user != null) {
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                throw new RuntimeException("Password is incorrect");
+            }
+            user.setEmail(newEmail);
+            user.setEmailVerified(false); // Require re-verification
+            userRepository.save(user);
+            return;
+        }
+        
+        // Check admins table
+        Admin admin = adminRepository.findByEmail(currentEmail).orElse(null);
+        if (admin != null) {
+            if (!passwordEncoder.matches(password, admin.getPassword())) {
+                throw new RuntimeException("Password is incorrect");
+            }
+            admin.setEmail(newEmail);
+            admin.setEmailVerified(false); // Require re-verification
+            adminRepository.save(admin);
+            return;
+        }
+        
+        // Check organizers table
+        Organizer organizer = organizerRepository.findByEmail(currentEmail).orElse(null);
+        if (organizer != null) {
+            if (!passwordEncoder.matches(password, organizer.getPassword())) {
+                throw new RuntimeException("Password is incorrect");
+            }
+            organizer.setEmail(newEmail);
+            organizer.setEmailVerified(false); // Require re-verification
+            organizerRepository.save(organizer);
+            return;
+        }
+        
+        // Check organizer employees table
+        OrganizerEmployee employee = employeeRepository.findByEmail(currentEmail).orElse(null);
+        if (employee != null) {
+            if (!passwordEncoder.matches(password, employee.getPassword())) {
+                throw new RuntimeException("Password is incorrect");
+            }
+            employee.setEmail(newEmail);
+            employee.setEmailVerified(false); // Require re-verification
+            employeeRepository.save(employee);
+            return;
+        }
+        
+        throw new ResourceNotFoundException("User", "email", currentEmail);
+    }
 }

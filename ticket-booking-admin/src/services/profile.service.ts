@@ -35,4 +35,13 @@ export const profileService = {
     });
     return response.data as { message: string };
   },
+
+  // Change email
+  changeEmail: async (newEmail: string, password: string): Promise<{ message: string }> => {
+    const response = await api.post('/api/profile/change-email', {
+      newEmail,
+      password,
+    });
+    return response.data as { message: string };
+  },
 };
