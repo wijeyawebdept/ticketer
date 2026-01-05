@@ -19,9 +19,21 @@ class EventCategoryService {
     return response.data;
   }
 
+  // Public method for fetching active categories (no auth required)
+  async getPublicActiveCategories(): Promise<EventCategory[]> {
+    const response = await api.get<EventCategory[]>('/api/public/event-categories/active');
+    return response.data;
+  }
+
   async getCategoryById(id: string): Promise<EventCategory> {
     const basePath = this.getBasePath();
     const response = await api.get<EventCategory>(`${basePath}/event-categories/${id}`);
+    return response.data;
+  }
+
+  // Public method for fetching category by ID (no auth required)
+  async getPublicCategoryById(id: string): Promise<EventCategory> {
+    const response = await api.get<EventCategory>(`/api/public/event-categories/${id}`);
     return response.data;
   }
 

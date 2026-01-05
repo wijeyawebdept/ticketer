@@ -88,7 +88,7 @@ public class Event {
     private String imageUrl;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private EventCategory category;
 

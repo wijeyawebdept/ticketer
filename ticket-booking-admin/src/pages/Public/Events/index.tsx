@@ -112,7 +112,6 @@ const Events: React.FC = () => {
       <PublicNavbar />
       
       <Container maxWidth="lg">
-        {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 6 }}>
           <Typography
             variant="h1"
@@ -138,7 +137,6 @@ const Events: React.FC = () => {
             Discover and book tickets for exciting events
           </Typography>
 
-          {/* Search Bar */}
           <Box sx={{ maxWidth: '600px', mx: 'auto' }}>
             <TextField
               fullWidth
@@ -185,7 +183,6 @@ const Events: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Events Grid */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress sx={{ color: '#ff1955' }} />
@@ -221,7 +218,6 @@ const Events: React.FC = () => {
                     }}
                     onClick={() => handleEventClick(event)}
                   >
-                    {/* Badges */}
                     <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', gap: 1, flexDirection: 'row-reverse' }}>
                       {event.hasDeal && (
                         <Chip
@@ -299,7 +295,6 @@ const Events: React.FC = () => {
                         </Typography>
                       </Box>
 
-                      {/* Base Price */}
                       <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.1)' }}>
                         <Typography
                           variant="body2"
@@ -330,7 +325,6 @@ const Events: React.FC = () => {
               ))}
             </Grid>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, gap: 2 }}>
                 <Button

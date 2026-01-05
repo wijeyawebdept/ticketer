@@ -16,6 +16,7 @@ import {
   MenuItem,
   Avatar,
   ListItemIcon,
+  Divider,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -26,20 +27,38 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
-import { ProfileDTO } from '../../types';
+import { EventCategoryService } from '../../services';
+import { ProfileDTO, EventCategory } from '../../types';
 
 const PublicNavbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [eventsAnchor, setEventsAnchor] = useState<null | HTMLElement>(null);
   const [portfolioAnchor, setPortfolioAnchor] = useState<null | HTMLElement>(null);
   const [blogAnchor, setBlogAnchor] = useState<null | HTMLElement>(null);
   const [otherPagesAnchor, setOtherPagesAnchor] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isCustomerUser, logout } = useAuth();
+
+  // Fetch event categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoryData = await EventCategoryService.getPublicActiveCategories();
+        console.log('Fetched categories in navbar:', categoryData);
+        setCategories(categoryData);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -70,7 +89,6 @@ const PublicNavbar: React.FC = () => {
   };
 
   const navItems = [
-    { label: 'Events', path: '/events' },
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
     { label: 'Contact', path: '/contact' },
@@ -164,6 +182,83 @@ const PublicNavbar: React.FC = () => {
             </IconButton>
           ) : (
             <Box sx={{ display: 'flex', gap: 0, alignItems: 'center' }}>
+              {/* Events Dropdown */}
+              <Box>
+                <Button
+                  onClick={(e) => setEventsAnchor(e.currentTarget)}
+                  endIcon={<ArrowDropDownIcon />}
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.55)',
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 400,
+                    fontSize: '1rem',
+                    lineHeight: 1.5,
+                    textTransform: 'none',
+                    padding: '0.5rem 1rem',
+                    minWidth: 'auto',
+                    '&:hover': {
+                      color: '#fff',
+                      backgroundColor: 'transparent',
+                    },
+                  }}
+                >
+                  Events
+                </Button>
+                <Menu
+                  anchorEl={eventsAnchor}
+                  open={Boolean(eventsAnchor)}
+                  onClose={() => setEventsAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                      maxHeight: 400,
+                    }
+                  }}
+                >
+                  {categories.length === 0 ? (
+                    <MenuItem disabled sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.95rem' }}>
+                      Loading categories...
+                    </MenuItem>
+                  ) : (
+                    categories.map((category) => (
+                      <MenuItem 
+                        key={category.id} 
+                        onClick={() => {
+                          navigate(`/events?category=${category.id}`);
+                          setEventsAnchor(null);
+                        }}
+                        sx={{ 
+                          fontFamily: 'Raleway, sans-serif',
+                          fontSize: '0.95rem',
+                          py: 1,
+                        }}
+                      >
+                        {category.categoryName}
+                      </MenuItem>
+                    ))
+                  )}
+                  <Divider sx={{ my: 0.5 }} />
+                  <MenuItem 
+                    onClick={() => {
+                      navigate('/events');
+                      setEventsAnchor(null);
+                    }}
+                    sx={{ 
+                      fontFamily: 'Raleway, sans-serif',
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      color: '#ff1955',
+                      py: 1,
+                    }}
+                  >
+                    All Events
+                  </MenuItem>
+                </Menu>
+              </Box>
+
               {navItems.map((item) => (
                 <Button
                   key={item.label}
