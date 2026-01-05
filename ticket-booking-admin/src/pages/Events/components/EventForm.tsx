@@ -18,7 +18,9 @@ import {
   Step,
   StepLabel,
   Chip,
-  Card
+  Card,
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,8 +34,8 @@ import {
 } from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { Event, Venue, EventStatus, TicketCategory } from '../../../types';
-import { EventService } from '../../../services';
+import { Event, Venue, EventStatus, TicketCategory, EventCategory } from '../../../types';
+import { EventService, EventScheduleService, EventCategoryService } from '../../../services';
 import { VenueService } from '../../../services';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -42,7 +44,7 @@ interface FormValues {
   name: string;
   description: string;
   venueId: string;
-  category: string;
+  categoryId: string;
   basePrice: number | '';
   totalCapacity: number | '';
   status: EventStatus;
@@ -111,7 +113,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venueLoading, setVenueLoading] = useState(false);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' | 'success' }>({ 
+    open: false, 
+    message: '', 
+    severity: 'info' 
+  });
 
   const steps = ['Event Info', 'Venue & Capacity', 'Ticket Categories', 'Media & Publish'];
   const [stepErrors, setStepErrors] = useState<{ [key: number]: string[] }>({});
@@ -170,8 +179,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         }
         break;
         
-      case 3: // Media & Publish (optional step)
-        // No required fields in this step
+      case 3: // Media & Publish (required image upload)
+        // Check if image is uploaded (required field)
+        // If editing existing event with image, skip this validation
+        if (!event?.imageUrl && !values.imageFile && !imagePreview) {
+          stepErrorMessages.push('Event image is required');
+        }
         break;
     }
     
@@ -254,6 +267,23 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
     fetchVenues();
   }, []);
   
+  // Load categories when component mounts
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoryLoading(true);
+      try {
+        const categoryData = await EventCategoryService.getActiveCategories();
+        setCategories(categoryData);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+  
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
     console.log('=== IMAGE CHANGE HANDLER CALLED ===');
     const file = e.target.files?.[0];
@@ -310,14 +340,16 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   };
 
   return (
+    <>
     <Formik
       initialValues={{
+        // Form initial values for event creation/editing
         name: event?.name || '',
         description: event?.description || '',
         venueId: event?.venue?.id || '',
-        category: '',
+        categoryId: event?.category?.id || '',
         basePrice: event?.basePrice || '',
-        totalCapacity: event?.ticketsAvailable || '',
+        totalCapacity: event?.totalCapacity || '',
         status: event?.status || EventStatus.DRAFT,
         imageFile: null,
         ticketCategories: event?.ticketCategories && event.ticketCategories.length > 0 
@@ -345,8 +377,13 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             return uuidRegex.test(value);
           }),
-        category: Yup.string()
-          .optional(),
+        categoryId: Yup.string()
+          .optional()
+          .test('valid-uuid', 'Invalid category selected', (value) => {
+            if (!value) return true; // Optional field
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(value);
+          }),
         basePrice: Yup.number()
           .required('Base price is required')
           .typeError('Base price must be a valid number')
@@ -384,6 +421,18 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             [EventStatus.DRAFT, EventStatus.PUBLISHED, EventStatus.CANCELLED, EventStatus.COMPLETED],
             'Invalid event status selected'
           ),
+        imageFile: Yup.mixed()
+          .test('file-required', 'Event image is required', function(value) {
+            // If editing existing event with image, imageFile is optional (can keep existing image)
+            // If creating new event, imageFile is required
+            if (event?.imageUrl) {
+              // Editing: optional
+              return true;
+            } else {
+              // Creating: required
+              return value !== null;
+            }
+          }),
         ticketCategories: Yup.array().of(
           Yup.object().shape({
             categoryName: Yup.string()
@@ -479,12 +528,33 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             return;
           }
           
+          // If trying to publish an existing event, check for schedules
+          if (values.status === EventStatus.PUBLISHED && event?.id) {
+            try {
+              const schedules = await EventScheduleService.getSchedulesForEvent(event.id);
+              if (!schedules || schedules.length === 0) {
+                setValidationError('Cannot publish event without schedules. Please add at least one event schedule before publishing.');
+                setSubmitting(false);
+                setUploading(false);
+                return;
+              }
+            } catch (error) {
+              console.error('Error checking event schedules:', error);
+              setValidationError('Failed to verify event schedules. Please try again.');
+              setSubmitting(false);
+              setUploading(false);
+              return;
+            }
+          }
+          
           const eventData: any = { ...values };
           delete eventData.imageFile;
           
           // Prepare data for API
           const eventDataForApi = {
             ...eventData,
+            availableSeats: Number(eventData.totalCapacity), // Event's configured capacity
+            totalCapacity: selectedVenue?.capacity || Number(eventData.totalCapacity), // Venue's total capacity
             ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
               ...category,
               categoryName: category.categoryName.trim(),
@@ -597,6 +667,50 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     />
                   </Grid>
                   
+                  <Grid item xs={12}>
+                    <FormControl
+                      fullWidth
+                      variant="outlined"
+                      margin="normal"
+                      error={touched.categoryId && Boolean(errors.categoryId)}
+                    >
+                      <InputLabel id="category-label">Event Category</InputLabel>
+                      <Select
+                        labelId="category-label"
+                        id="categoryId"
+                        name="categoryId"
+                        value={values.categoryId}
+                        onChange={(e) => {
+                          handleChange({
+                            target: {
+                              name: 'categoryId',
+                              value: e.target.value
+                            }
+                          } as any);
+                        }}
+                        onBlur={handleBlur}
+                        label="Event Category"
+                        disabled={categoryLoading}
+                      >
+                        <MenuItem value="">
+                          <em>None (Uncategorized)</em>
+                        </MenuItem>
+                        {categories.map((category) => (
+                          <MenuItem key={category.id} value={category.id}>
+                            {category.categoryName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      <FormHelperText>
+                        {touched.categoryId && errors.categoryId 
+                          ? errors.categoryName as string
+                          : categoryLoading 
+                            ? 'Loading categories...'
+                            : 'Select a category to help attendees find your event'}
+                      </FormHelperText>
+                    </FormControl>
+                  </Grid>
+                  
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
@@ -635,8 +749,33 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                         id="status"
                         name="status"
                         value={values.status}
-                        onChange={(e) => {
-                          setFieldValue('status', e.target.value);
+                        onChange={async (e) => {
+                          const newStatus = e.target.value as EventStatus;
+                          
+                          // If trying to publish an existing event, check for schedules
+                          if (newStatus === EventStatus.PUBLISHED && event?.id) {
+                            try {
+                              const schedules = await EventScheduleService.getSchedulesForEvent(event.id);
+                              if (!schedules || schedules.length === 0) {
+                                setSnackbar({ 
+                                  open: true, 
+                                  message: 'Cannot publish event without schedules. Please add at least one event schedule before publishing.', 
+                                  severity: 'warning' 
+                                });
+                                return; // Don't change the status
+                              }
+                            } catch (error) {
+                              console.error('Error checking event schedules:', error);
+                              setSnackbar({ 
+                                open: true, 
+                                message: 'Failed to verify event schedules. Please try again.', 
+                                severity: 'error' 
+                              });
+                              return;
+                            }
+                          }
+                          
+                          setFieldValue('status', newStatus);
                         }}
                         label="Status"
                       >
@@ -942,15 +1081,15 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                      Event Image (Optional)
+                      Event Image <span style={{ color: '#d32f2f' }}>*</span>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Upload an eye-catching image to attract more attendees. Recommended size: 1920x1080px
+                      Upload an eye-catching image to attract more attendees. This is required. Recommended size: 1920x1080px
                     </Typography>
                     
-                    <Card sx={{ p: 3, borderRadius: 2, border: '2px dashed', borderColor: imagePreview ? 'success.main' : 'divider', bgcolor: imagePreview ? 'success.50' : 'background.paper' }}>
+                    <Card sx={{ p: 3, borderRadius: 2, border: '2px dashed', borderColor: imagePreview ? 'success.main' : (errors.imageFile && touched.imageFile ? 'error.main' : 'divider'), bgcolor: imagePreview ? 'success.50' : 'background.paper' }}>
                       <Box sx={{ textAlign: 'center' }}>
-                        <CloudUploadIcon sx={{ fontSize: 48, color: imagePreview ? 'success.main' : 'text.secondary', mb: 2 }} />
+                        <CloudUploadIcon sx={{ fontSize: 48, color: imagePreview ? 'success.main' : (errors.imageFile && touched.imageFile ? 'error.main' : 'text.secondary'), mb: 2 }} />
                         <Button
                           variant={imagePreview ? "outlined" : "contained"}
                           component="label"
@@ -959,16 +1098,22 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                           size="large"
                           sx={{ mb: 1 }}
                         >
-                          {imagePreview ? 'Image Selected - Change' : 'Choose Event Image'}
+                          {imagePreview ? 'Image Selected - Change' : 'Choose Event Image *'}
                           <input
                             type="file"
                             accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                             hidden
-                            onChange={(e) => handleImageChange(e, setFieldValue)}
+                            onChange={(e) => {
+                              handleImageChange(e, setFieldValue);
+                              setFieldValue('imageFile', e.target.files?.[0] || null);
+                            }}
                           />
                         </Button>
-                        <FormHelperText sx={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                          Supported formats: JPEG, PNG, GIF, WebP (max 5MB)
+                        <FormHelperText 
+                          error={Boolean(errors.imageFile && touched.imageFile)}
+                          sx={{ textAlign: 'center', fontSize: '0.875rem' }}
+                        >
+                          {errors.imageFile && touched.imageFile ? errors.imageFile as string : 'Supported formats: JPEG, PNG, GIF, WebP (max 5MB) - Required'}
                         </FormHelperText>
                       </Box>
                       
@@ -1136,6 +1281,25 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         );
       }}
     </Formik>
+    
+    {/* Snackbar for notifications */}
+    <Snackbar 
+      open={snackbar.open} 
+      autoHideDuration={6000} 
+      onClose={() => setSnackbar({ ...snackbar, open: false })}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+    >
+      <MuiAlert 
+        onClose={() => setSnackbar({ ...snackbar, open: false })} 
+        severity={snackbar.severity}
+        sx={{ width: '100%' }}
+        elevation={6}
+        variant="filled"
+      >
+        {snackbar.message}
+      </MuiAlert>
+    </Snackbar>
+    </>
   );
 };
 

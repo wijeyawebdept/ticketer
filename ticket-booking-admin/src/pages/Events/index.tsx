@@ -17,7 +17,9 @@ import {
   ListItemIcon,
   ListItemText,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -35,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
-import { EventService } from '../../services';
+import { EventService, EventScheduleService } from '../../services';
 import { Event, EventStatus, UserRole } from '../../types';
 import EventForm from './components/EventForm';
 
@@ -51,6 +53,11 @@ const Events: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState<boolean>(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' | 'success' }>({ 
+    open: false, 
+    message: '', 
+    severity: 'info' 
+  });
 
   useEffect(() => {
     fetchEvents();
@@ -74,9 +81,6 @@ const Events: React.FC = () => {
         // Handle unexpected response format
         eventsData = [];
       }
-      
-      console.log('Events - Processed events data:', eventsData);
-      console.log('Events - First event sample:', eventsData[0]);
       
       setEvents(eventsData);
     } catch (error) {
@@ -115,12 +119,42 @@ const Events: React.FC = () => {
   const handleChangeStatus = async (status: EventStatus) => {
     if (!contextMenuEvent) return;
     
+    // If trying to publish, check if event has schedules
+    if (status === EventStatus.PUBLISHED) {
+      try {
+        const schedules = await EventScheduleService.getSchedulesForEvent(contextMenuEvent.id);
+        if (!schedules || schedules.length === 0) {
+          setSnackbar({ 
+            open: true, 
+            message: 'Cannot publish event without schedules. Please add at least one event schedule before publishing.', 
+            severity: 'warning' 
+          });
+          handleContextMenuClose();
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking event schedules:', error);
+        setSnackbar({ 
+          open: true, 
+          message: 'Failed to verify event schedules. Please try again.', 
+          severity: 'error' 
+        });
+        handleContextMenuClose();
+        return;
+      }
+    }
+    
     try {
       await EventService.changeEventStatus(contextMenuEvent.id, status);
       fetchEvents(); // Refresh the events list
       handleContextMenuClose();
     } catch (error) {
       console.error('Error changing event status:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to change event status. Please try again.', 
+        severity: 'error' 
+      });
     }
   };
 
@@ -154,6 +188,30 @@ const Events: React.FC = () => {
     if (selectedEventIds.length === 0) return;
     
     try {
+      // Check if all selected events have schedules
+      const scheduleChecks = await Promise.all(
+        selectedEventIds.map(async (id) => {
+          const schedules = await EventScheduleService.getSchedulesForEvent(id);
+          return { id, hasSchedules: schedules && schedules.length > 0 };
+        })
+      );
+      
+      const eventsWithoutSchedules = scheduleChecks.filter(check => !check.hasSchedules);
+      
+      if (eventsWithoutSchedules.length > 0) {
+        const eventNames = events
+          .filter(e => eventsWithoutSchedules.some(check => check.id === e.id))
+          .map(e => e.name)
+          .join(', ');
+        setSnackbar({ 
+          open: true, 
+          message: `Cannot publish the following events without schedules: ${eventNames}. Please add schedules to these events before publishing.`, 
+          severity: 'warning' 
+        });
+        return;
+      }
+      
+      // All events have schedules, proceed with publishing
       await Promise.all(
         selectedEventIds.map(id => EventService.changeEventStatus(id, EventStatus.PUBLISHED))
       );
@@ -161,6 +219,11 @@ const Events: React.FC = () => {
       fetchEvents();
     } catch (error) {
       console.error('Error bulk publishing events:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to publish some events. Please try again.', 
+        severity: 'error' 
+      });
     }
   };
 
@@ -225,13 +288,36 @@ const Events: React.FC = () => {
         return 'N/A';
       }
     },
+    {
+      field: 'categoryName',
+      headerName: 'Category',
+      flex: 0.8,
+      renderCell: (params: GridRenderCellParams) => {
+        const categoryName = params.row.category?.categoryName;
+        if (!categoryName) {
+          return <Chip label="Uncategorized" size="small" variant="outlined" />;
+        }
+        return (
+          <Chip
+            label={categoryName}
+            size="small"
+            variant="outlined"
+            sx={{
+              fontWeight: 500
+            }}
+          />
+        );
+      }
+    },
     { 
       field: 'availableSeats', 
       headerName: 'Seats', 
       flex: 1,
       valueGetter: (params) => {
-        const available = params.row.availableSeats || 0;
-        const total = params.row.totalCapacity || 0;
+        // totalCapacity = seats configured during event creation
+        // venue.capacity = venue's total capacity
+        const available = params.row.totalCapacity || 0;
+        const total = params.row.venue?.capacity || 0;
         return `${available} / ${total}`;
       }
     },
@@ -483,7 +569,7 @@ const Events: React.FC = () => {
                     const venueName = event.venue?.name?.toLowerCase() || '';
                     const venueAddress = event.venue?.address?.toLowerCase() || '';
                     const venueCity = event.venue?.city?.toLowerCase() || '';
-                    const category = event.category?.toLowerCase() || '';
+                    const category = event.category?.categoryName?.toLowerCase() || '';
                     const status = event.status?.toLowerCase() || '';
                     
                     // Search in organizer name - check both organizer and createdBy fields
@@ -661,6 +747,24 @@ const Events: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <MuiAlert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+          elevation={6}
+          variant="filled"
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

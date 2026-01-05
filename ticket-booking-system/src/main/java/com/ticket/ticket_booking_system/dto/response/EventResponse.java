@@ -24,6 +24,9 @@ public class EventResponse {
     private LocalDateTime updatedAt;
     private String createdByType; // "ADMIN", "SUPER_ADMIN", "ORGANIZER", etc.
 
+    // Event category
+    private EventCategoryResponse category;
+
     // Added ticket categories field
     private List<TicketCategoryResponse> ticketCategories;
 
@@ -153,6 +156,14 @@ public class EventResponse {
         this.createdByType = createdByType;
     }
 
+    public EventCategoryResponse getCategory() {
+        return category;
+    }
+
+    public void setCategory(EventCategoryResponse category) {
+        this.category = category;
+    }
+
     // Added getter and setter for ticketCategories
     public List<TicketCategoryResponse> getTicketCategories() {
         return ticketCategories;
@@ -246,6 +257,11 @@ public class EventResponse {
 
         public Builder createdByType(String createdByType) {
             eventResponse.setCreatedByType(createdByType);
+            return this;
+        }
+
+        public Builder category(EventCategoryResponse category) {
+            eventResponse.setCategory(category);
             return this;
         }
 

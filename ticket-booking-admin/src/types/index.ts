@@ -44,6 +44,24 @@ export interface UserUpdateRequest {
 }
 
 // Event related types
+export interface EventCategory {
+  id: string;
+  categoryName: string;
+  description?: string;
+  icon?: string;
+  colorCode?: string;
+  active: number;
+  createdBy?: string;
+  createdAt: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+export interface EventCategoryRequest {
+  categoryName: string;
+  description?: string;
+}
+
 export interface TicketCategory {
   categoryName: string;
   description?: string;
@@ -60,7 +78,7 @@ export interface Event {
   endDateTime: string;   // Next/earliest schedule end time
   nextSchedule?: EventSchedule; // Next upcoming schedule
   venue: Venue;
-  category?: string; // Made optional since backend doesn't support event categories
+  category?: EventCategory; // Event category (FK relationship)
   status: EventStatus;
   active?: number; // 1=active, 0=inactive, -1=deleted
   createdBy: User;
@@ -69,6 +87,8 @@ export interface Event {
   imageUrl?: string;
   basePrice: number;
   ticketsAvailable: number;
+  totalCapacity: number; // Event's configured capacity
+  availableSeats: number; // Current available seats for the event
   ticketPrice: number;
   ticketCategories?: TicketCategory[]; // Added ticket categories
   hasDeal?: boolean; // Indicates if event has special deals

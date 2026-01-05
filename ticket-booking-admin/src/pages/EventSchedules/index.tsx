@@ -280,14 +280,7 @@ const EventSchedules: React.FC = () => {
       .max(100000, 'Capacity cannot exceed 100,000')
       .test('not-exceed-event', 'Capacity cannot exceed event total capacity', function(value) {
         if (!event || !value) return true;
-        return value <= (event.venue?.capacity || 0);
-      })
-      .test('not-exceed-remaining', 'Total scheduled capacity would exceed event capacity', function(value) {
-        if (!event || !value) return true;
-        const totalScheduled = getTotalScheduledCapacity();
-        const currentScheduleCapacity = selectedSchedule?.capacity || 0;
-        const newTotal = totalScheduled - currentScheduleCapacity + value;
-        return newTotal <= (event.venue?.capacity || 0);
+        return value <= (event.totalCapacity || 0);
       }),
     priceAdjustment: Yup.number()
       .min(-1000000, 'Price adjustment cannot be less than -1,000,000')
@@ -544,7 +537,7 @@ const EventSchedules: React.FC = () => {
                     date.setHours(0, 0, 0, 0);
                     return date;
                   })(),
-              capacity: selectedSchedule?.capacity || (event?.venue?.capacity ?? 100),
+              capacity: selectedSchedule?.capacity || (event?.totalCapacity ?? 100),
               priceAdjustment: selectedSchedule?.priceAdjustment || 0,
               notes: selectedSchedule?.notes || '',
             }}
@@ -581,9 +574,6 @@ const EventSchedules: React.FC = () => {
           >
             {({ values, errors, touched, setFieldValue, handleChange, handleBlur, isSubmitting }) => {
               const duration = calculateDuration(values.startTime, values.endTime);
-              const totalScheduled = getTotalScheduledCapacity();
-              const currentScheduleCapacity = selectedSchedule?.capacity || 0;
-              const remainingAfterThis = event ? (event.venue?.capacity || 0) - (totalScheduled - currentScheduleCapacity + values.capacity) : 0;
               const hasErrors = Object.keys(errors).length > 0;
               const hasTouched = Object.keys(touched).length > 0;
               
@@ -593,11 +583,12 @@ const EventSchedules: React.FC = () => {
                     {/* Capacity Info Alert */}
                     {event && (
                       <Alert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight="bold">Event Capacity Overview:</Typography>
+                        <Typography variant="body2" fontWeight="bold">Event Capacity:</Typography>
                         <Typography variant="body2">
-                          Total Event Capacity: {event.venue?.capacity || 0} | 
-                          Already Scheduled: {totalScheduled - currentScheduleCapacity} | 
-                          Remaining: {remainingAfterThis >= 0 ? remainingAfterThis : 0}
+                          Maximum capacity per schedule: {event.totalCapacity || 0} seats
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Note: Each schedule is independent and can use the full event capacity.
                         </Typography>
                       </Alert>
                     )}

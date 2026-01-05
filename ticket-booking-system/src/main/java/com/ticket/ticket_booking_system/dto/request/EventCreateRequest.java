@@ -29,6 +29,8 @@ public class EventCreateRequest {
 
     private String imageUrl;
 
+    private UUID categoryId;
+
     // Ticket categories for multiple pricing options
     private List<TicketCategoryRequest> ticketCategories;
 
@@ -87,5 +89,13 @@ public class EventCreateRequest {
 
     public void setTicketCategories(List<TicketCategoryRequest> ticketCategories) {
         this.ticketCategories = ticketCategories;
+    }
+    
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 }

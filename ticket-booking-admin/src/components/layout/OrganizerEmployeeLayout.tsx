@@ -33,7 +33,7 @@ import {
   EventSeat as EventSeatIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
@@ -95,6 +95,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
   useEffect(() => {
@@ -235,36 +236,37 @@ const OrganizerEmployeeLayout: React.FC = () => {
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton 
-                component={RouterLink} 
-                to={item.path}
-                onClick={handleMenuItemClick}
-                sx={{
-                  borderRadius: '8px',
-                  mx: 1,
-                  '&:hover': {
-                    backgroundColor: 'rgba(67, 160, 71, 0.1)',
-                  },
-                  '&.active': {
-                    backgroundColor: 'rgba(67, 160, 71, 0.2)',
-                  }
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, color: '#43a047' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{ 
-                    fontWeight: 500,
-                    color: '#333'
-                  }} 
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton 
+                  component={RouterLink} 
+                  to={item.path}
+                  onClick={handleMenuItemClick}
+                  sx={{
+                    borderRadius: '8px',
+                    mx: 1,
+                    backgroundColor: isActive ? 'rgba(67, 160, 71, 0.15)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: isActive ? 'rgba(67, 160, 71, 0.2)' : 'rgba(67, 160, 71, 0.08)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: isActive ? '#43a047' : '#666' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={{ 
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? '#43a047' : '#333'
+                    }} 
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
       </Drawer>
       <Main open={open}>

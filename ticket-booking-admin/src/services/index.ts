@@ -3,6 +3,7 @@ import DashboardService from './dashboard.service';
 import UserService from './user.service';
 import EventService from './event.service';
 import EventScheduleService from './eventSchedule.service';
+import EventCategoryService from './eventCategory.service';
 import BookingService from './booking.service';
 import TransactionService from './transaction.service';
 import { VenueService } from './venue.service';
@@ -18,6 +19,7 @@ export {
   UserService,
   EventService,
   EventScheduleService,
+  EventCategoryService,
   BookingService,
   OrganizerService,
   TransactionService,

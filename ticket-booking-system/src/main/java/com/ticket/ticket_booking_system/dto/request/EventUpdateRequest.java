@@ -20,6 +20,7 @@ public class EventUpdateRequest {
     
     private String status;
     private String imageUrl;
+    private UUID categoryId;
     
     // Getters and Setters
     public String getName() {
@@ -76,5 +77,13 @@ public class EventUpdateRequest {
     
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+    
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 }

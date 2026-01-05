@@ -36,6 +36,7 @@ import EventSchedules from './pages/EventSchedules';
 import EventAssignments from './pages/EventAssignments';
 import AdminEventAssignments from './pages/AdminEventAssignments';
 import OrganizerAssignment from './pages/OrganizerAssignment';
+import EventCategories from './pages/EventCategories';
 import { UserRole } from './types';
 
 // Public pages
@@ -208,6 +209,8 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin/events" element={<Events />} />
                   <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
+                  <Route path="/event-categories" element={<EventCategories />} />
+                  <Route path="/admin/event-categories" element={<EventCategories />} />
                   <Route path="/admin/users" element={<Users />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/admin/admins" element={<Admins />} />

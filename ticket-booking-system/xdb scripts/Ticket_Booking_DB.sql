@@ -207,6 +207,7 @@ select * from organizers;
 select * from organizer_employees;
 select * from event_schedules;
 select * from event_employee_assignments;
+select * from event_categories;
 
 -- Check what columns exist in the tables
 SELECT column_name 
@@ -226,17 +227,6 @@ FROM venues v
 LEFT JOIN seats s ON s.venue_id = v.venue_id AND s.event_id IS NULL
 GROUP BY v.venue_id, v.name, v.capacity
 ORDER BY difference DESC;
-
-
-
-
-
-
-
-
-
-
-
 
 
 

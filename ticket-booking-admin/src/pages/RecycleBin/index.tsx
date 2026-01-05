@@ -80,7 +80,7 @@ const RecycleBin: React.FC = () => {
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
   const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === UserRole.ROLE_ORGANIZER;
-  const entityTypes = ['USER', 'EVENT', 'VENUE', 'SCHEDULE'];
+  const entityTypes = ['USER', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY'];
 
   useEffect(() => {
     fetchRecycleBinItems();
@@ -94,7 +94,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
         data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
       setItems(data);
@@ -168,7 +168,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         await RecycleBinService.emptyRecycleBin();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
         await RecycleBinService.emptyRecycleBinByType(entityType);
       }
       setSuccess('Recycle bin emptied successfully');
@@ -189,6 +189,10 @@ const RecycleBin: React.FC = () => {
         return 'secondary';
       case 'VENUE':
         return 'success';
+      case 'SCHEDULE':
+        return 'warning';
+      case 'EVENT_CATEGORY':
+        return 'info';
       default:
         return 'default';
     }
@@ -269,6 +273,7 @@ const RecycleBin: React.FC = () => {
           <Tab label="Events" />
           <Tab label="Venues" />
           <Tab label="Schedules" />
+          <Tab label="Event Categories" />
         </Tabs>
 
         {loading ? (

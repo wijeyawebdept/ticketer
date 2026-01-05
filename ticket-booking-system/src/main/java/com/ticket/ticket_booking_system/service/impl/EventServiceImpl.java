@@ -17,11 +17,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ticket.ticket_booking_system.dto.request.EventCreateRequest;
 import com.ticket.ticket_booking_system.dto.request.EventUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
+import com.ticket.ticket_booking_system.dto.response.EventCategoryResponse;
 import com.ticket.ticket_booking_system.dto.response.TicketCategoryResponse;
 import com.ticket.ticket_booking_system.dto.response.UserBasicResponse; // Added import
 import com.ticket.ticket_booking_system.dto.response.VenueBasicResponse; // Added import
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventCategory;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
@@ -30,6 +32,7 @@ import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException; // Added import
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.EventCategoryRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
@@ -50,6 +53,7 @@ public class EventServiceImpl implements EventService {
 
     private final EventRepository eventRepository;
     private final VenueRepository venueRepository;
+    private final EventCategoryRepository eventCategoryRepository;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
@@ -122,6 +126,13 @@ public class EventServiceImpl implements EventService {
 
         System.out.println("Venue found: " + venue.getName() + " (Capacity: " + venue.getCapacity() + ")");
 
+        // Find category if provided
+        EventCategory category = null;
+        if (request.getCategoryId() != null) {
+            category = eventCategoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Event Category", "id", request.getCategoryId().toString()));
+        }
+
         // Build event entity - automatically populate venue name and address from the selected venue
         Event event = Event.builder()
                 .name(request.getName())
@@ -134,6 +145,7 @@ public class EventServiceImpl implements EventService {
                 .availableSeats(request.getTotalCapacity()) // Initially all seats are available
                 .status(Event.EventStatus.DRAFT) // Default status is DRAFT
                 .imageUrl(request.getImageUrl())
+                .category(category) // Set category FK
                 .organizer(eventOrganizer) // Only set for ORGANIZER role
                 .createdByUserId(createdByUserId) // Track creator ID
                 .createdByType(createdByType) // Track creator type (USER/ADMIN/SUPER_ADMIN/ORGANIZER)
@@ -269,6 +281,12 @@ public class EventServiceImpl implements EventService {
 
         if (request.getImageUrl() != null) {
             event.setImageUrl(request.getImageUrl());
+        }
+
+        if (request.getCategoryId() != null) {
+            EventCategory category = eventCategoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Event Category", "id", request.getCategoryId().toString()));
+            event.setCategory(category);
         }
 
         Event savedEvent = eventRepository.save(event);
@@ -537,6 +555,19 @@ public class EventServiceImpl implements EventService {
             endDateTime = java.time.LocalDateTime.of(nextSchedule.getScheduleDate(), nextSchedule.getEndTime());
         }
 
+        // Map event category if exists
+        EventCategoryResponse categoryResponse = null;
+        if (event.getCategory() != null) {
+            categoryResponse = EventCategoryResponse.builder()
+                    .id(event.getCategory().getId())
+                    .categoryName(event.getCategory().getCategoryName())
+                    .description(event.getCategory().getDescription())
+                    .active(event.getCategory().getActive())
+                    .createdAt(event.getCategory().getCreatedAt())
+                    .updatedAt(event.getCategory().getUpdatedAt())
+                    .build();
+        }
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -554,6 +585,7 @@ public class EventServiceImpl implements EventService {
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .createdByType(event.getCreatedByType()) // Include creator type for filtering
+                .category(categoryResponse) // Include category object
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .build();
     }

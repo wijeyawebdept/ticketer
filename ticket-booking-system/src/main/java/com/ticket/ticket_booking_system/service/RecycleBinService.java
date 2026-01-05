@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ticket.ticket_booking_system.dto.RecycleBinDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
+import com.ticket.ticket_booking_system.entity.EventCategory;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
@@ -21,6 +23,7 @@ import com.ticket.ticket_booking_system.entity.RecycleBin;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.EventCategoryRepository;
 import com.ticket.ticket_booking_system.repository.EventEmployeeAssignmentRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
@@ -45,6 +48,7 @@ public class RecycleBinService {
     private final VenueRepository venueRepository;
     private final SeatRepository seatRepository;
     private final TicketCategoryRepository ticketCategoryRepository;
+    private final EventCategoryRepository eventCategoryRepository;
     private final EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository;
     private final ObjectMapper objectMapper;
 
@@ -59,6 +63,7 @@ public class RecycleBinService {
             VenueRepository venueRepository,
             SeatRepository seatRepository,
             TicketCategoryRepository ticketCategoryRepository,
+            EventCategoryRepository eventCategoryRepository,
             EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository) {
         this.recycleBinRepository = recycleBinRepository;
         this.userRepository = userRepository;
@@ -70,6 +75,7 @@ public class RecycleBinService {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.ticketCategoryRepository = ticketCategoryRepository;
+        this.eventCategoryRepository = eventCategoryRepository;
         this.eventEmployeeAssignmentRepository = eventEmployeeAssignmentRepository;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
@@ -283,6 +289,9 @@ public class RecycleBinService {
                 case "SCHEDULE":
                     restoreSchedule(recycleBin);
                     break;
+                case "EVENT_CATEGORY":
+                    restoreEventCategory(recycleBin);
+                    break;
                 default:
                     throw new RuntimeException("Unknown entity type: " + entityType);
             }
@@ -375,6 +384,18 @@ public class RecycleBinService {
         System.out.println("Event Schedule " + schedule.getScheduleId() + " restored from recycle bin");
     }
 
+    private void restoreEventCategory(RecycleBin recycleBin) throws JsonProcessingException {
+        EventCategory category = eventCategoryRepository.findById(recycleBin.getEntityId())
+                .orElseThrow(() -> new RuntimeException("Event Category not found: " + recycleBin.getEntityId()));
+        
+        // Reactivate the category
+        category.setActive(1);
+        category.setUpdatedAt(LocalDateTime.now());
+        eventCategoryRepository.save(category);
+        
+        System.out.println("Event Category " + category.getCategoryName() + " restored from recycle bin");
+    }
+
     @Transactional
     public void emptyRecycleBin() {
         List<RecycleBin> allItems = recycleBinRepository.findAll();
@@ -452,6 +473,14 @@ public class RecycleBinService {
                             System.out.println("Venue not found (already deleted): " + entityId);
                         }
                         break;
+                    case "EVENT_CATEGORY":
+                        if (eventCategoryRepository.existsById(entityId)) {
+                            eventCategoryRepository.deleteById(entityId);
+                            System.out.println("Event Category permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Event Category not found (already deleted): " + entityId);
+                        }
+                        break;
                     default:
                         System.err.println("Unknown entity type: " + entityType);
                 }
@@ -524,6 +553,14 @@ public class RecycleBinService {
                             System.out.println("Event Schedule not found (already deleted): " + entityId);
                         }
                         break;
+                    case "EVENT_CATEGORY":
+                        if (eventCategoryRepository.existsById(entityId)) {
+                            eventCategoryRepository.deleteById(entityId);
+                            System.out.println("Event Category permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Event Category not found (already deleted): " + entityId);
+                        }
+                        break;
                     default:
                         System.err.println("Unknown entity type: " + entityType);
                 }
@@ -574,6 +611,11 @@ public class RecycleBinService {
                     if (venueRepository.existsById(entityId)) {
                         seatRepository.deleteByVenueId(entityId);
                         venueRepository.deleteById(entityId);
+                    }
+                    break;
+                case "EVENT_CATEGORY":
+                    if (eventCategoryRepository.existsById(entityId)) {
+                        eventCategoryRepository.deleteById(entityId);
                     }
                     break;
             }

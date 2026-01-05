@@ -36,7 +36,7 @@ import {
   Assignment as AssignmentIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { useNavigate, Outlet, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
@@ -79,7 +79,7 @@ const AppBarStyled = styled(AppBar, {
     }),
   }),
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
 }));
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -94,12 +94,13 @@ const OrganizerLayout: React.FC = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [open, setOpen] = useState(!isMobile);
+  const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
   useEffect(() => {
@@ -249,36 +250,37 @@ const OrganizerLayout: React.FC = () => {
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton 
-                component={RouterLink} 
-                to={item.path}
-                onClick={handleMenuItemClick}
-                sx={{
-                  borderRadius: '8px',
-                  mx: 1,
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                  },
-                  '&.active': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.2)',
-                  }
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, color: '#1976d2' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{ 
-                    fontWeight: 500,
-                    color: '#333'
-                  }} 
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton 
+                  component={RouterLink} 
+                  to={item.path}
+                  onClick={handleMenuItemClick}
+                  sx={{
+                    borderRadius: '8px',
+                    mx: 1,
+                    backgroundColor: isActive ? 'rgba(25, 118, 210, 0.15)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: isActive ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.08)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: isActive ? '#1976d2' : '#666' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={{ 
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? '#1976d2' : '#333'
+                    }} 
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
       </Drawer>
       <Main open={open}>

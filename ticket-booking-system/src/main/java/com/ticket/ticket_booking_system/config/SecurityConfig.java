@@ -52,6 +52,7 @@ public class SecurityConfig {
                     "/api/venues/**",
                     "/error"
                 ).permitAll()
+                .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
                 .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
                 .anyRequest().authenticated()
             )

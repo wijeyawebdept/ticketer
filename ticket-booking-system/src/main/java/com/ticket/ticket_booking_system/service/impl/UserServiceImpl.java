@@ -26,14 +26,12 @@ import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
-import com.ticket.ticket_booking_system.entity.Role;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
-import com.ticket.ticket_booking_system.repository.RoleRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.UserService;
@@ -44,7 +42,6 @@ import jakarta.persistence.criteria.Predicate;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
@@ -54,7 +51,6 @@ public class UserServiceImpl implements UserService {
 
     public UserServiceImpl(
             UserRepository userRepository, 
-            RoleRepository roleRepository,
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
             OrganizerEmployeeRepository employeeRepository,
@@ -62,7 +58,6 @@ public class UserServiceImpl implements UserService {
             PasswordEncoder passwordEncoder,
             RecycleBinService recycleBinService) {
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
@@ -83,8 +78,6 @@ public class UserServiceImpl implements UserService {
                 ? request.getRole().toUpperCase() 
                 : "USER";
         
-        // Try to find role entity from roles table
-        Role roleEntity = roleRepository.findByRoleName(roleName).orElse(null);
         User.Role enumRole = User.Role.USER;
         
         try {
@@ -103,7 +96,6 @@ public class UserServiceImpl implements UserService {
                 .dateOfBirth(request.getDateOfBirth())
                 .profilePicture(request.getProfilePicture())
                 .role(enumRole)
-                .roleEntity(roleEntity)
                 .active(1)
                 .emailVerified(false)
                 .build();
@@ -234,27 +226,15 @@ public class UserServiceImpl implements UserService {
         }
 
         // Handle role updates
-        String oldRoleName = (user.getRoleEntity() != null) ? user.getRoleEntity().getRoleName() : user.getRole().name();
+        String oldRoleName = user.getRole().name();
         String newRoleName = null;
         
         if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
             try {
                 newRoleName = request.getRole().toUpperCase();
-                
-                // First, try to find the role in the roles table
-                Role roleEntity = roleRepository.findByRoleName(newRoleName).orElse(null);
-                
-                if (roleEntity != null) {
-                    // Use the role entity from the roles table
-                    user.setRoleEntity(roleEntity);
-                    System.out.println("Role entity updated to: " + roleEntity.getRoleName());
-                } else {
-                    // Fall back to enum if role not found in roles table
-                    User.Role enumRole = User.Role.valueOf(newRoleName);
-                    user.setRole(enumRole);
-                    user.setRoleEntity(null);
-                    System.out.println("Role enum updated to: " + enumRole);
-                }
+                User.Role enumRole = User.Role.valueOf(newRoleName);
+                user.setRole(enumRole);
+                System.out.println("Role updated to: " + enumRole);
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid role: " + request.getRole());
             }
@@ -415,8 +395,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapUserToResponse(User user) {
-        // Use roleEntity if available, otherwise fall back to enum role
-        String roleName = (user.getRoleEntity() != null) ? user.getRoleEntity().getRoleName() : user.getRole().name();
+        String roleName = user.getRole().name();
         
         return UserResponse.builder()
                 .id(user.getId())

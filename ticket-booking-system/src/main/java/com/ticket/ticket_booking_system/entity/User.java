@@ -15,11 +15,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -70,10 +67,6 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "role_id")
-    private com.ticket.ticket_booking_system.entity.Role roleEntity;
-
     @Column(name = "status", nullable = false)
     @Builder.Default
     private int active = 1; // 1 = active, 0 = deactivated, -1 = soft deleted
@@ -115,9 +108,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Use roleEntity if available, otherwise fall back to enum role
-        String roleName = (roleEntity != null) ? roleEntity.getRoleName() : role.name();
-        return List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override
