@@ -243,7 +243,7 @@ const Dashboard: React.FC = () => {
               icon={<AdminPanelSettingsIcon />}
               sx={{ 
                 borderRadius: 3,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #e53935 0%, #c62828 100%)',
                 color: 'white',
                 '& .MuiAlert-icon': {
                   color: 'white'
