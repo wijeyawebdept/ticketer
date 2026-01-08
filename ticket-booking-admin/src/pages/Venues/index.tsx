@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Box, 
   Button, 
@@ -20,7 +20,7 @@ import {
   MenuItem,
   DialogContentText
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, AutoAwesome as AutoAwesomeIcon, Refresh as RefreshIcon, CheckCircle as ActivateIcon, Block as DeactivateIcon, Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, DeleteSweep as DeleteSweepIcon, EventSeat as EventSeatIcon, Refresh as RefreshIcon, CheckCircle as ActivateIcon, Block as DeactivateIcon, Search as SearchIcon, Info as InfoIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { VenueService } from '../../services';
 import { Venue } from '../../types';
@@ -35,11 +35,9 @@ const VenuesPage = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const [generatingSeats, setGeneratingSeats] = useState<string | null>(null);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -56,9 +54,7 @@ const VenuesPage = () => {
   
   // Confirmation dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [generateSeatsDialogOpen, setGenerateSeatsDialogOpen] = useState<boolean>(false);
   const [venueToDelete, setVenueToDelete] = useState<Venue | null>(null);
-  const [venueForSeats, setVenueForSeats] = useState<Venue | null>(null);
 
   // Determine if user is admin based on URL path or user role
   const isAdmin = location.pathname.includes('/admin/') || (
@@ -88,7 +84,6 @@ const VenuesPage = () => {
       });
       
       setVenues(validatedVenues);
-      setFilteredVenues(validatedVenues);
     } catch (error) {
       console.error('Error fetching venues:', error);
       ToastService.error('Failed to load venues. Please try again later.');
@@ -102,9 +97,9 @@ const VenuesPage = () => {
     fetchVenues();
   }, [fetchVenues]);
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...venues];
+  // Apply filters using useMemo for better performance
+  const filteredVenues = useMemo(() => {
+    let filtered = venues;
 
     // Search by name
     if (searchQuery.trim()) {
@@ -132,7 +127,7 @@ const VenuesPage = () => {
       filtered = filtered.filter(venue => venue.capacity <= max);
     }
 
-    setFilteredVenues(filtered);
+    return filtered;
   }, [venues, searchQuery, statusFilter, minCapacity, maxCapacity]);
 
   // Handle form close
@@ -213,49 +208,6 @@ const VenuesPage = () => {
     }
   };
 
-  // Handle generate seats for venue - open confirmation dialog
-  const handleGenerateSeats = (venue: Venue) => {
-    setVenueForSeats(venue);
-    setGenerateSeatsDialogOpen(true);
-  };
-
-  // Confirm generate seats
-  const confirmGenerateSeats = async () => {
-    if (!venueForSeats) return;
-    
-    const toastId = ToastService.loading(`Generating template seats for "${venueForSeats.name}"...`);
-    setGeneratingSeats(venueForSeats.id);
-    
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      const response = await fetch(`http://localhost:8081/api/admin/venues/${venueForSeats.id}/generate-seats`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate seats');
-      }
-      
-      const result = await response.text();
-      ToastService.updateSuccess(toastId, result);
-      setGenerateSeatsDialogOpen(false);
-      setVenueForSeats(null);
-    } catch (error) {
-      console.error('Error generating seats:', error);
-      ToastService.updateError(toastId, `Failed to generate seats for "${venueForSeats.name}". Please try again.`);
-    } finally {
-      setGeneratingSeats(null);
-    }
-  };
-
   // Handle toggle venue status
   const handleToggleStatus = async (venue: Venue) => {
     const toastId = ToastService.loading(`Updating status for "${venue.name}"...`);
@@ -328,8 +280,8 @@ const VenuesPage = () => {
     setSelectedVenueIds(newSelection);
   };
 
-  // Define columns for DataGrid
-  const columns: GridColDef[] = [
+  // Define columns for DataGrid with useMemo to prevent recreation
+  const columns: GridColDef[] = useMemo(() => [
     {
       field: 'name',
       headerName: 'Name',
@@ -482,23 +434,6 @@ const VenuesPage = () => {
               </IconButton>
             </span>
           </Tooltip>
-          <Tooltip title={isOrganizer ? "Organizers cannot generate seats" : "Generate Template Seats"}>
-            <span>
-              <IconButton
-                onClick={() => handleGenerateSeats(params.row)}
-                size="small"
-                color="success"
-                disabled={generatingSeats === params.row.id || isOrganizer}
-                sx={{ mr: 1 }}
-              >
-                {generatingSeats === params.row.id ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <AutoAwesomeIcon />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
           {(params.row.status ?? 1) === 1 ? (
             <Tooltip title={isOrganizer ? "Organizers cannot deactivate venues" : "Deactivate Venue"}>
               <span>
@@ -555,7 +490,7 @@ const VenuesPage = () => {
         </Box>
       ),
     },
-  ];
+  ], [isOrganizer]); // Only recreate if isOrganizer changes
 
   return (
     <Box p={3}>
@@ -685,7 +620,7 @@ const VenuesPage = () => {
       )}
 
       <Paper>
-        <Box height={500} width="100%">
+        <Box sx={{ height: 600, width: '100%', overflow: 'hidden' }}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" height="100%">
               <CircularProgress />
@@ -702,6 +637,11 @@ const VenuesPage = () => {
               rowSelectionModel={selectedVenueIds}
               initialState={{
                 pagination: { paginationModel: { pageSize: 10 } },
+              }}
+              sx={{
+                '& .MuiDataGrid-virtualScroller': {
+                  overflow: 'auto'
+                }
               }}
             />
           )}
@@ -743,20 +683,6 @@ const VenuesPage = () => {
         onCancel={() => {
           setDeleteDialogOpen(false);
           setVenueToDelete(null);
-        }}
-      />
-
-      {/* Generate Seats Confirmation Dialog */}
-      <ConfirmationDialog
-        open={generateSeatsDialogOpen}
-        title={ConfirmationMessages.GENERATE_SEATS.title}
-        message={`This will generate ${venueForSeats?.capacity || 0} template seats for "${venueForSeats?.name}". Any existing template seats will be replaced. Continue?`}
-        confirmText={ConfirmationMessages.GENERATE_SEATS.confirmText}
-        variant={ConfirmationMessages.GENERATE_SEATS.variant}
-        onConfirm={confirmGenerateSeats}
-        onCancel={() => {
-          setGenerateSeatsDialogOpen(false);
-          setVenueForSeats(null);
         }}
       />
 

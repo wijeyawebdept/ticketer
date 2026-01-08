@@ -88,18 +88,8 @@ public class VenueServiceImpl implements VenueService {
         Venue savedVenue = venueRepository.save(venue);
 
         System.out.println("Venue saved with ID: " + savedVenue.getVenueId());
-
-        // Generate seats from configuration if provided
-        if (venue.getSeatingChartConfig() != null && !venue.getSeatingChartConfig().trim().isEmpty()) {
-            System.out.println("Generating seats from custom seating chart config...");
-            generateSeatsFromConfig(savedVenue);
-        } else {
-            // Auto-generate seats based on capacity if no seating config provided
-            System.out.println("Auto-generating seats based on capacity...");
-            generateSeatsForVenue(savedVenue.getVenueId());
-        }
-
-        System.out.println("CREATE VENUE COMPLETE");
+        System.out.println("CREATE VENUE COMPLETE - No automatic seat generation");
+        
         return savedVenue;
     }
 
