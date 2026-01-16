@@ -208,6 +208,10 @@ select * from organizer_employees;
 select * from event_schedules;
 select * from event_employee_assignments;
 select * from event_categories;
+select * from venue_seats;
+select * from seat_categories;
+
+
 
 -- Check what columns exist in the tables
 SELECT column_name 

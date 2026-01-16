@@ -9,20 +9,22 @@ DROP TABLE IF EXISTS seat_categories CASCADE;
 -- Seat Categories (VIP, PREMIUM, REGULAR, BALCONY)
 CREATE TABLE seat_categories (
     category_id SERIAL PRIMARY KEY,
-    category_name VARCHAR(50) NOT NULL UNIQUE,
+    venue_id UUID NOT NULL,
+    category_name VARCHAR(50) NOT NULL,
     base_price DECIMAL(10,2) NOT NULL,
     color_code VARCHAR(7) NOT NULL, -- Hex color for UI
     display_order INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (venue_id) REFERENCES venues(venue_id),
+    UNIQUE (venue_id, category_name) -- Category names must be unique per venue
 );
 
--- Insert default seat categories based on the venue image
-INSERT INTO seat_categories (category_name, base_price, color_code, display_order) VALUES
-('VIP_RED', 7500.00, '#FF4444', 1),
-('VIP_PURPLE', 5000.00, '#C41AE5', 2),
-('PREMIUM', 4000.00, '#6B7CFF', 3),
-('REGULAR', 3000.00, '#A8B400', 4),
-('BALCONY', 3000.00, '#9E9E9E', 5);
+-- Insert default seat categories for Kularathna Hall
+-- Replace '54fd37e5-5a1c-4834-af83-ad9c8bf1f300' with the actual venue_id if different
+INSERT INTO seat_categories (venue_id, category_name, base_price, color_code, display_order) VALUES
+('54fd37e5-5a1c-4834-af83-ad9c8bf1f300', 'VIP Platinum', 7500.00, '#FF4444', 1),
+('54fd37e5-5a1c-4834-af83-ad9c8bf1f300', 'VIP Gold', 5000.00, '#C41AE5', 2),
+('54fd37e5-5a1c-4834-af83-ad9c8bf1f300', 'VIP Silver', 4000.00, '#6B7CFF', 3);
 
 -- Venue Seats (Hard-coded layout with metadata)
 CREATE TABLE venue_seats (

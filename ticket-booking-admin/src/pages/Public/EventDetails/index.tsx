@@ -50,10 +50,14 @@ const EventDetails: React.FC = () => {
   
   const [selectedShowtime, setSelectedShowtime] = useState('');
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
+  const [deliveryMethod, setDeliveryMethod] = useState('online');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     phone: '',
     email: '',
     nic: '',
@@ -136,9 +140,9 @@ const EventDetails: React.FC = () => {
             setCustomerInfo(bookingData.customerInfo);
           }
           
-          // Auto-open payment modal
+          // Auto-open checkout modal
           setTimeout(() => {
-            setPaymentModalOpen(true);
+            setCheckoutModalOpen(true);
           }, 500); // Small delay to ensure state is set
           
           // Clear the stored booking state
@@ -185,12 +189,12 @@ const EventDetails: React.FC = () => {
       return;
     }
     
-    // If authenticated, open payment modal directly
-    setPaymentModalOpen(true);
+    // If authenticated, open checkout modal directly
+    setCheckoutModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    setPaymentModalOpen(false);
+    setCheckoutModalOpen(false);
   };
 
   const calculateTotal = () => {
@@ -728,9 +732,373 @@ const EventDetails: React.FC = () => {
         </Grid>
       </Container>
 
-      {/* Payment Modal */}
+      {/* Checkout Modal */}
       <Dialog
-        open={paymentModalOpen}
+        open={checkoutModalOpen}
+        onClose={handleCloseModal}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <DialogTitle sx={{ position: 'relative', pb: 2, borderBottom: '1px solid #f0f0f0' }}>
+          <IconButton
+            onClick={handleCloseModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'grey.500',
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          <Grid container>
+            {/* Left Side - Checkout Form */}
+            <Grid item xs={12} md={7} sx={{ p: 4, borderRight: { md: '1px solid #f0f0f0' } }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, fontFamily: 'Raleway, sans-serif' }}>
+                Checkout
+              </Typography>
+
+              {/* Delivery Method */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Delivery method
+                </Typography>
+                <FormControl fullWidth>
+                  <Select
+                    value={deliveryMethod}
+                    onChange={(e) => setDeliveryMethod(e.target.value)}
+                    size="small"
+                  >
+                    <MenuItem value="online">Online</MenuItem>
+                    <MenuItem value="pickup">Pick up</MenuItem>
+                  </Select>
+                </FormControl>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                  Only the ticket prices will be charged. No any extra charges
+                </Typography>
+              </Box>
+
+              {/* Payment Method */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Payment Method <span style={{ color: '#d32f2f' }}>(Select one)</span>
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
+                    { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
+                    { value: 'amex', img: '/images/amex.jpg', alt: 'American Express' },
+                    { value: 'ezcash', img: '/images/ezcash.jpg', alt: 'EZ Cash' },
+                    { value: 'hnb', img: '/images/hnb.jpg', alt: 'HNB' },
+                    { value: 'koko', img: '/images/koko.jpg', alt: 'Koko' },
+                  ].map((method) => (
+                    <Box
+                      key={method.value}
+                      onClick={() => setSelectedPaymentMethod(method.value)}
+                      sx={{
+                        width: '80px',
+                        height: '50px',
+                        border: selectedPaymentMethod === method.value ? '3px solid #ff1955' : '2px solid #ddd',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          borderColor: '#ff1955',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                        },
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={method.img}
+                        alt={method.alt}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          padding: '8px',
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Customer Information */}
+              <Box sx={{ mb: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="First Name"
+                      placeholder="First Name *"
+                      value={customerInfo.firstName}
+                      onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)}
+                      size="small"
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      placeholder="Last Name *"
+                      value={customerInfo.lastName}
+                      onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)}
+                      size="small"
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="NIC/Passport"
+                      placeholder="NIC/Passport *"
+                      value={customerInfo.nic}
+                      onChange={(e) => handleCustomerInfoChange('nic', e.target.value)}
+                      size="small"
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Contact Number"
+                      placeholder="Contact Number *"
+                      value={customerInfo.phone}
+                      onChange={(e) => handleCustomerInfoChange('phone', e.target.value)}
+                      size="small"
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      placeholder="Email *"
+                      type="email"
+                      value={customerInfo.email}
+                      onChange={(e) => handleCustomerInfoChange('email', e.target.value)}
+                      size="small"
+                      required
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Terms and Conditions */}
+              <Box sx={{ mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <input
+                      type="checkbox"
+                      checked={bookingForSomeoneElse}
+                      onChange={(e) => setBookingForSomeoneElse(e.target.checked)}
+                      style={{ marginRight: '8px' }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2">
+                      I am booking for someone else
+                    </Typography>
+                  }
+                />
+                <Box sx={{ mt: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <input
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={(e) => setAcceptTerms(e.target.checked)}
+                        style={{ marginRight: '8px' }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2">
+                        I accept and agree to{' '}
+                        <Typography
+                          component="a"
+                          href="#"
+                          sx={{
+                            color: '#ff1955',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
+                        >
+                          Terms and Conditions
+                        </Typography>
+                      </Typography>
+                    }
+                  />
+                </Box>
+              </Box>
+
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleCloseModal}
+                  sx={{
+                    borderColor: '#ff1955',
+                    color: '#ff1955',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      borderColor: '#e01545',
+                      backgroundColor: 'rgba(255, 25, 85, 0.04)',
+                    },
+                  }}
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => alert('Confirming booking...')}
+                  sx={{
+                    backgroundColor: '#ff1955',
+                    color: '#ffffff',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    py: 1.5,
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(255, 25, 85, 0.3)',
+                    '&:hover': {
+                      backgroundColor: '#e01545',
+                      boxShadow: '0 6px 16px rgba(255, 25, 85, 0.4)',
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  Confirm booking
+                </Button>
+              </Box>
+            </Grid>
+
+            {/* Right Side - Ticket Summary */}
+            <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
+                Ticket Summary
+              </Typography>
+
+              {/* Selected Tickets */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+                  Ticket
+                </Typography>
+                {ticketCategories.map((category: any) => {
+                  const categoryName = category.categoryName || category.name;
+                  const categoryPrice = category.price || 0;
+                  const qty = ticketQuantities[categoryName] || 0;
+                  if (qty > 0) {
+                    return (
+                      <Box key={categoryName} sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {Number(categoryPrice).toFixed(0)} LKR {categoryName.toUpperCase()} SEATING
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+                          Seat: {qty > 0 ? `${qty} ticket${qty > 1 ? 's' : ''}` : 'B10'}
+                        </Typography>
+                      </Box>
+                    );
+                  }
+                  return null;
+                })}
+                {calculateTotal() === 0 && (
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    No tickets selected
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Pricing Summary */}
+              <Box sx={{ mt: 3, pt: 2, borderTop: '2px solid #e0e0e0' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+                  Amount
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">Sub Total</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {calculateTotal().toLocaleString()} LKR
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="body2">Handeling fee</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>
+                    100 LKR
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 2 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Total
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {(calculateTotal() + 100).toLocaleString()} LKR
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Show Time Selection */}
+              {schedules.length > 0 && (
+                <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+                    Select Show Time:
+                  </Typography>
+                  <RadioGroup
+                    value={selectedShowtime}
+                    onChange={handleShowtimeChange}
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    {schedules.map((schedule) => {
+                      const isPast = isSchedulePast(schedule);
+                      return (
+                        <FormControlLabel
+                          key={schedule.scheduleId}
+                          value={schedule.scheduleId}
+                          control={<Radio size="small" />}
+                          label={formatScheduleDisplay(schedule) + (isPast ? ' (Past)' : '')}
+                          disabled={isPast}
+                          sx={{ 
+                            '& .MuiFormControlLabel-label': { 
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              textDecoration: isPast ? 'line-through' : 'none',
+                              color: isPast ? 'rgba(0, 0, 0, 0.4)' : 'inherit',
+                              fontStyle: isPast ? 'italic' : 'normal'
+                            },
+                            opacity: isPast ? 0.5 : 1
+                          }}
+                        />
+                      );
+                    })}
+                  </RadioGroup>
+                </Box>
+              )}
+
+            </Grid>
+          </Grid>
+        </DialogContent>
+      </Dialog>
+
+      {/* Old Payment Modal - Keep for backward compatibility if needed */}
+      <Dialog
+        open={false}
         onClose={handleCloseModal}
         maxWidth="sm"
         fullWidth
@@ -760,10 +1128,18 @@ const EventDetails: React.FC = () => {
           <Box sx={{ mb: 3 }}>
             <TextField
               fullWidth
-              label="Name"
-              placeholder="Name"
-              value={customerInfo.name}
-              onChange={(e) => handleCustomerInfoChange('name', e.target.value)}
+              label="First Name"
+              placeholder="First Name"
+              value={customerInfo.firstName}
+              onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Last Name"
+              placeholder="Last Name"
+              value={customerInfo.lastName}
+              onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)}
               sx={{ mb: 2 }}
             />
             <TextField

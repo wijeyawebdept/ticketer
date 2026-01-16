@@ -28,6 +28,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [hoveredSeat, setHoveredSeat] = useState<VenueSeat | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [showBalconyDialog, setShowBalconyDialog] = useState(false);
+  const [balconyTicketCount, setBalconyTicketCount] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
@@ -127,6 +129,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't start panning if clicking on balcony or seats
+    const target = e.target as SVGElement;
+    if (target.closest('.balcony-area') || target.tagName === 'circle') {
+      return;
+    }
     isPanning.current = true;
     lastPanPosition.current = { x: e.clientX, y: e.clientY };
   };
@@ -147,6 +154,24 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   const handleMouseUp = () => {
     isPanning.current = false;
+  };
+
+  const handleBalconyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowBalconyDialog(true);
+  };
+
+  const handleBalconyTicketSelect = () => {
+    // Handle balcony ticket selection - you can integrate this with your booking system
+    console.log(`Selected ${balconyTicketCount} balcony tickets`);
+    // TODO: Add logic to handle balcony ticket booking
+    setShowBalconyDialog(false);
+    setBalconyTicketCount(1);
+  };
+
+  const handleBalconyDialogClose = () => {
+    setShowBalconyDialog(false);
+    setBalconyTicketCount(1);
   };
 
   return (
@@ -194,30 +219,48 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
+        {/* Balcony Button Overlay */}
+        <button 
+          className="balcony-button-overlay"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Balcony clicked!');
+            handleBalconyClick(e);
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Click to book balcony tickets"
+        >
+          <span className="balcony-button-text">BALCONY</span>
+          <span className="balcony-button-subtext">Shared Space - Standing Area</span>
+          <span className="balcony-button-info">(Click to book tickets)</span>
+        </button>
+
         <svg
           ref={svgRef}
-          viewBox="0 0 1000 700"
+          viewBox="0 0 1500 700"
           className="venue-svg"
           style={{
             transform: `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+            pointerEvents: 'auto',
           }}
         >
           {/* Stage */}
           <rect
-            x="300"
+            x="500"
             y="20"
-            width="400"
-            height="50"
+            width="500"
+            height="60"
             fill="#D3D3D3"
             stroke="#999"
             strokeWidth="2"
             rx="5"
           />
           <text
-            x="500"
-            y="50"
+            x="750"
+            y="60"
             textAnchor="middle"
-            fontSize="20"
+            fontSize="24"
             fontWeight="bold"
             fill="#333"
           >
@@ -241,29 +284,66 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             />
           ))}
 
-          {/* Balcony */}
-          <rect
-            x="100"
-            y="520"
-            width="800"
-            height="120"
-            fill="rgba(169, 169, 169, 0.2)"
-            stroke="#999"
-            strokeWidth="2"
-            rx="5"
-          />
-          <text
-            x="500"
-            y="650"
-            textAnchor="middle"
-            fontSize="24"
-            fontWeight="bold"
-            fill="#666"
+          {/* Balcony (Standing Area) at bottom center */}
+          <g 
+            className="balcony-area"
+            onClick={handleBalconyClick}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ cursor: 'pointer' }}
           >
-            BALCONY
-          </text>
+            <rect 
+              x="350" 
+              y="580" 
+              width="800" 
+              height="90" 
+              fill="#f5e6d3" 
+              stroke="#8b7355" 
+              strokeWidth="3" 
+              rx="10"
+              onClick={handleBalconyClick}
+              style={{ cursor: 'pointer' }}
+            />
+            <text x="750" y="610" fontSize="26" fontWeight="bold" fill="#5d4e37" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+              BALCONY
+            </text>
+            <text x="750" y="640" fontSize="18" fontStyle="italic" fill="#6b5d4f" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+              Shared Space - Standing Area
+            </text>
+            <text x="750" y="660" fontSize="14" fill="#7a6a57" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+              (No Fixed Seating)
+            </text>
+          </g>
+
         </svg>
       </div>
+
+      {/* Balcony Ticket Selection Dialog */}
+      {showBalconyDialog && (
+        <div className="balcony-dialog-overlay" onClick={handleBalconyDialogClose}>
+          <div className="balcony-dialog" onClick={(e) => e.stopPropagation()}>
+            <button className="dialog-close-btn" onClick={handleBalconyDialogClose}>×</button>
+            <h3>This section is a *Shared Space* and does not have any allocated seats.</h3>
+            <p className="dialog-question">How many tickets do you want?</p>
+            <div className="ticket-number-grid">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                <button
+                  key={num}
+                  className={`ticket-number-btn ${balconyTicketCount === num ? 'selected' : ''}`}
+                  onClick={() => setBalconyTicketCount(num)}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+            <button className="dialog-select-btn" onClick={handleBalconyTicketSelect}>
+              Select tickets
+            </button>
+            <button className="dialog-cancel-btn" onClick={handleBalconyDialogClose}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hover tooltip */}
       {hoveredSeat && (
