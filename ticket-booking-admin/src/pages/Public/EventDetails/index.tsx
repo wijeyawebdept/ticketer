@@ -29,19 +29,12 @@ import EventService from '../../../services/event.service';
 import EventScheduleService from '../../../services/eventSchedule.service';
 import { Event, EventSchedule } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-
-interface TicketCategory {
-  name: string;
-  price: number;
-  quantity: number;
-}
+import axiosInstance from '../../../services/api';
 
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  
-  console.log('EventDetails - URL param id:', id);
   
   const [event, setEvent] = useState<Event | null>(null);
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
@@ -62,12 +55,69 @@ const EventDetails: React.FC = () => {
     email: '',
     nic: '',
   });
+  const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
+  const [checkingSeating, setCheckingSeating] = useState(true);
+  const [showSeatingMessage, setShowSeatingMessage] = useState(false);
+
+  // Check if venue has seating layout
+  useEffect(() => {
+    const checkVenueSeating = async () => {
+      if (!event?.venue?.id) {
+        setCheckingSeating(false);
+        return;
+      }
+
+      try {
+        setCheckingSeating(true);
+        
+        // Try multiple approaches to check for seating
+        try {
+          // First try: Use authenticated axios instance
+          const response = await axiosInstance.get<any[]>('/api/venue-seats/layout');
+          const seats = response.data;
+          
+          const venueHasSeats: boolean = seats && Array.isArray(seats) && seats.length > 0;
+          setHasSeatingLayout(venueHasSeats);
+          return;
+        } catch (authError: any) {
+          
+          // Second try: Direct fetch without auth (for CORS enabled endpoints)
+          try {
+            const response = await fetch('http://localhost:8081/api/venue-seats/layout', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (response.ok) {
+              const seats: any = await response.json();
+              
+              const venueHasSeats: boolean = seats && Array.isArray(seats) && seats.length > 0;
+              setHasSeatingLayout(venueHasSeats);
+              return;
+            }
+          } catch (fetchError) {
+            // Silent fallback
+          }
+          
+          // Third approach: Assume seating exists if venue has certain properties
+          // This is a fallback - you might want to add a 'hasSeating' flag to the venue object
+          setHasSeatingLayout(false);
+        }
+      } catch (error) {
+        setHasSeatingLayout(false);
+      } finally {
+        setCheckingSeating(false);
+      }
+    };
+
+    checkVenueSeating();
+  }, [event]);
 
   // Fetch event data
   useEffect(() => {
     const fetchEvent = async () => {
-      console.log('fetchEvent called with id:', id);
-      
       if (!id || id === 'undefined') {
         console.error('Invalid event ID:', id);
         setError('Event ID is missing or invalid');
@@ -77,15 +127,12 @@ const EventDetails: React.FC = () => {
 
       try {
         setLoading(true);
-        console.log('Calling getPublicEventById with:', id);
         const eventData = await EventService.getPublicEventById(id);
-        console.log('Received event data:', eventData);
         setEvent(eventData);
         
         // Fetch bookable schedules for this event
         try {
           const schedulesData = await EventScheduleService.getPublicBookableSchedulesForEvent(id);
-          console.log('Received schedules data:', schedulesData);
           setSchedules(schedulesData);
           // Set the first non-past schedule as default selected
           if (schedulesData.length > 0) {
@@ -127,8 +174,6 @@ const EventDetails: React.FC = () => {
         
         // Only restore if we're on the same event page
         if (bookingData.eventId === id) {
-          console.log('Restoring booking state:', bookingData);
-          
           // Restore booking selections
           if (bookingData.scheduleId) {
             setSelectedShowtime(bookingData.scheduleId);
@@ -170,6 +215,24 @@ const EventDetails: React.FC = () => {
   };
 
   const handleNextClick = () => {
+    // If venue has seating layout, redirect to seat selection page
+    if (hasSeatingLayout && selectedShowtime) {
+      // Find the selected schedule details
+      const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
+      
+      // Navigate to seat selection page with schedule ID and event details via state
+      navigate(`/seat-selection/${selectedShowtime}`, {
+        state: {
+          eventTitle: event?.name || 'Event',
+          venueName: event?.venue?.name || 'Venue',
+          eventDate: selectedSchedule?.scheduleDate || '',
+          eventTime: selectedSchedule?.startTime || '',
+          eventId: id, // Pass the event ID
+        }
+      });
+      return;
+    }
+
     // Check if user is authenticated
     if (!isAuthenticated()) {
       // Save booking state before redirecting to login
@@ -181,7 +244,6 @@ const EventDetails: React.FC = () => {
         returnUrl: window.location.pathname
       };
       
-      console.log('Saving booking state before login:', bookingState);
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingState));
       
       // Redirect to login page
@@ -653,9 +715,22 @@ const EventDetails: React.FC = () => {
                         <FormControl fullWidth size="small">
                           <Select
                             value={ticketQuantities[categoryName]?.toString() || '0'}
-                            onChange={(e: SelectChangeEvent) =>
-                              handleQuantityChange(categoryName, e.target.value)
-                            }
+                            onChange={(e: SelectChangeEvent) => {
+                              if (hasSeatingLayout) {
+                                setShowSeatingMessage(true);
+                                setTimeout(() => setShowSeatingMessage(false), 3000);
+                                return;
+                              }
+                              handleQuantityChange(categoryName, e.target.value);
+                            }}
+                            disabled={hasSeatingLayout}
+                            sx={{
+                              opacity: hasSeatingLayout ? 0.6 : 1,
+                              cursor: hasSeatingLayout ? 'not-allowed' : 'pointer',
+                              '& .MuiSelect-select': {
+                                backgroundColor: hasSeatingLayout ? '#f5f5f5' : 'white'
+                              }
+                            }}
                           >
                             {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
                               <MenuItem key={num} value={num.toString()}>
@@ -674,31 +749,75 @@ const EventDetails: React.FC = () => {
                 </Typography>
               )}
 
+              {/* Seating Layout Message */}
+              {hasSeatingLayout && showSeatingMessage && (
+                <Box
+                  sx={{
+                    backgroundColor: '#e3f2fd',
+                    border: '2px solid #2196f3',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    mb: 2,
+                    animation: 'pulse 0.5s ease-in-out',
+                    '@keyframes pulse': {
+                      '0%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(1.02)' },
+                      '100%': { transform: 'scale(1)' }
+                    }
+                  }}
+                >
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: '#1565c0',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      mb: 1,
+                      fontFamily: 'Raleway, sans-serif'
+                    }}
+                  >
+                    This event uses seat-based booking
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: '#1976d2',
+                      textAlign: 'center',
+                      fontFamily: 'Raleway, sans-serif'
+                    }}
+                  >
+                    Click "NEXT" to select your preferred seats from the venue
+                  </Typography>
+                </Box>
+              )}
+
               {/* Total Summary */}
-              <Box
-                sx={{
-                  borderBottom: '2px solid #444',
-                  pb: 2,
-                  mb: 2,
-                }}
-              >
-                {ticketCategories.map((category: any) => {
-                  const categoryName = category.categoryName || category.name;
-                  const categoryPrice = category.price || 0;
-                  const qty = ticketQuantities[categoryName] || 0;
-                  if (qty > 0) {
-                    return (
-                      <Typography key={categoryName} variant="body2">
-                        {categoryName} {qty} x {categoryPrice}/=
-                      </Typography>
-                    );
-                  }
-                  return null;
-                })}
-                <Typography fontWeight="bold" variant="body1" sx={{ mt: 1 }}>
-                  Total = {calculateTotal()}/=
-                </Typography>
-              </Box>
+              {!hasSeatingLayout && (
+                <Box
+                  sx={{
+                    borderBottom: '2px solid #444',
+                    pb: 2,
+                    mb: 2,
+                  }}
+                >
+                  {ticketCategories.map((category: any) => {
+                    const categoryName = category.categoryName || category.name;
+                    const categoryPrice = category.price || 0;
+                    const qty = ticketQuantities[categoryName] || 0;
+                    if (qty > 0) {
+                      return (
+                        <Typography key={categoryName} variant="body2">
+                          {categoryName} {qty} x {categoryPrice}/=
+                        </Typography>
+                      );
+                    }
+                    return null;
+                  })}
+                  <Typography fontWeight="bold" variant="body1" sx={{ mt: 1 }}>
+                    Total = {calculateTotal()}/=
+                  </Typography>
+                </Box>
+              )}
 
               {/* Next Button */}
               <Button

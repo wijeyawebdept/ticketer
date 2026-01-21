@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from './api';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -26,7 +26,7 @@ export interface SeatAvailabilityResponse {
 }
 
 export interface SeatHoldRequest {
-  eventScheduleId: number;
+  eventScheduleId: string | number;
   seatIds: string[];
   userId: number;
 }
@@ -42,16 +42,16 @@ export const venueSeatService = {
    * Get venue layout (all seats with positions)
    */
   getVenueLayout: async () => {
-    const response = await axios.get(`${API_BASE_URL}/api/venue-seats/layout`);
+    const response = await axiosInstance.get('/api/venue-seats/layout');
     return response.data;
   },
 
   /**
    * Get seat availability for a specific event schedule
    */
-  getSeatAvailability: async (eventScheduleId: number): Promise<SeatAvailabilityResponse> => {
-    const response = await axios.get<SeatAvailabilityResponse>(
-      `${API_BASE_URL}/api/venue-seats/availability/${eventScheduleId}`
+  getSeatAvailability: async (eventScheduleId: string | number): Promise<SeatAvailabilityResponse> => {
+    const response = await axiosInstance.get<SeatAvailabilityResponse>(
+      `/api/venue-seats/availability/${eventScheduleId}`
     );
     return response.data;
   },
@@ -60,16 +60,16 @@ export const venueSeatService = {
    * Hold seats temporarily (5-minute timer)
    */
   holdSeats: async (request: SeatHoldRequest): Promise<SeatHoldResponse> => {
-    const response = await axios.post<SeatHoldResponse>(`${API_BASE_URL}/api/venue-seats/hold`, request);
+    const response = await axiosInstance.post<SeatHoldResponse>('/api/venue-seats/hold', request);
     return response.data;
   },
 
   /**
    * Release seat holds manually
    */
-  releaseHolds: async (eventScheduleId: number, seatIds: string[]) => {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/venue-seats/release?eventScheduleId=${eventScheduleId}`,
+  releaseHolds: async (eventScheduleId: string | number, seatIds: string[]) => {
+    const response = await axiosInstance.post(
+      `/api/venue-seats/release?eventScheduleId=${eventScheduleId}`,
       seatIds
     );
     return response.data;
@@ -79,13 +79,13 @@ export const venueSeatService = {
    * Confirm booking (convert hold to booked)
    */
   confirmBooking: async (
-    eventScheduleId: number,
+    eventScheduleId: string | number,
     bookingRefId: number,
     userId: number,
     seatIds: string[]
   ) => {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/venue-seats/confirm?eventScheduleId=${eventScheduleId}&bookingRefId=${bookingRefId}&userId=${userId}`,
+    const response = await axiosInstance.post(
+      `/api/venue-seats/confirm?eventScheduleId=${eventScheduleId}&bookingRefId=${bookingRefId}&userId=${userId}`,
       seatIds
     );
     return response.data;
@@ -94,9 +94,9 @@ export const venueSeatService = {
   /**
    * Initialize seats for a new event schedule
    */
-  initializeEventSeats: async (eventScheduleId: number) => {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/venue-seats/initialize/${eventScheduleId}`
+  initializeEventSeats: async (eventScheduleId: string | number) => {
+    const response = await axiosInstance.post(
+      `/api/venue-seats/initialize/${eventScheduleId}`
     );
     return response.data;
   },

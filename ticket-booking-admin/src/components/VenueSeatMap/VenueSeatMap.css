@@ -1,7 +1,7 @@
 .venue-seat-map-container {
   position: relative;
   width: 100%;
-  max-width: 900px;
+  max-width: 1400px;
   height: auto;
   margin: 0 auto;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -99,15 +99,19 @@
 /* SVG Container */
 .venue-svg-container {
   position: relative;
-  width: 75%;
-  height: 400px;
-  max-height: 40vh;
+  width: 100%;
+  height: 650px;
+  max-height: 70vh;
   background: radial-gradient(circle at center, #2a2a3e 0%, #1a1a2e 100%);
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
   cursor: grab;
   box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
+  /* Hardware acceleration for smooth performance */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .venue-svg-container:active {
@@ -118,16 +122,24 @@
   cursor: pointer;
 }
 
+/* SVG element optimization */
 .venue-svg {
-  overflow: visible;
+  /* Enable GPU acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimize seat rendering - Remove individual will-change */
+.seat-circle {
+  transition: none;
   pointer-events: auto;
 }
 
-.venue-svg circle,
-.venue-svg rect,
-.venue-svg text,
-.venue-svg g {
-  pointer-events: auto;
+.seat-circle:hover {
+  cursor: inherit; /* Use the cursor from inline style, not browser default */
 }
 
 /* Balcony Button Overlay */
@@ -200,7 +212,8 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.venue-svg circle:hover {
+/* Only apply hover effect to actual seat circles, not other circles */
+.venue-svg circle.seat-circle:hover {
   transform: scale(1.3);
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
   stroke: white;

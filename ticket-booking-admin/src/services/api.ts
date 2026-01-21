@@ -1,9 +1,6 @@
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
-console.log('API_URL:', process.env.REACT_APP_API_URL);
-console.log('Final API_URL being used:', API_URL);
-
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -23,7 +20,6 @@ axiosInstance.interceptors.request.use(
                           config.url?.includes('/api/auth/organizer-employee/login');
     
     if (isAuthEndpoint) {
-      console.log('🚫 Skipping token for auth endpoint:', config.url);
       return config;
     }
     
@@ -55,19 +51,6 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers = config.headers || {};
       config.headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔑 Auth token being sent from', storageType, ':', token);
-      
-      // Decode JWT to see what's in it (for debugging only)
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        console.log('Decoded JWT payload:', JSON.parse(jsonPayload));
-      } catch (e) {
-        console.error('Error decoding JWT:', e);
-      }
     }
     return config;
   },

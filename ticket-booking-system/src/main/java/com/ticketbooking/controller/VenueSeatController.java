@@ -3,6 +3,7 @@ package com.ticketbooking.controller;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -15,10 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ticketbooking.dto.SeatAvailabilityResponse;
-import com.ticketbooking.dto.SeatHoldRequest;
-import com.ticketbooking.entity.VenueSeat;
-import com.ticketbooking.service.VenueSeatService;
+import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
+import com.ticket.ticket_booking_system.dto.SeatHoldRequest;
+import com.ticket.ticket_booking_system.entity.VenueSeat;
+import com.ticket.ticket_booking_system.service.VenueSeatService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,7 +44,7 @@ public class VenueSeatController {
      */
     @GetMapping("/availability/{eventScheduleId}")
     public ResponseEntity<SeatAvailabilityResponse> getSeatAvailability(
-        @PathVariable Long eventScheduleId
+        @PathVariable UUID eventScheduleId
     ) {
         return ResponseEntity.ok(venueSeatService.getSeatAvailability(eventScheduleId));
     }
@@ -78,7 +79,7 @@ public class VenueSeatController {
      */
     @PostMapping("/release")
     public ResponseEntity<Map<String, String>> releaseHolds(
-        @RequestParam Long eventScheduleId,
+        @RequestParam UUID eventScheduleId,
         @RequestBody List<String> seatIds
     ) {
         venueSeatService.releaseHolds(eventScheduleId, seatIds);
@@ -90,7 +91,7 @@ public class VenueSeatController {
      */
     @PostMapping("/confirm")
     public ResponseEntity<Map<String, Object>> confirmBooking(
-        @RequestParam Long eventScheduleId,
+        @RequestParam UUID eventScheduleId,
         @RequestParam Long bookingRefId,
         @RequestParam Long userId,
         @RequestBody List<String> seatIds
@@ -117,7 +118,7 @@ public class VenueSeatController {
      */
     @PostMapping("/initialize/{eventScheduleId}")
     public ResponseEntity<Map<String, String>> initializeEventSeats(
-        @PathVariable Long eventScheduleId
+        @PathVariable UUID eventScheduleId
     ) {
         venueSeatService.initializeEventSeats(eventScheduleId);
         return ResponseEntity.ok(Map.of("message", "Event seats initialized"));
@@ -128,7 +129,7 @@ public class VenueSeatController {
      */
     @PostMapping("/initialize/{eventScheduleId}/with-pricing")
     public ResponseEntity<Map<String, String>> initializeEventSeatsWithPricing(
-        @PathVariable Long eventScheduleId,
+        @PathVariable UUID eventScheduleId,
         @RequestBody Map<String, BigDecimal> categoryPrices
     ) {
         venueSeatService.initializeEventSeatsWithPricing(eventScheduleId, categoryPrices);
@@ -140,7 +141,7 @@ public class VenueSeatController {
      */
     @PutMapping("/pricing/{eventScheduleId}")
     public ResponseEntity<Map<String, String>> updateEventPricing(
-        @PathVariable Long eventScheduleId,
+        @PathVariable UUID eventScheduleId,
         @RequestParam String categoryName,
         @RequestParam BigDecimal newPrice
     ) {

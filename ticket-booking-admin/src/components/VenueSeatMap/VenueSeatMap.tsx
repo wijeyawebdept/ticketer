@@ -1,6 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { VENUE_SEATING_LAYOUT, SEAT_CATEGORIES, VenueSeat } from '../../data/venueSeatingLayout';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import axiosInstance from '../../services/api';
 import './VenueSeatMap.css';
+
+interface VenueSeatData {
+  seatId: string;
+  section: string;
+  rowLabel: string;
+  seatNumber: number;
+  categoryName: string;
+  colorCode: string;
+  xPosition: number;
+  yPosition: number;
+  isAisleSeat: boolean;
+  isAccessible: boolean;
+}
 
 interface SeatStatus {
   seatId: string;
@@ -8,8 +21,29 @@ interface SeatStatus {
   currentPrice: number;
 }
 
+interface SeatAvailabilityResponse {
+  seats: {
+    seatId: string;
+    section: string;
+    rowLabel: string;
+    seatNumber: number;
+    categoryName: string;
+    colorCode: string;
+    xPosition: number;
+    yPosition: number;
+    isAisleSeat: boolean;
+    isAccessible: boolean;
+    status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE';
+    currentPrice: number;
+  }[];
+  totalSeats: number;
+  availableSeats: number;
+  bookedSeats: number;
+  temporaryHolds: number;
+}
+
 interface VenueSeatMapProps {
-  eventScheduleId: number;
+  eventScheduleId: string | number;
   onSeatSelect?: (selectedSeats: string[]) => void;
   maxSelection?: number;
   selectedSeats?: string[];
@@ -23,27 +57,74 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   selectedSeats = [],
   bookedSeats = [],
 }) => {
+  const [venueSeats, setVenueSeats] = useState<VenueSeatData[]>([]);
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
   const [localSelectedSeats, setLocalSelectedSeats] = useState<Set<string>>(new Set(selectedSeats));
-  const [hoveredSeat, setHoveredSeat] = useState<VenueSeat | null>(null);
+  const [hoveredSeat, setHoveredSeat] = useState<VenueSeatData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [showBalconyDialog, setShowBalconyDialog] = useState(false);
   const [balconyTicketCount, setBalconyTicketCount] = useState(1);
+  const [loading, setLoading] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
+  const animationFrameId = useRef<number | null>(null);
 
   // Fetch seat availability from backend
   useEffect(() => {
     fetchSeatAvailability();
   }, [eventScheduleId]);
 
+  // Sync localSelectedSeats with selectedSeats prop when it changes externally
+  useEffect(() => {
+    setLocalSelectedSeats(new Set(selectedSeats));
+  }, [selectedSeats]);
+
   const fetchSeatAvailability = async () => {
     try {
-      const response = await fetch(`/api/venue-seats/availability/${eventScheduleId}`);
-      const data = await response.json();
+      setLoading(true);
+      const response = await axiosInstance.get<SeatAvailabilityResponse>(`/api/venue-seats/availability/${eventScheduleId}`);
+      const data = response.data;
       
+      // Debug: Log the first seat to see the actual data structure
+      if (data.seats && data.seats.length > 0) {
+        console.log('First seat data:', data.seats[0]);
+        console.log('xPosition type:', typeof data.seats[0].xPosition);
+        console.log('yPosition type:', typeof data.seats[0].yPosition);
+      }
+      
+      // Store venue seats with coordinates
+      const seats: VenueSeatData[] = data.seats.map((seat: any) => {
+        const xPos = seat.xPosition ? parseFloat(String(seat.xPosition)) : 0;
+        const yPos = seat.yPosition ? parseFloat(String(seat.yPosition)) : 0;
+        
+        return {
+          seatId: seat.seatId,
+          section: seat.section,
+          rowLabel: seat.rowLabel,
+          seatNumber: seat.seatNumber,
+          categoryName: seat.categoryName || seat.category,
+          colorCode: seat.colorCode,
+          xPosition: xPos,
+          yPosition: yPos,
+          isAisleSeat: seat.isAisleSeat || false,
+          isAccessible: seat.isAccessible || false,
+        };
+      });
+      
+      // Filter out any seats with invalid coordinates
+      const validSeats = seats.filter(s => !isNaN(s.xPosition) && !isNaN(s.yPosition));
+      
+      console.log('Total seats from API:', data.seats.length);
+      console.log('Valid seats after filtering:', validSeats.length);
+      if (validSeats.length === 0 && data.seats.length > 0) {
+        console.error('All seats filtered out! Sample seat:', seats[0]);
+      }
+      
+      setVenueSeats(validSeats);
+      
+      // Store seat statuses
       const statusMap = new Map<string, SeatStatus>();
       data.seats.forEach((seat: any) => {
         statusMap.set(seat.seatId, {
@@ -56,10 +137,17 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       setSeatStatuses(statusMap);
     } catch (error) {
       console.error('Failed to fetch seat availability:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSeatClick = (seat: VenueSeat) => {
+  const handleSeatClick = (seat: VenueSeatData, e?: React.MouseEvent) => {
+    // Stop event propagation to prevent panning
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const status = seatStatuses.get(seat.seatId);
     
     // Don't allow selection of booked/locked/held seats
@@ -83,7 +171,59 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     onSeatSelect?.(Array.from(newSelected));
   };
 
-  const getSeatColor = (seat: VenueSeat): string => {
+  // Pan handlers - Define handleMouseMove first since handleSVGMouseMove depends on it
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning.current) return;
+    
+    // Throttle with requestAnimationFrame for smooth performance
+    if (animationFrameId.current) return;
+    
+    animationFrameId.current = requestAnimationFrame(() => {
+      const deltaX = e.clientX - lastPanPosition.current.x;
+      const deltaY = e.clientY - lastPanPosition.current.y;
+      
+      setPanOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY,
+      }));
+      
+      lastPanPosition.current = { x: e.clientX, y: e.clientY };
+      animationFrameId.current = null;
+    });
+  }, []);
+
+  // Handle seat interactions through event delegation
+  const handleSVGClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (isPanning.current) return;
+    
+    const target = e.target as SVGElement;
+    if (target.tagName === 'circle' && target.hasAttribute('data-seat-id')) {
+      const seatId = target.getAttribute('data-seat-id');
+      const seat = venueSeats.find(s => s.seatId === seatId);
+      if (seat) {
+        handleSeatClick(seat, e);
+      }
+    }
+  }, [venueSeats, handleSeatClick]);
+
+  const handleSVGMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (isPanning.current) {
+      handleMouseMove(e);
+      setHoveredSeat(null);
+      return;
+    }
+
+    const target = e.target as SVGElement;
+    if (target.tagName === 'circle' && target.hasAttribute('data-seat-id')) {
+      const seatId = target.getAttribute('data-seat-id');
+      const seat = venueSeats.find(s => s.seatId === seatId);
+      setHoveredSeat(seat || null);
+    } else {
+      setHoveredSeat(null);
+    }
+  }, [venueSeats, handleMouseMove]);
+
+  const getSeatColor = useCallback((seat: VenueSeatData): string => {
     const status = seatStatuses.get(seat.seatId);
     
     // Selected seats
@@ -105,11 +245,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       }
     }
     
-    // Category-based colors (available seats)
-    return SEAT_CATEGORIES[seat.category].color;
-  };
+    // Use color code from database (category-based colors)
+    return seat.colorCode || '#4CAF50';
+  }, [seatStatuses, localSelectedSeats]);
 
-  const getSeatCursor = (seat: VenueSeat): string => {
+  const getSeatCursor = useCallback((seat: VenueSeatData): string => {
     const status = seatStatuses.get(seat.seatId);
     
     if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD'].includes(status.status)) {
@@ -117,7 +257,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
     
     return 'pointer';
-  };
+  }, [seatStatuses]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -138,23 +278,13 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     lastPanPosition.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning.current) return;
-    
-    const deltaX = e.clientX - lastPanPosition.current.x;
-    const deltaY = e.clientY - lastPanPosition.current.y;
-    
-    setPanOffset(prev => ({
-      x: prev.x + deltaX,
-      y: prev.y + deltaY,
-    }));
-    
-    lastPanPosition.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     isPanning.current = false;
-  };
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+      animationFrameId.current = null;
+    }
+  }, []);
 
   const handleBalconyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,7 +293,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   const handleBalconyTicketSelect = () => {
     // Handle balcony ticket selection - you can integrate this with your booking system
-    console.log(`Selected ${balconyTicketCount} balcony tickets`);
     // TODO: Add logic to handle balcony ticket booking
     setShowBalconyDialog(false);
     setBalconyTicketCount(1);
@@ -176,113 +305,119 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   return (
     <div className="venue-seat-map-container">
-      {/* Controls */}
-      <div className="venue-controls">
-        <button onClick={handleZoomIn} className="control-btn">🔍+</button>
-        <button onClick={handleZoomOut} className="control-btn">🔍-</button>
-        <button onClick={handleResetView} className="control-btn">↺ Reset</button>
-        <span className="selected-count">
-          Selected: {localSelectedSeats.size} / {maxSelection}
-        </span>
-      </div>
-
-      {/* Legend */}
-      <div className="venue-legend">
-        {Object.entries(SEAT_CATEGORIES).map(([key, cat]) => (
-          <div key={key} className="legend-item">
-            <span 
-              className="legend-color" 
-              style={{ backgroundColor: (cat as { color: string; name: string }).color }}
-            />
-            <span>{(cat as { color: string; name: string }).name}</span>
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          Loading venue layout...
+        </div>
+      )}
+      
+      {!loading && (
+        <>
+          {/* Controls */}
+          <div className="venue-controls">
+            <button onClick={handleZoomIn} className="control-btn">🔍+</button>
+            <button onClick={handleZoomOut} className="control-btn">🔍-</button>
+            <button onClick={handleResetView} className="control-btn">↺ Reset</button>
+            <span className="selected-count">
+              Selected: {localSelectedSeats.size} / {venueSeats.length}
+            </span>
           </div>
-        ))}
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#FF4444' }} />
-          <span>Sold</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#000000' }} />
-          <span>Locked</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#FFA500' }} />
-          <span>Selected</span>
-        </div>
-      </div>
+
+          {/* Legend - Dynamic from database */}
+          <div className="venue-legend">
+            {/* Get unique categories from venue seats */}
+            {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
+              const seat = venueSeats.find(s => s.categoryName === categoryName);
+              return (
+                <div key={`category-${index}-${categoryName}`} className="legend-item">
+                  <span 
+                    className="legend-color" 
+                    style={{ backgroundColor: seat?.colorCode || '#4CAF50' }}
+                  />
+                  <span>{categoryName}</span>
+                </div>
+              );
+            })}
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FF4444' }} />
+              <span>Sold</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#000000' }} />
+              <span>Locked</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FFA500' }} />
+              <span>Selected</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#f5e6d3' }} />
+              <span>Balcony (Standing)</span>
+            </div>
+          </div>
 
       {/* SVG Seat Map */}
       <div 
         className="venue-svg-container"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
-        {/* Balcony Button Overlay */}
-        <button 
-          className="balcony-button-overlay"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Balcony clicked!');
-            handleBalconyClick(e);
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          title="Click to book balcony tickets"
-        >
-          <span className="balcony-button-text">BALCONY</span>
-          <span className="balcony-button-subtext">Shared Space - Standing Area</span>
-          <span className="balcony-button-info">(Click to book tickets)</span>
-        </button>
-
         <svg
           ref={svgRef}
-          viewBox="0 0 1500 700"
+          viewBox="0 0 1800 900"
           className="venue-svg"
           style={{
             transform: `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
             pointerEvents: 'auto',
+            willChange: 'transform',
+            transition: isPanning.current ? 'none' : 'transform 0.1s ease-out',
           }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleSVGMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onClick={handleSVGClick}
         >
           {/* Stage */}
           <rect
-            x="500"
-            y="20"
-            width="500"
-            height="60"
+            x="600"
+            y="30"
+            width="600"
+            height="70"
             fill="#D3D3D3"
             stroke="#999"
             strokeWidth="2"
             rx="5"
           />
           <text
-            x="750"
-            y="60"
+            x="900"
+            y="75"
             textAnchor="middle"
-            fontSize="24"
+            fontSize="28"
             fontWeight="bold"
             fill="#333"
           >
             STAGE
           </text>
 
-          {/* Seats */}
-          {VENUE_SEATING_LAYOUT.map((seat: VenueSeat) => (
-            <circle
-              key={seat.seatId}
-              cx={seat.x}
-              cy={seat.y}
-              r="6"
-              fill={getSeatColor(seat)}
-              stroke={localSelectedSeats.has(seat.seatId) ? '#000' : 'none'}
-              strokeWidth="2"
-              style={{ cursor: getSeatCursor(seat) }}
-              onClick={() => handleSeatClick(seat)}
-              onMouseEnter={() => setHoveredSeat(seat)}
-              onMouseLeave={() => setHoveredSeat(null)}
-            />
-          ))}
+          {/* Seats - Render from database */}
+          <g id="seats-container">
+            {venueSeats.map((seat: VenueSeatData) => (
+              <circle
+                key={seat.seatId}
+                data-seat-id={seat.seatId}
+                cx={seat.xPosition}
+                cy={seat.yPosition}
+                r="6"
+                fill={getSeatColor(seat)}
+                stroke={localSelectedSeats.has(seat.seatId) ? '#000' : 'none'}
+                strokeWidth="2"
+                className="seat-circle"
+                style={{ 
+                  cursor: getSeatCursor(seat),
+                  pointerEvents: isPanning.current ? 'none' : 'auto'
+                }}
+              />
+            ))}
+          </g>
 
           {/* Balcony (Standing Area) at bottom center */}
           <g 
@@ -292,10 +427,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             style={{ cursor: 'pointer' }}
           >
             <rect 
-              x="350" 
-              y="580" 
-              width="800" 
-              height="90" 
+              x="400" 
+              y="750" 
+              width="1000" 
+              height="110" 
               fill="#f5e6d3" 
               stroke="#8b7355" 
               strokeWidth="3" 
@@ -303,13 +438,13 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               onClick={handleBalconyClick}
               style={{ cursor: 'pointer' }}
             />
-            <text x="750" y="610" fontSize="26" fontWeight="bold" fill="#5d4e37" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+            <text x="900" y="790" fontSize="30" fontWeight="bold" fill="#5d4e37" textAnchor="middle" style={{ pointerEvents: 'none' }}>
               BALCONY
             </text>
-            <text x="750" y="640" fontSize="18" fontStyle="italic" fill="#6b5d4f" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+            <text x="900" y="825" fontSize="20" fontStyle="italic" fill="#6b5d4f" textAnchor="middle" style={{ pointerEvents: 'none' }}>
               Shared Space - Standing Area
             </text>
-            <text x="750" y="660" fontSize="14" fill="#7a6a57" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+            <text x="900" y="850" fontSize="16" fill="#7a6a57" textAnchor="middle" style={{ pointerEvents: 'none' }}>
               (No Fixed Seating)
             </text>
           </g>
@@ -350,13 +485,15 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         <div className="seat-tooltip">
           <strong>{hoveredSeat.seatId}</strong>
           <div>Section: {hoveredSeat.section}</div>
-          <div>Row: {hoveredSeat.row}, Seat: {hoveredSeat.number}</div>
-          <div>Category: {SEAT_CATEGORIES[hoveredSeat.category].name}</div>
+          <div>Row: {hoveredSeat.rowLabel}, Seat: {hoveredSeat.seatNumber}</div>
+          <div>Category: {hoveredSeat.categoryName}</div>
           {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
-            <div>Price: {seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()} LKR</div>
+            <div>Price: Rs.{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
           )}
           <div>Status: {seatStatuses.get(hoveredSeat.seatId)?.status || 'AVAILABLE'}</div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

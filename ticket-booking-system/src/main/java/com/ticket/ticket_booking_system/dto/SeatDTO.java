@@ -1,6 +1,8 @@
-package com.ticketbooking.dto;
+package com.ticket.ticket_booking_system.dto;
 
 import java.math.BigDecimal;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,12 +16,17 @@ public class SeatDTO {
     private String section;
     private String rowLabel;
     private Integer seatNumber;
-    private String category;
+    private String categoryName;
     private String colorCode;
+    
+    @JsonProperty("xPosition")
     private BigDecimal xPosition;
+    
+    @JsonProperty("yPosition")
     private BigDecimal yPosition;
+    
     private Boolean isAisleSeat;
     private Boolean isAccessible;
-    private String status; // AVAILABLE, BOOKED, TEMPORARY_HOLD, LOCKED, NOT_FOR_SALE
+    private String status;
     private BigDecimal currentPrice;
 }

@@ -46,6 +46,7 @@ import Gallery from './pages/Public/Gallery';
 import PublicEvents from './pages/Public/Events';
 import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
+import SeatSelectionPage from './pages/Public/SeatSelection';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -302,6 +303,7 @@ function App() {
               <Route path="/home" element={<Home />} />
               <Route path="/events" element={<PublicEvents />} />
               <Route path="/event/:id" element={<EventDetails />} />
+              <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />
               <Route path="/gallery" element={<Gallery />} />
             </Route>
 

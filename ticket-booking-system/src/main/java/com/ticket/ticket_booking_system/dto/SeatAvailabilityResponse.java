@@ -1,4 +1,4 @@
-package com.ticketbooking.dto;
+package com.ticket.ticket_booking_system.dto;
 
 import java.util.List;
 
@@ -14,5 +14,5 @@ public class SeatAvailabilityResponse {
     private Long totalSeats;
     private Long availableSeats;
     private Long bookedSeats;
-    private Long temporaryHolds;
+    private Long heldSeats;
 }
