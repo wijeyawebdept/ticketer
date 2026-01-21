@@ -61,6 +61,16 @@ public class VenueSeatService {
                 System.out.println("  categoryName: " + seat.getCategory().getCategoryName());
             }
             
+            // Determine status based on notes
+            String seatStatus = SeatStatus.AVAILABLE.name();
+            String notes = seat.getNotes() != null ? seat.getNotes().toLowerCase() : "";
+            
+            if (notes.contains("[locked]")) {
+                seatStatus = "LOCKED"; // Custom status for locked seats
+            } else if (notes.contains("[vip]")) {
+                seatStatus = "VIP_RESERVED"; // Custom status for VIP seats
+            }
+            
             SeatDTO dto = new SeatDTO(
                 seat.getSeatId(),
                 seat.getSection(),
@@ -72,8 +82,9 @@ public class VenueSeatService {
                 seat.getYPosition(),
                 seat.getIsAisleSeat(),
                 seat.getIsAccessible(),
-                SeatStatus.AVAILABLE.name(),
-                seat.getCategory().getBasePrice() // This becomes currentPrice
+                seatStatus,
+                seat.getCategory().getBasePrice(), // This becomes currentPrice
+                seat.getNotes() // Include notes for frontend
             );
             
             seatDTOs.add(dto);
@@ -148,6 +159,66 @@ public class VenueSeatService {
     @Transactional
     public void updateEventPricing(UUID eventScheduleId, String categoryName, java.math.BigDecimal newPrice) {
         // TODO: Implement event pricing update
+    }
+
+    /**
+     * Lock a seat (prevent booking)
+     */
+    @Transactional
+    public void lockSeat(String seatId) {
+        VenueSeat seat = venueSeatRepository.findById(seatId)
+            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+        
+        // Add a note indicating the seat is locked
+        String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
+        if (!currentNotes.contains("[LOCKED]")) {
+            seat.setNotes("[LOCKED] " + currentNotes);
+            venueSeatRepository.save(seat);
+        }
+    }
+
+    /**
+     * Unlock a seat (allow booking)
+     */
+    @Transactional
+    public void unlockSeat(String seatId) {
+        VenueSeat seat = venueSeatRepository.findById(seatId)
+            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+        
+        // Remove the locked flag from notes
+        String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
+        if (currentNotes.contains("[LOCKED]")) {
+            seat.setNotes(currentNotes.replace("[LOCKED] ", "").replace("[LOCKED]", ""));
+            venueSeatRepository.save(seat);
+        }
+    }
+
+    /**
+     * Mark seat as accessible (wheelchair accessible)
+     */
+    @Transactional
+    public void markAccessible(String seatId) {
+        VenueSeat seat = venueSeatRepository.findById(seatId)
+            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+        
+        seat.setIsAccessible(true);
+        venueSeatRepository.save(seat);
+    }
+
+    /**
+     * Reserve seat for VIP
+     */
+    @Transactional
+    public void reserveForVIP(String seatId) {
+        VenueSeat seat = venueSeatRepository.findById(seatId)
+            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+        
+        // Add a note indicating VIP reservation
+        String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
+        if (!currentNotes.contains("[VIP]")) {
+            seat.setNotes("[VIP] " + currentNotes);
+            venueSeatRepository.save(seat);
+        }
     }
 }
 

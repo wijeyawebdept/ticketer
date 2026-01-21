@@ -17,8 +17,9 @@ interface VenueSeatData {
 
 interface SeatStatus {
   seatId: string;
-  status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE' | 'SELECTED';
+  status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE' | 'SELECTED' | 'VIP_RESERVED';
   currentPrice: number;
+  notes?: string;
 }
 
 interface SeatAvailabilityResponse {
@@ -33,8 +34,9 @@ interface SeatAvailabilityResponse {
     yPosition: number;
     isAisleSeat: boolean;
     isAccessible: boolean;
-    status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE';
+    status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE' | 'VIP_RESERVED';
     currentPrice: number;
+    notes?: string;
   }[];
   totalSeats: number;
   availableSeats: number;
@@ -131,6 +133,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           seatId: seat.seatId,
           status: seat.status,
           currentPrice: seat.currentPrice,
+          notes: seat.notes,
         });
       });
       
@@ -150,8 +153,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     
     const status = seatStatuses.get(seat.seatId);
     
-    // Don't allow selection of booked/locked/held seats
-    if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD'].includes(status.status)) {
+    // Don't allow selection of booked/locked/held/VIP reserved seats
+    if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status)) {
       return;
     }
 
@@ -237,7 +240,21 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         case 'BOOKED':
           return '#FF4444'; // Red for sold
         case 'LOCKED':
-          return '#000000'; // Black for locked
+          return '#6c757d'; // Gray for locked
+        case 'VIP_RESERVED':
+          // Determine VIP tier by category name and notes
+          const notes = status.notes?.toLowerCase() || '';
+          const categoryName = seat.categoryName?.toLowerCase() || '';
+          
+          if (categoryName.includes('platinum') || notes.includes('platinum')) {
+            return '#dc3545'; // Red for VIP Platinum
+          } else if (categoryName.includes('gold') || notes.includes('gold')) {
+            return '#9c27b0'; // Purple for VIP Gold
+          } else if (categoryName.includes('silver') || notes.includes('silver')) {
+            return '#2196f3'; // Blue for VIP Silver
+          }
+          // Default VIP color
+          return '#dc3545'; // Red
         case 'TEMPORARY_HOLD':
           return '#FFD700'; // Gold for temporary hold
         case 'NOT_FOR_SALE':

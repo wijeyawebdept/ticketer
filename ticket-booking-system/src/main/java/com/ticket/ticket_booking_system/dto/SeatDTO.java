@@ -29,4 +29,5 @@ public class SeatDTO {
     private Boolean isAccessible;
     private String status;
     private BigDecimal currentPrice;
+    private String notes;
 }
