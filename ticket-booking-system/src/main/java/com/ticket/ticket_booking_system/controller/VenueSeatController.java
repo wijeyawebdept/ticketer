@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.service.VenueSeatService;
-import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +32,15 @@ public class VenueSeatController {
     @GetMapping("/layout")
     public ResponseEntity<List<VenueSeat>> getVenueLayout() {
         return ResponseEntity.ok(venueSeatService.getAllSeats());
+    }
+
+    /**
+     * Get venue layout for a specific venue
+     * GET /api/venue-seats/layout/{venueId}
+     */
+    @GetMapping("/layout/{venueId}")
+    public ResponseEntity<List<VenueSeat>> getVenueLayoutByVenue(@PathVariable UUID venueId) {
+        return ResponseEntity.ok(venueSeatService.getSeatsByVenue(venueId));
     }
 
     /**

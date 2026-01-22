@@ -21,6 +21,8 @@ public class EventScheduleResponse {
     private UUID scheduleId;
     private UUID eventId;
     private String eventName;
+    private UUID venueId;
+    private String venueName;
     private LocalDate scheduleDate;
     private LocalTime startTime;
     private LocalTime endTime;

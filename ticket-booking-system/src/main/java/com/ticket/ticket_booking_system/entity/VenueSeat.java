@@ -3,6 +3,8 @@ package com.ticket.ticket_booking_system.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -21,7 +23,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "venue_seats", indexes = {
     @Index(name = "idx_section", columnList = "section"),
     @Index(name = "idx_row", columnList = "row_label"),
-    @Index(name = "idx_category", columnList = "category_id")
+    @Index(name = "idx_category", columnList = "category_id"),
+    @Index(name = "idx_venue_seats_venue_id", columnList = "venue_id")
 })
 @Data
 @NoArgsConstructor
@@ -44,6 +47,11 @@ public class VenueSeat {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", nullable = false)
     private SeatCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venue_id")
+    @JsonIgnore // Ignore venue field during JSON serialization to prevent LazyInitializationException
+    private Venue venue; // Reference to the venue this seat belongs to
 
     @Column(name = "x_position", nullable = false, precision = 8, scale = 2)
     private BigDecimal xPosition; // SVG/Canvas X coordinate

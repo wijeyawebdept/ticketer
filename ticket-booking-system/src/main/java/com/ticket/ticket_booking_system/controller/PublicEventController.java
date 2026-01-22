@@ -90,4 +90,14 @@ public class PublicEventController {
         List<EventScheduleResponse> schedules = eventScheduleService.getBookableSchedulesForEvent(eventId);
         return ResponseEntity.ok(schedules);
     }
+
+    /**
+     * Get event schedule details by UUID (publicly accessible)
+     * Used by customers on seat selection page to get venue information
+     */
+    @GetMapping("/schedules/{scheduleId}")
+    public ResponseEntity<EventScheduleResponse> getPublicScheduleByUUID(@PathVariable UUID scheduleId) {
+        EventScheduleResponse schedule = eventScheduleService.getScheduleById(scheduleId);
+        return ResponseEntity.ok(schedule);
+    }
 }

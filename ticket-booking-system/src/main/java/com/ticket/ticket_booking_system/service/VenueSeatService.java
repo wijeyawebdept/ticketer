@@ -9,8 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.dto.SeatDTO;
+import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat.SeatStatus;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
+import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class VenueSeatService {
 
     private final VenueSeatRepository venueSeatRepository;
+    private final EventScheduleRepository eventScheduleRepository;
 
     /**
      * Get all venue seats with their hard-coded layout
@@ -38,13 +41,31 @@ public class VenueSeatService {
     }
 
     /**
+     * Get all venue seats for a specific venue (placeholder - VenueSeat doesn't have venue_id)
+     * Note: Current implementation returns all seats since VenueSeat table doesn't have venue relationship
+     * TODO: Implement proper filtering when database schema is updated
+     */
+    @Transactional(readOnly = true)
+    public List<VenueSeat> getSeatsByVenue(UUID venueId) {
+        // Return seats filtered by venue
+        return venueSeatRepository.findByVenueOrderedByLayout(venueId);
+    }
+
+    /**
      * Get seat availability for a specific event schedule (UUID-based)
-     * Returns all seats as AVAILABLE since bookings use Long IDs
+     * Returns all seats for the event's venue with booking status
      */
     @Transactional(readOnly = true)
     public SeatAvailabilityResponse getSeatAvailabilityByUUID(UUID eventScheduleUuid) {
-        // Get all venue seats (hard-coded layout)
-        List<VenueSeat> allSeats = venueSeatRepository.findAllOrderedByLayout();
+        // Get the event schedule to find the venue
+        EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleUuid)
+            .orElseThrow(() -> new RuntimeException("Event schedule not found"));
+        
+        // Get the venue from the event
+        UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
+        
+        // Get only seats for this specific venue
+        List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
         
         // Since SeatBooking uses Long eventScheduleId but EventSchedule uses UUID scheduleId,
         // we can't query bookings directly. Return all seats as AVAILABLE for now.
@@ -52,7 +73,7 @@ public class VenueSeatService {
         
         List<SeatDTO> seatDTOs = new ArrayList<>();
         
-        for (VenueSeat seat : allSeats) {
+        for (VenueSeat seat : venueSeats) {
             // Debug logging
             if (seat.getSeatId().equals("KH-A01")) {
                 System.out.println("DEBUG: Creating DTO for seat KH-A01");
@@ -92,8 +113,8 @@ public class VenueSeatService {
         
         return new SeatAvailabilityResponse(
             seatDTOs,
-            (long) allSeats.size(),
-            (long) allSeats.size(), // All available
+            (long) venueSeats.size(),
+            (long) venueSeats.size(), // All available
             0L, // None booked
             0L  // No holds
         );

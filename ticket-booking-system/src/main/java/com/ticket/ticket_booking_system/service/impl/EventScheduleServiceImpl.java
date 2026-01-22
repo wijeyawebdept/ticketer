@@ -333,6 +333,8 @@ public class EventScheduleServiceImpl implements EventScheduleService {
             .scheduleId(schedule.getScheduleId())
             .eventId(event.getEventId())
             .eventName(event.getName())
+            .venueId(event.getVenue() != null ? event.getVenue().getVenueId() : null)
+            .venueName(event.getVenue() != null ? event.getVenue().getName() : null)
             .scheduleDate(schedule.getScheduleDate())
             .startTime(schedule.getStartTime())
             .endTime(schedule.getEndTime())

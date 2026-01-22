@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogActions,
   Button,
-  ButtonGroup,
   List,
   ListItem,
   ListItemButton,
@@ -27,15 +26,12 @@ import {
   ZoomIn, 
   ZoomOut, 
   CenterFocusStrong, 
-  Close,
   Lock,
   LockOpen,
-  Block,
   CheckCircle,
-  Schedule,
-  Cancel,
   EventSeat,
-  Info
+  Info,
+  Close
 } from '@mui/icons-material';
 import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
@@ -73,11 +69,12 @@ const SeatingArrangement: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const svgContainerRef = useRef<HTMLDivElement>(null);
-  const [isBalconyHovered, setIsBalconyHovered] = useState(false);
+  const [showBalconyDialog, setShowBalconyDialog] = useState(false);
+  const [balconyTicketCount, setBalconyTicketCount] = useState<number | null>(null);
   
-  // Balcony dialog state
-  const [balconyDialogOpen, setBalconyDialogOpen] = useState(false);
-  const [selectedTicketCount, setSelectedTicketCount] = useState<number | null>(null);
+  // Kularathna Stadium venue ID
+  const KULARATHNA_STADIUM_ID = '54fd37e5-5a1c-4834-af83-ad9c8bf1f300';
+  const shouldShowBalcony = id === KULARATHNA_STADIUM_ID;
   
   // Seat management state
   const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: VenueSeat | null }>({ open: false, seat: null });
@@ -153,31 +150,13 @@ const SeatingArrangement: React.FC = () => {
   };
 
   useEffect(() => {
+    // Clear previous data before fetching new venue data
+    setSeats([]);
+    setCategories([]);
+    setError(null);
     fetchHardcodedSeats();
-  }, []);
-
-  const handleBalconyClick = () => {
-    setBalconyDialogOpen(true);
-  };
-
-  const handleCloseBalconyDialog = () => {
-    setBalconyDialogOpen(false);
-    setSelectedTicketCount(null);
-  };
-
-  const handleTicketCountSelect = (count: number) => {
-    setSelectedTicketCount(count);
-  };
-
-  const handleSelectTickets = () => {
-    if (selectedTicketCount) {
-      console.log(`Selected ${selectedTicketCount} tickets for Balcony area`);
-      // Add your logic here to handle the ticket selection
-      // For example: navigate to booking page, add to cart, etc.
-      alert(`${selectedTicketCount} ticket(s) selected for Balcony (Standing Area)`);
-      handleCloseBalconyDialog();
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, eventScheduleId]);
 
   const fetchHardcodedSeats = async () => {
     try {
@@ -229,11 +208,11 @@ const SeatingArrangement: React.FC = () => {
         
         setCategories(uniqueCategories);
       } else {
-        // Otherwise, fetch hardcoded venue seats layout
-        const response = await api.get<VenueSeat[]>('/api/venue-seats/layout');
+        // Otherwise, fetch hardcoded venue seats layout filtered by venue ID
+        const response = await api.get<VenueSeat[]>(`/api/venue-seats/layout/${id}`);
         setSeats(response.data);
         
-        console.log('Loaded seats:', response.data.length);
+        console.log('Loaded seats for venue', id, ':', response.data.length);
         console.log('Sample seats:', response.data.slice(0, 5));
         
         // Extract unique categories from layout response
@@ -485,6 +464,49 @@ const SeatingArrangement: React.FC = () => {
     return `${minX - padding} ${minY - topPadding} ${width} ${height}`;
   };
 
+  // Calculate stage position to center it horizontally
+  const getStagePosition = () => {
+    if (seats.length === 0) {
+      return { x: 400, centerX: 750 };
+    }
+    
+    const xPositions = seats.map(s => Number(s.xposition) || 0).filter(x => x > 0);
+    if (xPositions.length === 0) {
+      return { x: 400, centerX: 750 };
+    }
+    
+    const minX = Math.min(...xPositions);
+    const maxX = Math.max(...xPositions);
+    const stageWidth = 700;
+    
+    // Center the stage between min and max seat positions
+    const stageX = minX + (maxX - minX - stageWidth) / 2;
+    const stageCenterX = stageX + stageWidth / 2;
+    
+    return { x: stageX, centerX: stageCenterX };
+  };
+
+  const handleBalconyClick = () => {
+    setShowBalconyDialog(true);
+  };
+
+  const handleCloseBalconyDialog = () => {
+    setShowBalconyDialog(false);
+    setBalconyTicketCount(null);
+  };
+
+  const handleTicketCountSelect = (count: number) => {
+    setBalconyTicketCount(count);
+  };
+
+  const handleSelectTickets = () => {
+    if (balconyTicketCount) {
+      console.log(`Selected ${balconyTicketCount} tickets for Balcony area`);
+      alert(`${balconyTicketCount} ticket(s) selected for Balcony (Standing Area)`);
+      handleCloseBalconyDialog();
+    }
+  };
+
   return (
     <Box p={3}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -575,8 +597,61 @@ const SeatingArrangement: React.FC = () => {
             <Typography variant="body2">
               <strong>Multi-Select Mode Active:</strong> {selectedSeats.length} seat(s) selected. Click seats to select/deselect them.
             </Typography>
+            
+            {/* Batch Actions - Show only when seats are selected */}
             {selectedSeats.length > 0 && (
-              <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>
+                  Batch Actions:
+                </Typography>
+                <Button 
+                  size="small" 
+                  variant="contained" 
+                  color="error"
+                  startIcon={<Lock />}
+                  onClick={async () => {
+                    for (const seatId of selectedSeats) {
+                      const seat = seats.find(s => s.seatId === seatId);
+                      if (seat) await lockSeat(seat);
+                    }
+                    setSelectedSeats([]);
+                    setMultiSelectMode(false);
+                  }}
+                >
+                  Lock Selected ({selectedSeats.length})
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="contained" 
+                  color="success"
+                  startIcon={<LockOpen />}
+                  onClick={async () => {
+                    for (const seatId of selectedSeats) {
+                      const seat = seats.find(s => s.seatId === seatId);
+                      if (seat) await unlockSeat(seat);
+                    }
+                    setSelectedSeats([]);
+                    setMultiSelectMode(false);
+                  }}
+                >
+                  Unlock Selected ({selectedSeats.length})
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="contained" 
+                  color="secondary"
+                  startIcon={<CheckCircle />}
+                  onClick={async () => {
+                    for (const seatId of selectedSeats) {
+                      const seat = seats.find(s => s.seatId === seatId);
+                      if (seat) await reserveForVIP(seat);
+                    }
+                    setSelectedSeats([]);
+                    setMultiSelectMode(false);
+                  }}
+                >
+                  Reserve for VIP ({selectedSeats.length})
+                </Button>
                 <Button 
                   size="small" 
                   variant="outlined" 
@@ -663,8 +738,8 @@ const SeatingArrangement: React.FC = () => {
                   style={{ display: 'block', pointerEvents: isDragging ? 'none' : 'auto' }}
                 >
                   {/* Stage area at top center */}
-                  <rect x="400" y="50" width="700" height="70" fill="#d3d3d3" stroke="#666" strokeWidth="3" rx="8" />
-                  <text x="750" y="95" fontSize="28" fontWeight="bold" fill="#333" textAnchor="middle">
+                  <rect x={getStagePosition().x} y="50" width="700" height="70" fill="#d3d3d3" stroke="#666" strokeWidth="3" rx="8" />
+                  <text x={getStagePosition().centerX} y="95" fontSize="28" fontWeight="bold" fill="#333" textAnchor="middle">
                     STAGE
                   </text>
                   
@@ -707,72 +782,38 @@ const SeatingArrangement: React.FC = () => {
                     );
                   })}
 
-                  {/* Balcony (Standing Area) at bottom center - Interactive Button */}
-                  <g 
-                    data-clickable="true"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleBalconyClick();
-                    }}
-                    onMouseEnter={() => setIsBalconyHovered(true)}
-                    onMouseLeave={() => setIsBalconyHovered(false)}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    style={{ 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      pointerEvents: 'all'
-                    }}
-                  >
-                    <rect 
-                      x="350" 
-                      y="580" 
-                      width="800" 
-                      height="90" 
-                      fill={isBalconyHovered ? '#ffe4b3' : '#f5e6d3'}
-                      stroke={isBalconyHovered ? '#a0825a' : '#8b7355'}
-                      strokeWidth={isBalconyHovered ? '4' : '3'}
-                      rx="10"
-                      style={{
-                        filter: isBalconyHovered ? 'drop-shadow(0px 4px 8px rgba(0,0,0,0.3))' : 'none',
-                        transition: 'all 0.3s ease'
-                      }}
-                    />
-                    <text 
-                      x="750" 
-                      y="610" 
-                      fontSize="26" 
-                      fontWeight="bold" 
-                      fill="#5d4e37" 
-                      textAnchor="middle"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      BALCONY
-                    </text>
-                    <text 
-                      x="750" 
-                      y="640" 
-                      fontSize="18" 
-                      fontStyle="italic" 
-                      fill="#6b5d4f" 
-                      textAnchor="middle"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      Shared Space - Standing Area
-                    </text>
-                    <text 
-                      x="750" 
-                      y="660" 
-                      fontSize="14" 
-                      fill="#7a6a57" 
-                      textAnchor="middle"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {isBalconyHovered ? '(Click for details)' : '(No Fixed Seating)'}
-                    </text>
-                  </g>
+                  {/* Balcony - Only for Kularathna Stadium */}
+                  {shouldShowBalcony && (
+                    <>
+                      <rect
+                        x="350"
+                        y="580"
+                        width="900"
+                        height="80"
+                        fill="#FFE082"
+                        fillOpacity="0.4"
+                        stroke="#FFA000"
+                        strokeWidth="3"
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBalconyClick();
+                        }}
+                      />
+                      <text
+                        x="800"
+                        y="630"
+                        textAnchor="middle"
+                        fontSize="24"
+                        fontWeight="bold"
+                        fill="#FF6F00"
+                        style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                      >
+                        BALCONY (Standing Area)
+                      </text>
+                    </>
+                  )}
+
                 </svg>
               ) : (
                 <Box sx={{ textAlign: 'center', py: 10 }}>
@@ -881,9 +922,10 @@ const SeatingArrangement: React.FC = () => {
           {actionError}
         </Alert>
       </Snackbar>
-      {/* Balcony Ticket Selection Dialog */}
+
+      {/* Balcony Dialog - Only for Kularathna Stadium */}
       <Dialog 
-        open={balconyDialogOpen} 
+        open={showBalconyDialog && shouldShowBalcony} 
         onClose={handleCloseBalconyDialog}
         maxWidth="sm"
         fullWidth
@@ -921,7 +963,7 @@ const SeatingArrangement: React.FC = () => {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
               <Button
                 key={count}
-                variant={selectedTicketCount === count ? 'contained' : 'outlined'}
+                variant={balconyTicketCount === count ? 'contained' : 'outlined'}
                 onClick={() => handleTicketCountSelect(count)}
                 sx={{
                   minWidth: '60px',
@@ -929,9 +971,9 @@ const SeatingArrangement: React.FC = () => {
                   fontSize: '18px',
                   fontWeight: 600,
                   borderRadius: 2,
-                  border: selectedTicketCount === count ? 'none' : '2px solid #ddd',
+                  border: balconyTicketCount === count ? 'none' : '2px solid #ddd',
                   '&:hover': {
-                    backgroundColor: selectedTicketCount === count ? 'primary.dark' : 'grey.100'
+                    backgroundColor: balconyTicketCount === count ? 'primary.dark' : 'grey.100'
                   }
                 }}
               >
@@ -944,7 +986,7 @@ const SeatingArrangement: React.FC = () => {
             <Button
               variant="contained"
               fullWidth
-              disabled={!selectedTicketCount}
+              disabled={!balconyTicketCount}
               onClick={handleSelectTickets}
               sx={{
                 py: 1.5,

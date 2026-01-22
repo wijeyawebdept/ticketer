@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { Dialog, DialogContent, DialogTitle, Button, Box, Typography, IconButton } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import axiosInstance from '../../services/api';
 import './VenueSeatMap.css';
 
@@ -46,6 +48,7 @@ interface SeatAvailabilityResponse {
 
 interface VenueSeatMapProps {
   eventScheduleId: string | number;
+  venueId?: string;
   onSeatSelect?: (selectedSeats: string[]) => void;
   maxSelection?: number;
   selectedSeats?: string[];
@@ -54,6 +57,7 @@ interface VenueSeatMapProps {
 
 export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   eventScheduleId,
+  venueId,
   onSeatSelect,
   maxSelection = 10,
   selectedSeats = [],
@@ -65,13 +69,24 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [hoveredSeat, setHoveredSeat] = useState<VenueSeatData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [showBalconyDialog, setShowBalconyDialog] = useState(false);
-  const [balconyTicketCount, setBalconyTicketCount] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showBalconyDialog, setShowBalconyDialog] = useState(false);
+  const [balconyTicketCount, setBalconyTicketCount] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
+  
+  // Kularathna Stadium venue ID
+  const KULARATHNA_STADIUM_ID = '54fd37e5-5a1c-4834-af83-ad9c8bf1f300';
+  const shouldShowBalcony = venueId === KULARATHNA_STADIUM_ID;
+
+  // Debug: Log venue ID changes
+  useEffect(() => {
+    console.log('VenueSeatMap received venueId:', venueId);
+    console.log('Kularathna Stadium ID:', KULARATHNA_STADIUM_ID);
+    console.log('Should show balcony:', shouldShowBalcony);
+  }, [venueId, shouldShowBalcony]);
 
   // Fetch seat availability from backend
   useEffect(() => {
@@ -286,9 +301,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Don't start panning if clicking on balcony or seats
+    // Don't start panning if clicking on seats
     const target = e.target as SVGElement;
-    if (target.closest('.balcony-area') || target.tagName === 'circle') {
+    if (target.tagName === 'circle') {
       return;
     }
     isPanning.current = true;
@@ -303,28 +318,33 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
   }, []);
 
-  const handleBalconyClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleBalconyClick = () => {
+    console.log('Balcony clicked!');
     setShowBalconyDialog(true);
-  };
-
-  const handleBalconyTicketSelect = () => {
-    // Handle balcony ticket selection - you can integrate this with your booking system
-    // TODO: Add logic to handle balcony ticket booking
-    setShowBalconyDialog(false);
-    setBalconyTicketCount(1);
   };
 
   const handleBalconyDialogClose = () => {
     setShowBalconyDialog(false);
-    setBalconyTicketCount(1);
+    setBalconyTicketCount(null);
+  };
+
+  const handleBalconyTicketSelect = (count: number) => {
+    setBalconyTicketCount(count);
+  };
+
+  const handleBalconyConfirm = () => {
+    if (balconyTicketCount) {
+      console.log(`Selected ${balconyTicketCount} tickets for Balcony area`);
+      alert(`${balconyTicketCount} ticket(s) selected for Balcony (Standing Area)`);
+      handleBalconyDialogClose();
+    }
   };
 
   return (
     <div className="venue-seat-map-container">
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          Loading venue layout...
+          Loading venue layout... is sucks
         </div>
       )}
       
@@ -332,9 +352,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         <>
           {/* Controls */}
           <div className="venue-controls">
-            <button onClick={handleZoomIn} className="control-btn">🔍+</button>
-            <button onClick={handleZoomOut} className="control-btn">🔍-</button>
-            <button onClick={handleResetView} className="control-btn">↺ Reset</button>
+            <button onClick={handleZoomIn} className="control-btn">+</button>
+            <button onClick={handleZoomOut} className="control-btn">-</button>
+            <button onClick={handleResetView} className="control-btn">Reset</button>
             <span className="selected-count">
               Selected: {localSelectedSeats.size} / {venueSeats.length}
             </span>
@@ -367,10 +387,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               <span className="legend-color" style={{ backgroundColor: '#FFA500' }} />
               <span>Selected</span>
             </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#f5e6d3' }} />
-              <span>Balcony (Standing)</span>
-            </div>
           </div>
 
       {/* SVG Seat Map */}
@@ -395,18 +411,18 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         >
           {/* Stage */}
           <rect
-            x="600"
-            y="30"
-            width="600"
+            x="400"
+            y="50"
+            width="700"
             height="70"
-            fill="#D3D3D3"
-            stroke="#999"
-            strokeWidth="2"
-            rx="5"
+            fill="#d3d3d3"
+            stroke="#666"
+            strokeWidth="3"
+            rx="8"
           />
           <text
-            x="900"
-            y="75"
+            x="750"
+            y="95"
             textAnchor="middle"
             fontSize="28"
             fontWeight="bold"
@@ -436,66 +452,44 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             ))}
           </g>
 
-          {/* Balcony (Standing Area) at bottom center */}
-          <g 
-            className="balcony-area"
-            onClick={handleBalconyClick}
-            onMouseDown={(e) => e.stopPropagation()}
-            style={{ cursor: 'pointer' }}
-          >
-            <rect 
-              x="400" 
-              y="750" 
-              width="1000" 
-              height="110" 
-              fill="#f5e6d3" 
-              stroke="#8b7355" 
-              strokeWidth="3" 
-              rx="10"
-              onClick={handleBalconyClick}
-              style={{ cursor: 'pointer' }}
-            />
-            <text x="900" y="790" fontSize="30" fontWeight="bold" fill="#5d4e37" textAnchor="middle" style={{ pointerEvents: 'none' }}>
-              BALCONY
-            </text>
-            <text x="900" y="825" fontSize="20" fontStyle="italic" fill="#6b5d4f" textAnchor="middle" style={{ pointerEvents: 'none' }}>
-              Shared Space - Standing Area
-            </text>
-            <text x="900" y="850" fontSize="16" fill="#7a6a57" textAnchor="middle" style={{ pointerEvents: 'none' }}>
-              (No Fixed Seating)
-            </text>
-          </g>
+          {/* Balcony - Only for Kularathna Stadium */}
+          {shouldShowBalcony && (
+            <>
+              <rect
+                x="350"
+                y="580"
+                width="900"
+                height="80"
+                fill="#FFE082"
+                fillOpacity="0.4"
+                stroke="#FFA000"
+                strokeWidth="3"
+                className="balcony-area"
+                style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBalconyClick();
+                }}
+              />
+              <text
+                x="800"
+                y="630"
+                textAnchor="middle"
+                fontSize="24"
+                fontWeight="bold"
+                fill="#FF6F00"
+                className="balcony-label"
+                style={{ cursor: 'pointer', pointerEvents: 'none' }}
+              >
+                BALCONY (Standing Area)
+              </text>
+            </>
+          )}
+
+
 
         </svg>
       </div>
-
-      {/* Balcony Ticket Selection Dialog */}
-      {showBalconyDialog && (
-        <div className="balcony-dialog-overlay" onClick={handleBalconyDialogClose}>
-          <div className="balcony-dialog" onClick={(e) => e.stopPropagation()}>
-            <button className="dialog-close-btn" onClick={handleBalconyDialogClose}>×</button>
-            <h3>This section is a *Shared Space* and does not have any allocated seats.</h3>
-            <p className="dialog-question">How many tickets do you want?</p>
-            <div className="ticket-number-grid">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                <button
-                  key={num}
-                  className={`ticket-number-btn ${balconyTicketCount === num ? 'selected' : ''}`}
-                  onClick={() => setBalconyTicketCount(num)}
-                >
-                  {num}
-                </button>
-              ))}
-            </div>
-            <button className="dialog-select-btn" onClick={handleBalconyTicketSelect}>
-              Select tickets
-            </button>
-            <button className="dialog-cancel-btn" onClick={handleBalconyDialogClose}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Hover tooltip */}
       {hoveredSeat && (
@@ -510,6 +504,101 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           <div>Status: {seatStatuses.get(hoveredSeat.seatId)?.status || 'AVAILABLE'}</div>
         </div>
       )}
+
+      {/* Balcony Dialog - Only for Kularathna Stadium */}
+      <Dialog 
+        open={showBalconyDialog && shouldShowBalcony} 
+        onClose={handleBalconyDialogClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ position: 'relative', pb: 1 }}>
+          <IconButton
+            onClick={handleBalconyDialogClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'grey.500'
+            }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            This section is a <strong>*Shared Space*</strong> and does not have any allocated seats.
+          </Typography>
+          
+          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+            How many tickets do you want?
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', mb: 4 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+              <Button
+                key={count}
+                variant={balconyTicketCount === count ? 'contained' : 'outlined'}
+                onClick={() => handleBalconyTicketSelect(count)}
+                sx={{
+                  minWidth: '60px',
+                  height: '50px',
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  border: balconyTicketCount === count ? 'none' : '2px solid #ddd',
+                  '&:hover': {
+                    backgroundColor: balconyTicketCount === count ? 'primary.dark' : 'grey.100'
+                  }
+                }}
+              >
+                {count}
+              </Button>
+            ))}
+          </Box>
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              fullWidth
+              disabled={!balconyTicketCount}
+              onClick={handleBalconyConfirm}
+              sx={{
+                py: 1.5,
+                fontSize: '16px',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: 2,
+                backgroundColor: '#6B8CFF',
+                '&:hover': {
+                  backgroundColor: '#5a7ae6'
+                }
+              }}
+            >
+              Select tickets
+            </Button>
+          </Box>
+          
+          <Button
+            onClick={handleBalconyDialogClose}
+            sx={{
+              mt: 2,
+              color: 'text.secondary',
+              textTransform: 'none',
+              fontWeight: 500
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogContent>
+      </Dialog>
         </>
       )}
     </div>

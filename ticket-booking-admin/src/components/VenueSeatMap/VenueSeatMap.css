@@ -100,8 +100,8 @@
 .venue-svg-container {
   position: relative;
   width: 100%;
-  height: 650px;
-  max-height: 70vh;
+  height: 750px;
+  max-height: 80vh;
   background: radial-gradient(circle at center, #2a2a3e 0%, #1a1a2e 100%);
   border-radius: 8px;
   overflow: hidden;

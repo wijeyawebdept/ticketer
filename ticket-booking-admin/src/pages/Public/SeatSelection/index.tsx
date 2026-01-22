@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
+import axiosInstance from '../../../services/api';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -25,7 +26,7 @@ interface EventDetails {
   venue: string;
   date: string;
   time: string;
-  eventId?: string; // Add this to store the actual event ID
+  eventId?: string;
 }
 
 const SeatSelectionPage: React.FC = () => {
@@ -39,6 +40,7 @@ const SeatSelectionPage: React.FC = () => {
   const [holdTimer, setHoldTimer] = useState<number>(0);
   const [isHolding, setIsHolding] = useState(false);
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
+  const [venueId, setVenueId] = useState<string | undefined>(undefined);
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -112,6 +114,21 @@ const SeatSelectionPage: React.FC = () => {
   }, [holdTimer]);
 
   const loadEventDetails = async (scheduleId: string) => {
+    try {
+      // Try to fetch event schedule details from API to get venueId
+      const response = await axiosInstance.get<{ venueId?: string; venueName?: string }>(`/api/public/events/schedules/${scheduleId}`);
+      if (response.data) {
+        const data = response.data;
+        console.log('Event Schedule Data:', data);
+        // Get venueId from the response
+        const foundVenueId = data.venueId;
+        console.log('Found venueId:', foundVenueId);
+        setVenueId(foundVenueId);
+      }
+    } catch (error) {
+      console.log('Could not fetch event schedule details:', error);
+    }
+
     // Use data passed from navigation state
     // Event details are passed when navigating from EventDetails page
     if (eventDetailsFromState) {
@@ -211,7 +228,6 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   const handleProceedToPayment = () => {
-    // Open payment modal instead of navigating
     setPaymentModalOpen(true);
   };
 
@@ -243,7 +259,7 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Implement actual booking confirmation with payment gateway
+      //: still have to Implement actual booking confirmation with payment gateway
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
       
       showMessage('success', 'Booking confirmed successfully!');
@@ -288,7 +304,7 @@ const SeatSelectionPage: React.FC = () => {
       {/* Event header */}
       <div className="event-header">
         <button onClick={() => navigate(-1)} className="back-btn">
-          ← Back
+        ← Back
         </button>
         <div className="event-info">
           <h1>{eventDetails.title}</h1>
@@ -304,6 +320,7 @@ const SeatSelectionPage: React.FC = () => {
       <div className="seat-map-section" ref={seatMapRef}>
         <VenueSeatMap
           eventScheduleId={eventScheduleId!}
+          venueId={venueId}
           onSeatSelect={handleSeatSelect}
           maxSelection={10}
           selectedSeats={selectedSeats}
@@ -412,7 +429,7 @@ const SeatSelectionPage: React.FC = () => {
               color: 'grey.500',
             }}
           >
-            ✕
+            ×
           </IconButton>
         </DialogTitle>
 
@@ -440,7 +457,7 @@ const SeatSelectionPage: React.FC = () => {
                   </Select>
                 </FormControl>
                 <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
-                  Only the ticket prices will be charged. No any extra charges
+                  Ha. Ha. Ha. we're gonna charge u more 100/=
                 </Typography>
               </Box>
 
