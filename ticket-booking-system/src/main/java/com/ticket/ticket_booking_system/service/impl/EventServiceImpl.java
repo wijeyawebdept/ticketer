@@ -180,6 +180,8 @@ public class EventServiceImpl implements EventService {
                                 .price(ticketCategoryRequest.getPrice())
                                 .capacity(ticketCategoryRequest.getCapacity())
                                 .description(ticketCategoryRequest.getDescription())
+                                .isSharedArea(ticketCategoryRequest.getIsSharedArea() != null ? ticketCategoryRequest.getIsSharedArea() : false)
+                                .sharedAreaNumber(ticketCategoryRequest.getSharedAreaNumber())
                                 .event(finalSavedEvent)
                                 .build())
                         .collect(Collectors.toList());
@@ -290,6 +292,44 @@ public class EventServiceImpl implements EventService {
         }
 
         Event savedEvent = eventRepository.save(event);
+        
+        // Handle ticket categories update if provided
+        if (request.getTicketCategories() != null && !request.getTicketCategories().isEmpty()) {
+            System.out.println("UPDATE EVENT: Processing " + request.getTicketCategories().size() + " ticket categories");
+            
+            // Delete existing ticket categories for this event
+            ticketCategoryRepository.deleteByEventEventId(savedEvent.getEventId());
+            System.out.println("UPDATE EVENT: Deleted old ticket categories for event " + savedEvent.getEventId());
+            
+            // Create new ticket categories
+            List<TicketCategory> ticketCategories = request.getTicketCategories().stream()
+                    .map(ticketCategoryRequest -> {
+                        System.out.println("UPDATE EVENT: Creating category - " + ticketCategoryRequest.getCategoryName() + 
+                            ", isSharedArea=" + ticketCategoryRequest.getIsSharedArea() + 
+                            ", sharedAreaNumber=" + ticketCategoryRequest.getSharedAreaNumber());
+                        return TicketCategory.builder()
+                                .categoryName(ticketCategoryRequest.getCategoryName())
+                                .price(ticketCategoryRequest.getPrice())
+                                .capacity(ticketCategoryRequest.getCapacity())
+                                .description(ticketCategoryRequest.getDescription())
+                                .isSharedArea(ticketCategoryRequest.getIsSharedArea() != null ? ticketCategoryRequest.getIsSharedArea() : false)
+                                .sharedAreaNumber(ticketCategoryRequest.getSharedAreaNumber())
+                                .event(savedEvent)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            // Save all ticket categories
+            ticketCategoryRepository.saveAll(ticketCategories);
+            System.out.println("UPDATE EVENT: Saved " + ticketCategories.size() + " ticket categories");
+            
+            // Count shared area categories for verification
+            long sharedAreaCount = ticketCategories.stream()
+                    .filter(tc -> Boolean.TRUE.equals(tc.getIsSharedArea()))
+                    .count();
+            System.out.println("UPDATE EVENT: " + sharedAreaCount + " categories are shared areas");
+        }
+        
         return mapEventToResponse(savedEvent);
     }
 
@@ -508,6 +548,8 @@ public class EventServiceImpl implements EventService {
                             .price(ticketCategory.getPrice())
                             .capacity(ticketCategory.getCapacity())
                             .description(ticketCategory.getDescription())
+                            .isSharedArea(ticketCategory.getIsSharedArea())
+                            .sharedAreaNumber(ticketCategory.getSharedAreaNumber())
                             .createdAt(ticketCategory.getCreatedAt())
                             .updatedAt(ticketCategory.getUpdatedAt())
                             .build())

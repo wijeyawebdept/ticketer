@@ -148,6 +148,10 @@ public class OrganizerVenueController {
         response.setSeatingLayout(venue.getSeatingLayout());
         response.setCreatedAt(venue.getCreatedAt());
         response.setUpdatedAt(venue.getUpdatedAt());
+        // Shared area fields
+        response.setHasSharedAreas(venue.getHasSharedAreas());
+        response.setSharedAreaCount(venue.getSharedAreaCount());
+        response.setSharedAreaTotalCapacity(venue.getSharedAreaTotalCapacity());
         return response;
     }
 
@@ -164,6 +168,10 @@ public class OrganizerVenueController {
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
         venue.setSeatingLayout(request.getSeatingLayout());
+        // Shared area fields
+        venue.setHasSharedAreas(request.getHasSharedAreas() != null ? request.getHasSharedAreas() : false);
+        venue.setSharedAreaCount(request.getSharedAreaCount() != null ? request.getSharedAreaCount() : 0);
+        venue.setSharedAreaTotalCapacity(request.getSharedAreaTotalCapacity() != null ? request.getSharedAreaTotalCapacity() : 0);
         return venue;
     }
 
@@ -180,6 +188,10 @@ public class OrganizerVenueController {
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
         venue.setSeatingLayout(request.getSeatingLayout());
+        // Shared area fields
+        venue.setHasSharedAreas(request.getHasSharedAreas() != null ? request.getHasSharedAreas() : false);
+        venue.setSharedAreaCount(request.getSharedAreaCount() != null ? request.getSharedAreaCount() : 0);
+        venue.setSharedAreaTotalCapacity(request.getSharedAreaTotalCapacity() != null ? request.getSharedAreaTotalCapacity() : 0);
         return venue;
     }
 }

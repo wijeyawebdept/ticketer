@@ -11,8 +11,11 @@ import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.dto.SeatDTO;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat.SeatStatus;
+import com.ticket.ticket_booking_system.entity.TicketCategory;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
+import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
+import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,8 @@ public class VenueSeatService {
 
     private final VenueSeatRepository venueSeatRepository;
     private final EventScheduleRepository eventScheduleRepository;
+    private final TicketCategoryRepository ticketCategoryRepository;
+    private final BookingRepository bookingRepository;
 
     /**
      * Get all venue seats with their hard-coded layout
@@ -63,6 +68,7 @@ public class VenueSeatService {
         
         // Get the venue from the event
         UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
+        UUID eventId = eventSchedule.getEvent().getEventId();
         
         // Get only seats for this specific venue
         List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
@@ -111,13 +117,50 @@ public class VenueSeatService {
             seatDTOs.add(dto);
         }
         
-        return new SeatAvailabilityResponse(
+        // Fetch shared area categories for the event
+        System.out.println("DEBUG: Looking for shared areas for eventId: " + eventId);
+        List<TicketCategory> sharedAreaCategories = ticketCategoryRepository.findSharedAreaCategoriesByEventId(eventId);
+        System.out.println("DEBUG: Found " + sharedAreaCategories.size() + " shared area categories");
+        List<SeatAvailabilityResponse.SharedAreaDTO> sharedAreas = new ArrayList<>();
+        
+        for (TicketCategory category : sharedAreaCategories) {
+            System.out.println("DEBUG: Processing shared area: " + category.getCategoryName() + 
+                ", isSharedArea=" + category.getIsSharedArea() + 
+                ", sharedAreaNumber=" + category.getSharedAreaNumber());
+            // Count booked tickets for this shared area
+            Long bookedTickets = bookingRepository.countBookedSharedAreaTickets(
+                eventScheduleUuid, 
+                category.getSharedAreaNumber()
+            );
+            if (bookedTickets == null) {
+                bookedTickets = 0L;
+            }
+            
+            int availableTickets = category.getCapacity() - bookedTickets.intValue();
+            if (availableTickets < 0) {
+                availableTickets = 0;
+            }
+            
+            sharedAreas.add(SeatAvailabilityResponse.SharedAreaDTO.builder()
+                .categoryId(category.getCategoryId())
+                .categoryName(category.getCategoryName())
+                .price(category.getPrice())
+                .capacity(category.getCapacity())
+                .sharedAreaNumber(category.getSharedAreaNumber())
+                .availableTickets(availableTickets)
+                .build());
+        }
+        
+        SeatAvailabilityResponse response = new SeatAvailabilityResponse(
             seatDTOs,
             (long) venueSeats.size(),
             (long) venueSeats.size(), // All available
             0L, // None booked
             0L  // No holds
         );
+        response.setSharedAreas(sharedAreas);
+        
+        return response;
     }
 
     /**

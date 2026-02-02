@@ -45,7 +45,7 @@ public class BookingSeat {
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_id", nullable = false)
+    @JoinColumn(name = "seat_id", nullable = true) // Allow NULL for shared area tickets
     private Seat seat;
 
     @Column(nullable = false)
@@ -53,6 +53,14 @@ public class BookingSeat {
 
     @Column(length = 36)
     private String ticketCode;
+    
+    // Shared area support
+    @Builder.Default
+    @Column(name = "is_shared_area_ticket")
+    private Boolean isSharedAreaTicket = false;
+    
+    @Column(name = "shared_area_number")
+    private Integer sharedAreaNumber;
     
     // Add compatibility methods to support existing code
     public UUID getId() {

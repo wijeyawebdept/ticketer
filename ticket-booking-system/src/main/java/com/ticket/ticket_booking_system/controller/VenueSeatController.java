@@ -8,11 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
+import com.ticket.ticket_booking_system.dto.SeatHoldRequest;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.service.VenueSeatService;
 
@@ -111,6 +114,117 @@ public class VenueSeatController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(Map.of("message", "Failed to reserve seat for VIP: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Hold seats temporarily (5-minute timer) - Public endpoint for customers
+     * POST /api/venue-seats/hold
+     */
+    @PostMapping("/hold")
+    public ResponseEntity<Map<String, Object>> holdSeats(@RequestBody SeatHoldRequest request) {
+        try {
+            boolean success = venueSeatService.holdSeats(
+                request.getEventScheduleId(),
+                request.getSeatIds(),
+                request.getUserId()
+            );
+            
+            if (success) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Seats held successfully",
+                    "expiresIn", 300 // 5 minutes in seconds
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "message", "Failed to hold seats"
+                ));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "success", false,
+                    "message", "Error holding seats: " + e.getMessage()
+                ));
+        }
+    }
+
+    /**
+     * Release seat holds manually - Public endpoint
+     * POST /api/venue-seats/release
+     */
+    @PostMapping("/release")
+    public ResponseEntity<Map<String, Object>> releaseHolds(
+            @org.springframework.web.bind.annotation.RequestParam UUID eventScheduleId,
+            @RequestBody List<String> seatIds) {
+        try {
+            venueSeatService.releaseHolds(eventScheduleId, seatIds);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Holds released successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "success", false,
+                    "message", "Error releasing holds: " + e.getMessage()
+                ));
+        }
+    }
+
+    /**
+     * Confirm booking (convert hold to booked) - Public endpoint
+     * POST /api/venue-seats/confirm
+     */
+    @PostMapping("/confirm")
+    public ResponseEntity<Map<String, Object>> confirmBooking(
+            @org.springframework.web.bind.annotation.RequestParam UUID eventScheduleId,
+            @org.springframework.web.bind.annotation.RequestParam Long bookingRefId,
+            @org.springframework.web.bind.annotation.RequestParam Long userId,
+            @RequestBody List<String> seatIds) {
+        try {
+            boolean success = venueSeatService.confirmBooking(eventScheduleId, seatIds, userId, bookingRefId);
+            
+            if (success) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Booking confirmed successfully"
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "message", "Failed to confirm booking"
+                ));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "success", false,
+                    "message", "Error confirming booking: " + e.getMessage()
+                ));
+        }
+    }
+
+    /**
+     * Initialize seats for a new event schedule
+     * POST /api/venue-seats/initialize/{eventScheduleId}
+     */
+    @PostMapping("/initialize/{eventScheduleId}")
+    public ResponseEntity<Map<String, Object>> initializeEventSeats(@PathVariable UUID eventScheduleId) {
+        try {
+            venueSeatService.initializeEventSeats(eventScheduleId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Event seats initialized successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "success", false,
+                    "message", "Error initializing event seats: " + e.getMessage()
+                ));
         }
     }
 }

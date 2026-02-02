@@ -53,6 +53,19 @@ public class Venue {
     @Column(nullable = false)
     private Integer capacity;
     
+    // Shared/common areas support
+    @Builder.Default
+    @Column(name = "has_shared_areas")
+    private Boolean hasSharedAreas = false;
+    
+    @Builder.Default
+    @Column(name = "shared_area_count")
+    private Integer sharedAreaCount = 0;
+    
+    @Builder.Default
+    @Column(name = "shared_area_total_capacity")
+    private Integer sharedAreaTotalCapacity = 0;
+    
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "seating_chart_config", columnDefinition = "jsonb")
     private String seatingChartConfig;

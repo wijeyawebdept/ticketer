@@ -1,11 +1,13 @@
 import api from './api';
 import type {
   Seat,
+  SeatDTO,
   SeatWithStatus,
   HoldSeatsRequest,
   ConfirmBookingRequest,
   BookingResponse,
   SeatAvailabilityStats,
+  SeatAvailabilityWithSharedAreas,
   SeatsGroupedByRow,
   SeatStatus
 } from '../types/seat';
@@ -58,6 +60,60 @@ class SeatBookingService {
   async getAvailabilityStats(eventId: string): Promise<SeatAvailabilityStats> {
     const response = await api.get<SeatAvailabilityStats>(`/api/bookings/stats?eventId=${eventId}`);
     return response.data;
+  }
+
+  /**
+   * Get full seat availability including shared areas for a schedule
+   */
+  async getSeatAvailabilityWithSharedAreas(scheduleId: string): Promise<SeatAvailabilityWithSharedAreas> {
+    const response = await api.get<SeatAvailabilityWithSharedAreas>(`/api/venue-seats/availability/${scheduleId}`);
+    return response.data;
+  }
+
+  /**
+   * Transform SeatDTO from availability endpoint to SeatWithStatus
+   */
+  transformSeatDTOsWithStatus(seats: SeatDTO[], selectedSeatIds: Set<string>): SeatWithStatus[] {
+    return seats.map(seat => {
+      // Map status from backend
+      let status: SeatStatus = 'available';
+      const backendStatus = seat.status?.toUpperCase() || 'AVAILABLE';
+      
+      if (backendStatus === 'LOCKED' || backendStatus === 'BLOCKED') {
+        status = 'blocked';
+      } else if (backendStatus === 'BOOKED') {
+        status = 'booked';
+      } else if (backendStatus === 'HELD') {
+        status = 'held';
+      } else if (selectedSeatIds.has(seat.seatId)) {
+        status = 'selected';
+      }
+
+      // Convert SeatDTO to SeatWithStatus compatible format
+      return {
+        seatId: seat.seatId,
+        venueId: '',
+        venueName: '',
+        eventId: '',
+        eventName: '',
+        section: seat.section,
+        rowNumber: seat.rowLabel,
+        seatNumber: String(seat.seatNumber),
+        xPosition: seat.xPosition,
+        yPosition: seat.yPosition,
+        seatType: seat.categoryName?.toUpperCase().includes('VIP') ? 'VIP' : 
+                  seat.categoryName?.toUpperCase().includes('PREMIUM') ? 'PREMIUM' : 'REGULAR',
+        price: seat.currentPrice || 0,
+        isAvailable: status === 'available' || status === 'selected',
+        isBlocked: status === 'blocked',
+        isPermanentHold: false,
+        categoryName: seat.categoryName,
+        colorCode: seat.colorCode,
+        notes: seat.notes,
+        status,
+        displayLabel: `${seat.rowLabel}${seat.seatNumber}`
+      } as SeatWithStatus;
+    });
   }
 
   /**

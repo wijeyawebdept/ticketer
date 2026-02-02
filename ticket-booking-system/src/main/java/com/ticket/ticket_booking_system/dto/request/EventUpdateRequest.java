@@ -1,6 +1,7 @@
 package com.ticket.ticket_booking_system.dto.request;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.Positive;
@@ -21,6 +22,9 @@ public class EventUpdateRequest {
     private String status;
     private String imageUrl;
     private UUID categoryId;
+    
+    // Ticket categories for updates
+    private List<TicketCategoryRequest> ticketCategories;
     
     // Getters and Setters
     public String getName() {
@@ -85,5 +89,13 @@ public class EventUpdateRequest {
 
     public void setCategoryId(UUID categoryId) {
         this.categoryId = categoryId;
+    }
+    
+    public List<TicketCategoryRequest> getTicketCategories() {
+        return ticketCategories;
+    }
+    
+    public void setTicketCategories(List<TicketCategoryRequest> ticketCategories) {
+        this.ticketCategories = ticketCategories;
     }
 }

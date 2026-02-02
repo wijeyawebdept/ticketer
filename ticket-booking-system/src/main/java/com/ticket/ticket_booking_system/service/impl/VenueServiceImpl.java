@@ -107,6 +107,10 @@ public class VenueServiceImpl implements VenueService {
         venue.setCapacity(venueDetails.getCapacity());
         venue.setSeatingChartConfig(venueDetails.getSeatingChartConfig());
         venue.setSeatingLayout(venueDetails.getSeatingLayout());
+        // Shared area fields
+        venue.setHasSharedAreas(venueDetails.getHasSharedAreas());
+        venue.setSharedAreaCount(venueDetails.getSharedAreaCount());
+        venue.setSharedAreaTotalCapacity(venueDetails.getSharedAreaTotalCapacity());
         venue.setUpdatedAt(LocalDateTime.now());
 
         return venueRepository.save(venue);

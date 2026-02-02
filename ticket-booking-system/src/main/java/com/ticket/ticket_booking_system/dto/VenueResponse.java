@@ -19,6 +19,11 @@ public class VenueResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // Shared area fields
+    private Boolean hasSharedAreas;
+    private Integer sharedAreaCount;
+    private Integer sharedAreaTotalCapacity;
+    
     // Constructors
     public VenueResponse() {}
     
@@ -128,5 +133,29 @@ public class VenueResponse {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public Boolean getHasSharedAreas() {
+        return hasSharedAreas;
+    }
+    
+    public void setHasSharedAreas(Boolean hasSharedAreas) {
+        this.hasSharedAreas = hasSharedAreas;
+    }
+    
+    public Integer getSharedAreaCount() {
+        return sharedAreaCount;
+    }
+    
+    public void setSharedAreaCount(Integer sharedAreaCount) {
+        this.sharedAreaCount = sharedAreaCount;
+    }
+    
+    public Integer getSharedAreaTotalCapacity() {
+        return sharedAreaTotalCapacity;
+    }
+    
+    public void setSharedAreaTotalCapacity(Integer sharedAreaTotalCapacity) {
+        this.sharedAreaTotalCapacity = sharedAreaTotalCapacity;
     }
 }

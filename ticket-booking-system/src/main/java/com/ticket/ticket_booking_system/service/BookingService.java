@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,13 +14,17 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.entity.Booking;
+import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
+import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
+import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 
 import jakarta.persistence.criteria.Predicate;
@@ -37,6 +42,7 @@ public class BookingService {
     private final EventScheduleRepository eventScheduleRepository;
     private final EventScheduleService eventScheduleService;
     private final UserRepository userRepository;
+    private final SeatRepository seatRepository;
 
     /**
      * Get all bookings for admin with filters
@@ -52,6 +58,102 @@ public class BookingService {
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, String scheduleId, Pageable pageable) {
         Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, scheduleId);
         return bookingRepository.findAll(spec, pageable);
+    }
+    
+    /**
+     * Create a booking with seats and/or shared area tickets
+     */
+    public Booking createBookingWithSeatsAndSharedAreas(
+            UUID userId, 
+            ConfirmBookingRequest request, 
+            String paymentId) {
+        
+        log.info("Creating booking for user {} with event {} and schedule {}", 
+                userId, request.getEventId(), request.getScheduleId());
+        
+        // Fetch required entities
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        
+        Event event = eventRepository.findById(request.getEventId())
+                .orElseThrow(() -> new RuntimeException("Event not found with ID: " + request.getEventId()));
+        
+        EventSchedule schedule = eventScheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + request.getScheduleId()));
+        
+        // Create booking
+        Booking booking = Booking.builder()
+                .user(user)
+                .event(event)
+                .eventSchedule(schedule)
+                .totalAmount(request.getTotalAmount())
+                .status(Booking.BookingStatus.CONFIRMED)
+                .bookingReference(generateBookingReference())
+                .attended(false)
+                .build();
+        
+        // Add seat bookings if any
+        if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
+            for (UUID seatId : request.getSeatIds()) {
+                Seat seat = seatRepository.findById(seatId)
+                        .orElseThrow(() -> new RuntimeException("Seat not found with ID: " + seatId));
+                
+                BookingSeat bookingSeat = BookingSeat.builder()
+                        .seat(seat)
+                        .priceAtBooking(seat.getPrice())
+                        .ticketCode(generateTicketCode())
+                        .isSharedAreaTicket(false)
+                        .build();
+                
+                booking.addSeat(bookingSeat);
+            }
+        }
+        
+        // Add shared area tickets if any
+        if (request.getSharedAreaTickets() != null && !request.getSharedAreaTickets().isEmpty()) {
+            for (ConfirmBookingRequest.SharedAreaTicketRequest sharedAreaTicket : request.getSharedAreaTickets()) {
+                // Create one BookingSeat entry per ticket
+                for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
+                    BookingSeat bookingSeat = BookingSeat.builder()
+                            .seat(null) // No seat for shared area tickets
+                            .priceAtBooking(sharedAreaTicket.getPricePerTicket())
+                            .ticketCode(generateTicketCode())
+                            .isSharedAreaTicket(true)
+                            .sharedAreaNumber(sharedAreaTicket.getSharedAreaNumber())
+                            .build();
+                    
+                    booking.addSeat(bookingSeat);
+                }
+                
+                log.info("Added {} shared area tickets for area {} ({})", 
+                        sharedAreaTicket.getTicketCount(), 
+                        sharedAreaTicket.getSharedAreaNumber(),
+                        sharedAreaTicket.getCategoryName());
+            }
+        }
+        
+        // Update schedule availability
+        int totalTickets = booking.getBookingSeats().size();
+        eventScheduleService.reserveSeats(schedule.getScheduleId(), totalTickets);
+        
+        Booking savedBooking = bookingRepository.save(booking);
+        log.info("Booking created successfully with reference: {}", savedBooking.getBookingReference());
+        
+        return savedBooking;
+    }
+    
+    /**
+     * Generate a unique booking reference
+     */
+    private String generateBookingReference() {
+        return "BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    /**
+     * Generate a unique ticket code
+     */
+    private String generateTicketCode() {
+        return "TK-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
     }
 
     /**

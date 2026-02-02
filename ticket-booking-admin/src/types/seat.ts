@@ -68,3 +68,40 @@ export interface SeatAvailabilityStats {
 export interface SeatsGroupedByRow {
   [rowLabel: string]: SeatWithStatus[];
 }
+
+// Shared area from backend
+export interface SharedAreaDTO {
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  capacity: number;
+  sharedAreaNumber: number;
+  availableTickets: number;
+}
+
+// SeatDTO from venue-seats availability endpoint
+export interface SeatDTO {
+  seatId: string;
+  section: string;
+  rowLabel: string;
+  seatNumber: number;
+  categoryName: string;
+  colorCode: string;
+  xPosition: number;
+  yPosition: number;
+  isAisleSeat: boolean;
+  isAccessible: boolean;
+  status: string;
+  currentPrice: number;
+  notes: string;
+}
+
+// Full seat availability response including shared areas
+export interface SeatAvailabilityWithSharedAreas {
+  seats: SeatDTO[];
+  totalSeats: number;
+  availableSeats: number;
+  bookedSeats: number;
+  heldSeats: number;
+  sharedAreas?: SharedAreaDTO[];
+}

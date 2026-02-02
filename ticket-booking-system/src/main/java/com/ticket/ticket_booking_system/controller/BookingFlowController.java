@@ -124,8 +124,8 @@ public class BookingFlowController {
             @Valid @RequestBody ConfirmBookingRequest request,
             Authentication authentication) {
         
-        log.info("User {} confirming booking for event {} with payment {}", 
-                authentication.getName(), request.getEventId(), request.getPaymentId());
+        log.info("User {} confirming booking for event {} schedule {} with payment {}", 
+                authentication.getName(), request.getEventId(), request.getScheduleId(), request.getPaymentId());
         
         try {
             // Extract user ID from authentication
@@ -134,22 +134,33 @@ public class BookingFlowController {
             // Verify payment (this should integrate with your payment service)
             // For now, we'll assume payment is valid if paymentId is provided
             
-            // Reserve the seats (mark as booked)
-            seatService.reserveSeats(request.getSeatIds());
+            // Reserve the seats (mark as booked) if any seat IDs provided
+            if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
+                seatService.reserveSeats(request.getSeatIds());
+            }
             
-            // Create booking record
-            // Note: You'll need to implement this in your BookingService
-            // Booking booking = bookingService.createBookingWithSeats(
-            //     userId, request.getEventId(), request.getSeatIds(), 
-            //     request.getPaymentId(), request.getPaymentMethod()
-            // );
+            // Create booking record with seats and shared area tickets
+            Booking booking = bookingService.createBookingWithSeatsAndSharedAreas(
+                userId, request, request.getPaymentId()
+            );
+            
+            int seatCount = request.getSeatIds() != null ? request.getSeatIds().size() : 0;
+            int sharedAreaTicketCount = 0;
+            if (request.getSharedAreaTickets() != null) {
+                sharedAreaTicketCount = request.getSharedAreaTickets().stream()
+                        .mapToInt(ConfirmBookingRequest.SharedAreaTicketRequest::getTicketCount)
+                        .sum();
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Booking confirmed successfully");
-            response.put("bookedSeats", request.getSeatIds().size());
+            response.put("bookedSeats", seatCount);
+            response.put("sharedAreaTickets", sharedAreaTicketCount);
+            response.put("totalTickets", seatCount + sharedAreaTicketCount);
             response.put("paymentId", request.getPaymentId());
-            // response.put("bookingReference", booking.getBookingReference());
+            response.put("bookingReference", booking.getBookingReference());
+            response.put("bookingId", booking.getBookingId());
             
             return ResponseEntity.ok(response);
             

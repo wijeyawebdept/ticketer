@@ -1,8 +1,11 @@
 package com.ticket.ticket_booking_system.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,4 +18,29 @@ public class SeatAvailabilityResponse {
     private Long availableSeats;
     private Long bookedSeats;
     private Long heldSeats;
+    
+    // Shared area data - ticket categories marked as shared areas
+    private List<SharedAreaDTO> sharedAreas;
+    
+    // Constructor without sharedAreas for backward compatibility
+    public SeatAvailabilityResponse(List<SeatDTO> seats, Long totalSeats, Long availableSeats, Long bookedSeats, Long heldSeats) {
+        this.seats = seats;
+        this.totalSeats = totalSeats;
+        this.availableSeats = availableSeats;
+        this.bookedSeats = bookedSeats;
+        this.heldSeats = heldSeats;
+    }
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SharedAreaDTO {
+        private UUID categoryId;
+        private String categoryName;
+        private BigDecimal price;
+        private Integer capacity;
+        private Integer sharedAreaNumber;
+        private Integer availableTickets;
+    }
 }

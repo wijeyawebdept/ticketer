@@ -67,6 +67,8 @@ export interface TicketCategory {
   description?: string;
   price: number;
   capacity: number;
+  isSharedArea?: boolean;
+  sharedAreaNumber?: number;
 }
 
 export interface Event {
@@ -152,6 +154,10 @@ export interface Venue {
   capacity: number;
   status?: number; // 1=active, 0=inactive, -1=soft deleted
   seatingLayout?: { [key: string]: any };
+  // Shared/Common areas (standing areas without seats)
+  hasSharedAreas?: boolean;
+  sharedAreaCount?: number;
+  sharedAreaTotalCapacity?: number;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -12,11 +12,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
+import PeopleIcon from '@mui/icons-material/People';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import { seatBookingService } from '../../services/seatBooking.service';
-import type { SeatWithStatus, SeatsGroupedByRow, SeatStatus } from '../../types/seat';
+import type { SeatWithStatus, SeatsGroupedByRow, SeatStatus, SharedAreaDTO } from '../../types/seat';
 
 interface SeatMapProps {
   eventId: string;
@@ -133,6 +139,28 @@ const LegendBox = styled(Box)<{ color: string }>(({ color }) => ({
   borderRadius: '4px',
 }));
 
+// Standing area card styled component
+const StandingAreaCard = styled(Card)<{ selected?: boolean }>(({ theme, selected }) => ({
+  borderRadius: theme.spacing(2),
+  border: selected ? '3px solid #9c27b0' : '2px solid #e0e0e0',
+  backgroundColor: selected ? '#f3e5f5' : '#fff',
+  transition: 'all 0.2s ease',
+  cursor: 'pointer',
+  '&:hover': {
+    borderColor: '#9c27b0',
+    boxShadow: theme.shadows[4],
+  },
+}));
+
+// Selected standing area tickets state
+interface StandingAreaSelection {
+  categoryName: string;
+  price: number;
+  count: number;
+  sharedAreaNumber: number;
+  availableCapacity: number;
+}
+
 const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
   const [seats, setSeats] = useState<SeatWithStatus[]>([]);
   const [groupedSeats, setGroupedSeats] = useState<SeatsGroupedByRow>({});
@@ -142,22 +170,39 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
+  
+  // Standing/shared area state - using SharedAreaDTO from backend
+  const [standingAreas, setStandingAreas] = useState<SharedAreaDTO[]>([]);
+  const [standingAreaSelections, setStandingAreaSelections] = useState<Map<number, StandingAreaSelection>>(new Map());
 
-  // Fetch seats
+  // Fetch seats and shared areas from venue-seats availability endpoint
   const fetchSeats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const fetchedSeats = await seatBookingService.getEventSeats(eventId);
-      const seatsWithStatus = seatBookingService.transformSeatsWithStatus(
-        fetchedSeats,
+      // Fetch full availability including shared areas (eventId here is actually scheduleId)
+      const availability = await seatBookingService.getSeatAvailabilityWithSharedAreas(eventId);
+      
+      console.log('Availability response:', availability);
+      console.log('Shared areas:', availability.sharedAreas);
+      
+      // Transform SeatDTOs to SeatWithStatus using the new method
+      const seatsWithStatus = seatBookingService.transformSeatDTOsWithStatus(
+        availability.seats || [],
         selectedSeatIds
       );
       
       setSeats(seatsWithStatus);
       setGroupedSeats(seatBookingService.groupSeatsByRow(seatsWithStatus));
+      
+      // Set shared/standing areas from availability response
+      if (availability.sharedAreas && availability.sharedAreas.length > 0) {
+        console.log('Setting standing areas:', availability.sharedAreas);
+        setStandingAreas(availability.sharedAreas);
+      }
     } catch (err: any) {
+      console.error('Error fetching seats:', err);
       setError(err.message || 'Failed to load seats');
     } finally {
       setLoading(false);
@@ -168,11 +213,43 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
     fetchSeats();
   }, [fetchSeats]);
 
-  // Calculate total price when selection changes
+  // Calculate total price when selection changes (seats + standing areas)
   useEffect(() => {
-    const price = seatBookingService.calculateTotalPrice(seats, selectedSeatIds);
-    setTotalPrice(price);
-  }, [seats, selectedSeatIds]);
+    // Seat prices
+    const seatPrice = seatBookingService.calculateTotalPrice(seats, selectedSeatIds);
+    
+    // Standing area prices
+    let standingPrice = 0;
+    standingAreaSelections.forEach((selection) => {
+      standingPrice += selection.price * selection.count;
+    });
+    
+    setTotalPrice(seatPrice + standingPrice);
+  }, [seats, selectedSeatIds, standingAreaSelections]);
+
+  // Handle standing area ticket count change
+  const handleStandingAreaChange = (area: SharedAreaDTO, change: number) => {
+    const areaNumber = area.sharedAreaNumber || 0;
+    const currentSelection = standingAreaSelections.get(areaNumber);
+    const currentCount = currentSelection?.count || 0;
+    // Use availableTickets instead of capacity to limit selection
+    const maxAvailable = area.availableTickets || area.capacity;
+    const newCount = Math.max(0, Math.min(maxAvailable, currentCount + change));
+    
+    const newSelections = new Map(standingAreaSelections);
+    if (newCount > 0) {
+      newSelections.set(areaNumber, {
+        categoryName: area.categoryName,
+        price: area.price,
+        count: newCount,
+        sharedAreaNumber: areaNumber,
+        availableCapacity: maxAvailable
+      });
+    } else {
+      newSelections.delete(areaNumber);
+    }
+    setStandingAreaSelections(newSelections);
+  };
 
   // Handle seat click
   const handleSeatClick = (seat: SeatWithStatus) => {
@@ -326,12 +403,105 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
         </LegendItem>
       </LegendContainer>
 
+      {/* Standing/Common Areas Section */}
+      {standingAreas.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PeopleIcon color="secondary" />
+            Standing/Common Areas
+            <Chip label={`${standingAreas.length} Area${standingAreas.length > 1 ? 's' : ''}`} color="secondary" size="small" />
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select the number of standing tickets you want for each area. These are non-seated areas.
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {standingAreas.map((area) => {
+              const areaNumber = area.sharedAreaNumber || 0;
+              const selection = standingAreaSelections.get(areaNumber);
+              const selectedCount = selection?.count || 0;
+              
+              return (
+                <Grid item xs={12} sm={6} md={4} key={areaNumber}>
+                  <StandingAreaCard selected={selectedCount > 0}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="h6" component="div">
+                          {area.categoryName}
+                        </Typography>
+                        <Chip 
+                          label={`Area ${areaNumber}`} 
+                          size="small" 
+                          color="secondary" 
+                          variant="outlined" 
+                        />
+                      </Box>
+                      
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Standing/common area - no assigned seats
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                        <Typography variant="h6" color="secondary">
+                          Rs {area.price.toFixed(2)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Available: {area.availableTickets} / {area.capacity}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mt: 2, gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleStandingAreaChange(area, -1)}
+                          disabled={selectedCount === 0}
+                          sx={{ minWidth: 40 }}
+                        >
+                          <RemoveIcon />
+                        </Button>
+                        <TextField
+                          value={selectedCount}
+                          size="small"
+                          inputProps={{ 
+                            style: { textAlign: 'center', width: '50px' },
+                            readOnly: true
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleStandingAreaChange(area, 1)}
+                          disabled={selectedCount >= (area.availableTickets || 0)}
+                          sx={{ minWidth: 40 }}
+                        >
+                          <AddIcon />
+                        </Button>
+                      </Box>
+                      
+                      {selectedCount > 0 && (
+                        <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'secondary.main', fontWeight: 'bold' }}>
+                          Subtotal: Rs {(area.price * selectedCount).toFixed(2)}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </StandingAreaCard>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
+      )}
+
       {/* Selection summary */}
       <Paper elevation={3} sx={{ mt: 3, p: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6}>
             <Typography variant="h6">
-              Selected Seats: {selectedSeatIds.size}
+              Selected: {selectedSeatIds.size} seat(s)
+              {Array.from(standingAreaSelections.values()).reduce((sum, s) => sum + s.count, 0) > 0 && (
+                <span> + {Array.from(standingAreaSelections.values()).reduce((sum, s) => sum + s.count, 0)} standing</span>
+              )}
             </Typography>
             <Typography variant="h5" color="primary">
               Total: Rs {totalPrice.toFixed(2)}
@@ -341,7 +511,7 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
             <Button
               variant="contained"
               size="large"
-              disabled={selectedSeatIds.size === 0 || processing}
+              disabled={(selectedSeatIds.size === 0 && standingAreaSelections.size === 0) || processing}
               onClick={handleProceedToPayment}
               startIcon={processing ? <CircularProgress size={20} /> : <EventSeatIcon />}
             >
@@ -355,14 +525,28 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
       <Dialog open={confirmDialogOpen} onClose={() => !processing && setConfirmDialogOpen(false)}>
         <DialogTitle>Confirm Booking</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            You have selected {selectedSeatIds.size} seat(s).
-          </Typography>
-          <Typography variant="h6" color="primary" gutterBottom>
+          {selectedSeatIds.size > 0 && (
+            <Typography gutterBottom>
+              🎟️ Seats: {selectedSeatIds.size} seat(s)
+            </Typography>
+          )}
+          {standingAreaSelections.size > 0 && (
+            <Box sx={{ mb: 1 }}>
+              <Typography gutterBottom>
+                🎭 Standing Tickets:
+              </Typography>
+              {Array.from(standingAreaSelections.values()).map((selection) => (
+                <Typography key={selection.sharedAreaNumber} variant="body2" sx={{ pl: 2 }}>
+                  • {selection.categoryName}: {selection.count} ticket(s) @ Rs {selection.price.toFixed(2)}
+                </Typography>
+              ))}
+            </Box>
+          )}
+          <Typography variant="h6" color="primary" gutterBottom sx={{ mt: 2 }}>
             Total Amount: Rs {totalPrice.toFixed(2)}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Your seats are held for 5 minutes. Please complete the payment to confirm your booking.
+            Your selection is held for 5 minutes. Please complete the payment to confirm your booking.
           </Typography>
         </DialogContent>
         <DialogActions>

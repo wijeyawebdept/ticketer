@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, Button, Box, Typography, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from '../../services/api';
@@ -24,6 +24,16 @@ interface SeatStatus {
   notes?: string;
 }
 
+// Shared area ticket category from database
+interface SharedAreaCategory {
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  capacity: number;
+  sharedAreaNumber: number;
+  availableTickets: number;
+}
+
 interface SeatAvailabilityResponse {
   seats: {
     seatId: string;
@@ -44,12 +54,15 @@ interface SeatAvailabilityResponse {
   availableSeats: number;
   bookedSeats: number;
   temporaryHolds: number;
+  // Shared area data from venue and ticket categories
+  sharedAreas?: SharedAreaCategory[];
 }
 
 interface VenueSeatMapProps {
   eventScheduleId: string | number;
   venueId?: string;
   onSeatSelect?: (selectedSeats: string[]) => void;
+  onSharedAreaSelect?: (areaNumber: number, count: number, price: number, categoryName: string) => void;
   maxSelection?: number;
   selectedSeats?: string[];
   bookedSeats?: string[];
@@ -59,6 +72,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   eventScheduleId,
   venueId,
   onSeatSelect,
+  onSharedAreaSelect,
   maxSelection = 10,
   selectedSeats = [],
   bookedSeats = [],
@@ -70,23 +84,24 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(true);
-  const [showBalconyDialog, setShowBalconyDialog] = useState(false);
-  const [balconyTicketCount, setBalconyTicketCount] = useState<number | null>(null);
+  const [showSharedAreaDialog, setShowSharedAreaDialog] = useState(false);
+  const [selectedSharedArea, setSelectedSharedArea] = useState<SharedAreaCategory | null>(null);
+  const [sharedAreaTicketCount, setSharedAreaTicketCount] = useState<number | null>(null);
+  const [sharedAreas, setSharedAreas] = useState<SharedAreaCategory[]>([]);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
   
-  // Kularathna Stadium venue ID
-  const KULARATHNA_STADIUM_ID = '54fd37e5-5a1c-4834-af83-ad9c8bf1f300';
-  const shouldShowBalcony = venueId === KULARATHNA_STADIUM_ID;
+  // Check if venue has shared areas from database
+  const hasSharedAreas = sharedAreas.length > 0;
 
   // Debug: Log venue ID changes
   useEffect(() => {
     console.log('VenueSeatMap received venueId:', venueId);
-    console.log('Kularathna Stadium ID:', KULARATHNA_STADIUM_ID);
-    console.log('Should show balcony:', shouldShowBalcony);
-  }, [venueId, shouldShowBalcony]);
+    console.log('Has shared areas:', hasSharedAreas);
+    console.log('Shared areas:', sharedAreas);
+  }, [venueId, hasSharedAreas, sharedAreas]);
 
   // Fetch seat availability from backend
   useEffect(() => {
@@ -153,6 +168,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       });
       
       setSeatStatuses(statusMap);
+      
+      // Store shared areas if available from API response
+      if (data.sharedAreas && data.sharedAreas.length > 0) {
+        console.log('Shared areas from API:', data.sharedAreas);
+        setSharedAreas(data.sharedAreas);
+      }
     } catch (error) {
       console.error('Failed to fetch seat availability:', error);
     } finally {
@@ -281,16 +302,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     return seat.colorCode || '#4CAF50';
   }, [seatStatuses, localSelectedSeats]);
 
-  const getSeatCursor = useCallback((seat: VenueSeatData): string => {
-    const status = seatStatuses.get(seat.seatId);
-    
-    if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD'].includes(status.status)) {
-      return 'not-allowed';
-    }
-    
-    return 'pointer';
-  }, [seatStatuses]);
-
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
@@ -318,25 +329,32 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
   }, []);
 
-  const handleBalconyClick = () => {
-    console.log('Balcony clicked!');
-    setShowBalconyDialog(true);
+  const handleSharedAreaClick = (area: SharedAreaCategory) => {
+    console.log('Shared area clicked:', area);
+    setSelectedSharedArea(area);
+    setShowSharedAreaDialog(true);
   };
 
-  const handleBalconyDialogClose = () => {
-    setShowBalconyDialog(false);
-    setBalconyTicketCount(null);
+  const handleSharedAreaDialogClose = () => {
+    setShowSharedAreaDialog(false);
+    setSelectedSharedArea(null);
+    setSharedAreaTicketCount(null);
   };
 
-  const handleBalconyTicketSelect = (count: number) => {
-    setBalconyTicketCount(count);
+  const handleSharedAreaTicketSelect = (count: number) => {
+    setSharedAreaTicketCount(count);
   };
 
-  const handleBalconyConfirm = () => {
-    if (balconyTicketCount) {
-      console.log(`Selected ${balconyTicketCount} tickets for Balcony area`);
-      alert(`${balconyTicketCount} ticket(s) selected for Balcony (Standing Area)`);
-      handleBalconyDialogClose();
+  const handleSharedAreaConfirm = () => {
+    if (sharedAreaTicketCount && selectedSharedArea) {
+      console.log(`Selected ${sharedAreaTicketCount} tickets for ${selectedSharedArea.categoryName}`);
+      onSharedAreaSelect?.(
+        selectedSharedArea.sharedAreaNumber,
+        sharedAreaTicketCount, 
+        selectedSharedArea.price,
+        selectedSharedArea.categoryName
+      );
+      handleSharedAreaDialogClose();
     }
   };
 
@@ -449,58 +467,100 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
           {/* Seats - Render from database */}
           <g id="seats-container">
-            {venueSeats.map((seat: VenueSeatData) => (
-              <circle
-                key={seat.seatId}
-                data-seat-id={seat.seatId}
-                cx={seat.xPosition}
-                cy={seat.yPosition}
-                r="6"
-                fill={getSeatColor(seat)}
-                stroke={localSelectedSeats.has(seat.seatId) ? '#000' : 'none'}
-                strokeWidth="2"
-                className="seat-circle"
-                style={{ 
-                  cursor: getSeatCursor(seat),
-                  pointerEvents: isPanning.current ? 'none' : 'auto'
-                }}
-              />
-            ))}
+            {venueSeats.map((seat: VenueSeatData) => {
+              const status = seatStatuses.get(seat.seatId);
+              const isUnavailable = status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status);
+              
+              return (
+                <circle
+                  key={seat.seatId}
+                  data-seat-id={seat.seatId}
+                  cx={seat.xPosition}
+                  cy={seat.yPosition}
+                  r="6"
+                  fill={getSeatColor(seat)}
+                  stroke={localSelectedSeats.has(seat.seatId) ? '#000' : 'none'}
+                  strokeWidth="2"
+                  className="seat-circle"
+                  style={{ 
+                    cursor: isUnavailable ? 'not-allowed' : 'pointer',
+                    pointerEvents: isPanning.current ? 'none' : 'auto'
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                />
+              );
+            })}
           </g>
 
-          {/* Balcony - Only for Kularathna Stadium */}
-          {shouldShowBalcony && (
-            <>
-              <rect
-                x="350"
-                y="580"
-                width="900"
-                height="80"
-                fill="#FFE082"
-                fillOpacity="0.4"
-                stroke="#FFA000"
-                strokeWidth="3"
-                className="balcony-area"
-                style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleBalconyClick();
-                }}
-              />
-              <text
-                x="800"
-                y="630"
-                textAnchor="middle"
-                fontSize="24"
-                fontWeight="bold"
-                fill="#FF6F00"
-                className="balcony-label"
-                style={{ cursor: 'pointer', pointerEvents: 'none' }}
-              >
-                BALCONY (Standing Area)
-              </text>
-            </>
-          )}
+          {/* Dynamic Shared/Standing Areas - Rendered from database */}
+          {hasSharedAreas && sharedAreas.map((area, index) => {
+            // Calculate position for each shared area
+            const xPositions = venueSeats.map(s => s.xPosition).filter(x => !isNaN(x));
+            const minX = xPositions.length > 0 ? Math.min(...xPositions) : 200;
+            const maxX = xPositions.length > 0 ? Math.max(...xPositions) : 1600;
+            const yPositions = venueSeats.map(s => s.yPosition).filter(y => !isNaN(y));
+            const maxY = yPositions.length > 0 ? Math.max(...yPositions) : 500;
+            
+            // Calculate area dimensions based on number of shared areas
+            const totalWidth = maxX - minX;
+            const areaWidth = sharedAreas.length > 1 
+              ? (totalWidth - (sharedAreas.length - 1) * 20) / sharedAreas.length 
+              : totalWidth * 0.5;
+            const areaX = sharedAreas.length > 1 
+              ? minX + index * (areaWidth + 20)
+              : minX + totalWidth * 0.25;
+            const areaY = maxY + 60;
+            const areaHeight = 80;
+            
+            // Color palette for different areas
+            const areaColors = ['#FFE082', '#B3E5FC', '#C8E6C9', '#F8BBD9', '#D1C4E9'];
+            const borderColors = ['#FFA000', '#0288D1', '#388E3C', '#C2185B', '#7B1FA2'];
+            const textColors = ['#FF6F00', '#01579B', '#1B5E20', '#880E4F', '#4A148C'];
+            
+            return (
+              <g key={`shared-area-${area.sharedAreaNumber}`}>
+                <rect
+                  x={areaX}
+                  y={areaY}
+                  width={areaWidth}
+                  height={areaHeight}
+                  fill={areaColors[index % areaColors.length]}
+                  fillOpacity="0.4"
+                  stroke={borderColors[index % borderColors.length]}
+                  strokeWidth="3"
+                  className="shared-area"
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSharedAreaClick(area);
+                  }}
+                />
+                <text
+                  x={areaX + areaWidth / 2}
+                  y={areaY + areaHeight / 2 - 10}
+                  textAnchor="middle"
+                  fontSize="18"
+                  fontWeight="bold"
+                  fill={textColors[index % textColors.length]}
+                  style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                >
+                  {area.categoryName}
+                </text>
+                <text
+                  x={areaX + areaWidth / 2}
+                  y={areaY + areaHeight / 2 + 12}
+                  textAnchor="middle"
+                  fontSize="14"
+                  fill={textColors[index % textColors.length]}
+                  style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                >
+                  LKR {area.price.toLocaleString()} • {area.availableTickets} available
+                </text>
+              </g>
+            );
+          })}
 
 
 
@@ -521,10 +581,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         </div>
       )}
 
-      {/* Balcony Dialog - Only for Kularathna Stadium */}
+      {/* Dynamic Shared Area Dialog */}
       <Dialog 
-        open={showBalconyDialog && shouldShowBalcony} 
-        onClose={handleBalconyDialogClose}
+        open={showSharedAreaDialog && selectedSharedArea !== null} 
+        onClose={handleSharedAreaDialogClose}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -536,7 +596,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       >
         <DialogTitle sx={{ position: 'relative', pb: 1 }}>
           <IconButton
-            onClick={handleBalconyDialogClose}
+            onClick={handleSharedAreaDialogClose}
             sx={{
               position: 'absolute',
               right: 8,
@@ -549,8 +609,20 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         </DialogTitle>
         
         <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            {selectedSharedArea?.categoryName || 'Standing Area'}
+          </Typography>
+          
+          <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
             This section is a <strong>*Shared Space*</strong> and does not have any allocated seats.
+          </Typography>
+          
+          <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            Price per ticket: <strong>LKR {selectedSharedArea?.price.toLocaleString()}</strong>
+          </Typography>
+          
+          <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+            Available: <strong>{selectedSharedArea?.availableTickets}</strong> tickets
           </Typography>
           
           <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
@@ -558,20 +630,20 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           </Typography>
           
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', mb: 4 }}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(count => count <= (selectedSharedArea?.availableTickets || 10)).map((count) => (
               <Button
                 key={count}
-                variant={balconyTicketCount === count ? 'contained' : 'outlined'}
-                onClick={() => handleBalconyTicketSelect(count)}
+                variant={sharedAreaTicketCount === count ? 'contained' : 'outlined'}
+                onClick={() => handleSharedAreaTicketSelect(count)}
                 sx={{
                   minWidth: '60px',
                   height: '50px',
                   fontSize: '18px',
                   fontWeight: 600,
                   borderRadius: 2,
-                  border: balconyTicketCount === count ? 'none' : '2px solid #ddd',
+                  border: sharedAreaTicketCount === count ? 'none' : '2px solid #ddd',
                   '&:hover': {
-                    backgroundColor: balconyTicketCount === count ? 'primary.dark' : 'grey.100'
+                    backgroundColor: sharedAreaTicketCount === count ? 'primary.dark' : 'grey.100'
                   }
                 }}
               >
@@ -580,12 +652,18 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             ))}
           </Box>
           
+          {sharedAreaTicketCount && selectedSharedArea && (
+            <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
+              Total: LKR {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
+            </Typography>
+          )}
+          
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
             <Button
               variant="contained"
               fullWidth
-              disabled={!balconyTicketCount}
-              onClick={handleBalconyConfirm}
+              disabled={!sharedAreaTicketCount}
+              onClick={handleSharedAreaConfirm}
               sx={{
                 py: 1.5,
                 fontSize: '16px',
@@ -603,7 +681,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           </Box>
           
           <Button
-            onClick={handleBalconyDialogClose}
+            onClick={handleSharedAreaDialogClose}
             sx={{
               mt: 2,
               color: 'text.secondary',

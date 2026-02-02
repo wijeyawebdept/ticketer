@@ -48,6 +48,14 @@ public class TicketCategory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
+    
+    // Shared area support
+    @Builder.Default
+    @Column(name = "is_shared_area")
+    private Boolean isSharedArea = false;
+    
+    @Column(name = "shared_area_number")
+    private Integer sharedAreaNumber;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

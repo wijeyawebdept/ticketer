@@ -22,4 +22,8 @@ public class TicketCategoryRequest {
     private Integer capacity;
 
     private String description;
+    
+    // Shared area support
+    private Boolean isSharedArea = false;
+    private Integer sharedAreaNumber;
 }

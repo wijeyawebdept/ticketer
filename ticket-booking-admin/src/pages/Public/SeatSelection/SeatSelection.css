@@ -128,6 +128,7 @@
   margin-bottom: 15px;
   padding-bottom: 15px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
 }
 
 .summary-header h3 {
@@ -136,6 +137,48 @@
   font-family: 'Raleway', sans-serif;
   font-weight: 700;
   margin: 0;
+  flex: 1;
+}
+
+/* Collapse button */
+.collapse-btn {
+  background: rgba(255, 25, 85, 0.2);
+  border: 1px solid rgba(255, 25, 85, 0.5);
+  color: #fcd0a5;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 45px;
+  height: 35px;
+  margin-left: 10px;
+}
+
+.collapse-btn:hover {
+  background: rgba(255, 25, 85, 0.4);
+  border-color: #ff1955;
+  transform: scale(1.1);
+}
+
+/* Collapsed state */
+.booking-summary.collapsed {
+  padding-bottom: 0;
+}
+
+.booking-summary.collapsed .summary-content {
+  padding: 15px 20px;
+}
+
+.booking-summary.collapsed .summary-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .hold-timer {
@@ -321,9 +364,25 @@
   }
 
   .summary-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .summary-header h3 {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .collapse-btn {
+    order: 3;
+    margin-left: auto;
+  }
+
+  .hold-timer {
+    order: 2;
+    width: 100%;
   }
 
   .summary-actions {

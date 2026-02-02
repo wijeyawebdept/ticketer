@@ -63,4 +63,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     Page<Booking> findByEvent_Organizer_OrganizerIdAndStatus(UUID organizerId, Booking.BookingStatus status, Pageable pageable);
     
     List<Booking> findTopByEvent_Organizer_OrganizerIdOrderByBookingTimeDesc(UUID organizerId, Pageable pageable);
+    
+    // Count booked shared area tickets for a schedule and shared area number
+    @Query("SELECT COUNT(bs) FROM BookingSeat bs WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.isSharedAreaTicket = true AND bs.sharedAreaNumber = :sharedAreaNumber " +
+           "AND bs.booking.status IN ('CONFIRMED', 'PENDING')")
+    Long countBookedSharedAreaTickets(UUID scheduleId, Integer sharedAreaNumber);
 }

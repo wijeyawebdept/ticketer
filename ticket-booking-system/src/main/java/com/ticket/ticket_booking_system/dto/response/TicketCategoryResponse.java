@@ -20,6 +20,10 @@ public class TicketCategoryResponse {
     private Integer capacity;
 
     private String description;
+    
+    // Shared area support
+    private Boolean isSharedArea;
+    private Integer sharedAreaNumber;
 
     private LocalDateTime createdAt;
 

@@ -37,6 +37,11 @@ public class VenueUpdateRequest {
     private Integer capacity;
 
     private Map<String, Object> seatingLayout;
+    
+    // Shared area fields
+    private Boolean hasSharedAreas;
+    private Integer sharedAreaCount;
+    private Integer sharedAreaTotalCapacity;
 
     // Constructors
     public VenueUpdateRequest() {
@@ -116,5 +121,29 @@ public class VenueUpdateRequest {
 
     public void setSeatingLayout(Map<String, Object> seatingLayout) {
         this.seatingLayout = seatingLayout;
+    }
+    
+    public Boolean getHasSharedAreas() {
+        return hasSharedAreas;
+    }
+    
+    public void setHasSharedAreas(Boolean hasSharedAreas) {
+        this.hasSharedAreas = hasSharedAreas;
+    }
+    
+    public Integer getSharedAreaCount() {
+        return sharedAreaCount;
+    }
+    
+    public void setSharedAreaCount(Integer sharedAreaCount) {
+        this.sharedAreaCount = sharedAreaCount;
+    }
+    
+    public Integer getSharedAreaTotalCapacity() {
+        return sharedAreaTotalCapacity;
+    }
+    
+    public void setSharedAreaTotalCapacity(Integer sharedAreaTotalCapacity) {
+        this.sharedAreaTotalCapacity = sharedAreaTotalCapacity;
     }
 }

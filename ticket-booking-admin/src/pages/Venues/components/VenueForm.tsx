@@ -8,9 +8,11 @@ import {
   Divider,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
-import { Lock as LockIcon } from '@mui/icons-material';
+import { Lock as LockIcon, People as PeopleIcon } from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { VenueService } from '../../../services';
@@ -30,6 +32,9 @@ interface FormValues {
   state: string;
   postalCode: string;
   capacity: number | '';
+  hasSharedAreas: boolean;
+  sharedAreaCount: number | '';
+  sharedAreaTotalCapacity: number | '';
 }
 
 const validationSchema = Yup.object({
@@ -61,7 +66,20 @@ const validationSchema = Yup.object({
     .required('Capacity is required')
     .min(1, 'Capacity must be at least 1')
     .max(1000000, 'Capacity must be less than 1,000,000')
-    .typeError('Capacity must be a valid number')
+    .typeError('Capacity must be a valid number'),
+  hasSharedAreas: Yup.boolean(),
+  sharedAreaCount: Yup.number()
+    .when('hasSharedAreas', {
+      is: true,
+      then: (schema) => schema.required('Number of shared areas is required').min(1, 'At least 1 shared area').max(10, 'Maximum 10 shared areas'),
+      otherwise: (schema) => schema.notRequired()
+    }),
+  sharedAreaTotalCapacity: Yup.number()
+    .when('hasSharedAreas', {
+      is: true,
+      then: (schema) => schema.required('Total capacity is required').min(1, 'Capacity must be at least 1').max(10000, 'Maximum 10,000'),
+      otherwise: (schema) => schema.notRequired()
+    })
 });
 
 const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
@@ -72,7 +90,10 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
     city: venue?.city || '',
     state: venue?.state || '',
     postalCode: venue?.zipCode || '',
-    capacity: venue?.capacity || ''
+    capacity: venue?.capacity || '',
+    hasSharedAreas: venue?.hasSharedAreas || false,
+    sharedAreaCount: venue?.sharedAreaCount || '',
+    sharedAreaTotalCapacity: venue?.sharedAreaTotalCapacity || ''
   };
 
   console.log('VenueForm - Editing venue:', venue);
@@ -95,7 +116,10 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
             city: values.city,
             state: values.state,
             zipCode: values.postalCode,
-            capacity: Number(values.capacity)
+            capacity: Number(values.capacity),
+            hasSharedAreas: values.hasSharedAreas,
+            sharedAreaCount: values.hasSharedAreas ? Number(values.sharedAreaCount) : 0,
+            sharedAreaTotalCapacity: values.hasSharedAreas ? Number(values.sharedAreaTotalCapacity) : 0
           };
 
           if (venue?.id) {
@@ -338,6 +362,83 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
                 }}
               />
             </Grid>
+
+            {/* Shared/Common Areas Section */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <PeopleIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Shared/Common Areas (Optional)
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Standing areas without individual seats (e.g., Balcony, Standing Area). 
+                These do NOT affect the seated capacity above.
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="hasSharedAreas"
+                    checked={values.hasSharedAreas}
+                    onChange={(e) => {
+                      setFieldValue('hasSharedAreas', e.target.checked);
+                      if (!e.target.checked) {
+                        setFieldValue('sharedAreaCount', '');
+                        setFieldValue('sharedAreaTotalCapacity', '');
+                      }
+                    }}
+                    color="primary"
+                  />
+                }
+                label="This venue has shared/common areas (standing areas)"
+              />
+            </Grid>
+
+            {values.hasSharedAreas && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Number of Shared Areas"
+                    name="sharedAreaCount"
+                    type="number"
+                    value={values.sharedAreaCount}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.sharedAreaCount && Boolean(errors.sharedAreaCount)}
+                    helperText={touched.sharedAreaCount && errors.sharedAreaCount ? errors.sharedAreaCount as string : 'e.g., 2 for Balcony and Standing Area'}
+                    placeholder="e.g., 2"
+                    inputProps={{ min: 1, max: 10 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Total Standing Capacity"
+                    name="sharedAreaTotalCapacity"
+                    type="number"
+                    value={values.sharedAreaTotalCapacity}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.sharedAreaTotalCapacity && Boolean(errors.sharedAreaTotalCapacity)}
+                    helperText={touched.sharedAreaTotalCapacity && errors.sharedAreaTotalCapacity ? errors.sharedAreaTotalCapacity as string : 'Total across all shared areas'}
+                    placeholder="e.g., 400"
+                    inputProps={{ min: 1 }}
+                  />
+                </Grid>
+                {values.sharedAreaCount && values.sharedAreaTotalCapacity && Number(values.sharedAreaCount) > 0 && (
+                  <Grid item xs={12}>
+                    <Alert severity="info" icon={<PeopleIcon />}>
+                      <strong>Capacity per area:</strong> {Math.floor(Number(values.sharedAreaTotalCapacity) / Number(values.sharedAreaCount))} people per shared area
+                    </Alert>
+                  </Grid>
+                )}
+              </>
+            )}
 
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />

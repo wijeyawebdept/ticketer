@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Grid,
   Box,
   Typography,
@@ -15,6 +16,7 @@ import {
   Button,
   IconButton,
 } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
@@ -45,8 +47,18 @@ const SeatSelectionPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showBookingSummary, setShowBookingSummary] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const summaryRef = React.useRef<HTMLDivElement>(null);
   const seatMapRef = React.useRef<HTMLDivElement>(null);
+  
+  // Shared/Standing area ticket states (supports multiple areas)
+  interface SharedAreaSelection {
+    areaNumber: number;
+    categoryName: string;
+    ticketCount: number;
+    pricePerTicket: number;
+  }
+  const [sharedAreaSelections, setSharedAreaSelections] = useState<SharedAreaSelection[]>([]);
   
   // Payment modal states
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -54,6 +66,7 @@ const SeatSelectionPage: React.FC = () => {
   const [deliveryMethod, setDeliveryMethod] = useState('online');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
+  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
     lastName: '',
@@ -70,8 +83,9 @@ const SeatSelectionPage: React.FC = () => {
 
   // Show booking summary when seats are selected
   useEffect(() => {
-    setShowBookingSummary(selectedSeats.length > 0);
-  }, [selectedSeats]);
+    const hasSharedAreaTickets = sharedAreaSelections.reduce((sum, s) => sum + s.ticketCount, 0) > 0;
+    setShowBookingSummary(selectedSeats.length > 0 || hasSharedAreaTickets);
+  }, [selectedSeats, sharedAreaSelections]);
 
   // Handle click outside to collapse booking summary
   useEffect(() => {
@@ -157,6 +171,57 @@ const SeatSelectionPage: React.FC = () => {
     await calculateTotalPrice(seats);
   };
 
+  const handleSharedAreaSelect = (areaNumber: number, count: number, pricePerTicket: number, categoryName: string) => {
+    setSharedAreaSelections(prev => {
+      // Find if this area is already selected
+      const existingIndex = prev.findIndex(s => s.areaNumber === areaNumber);
+      
+      if (count === 0) {
+        // Remove this area selection
+        return prev.filter(s => s.areaNumber !== areaNumber);
+      }
+      
+      const newSelection: SharedAreaSelection = {
+        areaNumber,
+        categoryName,
+        ticketCount: count,
+        pricePerTicket
+      };
+      
+      if (existingIndex >= 0) {
+        // Update existing selection
+        const newSelections = [...prev];
+        newSelections[existingIndex] = newSelection;
+        return newSelections;
+      } else {
+        // Add new selection
+        return [...prev, newSelection];
+      }
+    });
+    
+    // Recalculate total price
+    recalculateTotalPrice();
+  };
+  
+  const recalculateTotalPrice = () => {
+    const seatsTotal = selectedSeatDetails.reduce((sum, seat) => sum + (seat?.currentPrice || 0), 0);
+    const sharedAreasTotal = sharedAreaSelections.reduce(
+      (sum, selection) => sum + (selection.ticketCount * selection.pricePerTicket), 
+      0
+    );
+    setTotalPrice(seatsTotal + sharedAreasTotal);
+  };
+  
+  // Recalculate when shared area selections change
+  useEffect(() => {
+    const seatsTotal = selectedSeatDetails.reduce((sum, seat) => sum + (seat?.currentPrice || 0), 0);
+    const sharedAreasTotal = sharedAreaSelections.reduce(
+      (sum, selection) => sum + (selection.ticketCount * selection.pricePerTicket), 
+      0
+    );
+    setTotalPrice(seatsTotal + sharedAreasTotal);
+  }, [sharedAreaSelections, selectedSeatDetails]);
+
   const calculateTotalPrice = async (seatIds: string[]) => {
     try {
       const response = await venueSeatService.getSeatAvailability(eventScheduleId!);
@@ -167,11 +232,17 @@ const SeatSelectionPage: React.FC = () => {
       
       setSelectedSeatDetails(selectedDetails);
       
-      const total = seatIds.reduce((sum, seatId) => {
+      const seatsTotal = seatIds.reduce((sum, seatId) => {
         const seat = response.seats.find(s => s.seatId === seatId);
         return sum + (seat?.currentPrice || 0);
       }, 0);
-      setTotalPrice(total);
+      
+      // Include shared area tickets in total
+      const sharedAreasTotal = sharedAreaSelections.reduce(
+        (sum, selection) => sum + (selection.ticketCount * selection.pricePerTicket), 
+        0
+      );
+      setTotalPrice(seatsTotal + sharedAreasTotal);
     } catch (error) {
       console.error('Failed to calculate price:', error);
     }
@@ -259,19 +330,59 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      //: payment gate eka integrate karanna thiye booking confirmation ekath ekka
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Build the booking confirmation request
+      const bookingRequest = {
+        eventId: eventDetails?.eventId,
+        scheduleId: eventScheduleId,
+        seatIds: selectedSeatDetails.map(seat => seat.seatId).filter((id: string) => id), // Only include valid seat IDs
+        sharedAreaTickets: sharedAreaSelections.map(selection => ({
+          categoryId: null, // Will be determined by backend based on shared area number
+          categoryName: selection.categoryName,
+          sharedAreaNumber: selection.areaNumber,
+          ticketCount: selection.ticketCount,
+          pricePerTicket: selection.pricePerTicket,
+        })),
+        paymentId: `PAY-${Date.now()}`, // This should come from actual payment gateway
+        paymentMethod: selectedPaymentMethod.toUpperCase(),
+        totalAmount: totalPrice,
+      };
+
+      console.log('Booking request:', bookingRequest);
       
-      showMessage('success', 'Booking confirmed successfully!');
-      setPaymentModalOpen(false);
+      // Define response type
+      interface BookingConfirmResponse {
+        success: boolean;
+        message?: string;
+        bookingReference?: string;
+        bookingId?: string;
+        bookedSeats?: number;
+        sharedAreaTickets?: number;
+        totalTickets?: number;
+        paymentId?: string;
+      }
       
-      // Navigate to bookings page or confirmation page
-      setTimeout(() => {
-        navigate('/bookings');
-      }, 2000);
-    } catch (error) {
+      // Make API call to confirm booking
+      const response = await axiosInstance.post<BookingConfirmResponse>('/api/bookings/confirm', bookingRequest);
+      
+      if (response.data.success) {
+        showMessage('success', `Booking confirmed! Reference: ${response.data.bookingReference}`);
+        setPaymentModalOpen(false);
+        
+        // Navigate to bookings page or confirmation page
+        setTimeout(() => {
+          navigate('/bookings', { 
+            state: { 
+              bookingReference: response.data.bookingReference,
+              message: 'Booking confirmed successfully!' 
+            } 
+          });
+        }, 2000);
+      } else {
+        showMessage('error', response.data.message || 'Booking failed. Please try again.');
+      }
+    } catch (error: any) {
       console.error('Booking failed:', error);
-      showMessage('error', 'Booking failed. Please try again.');
+      showMessage('error', error.response?.data?.message || 'Booking failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -322,44 +433,72 @@ const SeatSelectionPage: React.FC = () => {
           eventScheduleId={eventScheduleId!}
           venueId={venueId}
           onSeatSelect={handleSeatSelect}
+          onSharedAreaSelect={handleSharedAreaSelect}
           maxSelection={10}
           selectedSeats={selectedSeats}
         />
       </div>
 
       {/* Booking summary */}
-      {showBookingSummary && selectedSeats.length > 0 && (
-        <div className="booking-summary" ref={summaryRef}>
+      {showBookingSummary && (selectedSeats.length > 0 || sharedAreaSelections.length > 0) && (
+        <div className={`booking-summary ${isCollapsed ? 'collapsed' : ''}`} ref={summaryRef}>
           <div className="summary-content">
             <div className="summary-header">
               <h3>Booking Summary</h3>
-              {isHolding && (
+              <button 
+                className="collapse-btn"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                title={isCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {isCollapsed ? '▲' : '▼'}
+              </button>
+              {isHolding && !isCollapsed && (
                 <div className="hold-timer">
                   Time remaining: <strong>{formatTime(holdTimer)}</strong>
                 </div>
               )}
             </div>
 
-            <div className="summary-details">
-              <div className="summary-row">
-                <span>Selected Seats:</span>
-                <strong>{selectedSeats.length}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Seat IDs:</span>
-                <div className="seat-badges">
-                  {selectedSeats.map(seatId => (
-                    <span key={seatId} className="seat-badge">{seatId}</span>
+            {!isCollapsed && (
+              <>
+                <div className="summary-details">
+                  {selectedSeats.length > 0 && (
+                    <>
+                      <div className="summary-row">
+                        <span>Selected Seats:</span>
+                        <strong>{selectedSeats.length}</strong>
+                      </div>
+                      <div className="summary-row">
+                        <span>Seat IDs:</span>
+                        <div className="seat-badges">
+                          {selectedSeats.map(seatId => (
+                            <span key={seatId} className="seat-badge">{seatId}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => (
+                    <React.Fragment key={`shared-area-${selection.areaNumber}`}>
+                      <div className="summary-row">
+                        <span>{selection.categoryName}:</span>
+                        <strong>{selection.ticketCount} ticket{selection.ticketCount > 1 ? 's' : ''}</strong>
+                      </div>
+                      <div className="summary-row">
+                        <span>Price ({selection.categoryName}):</span>
+                        <strong>{(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR</strong>
+                      </div>
+                    </React.Fragment>
                   ))}
+                  
+                  <div className="summary-row total">
+                    <span>Total Price:</span>
+                    <strong>{totalPrice.toLocaleString()} LKR</strong>
+                  </div>
                 </div>
-              </div>
-              <div className="summary-row total">
-                <span>Total Price:</span>
-                <strong>{totalPrice.toLocaleString()} LKR</strong>
-              </div>
-            </div>
 
-            <div className="summary-actions">
+                <div className="summary-actions">
               {!isHolding ? (
                 <>
                   <button 
@@ -372,12 +511,16 @@ const SeatSelectionPage: React.FC = () => {
                   <button 
                     onClick={handleProceedToPayment} 
                     className="btn btn-success"
-                    disabled={selectedSeats.length === 0}
+                    disabled={selectedSeats.length === 0 && sharedAreaSelections.length === 0}
                   >
                     Proceed to Payment
                   </button>
                   <button 
-                    onClick={() => setSelectedSeats([])} 
+                    onClick={() => {
+                      setSelectedSeats([]);
+                      setSharedAreaSelections([]);
+                      setTotalPrice(0);
+                    }} 
                     className="btn btn-secondary"
                   >
                     Clear Selection
@@ -401,7 +544,9 @@ const SeatSelectionPage: React.FC = () => {
                   </button>
                 </>
               )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -605,10 +750,14 @@ const SeatSelectionPage: React.FC = () => {
                         I accept and agree to{' '}
                         <Typography
                           component="a"
-                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setTermsDialogOpen(true);
+                          }}
                           sx={{
                             color: '#ff1955',
                             textDecoration: 'none',
+                            cursor: 'pointer',
                             '&:hover': { textDecoration: 'underline' },
                           }}
                         >
@@ -692,6 +841,18 @@ const SeatSelectionPage: React.FC = () => {
                     No seats selected
                   </Typography>
                 )}
+                
+                {/* Shared Area Tickets */}
+                {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection, index) => (
+                  <Box key={`shared-area-${selection.areaNumber}`} sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR - {selection.categoryName.toUpperCase()}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+                      {selection.ticketCount} ticket{selection.ticketCount > 1 ? 's' : ''} (Standing Area #{selection.areaNumber})
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
 
               {/* Pricing Summary */}
@@ -745,6 +906,172 @@ const SeatSelectionPage: React.FC = () => {
             </Grid>
           </Grid>
         </DialogContent>
+      </Dialog>
+
+      {/* Terms and Conditions Dialog */}
+      <Dialog
+        open={termsDialogOpen}
+        onClose={() => setTermsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle sx={{ 
+          bgcolor: '#ff1955', 
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>
+            Terms and Conditions
+          </Typography>
+          <IconButton
+            onClick={() => setTermsDialogOpen(false)}
+            sx={{ color: 'white' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ py: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955' }}>
+              1. Acceptance of Terms
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              By purchasing tickets through our platform, you agree to be bound by these Terms and Conditions. 
+              Please read them carefully before completing your booking.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              2. Ticket Purchase and Payment
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • All ticket sales are final and non-refundable unless the event is cancelled or postponed.
+              <br />
+              • Payment must be made in full at the time of booking.
+              <br />
+              • We accept various payment methods including credit/debit cards and online payment systems.
+              <br />
+              • A handling fee may be applied to each transaction.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              3. Ticket Delivery
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • E-tickets will be sent to the email address provided during booking.
+              <br />
+              • It is your responsibility to ensure the email address is correct.
+              <br />
+              • You must present a valid ticket (printed or on mobile device) for entry to the event.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              4. Event Cancellation or Postponement
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • If an event is cancelled, refunds will be issued to the original payment method.
+              <br />
+              • In case of postponement, your ticket will remain valid for the new date.
+              <br />
+              • We are not responsible for any additional costs incurred (travel, accommodation, etc.).
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              5. Entry Requirements
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • Entry is subject to venue terms and conditions.
+              <br />
+              • Age restrictions may apply for certain events.
+              <br />
+              • Management reserves the right to refuse entry without refund.
+              <br />
+              • Security checks may be conducted at the venue.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              6. Prohibited Items and Behavior
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • Recording devices, professional cameras, and unauthorized merchandise are prohibited.
+              <br />
+              • Disruptive or offensive behavior may result in removal from the venue.
+              <br />
+              • Smoking, alcohol, and illegal substances are strictly prohibited unless otherwise stated.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              7. Liability
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • We are not liable for any injury, loss, or damage at the event.
+              <br />
+              • Attendees participate at their own risk.
+              <br />
+              • Personal belongings are the responsibility of the ticket holder.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              8. Ticket Resale
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • Tickets may not be resold for commercial purposes or at a premium.
+              <br />
+              • Unauthorized resale may result in ticket cancellation without refund.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              9. Privacy and Data Protection
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              • Your personal information will be processed in accordance with our Privacy Policy.
+              <br />
+              • We may use your contact details to send event-related communications.
+            </Typography>
+
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#ff1955', mt: 2 }}>
+              10. Contact Information
+            </Typography>
+            <Typography variant="body2" paragraph sx={{ color: 'text.secondary' }}>
+              For any questions or concerns regarding these terms, please contact our customer support team.
+            </Typography>
+
+            <Typography variant="body2" sx={{ mt: 3, fontStyle: 'italic', color: 'text.secondary' }}>
+              Last updated: February 2, 2026
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => {
+              setAcceptTerms(true);
+              setTermsDialogOpen(false);
+            }}
+            variant="contained"
+            sx={{
+              bgcolor: '#ff1955',
+              '&:hover': { bgcolor: '#e01545' },
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Accept and Close
+          </Button>
+          <Button
+            onClick={() => setTermsDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: '#ff1955',
+              color: '#ff1955',
+              textTransform: 'none',
+              '&:hover': { borderColor: '#e01545', bgcolor: 'rgba(255, 25, 85, 0.04)' },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
