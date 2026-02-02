@@ -259,8 +259,8 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      //: still have to Implement actual booking confirmation with payment gateway
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      //: payment gate eka integrate karanna thiye booking confirmation ekath ekka
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       showMessage('success', 'Booking confirmed successfully!');
       setPaymentModalOpen(false);

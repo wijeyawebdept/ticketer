@@ -242,4 +242,3 @@ ORDER BY difference DESC;
 
 
 
-

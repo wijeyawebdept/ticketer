@@ -64,8 +64,14 @@ const VenuesPage = () => {
     user?.role === 'ROLE_SUPER_ADMIN'
   );
   
-  // Check if user is organizer - organizers cannot modify venues
+  // Check if user is organizer - organizers can access seating but cannot modify venue details
   const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER';
+  
+  // Check if user is organizer employee
+  const isOrganizerEmployee = user?.role === 'ORGANIZER_EMPLOYEE' || user?.role === 'ROLE_ORGANIZER_EMPLOYEE';
+  
+  // Organizers and organizer employees can access seating arrangements
+  const canAccessSeating = isAdmin || isOrganizer || isOrganizerEmployee;
   
   // Fetch all venues from the API
   const fetchVenues = useCallback(async () => {
@@ -200,11 +206,13 @@ const VenuesPage = () => {
 
   // Handle seating arrangement
   const handleSeatingArrangement = (venue: Venue) => {
-    // Use different paths for admin and organizer
+    // Use different paths based on user role
     if (isAdmin) {
       navigate(`/venues/${venue.id}/seating`);
-    } else {
+    } else if (isOrganizer) {
       navigate(`/organizer/venues/${venue.id}/seating`);
+    } else if (isOrganizerEmployee) {
+      navigate(`/employee/venues/${venue.id}/seating`);
     }
   };
 
@@ -421,18 +429,15 @@ const VenuesPage = () => {
               </IconButton>
             </span>
           </Tooltip>
-          <Tooltip title={isOrganizer ? "Organizers cannot modify seating" : "Seating Arrangement"}>
-            <span>
-              <IconButton
-                onClick={() => handleSeatingArrangement(params.row)}
-                size="small"
-                color="secondary"
-                disabled={isOrganizer}
-                sx={{ mr: 1 }}
-              >
-                <EventSeatIcon />
-              </IconButton>
-            </span>
+          <Tooltip title="Seating Arrangement">
+            <IconButton
+              onClick={() => handleSeatingArrangement(params.row)}
+              size="small"
+              color="secondary"
+              sx={{ mr: 1 }}
+            >
+              <EventSeatIcon />
+            </IconButton>
           </Tooltip>
           {(params.row.status ?? 1) === 1 ? (
             <Tooltip title={isOrganizer ? "Organizers cannot deactivate venues" : "Deactivate Venue"}>

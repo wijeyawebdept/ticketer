@@ -409,27 +409,43 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           onMouseLeave={handleMouseUp}
           onClick={handleSVGClick}
         >
-          {/* Stage */}
-          <rect
-            x="400"
-            y="50"
-            width="700"
-            height="70"
-            fill="#d3d3d3"
-            stroke="#666"
-            strokeWidth="3"
-            rx="8"
-          />
-          <text
-            x="750"
-            y="95"
-            textAnchor="middle"
-            fontSize="28"
-            fontWeight="bold"
-            fill="#333"
-          >
-            STAGE
-          </text>
+          {/* Stage - Calculated based on seat alignment */}
+          {venueSeats.length > 0 && (() => {
+            // Calculate stage bounds from seats
+            const xPositions = venueSeats.map(s => s.xPosition).filter(x => !isNaN(x));
+            const minX = Math.min(...xPositions);
+            const maxX = Math.max(...xPositions);
+            const centerX = (minX + maxX) / 2;
+            const stageWidth = (maxX - minX) * 1.05; // 5% padding on each side
+            const stageX = centerX - (stageWidth / 2);
+            const stageY = 30;
+            const stageHeight = 80;
+            
+            return (
+              <>
+                <rect
+                  x={stageX}
+                  y={stageY}
+                  width={stageWidth}
+                  height={stageHeight}
+                  fill="#d3d3d3"
+                  stroke="#666"
+                  strokeWidth="3"
+                  rx="8"
+                />
+                <text
+                  x={centerX}
+                  y={stageY + stageHeight - 18}
+                  textAnchor="middle"
+                  fontSize="28"
+                  fontWeight="bold"
+                  fill="#333"
+                >
+                  STAGE
+                </text>
+              </>
+            );
+          })()}
 
           {/* Seats - Render from database */}
           <g id="seats-container">
