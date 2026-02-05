@@ -47,6 +47,7 @@ import PublicEvents from './pages/Public/Events';
 import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
+import { PaymentSuccess, PaymentCancel, PaymentError } from './pages/Public/Payment';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -305,6 +306,10 @@ function App() {
               <Route path="/event/:id" element={<EventDetails />} />
               <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />
               <Route path="/gallery" element={<Gallery />} />
+              {/* Payment Result Pages */}
+              <Route path="/booking/payment-success" element={<PaymentSuccess />} />
+              <Route path="/booking/payment-cancel" element={<PaymentCancel />} />
+              <Route path="/booking/payment-error" element={<PaymentError />} />
             </Route>
 
             {/* Default redirect - use role-based routing */}

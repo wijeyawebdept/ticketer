@@ -39,9 +39,17 @@ public class BookingSeat {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id", nullable = false)
+    private Event event;
+
     public void setBooking(Booking booking) {
         this.booking = booking;
+        // Also set the event from the booking
+        if (booking != null && booking.getEvent() != null) {
+            this.event = booking.getEvent();
+        }
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,9 +66,13 @@ public class BookingSeat {
     @Builder.Default
     @Column(name = "is_shared_area_ticket")
     private Boolean isSharedAreaTicket = false;
-    
+
     @Column(name = "shared_area_number")
     private Integer sharedAreaNumber;
+
+    // VenueSeat support - stores the VenueSeat ID (String format like "L-A-01")
+    @Column(name = "venue_seat_id", length = 20)
+    private String venueSeatId;
     
     // Add compatibility methods to support existing code
     public UUID getId() {

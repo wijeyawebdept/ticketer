@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refund Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2196F3;
+            margin: 0;
+            font-size: 28px;
+        }
+        .refund-icon {
+            font-size: 50px;
+            color: #2196F3;
+        }
+        .refund-details {
+            background-color: #e3f2fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .refund-details h2 {
+            color: #1976D2;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #bbdefb;
+            padding-bottom: 10px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e3f2fd;
+        }
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .refund-amount {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .refund-amount h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .refund-amount .amount {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .reason-section {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .reason-section h3 {
+            color: #e65100;
+            margin-top: 0;
+            font-size: 14px;
+        }
+        .processing-notice {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .processing-notice p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .footer {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="refund-icon">↩</div>
+            <h1>Refund Processed</h1>
+        </div>
+
+        <p>Your refund request has been processed successfully. The amount will be credited back to your original payment method.</p>
+
+        <div class="refund-amount">
+            <h3>Refund Amount</h3>
+            <div class="amount">
+                <span th:text="${currency}">LKR</span> <span th:text="${#numbers.formatDecimal(refundAmount, 1, 2)}">5,000.00</span>
+            </div>
+        </div>
+
+        <div class="refund-details">
+            <h2>Booking Details</h2>
+            <div class="detail-row">
+                <span class="detail-label">Booking Reference:</span>
+                <span class="detail-value" th:text="${bookingReference}">ABC123XYZ</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Event:</span>
+                <span class="detail-value" th:text="${eventName}">Concert Name</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Original Amount:</span>
+                <span class="detail-value">
+                    <span th:text="${currency}">LKR</span> <span th:text="${#numbers.formatDecimal(originalAmount, 1, 2)}">5,000.00</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="reason-section">
+            <h3>Refund Reason</h3>
+            <p th:text="${reason}">Customer requested cancellation</p>
+        </div>
+
+        <div class="processing-notice">
+            <p><strong>Processing Time:</strong></p>
+            <p>Refunds typically take 5-10 business days to appear in your account, depending on your bank or card issuer.</p>
+        </div>
+
+        <div class="footer">
+            <p>If you have any questions about this refund, please contact our support team.</p>
+            <p>&copy; 2024 Ticket Booking System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

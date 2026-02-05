@@ -41,15 +41,16 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/api/auth/**", 
-                    "/auth/**", 
-                    "/h2-console/**", 
-                    "/swagger-ui/**", 
+                    "/api/auth/**",
+                    "/auth/**",
+                    "/h2-console/**",
+                    "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/uploads/**",
                     "/uploads/profile-pictures/**",
                     "/api/public/**",
                     "/api/venues/**",
+                    "/api/payments/webhook",
                     "/error"
                 ).permitAll()
                 .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")

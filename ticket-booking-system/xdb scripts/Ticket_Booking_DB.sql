@@ -233,7 +233,10 @@ GROUP BY v.venue_id, v.name, v.capacity
 ORDER BY difference DESC;
 
 
+ALTER TABLE booking_seats DROP CONSTRAINT chk_seat_or_shared_area;
 
+ALTER TABLE booking_seats ADD CONSTRAINT chk_seat_or_shared_area 
+    CHECK (seat_id IS NOT NULL OR is_shared_area_ticket = true OR venue_seat_id IS NOT NULL);
 
 
 

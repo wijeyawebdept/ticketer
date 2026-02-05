@@ -15,11 +15,13 @@ import {
   FormControlLabel,
   Button,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
+import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -330,60 +332,104 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Build the booking confirmation request
-      const bookingRequest = {
-        eventId: eventDetails?.eventId,
-        scheduleId: eventScheduleId,
-        seatIds: selectedSeatDetails.map(seat => seat.seatId).filter((id: string) => id), // Only include valid seat IDs
+      // Build the payment initiation request
+      const paymentRequest: InitiatePaymentRequest = {
+        eventId: eventDetails?.eventId || '',
+        scheduleId: eventScheduleId || '',
+        seatIds: selectedSeatDetails.map(seat => seat.seatId).filter((id: string) => id),
         sharedAreaTickets: sharedAreaSelections.map(selection => ({
-          categoryId: null, // Will be determined by backend based on shared area number
+          categoryId: undefined,
           categoryName: selection.categoryName,
           sharedAreaNumber: selection.areaNumber,
           ticketCount: selection.ticketCount,
           pricePerTicket: selection.pricePerTicket,
         })),
-        paymentId: `PAY-${Date.now()}`, // This should come from actual payment gateway
-        paymentMethod: selectedPaymentMethod.toUpperCase(),
-        totalAmount: totalPrice,
+        totalAmount: totalPrice + 100, // Include handling fee
+        currency: 'LKR',
+        customerInfo: {
+          firstName: customerInfo.firstName,
+          lastName: customerInfo.lastName,
+          email: customerInfo.email,
+          phone: customerInfo.phone,
+          nic: customerInfo.nic,
+        },
       };
 
-      console.log('Booking request:', bookingRequest);
-      
-      // Define response type
-      interface BookingConfirmResponse {
-        success: boolean;
-        message?: string;
-        bookingReference?: string;
-        bookingId?: string;
-        bookedSeats?: number;
-        sharedAreaTickets?: number;
-        totalTickets?: number;
-        paymentId?: string;
-      }
-      
-      // Make API call to confirm booking
-      const response = await axiosInstance.post<BookingConfirmResponse>('/api/bookings/confirm', bookingRequest);
-      
-      if (response.data.success) {
-        showMessage('success', `Booking confirmed! Reference: ${response.data.bookingReference}`);
-        setPaymentModalOpen(false);
-        
-        // Navigate to bookings page or confirmation page
-        setTimeout(() => {
-          navigate('/bookings', { 
-            state: { 
-              bookingReference: response.data.bookingReference,
-              message: 'Booking confirmed successfully!' 
-            } 
-          });
-        }, 2000);
-      } else {
-        showMessage('error', response.data.message || 'Booking failed. Please try again.');
-      }
+      console.log('Initiating MPGS payment:', paymentRequest);
+
+      // Step 1: Initiate payment - creates pending booking and MPGS session
+      const sessionResponse = await paymentService.initiatePayment(paymentRequest);
+      console.log('MPGS Session created:', sessionResponse);
+
+      // Step 2: Load MPGS Checkout script
+      showMessage('success', 'Connecting to payment gateway...');
+      await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
+
+      // Step 3: Show MPGS Lightbox for payment
+      paymentService.showMPGSCheckout(
+        sessionResponse.sessionId,
+        sessionResponse.merchantId,
+        {
+          onComplete: async (resultIndicator: string, sessionVersion: string) => {
+            console.log('Payment completed:', resultIndicator, sessionVersion);
+            setLoading(true);
+            showMessage('success', 'Payment completed! Verifying...');
+
+            try {
+              // Step 4: Verify payment with backend
+              const verificationResult = await paymentService.verifyPayment(sessionResponse.sessionId);
+              console.log('Verification result:', verificationResult);
+
+              if (verificationResult.success) {
+                showMessage('success', `Booking confirmed! Reference: ${verificationResult.bookingReference}`);
+                setPaymentModalOpen(false);
+
+                // Navigate to success page
+                setTimeout(() => {
+                  navigate('/booking/payment-success', {
+                    state: {
+                      sessionId: sessionResponse.sessionId,
+                      bookingReference: verificationResult.bookingReference,
+                    },
+                  });
+                }, 1500);
+              } else {
+                showMessage('error', verificationResult.message || 'Payment verification failed');
+                // Navigate to error page
+                navigate('/booking/payment-error', {
+                  state: {
+                    sessionId: sessionResponse.sessionId,
+                    error: verificationResult.message,
+                  },
+                });
+              }
+            } catch (verifyError: any) {
+              console.error('Payment verification failed:', verifyError);
+              showMessage('error', 'Failed to verify payment. Please check your bookings.');
+            } finally {
+              setLoading(false);
+            }
+          },
+          onError: (error: any) => {
+            console.error('MPGS payment error:', error);
+            setLoading(false);
+            showMessage('error', error.message || 'Payment failed. Please try again.');
+          },
+          onCancel: () => {
+            console.log('Payment cancelled by user');
+            setLoading(false);
+            showMessage('error', 'Payment cancelled');
+            navigate('/booking/payment-cancel');
+          },
+        }
+      );
+
+      // Note: The loading state will be managed by the callbacks above
+      // Don't set loading to false here as the payment process is async
+
     } catch (error: any) {
-      console.error('Booking failed:', error);
-      showMessage('error', error.response?.data?.message || 'Booking failed. Please try again.');
-    } finally {
+      console.error('Payment initiation failed:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to initiate payment. Please try again.');
       setLoading(false);
     }
   };

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
+import com.ticket.ticket_booking_system.dto.request.InitiatePaymentRequest;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
@@ -26,6 +27,8 @@ import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
+import com.ticket.ticket_booking_system.entity.VenueSeat;
 
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,146 @@ public class BookingService {
     private final EventScheduleService eventScheduleService;
     private final UserRepository userRepository;
     private final SeatRepository seatRepository;
+    private final VenueSeatRepository venueSeatRepository;
+
+    /**
+     * Create a PENDING booking before payment is processed
+     * This reserves the booking record but doesn't confirm it or update seat availability
+     *
+     * @param userId User ID
+     * @param request Payment initiation request
+     * @return Pending booking
+     */
+    public Booking createPendingBooking(UUID userId, InitiatePaymentRequest request) {
+        log.info("Creating PENDING booking for user {} with event {} and schedule {}",
+                userId, request.getEventId(), request.getScheduleId());
+
+        // Fetch required entities
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        Event event = eventRepository.findById(request.getEventId())
+                .orElseThrow(() -> new RuntimeException("Event not found with ID: " + request.getEventId()));
+
+        EventSchedule schedule = eventScheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + request.getScheduleId()));
+
+        // Create PENDING booking (not confirmed yet)
+        Booking booking = Booking.builder()
+                .user(user)
+                .event(event)
+                .eventSchedule(schedule)
+                .totalAmount(request.getTotalAmount())
+                .status(Booking.BookingStatus.PENDING)
+                .bookingReference(generateBookingReference())
+                .attended(false)
+                .build();
+
+        // Add seat bookings if any (using VenueSeat with String ID)
+        if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
+            for (String seatId : request.getSeatIds()) {
+                VenueSeat venueSeat = venueSeatRepository.findById(seatId)
+                        .orElseThrow(() -> new RuntimeException("VenueSeat not found with ID: " + seatId));
+
+                // Get price from VenueSeat's category
+                BigDecimal price = venueSeat.getCategory() != null ?
+                        venueSeat.getCategory().getBasePrice() : BigDecimal.ZERO;
+
+                BookingSeat bookingSeat = BookingSeat.builder()
+                        .event(event) // Set the event (required by database constraint)
+                        .seat(null) // VenueSeat doesn't link to Seat entity
+                        .venueSeatId(seatId) // Store the VenueSeat ID
+                        .priceAtBooking(price)
+                        .ticketCode(generateTicketCode())
+                        .isSharedAreaTicket(false)
+                        .build();
+
+                booking.addSeat(bookingSeat);
+            }
+        }
+
+        // Add shared area tickets if any
+        if (request.getSharedAreaTickets() != null && !request.getSharedAreaTickets().isEmpty()) {
+            for (InitiatePaymentRequest.SharedAreaTicketRequest sharedAreaTicket : request.getSharedAreaTickets()) {
+                for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
+                    BookingSeat bookingSeat = BookingSeat.builder()
+                            .event(event) // Set the event (required by database constraint)
+                            .seat(null)
+                            .priceAtBooking(sharedAreaTicket.getPricePerTicket())
+                            .ticketCode(generateTicketCode())
+                            .isSharedAreaTicket(true)
+                            .sharedAreaNumber(sharedAreaTicket.getSharedAreaNumber())
+                            .build();
+
+                    booking.addSeat(bookingSeat);
+                }
+
+                log.info("Added {} shared area tickets for area {} ({})",
+                        sharedAreaTicket.getTicketCount(),
+                        sharedAreaTicket.getSharedAreaNumber(),
+                        sharedAreaTicket.getCategoryName());
+            }
+        }
+
+        // NOTE: Do NOT update schedule availability yet - only after payment confirmation
+
+        Booking savedBooking = bookingRepository.save(booking);
+        log.info("PENDING booking created with reference: {}", savedBooking.getBookingReference());
+
+        return savedBooking;
+    }
+
+    /**
+     * Confirm a booking after successful payment
+     *
+     * @param bookingId Booking ID
+     * @return Confirmed booking
+     */
+    public Booking confirmBookingAfterPayment(UUID bookingId) {
+        log.info("Confirming booking after payment: {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        if (booking.getStatus() != Booking.BookingStatus.PENDING) {
+            throw new RuntimeException("Booking is not in PENDING status: " + booking.getStatus());
+        }
+
+        // Update status to CONFIRMED
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+
+        // Update schedule availability
+        int totalTickets = booking.getBookingSeats().size();
+        eventScheduleService.reserveSeats(booking.getEventSchedule().getScheduleId(), totalTickets);
+
+        Booking confirmedBooking = bookingRepository.save(booking);
+        log.info("Booking confirmed with reference: {}", confirmedBooking.getBookingReference());
+
+        return confirmedBooking;
+    }
+
+    /**
+     * Cancel a booking after payment failure
+     *
+     * @param bookingId Booking ID
+     * @param reason Cancellation reason
+     * @return Cancelled booking
+     */
+    public Booking cancelBookingAfterPaymentFailure(UUID bookingId, String reason) {
+        log.info("Cancelling booking after payment failure: {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+        booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancellationReason(reason);
+
+        Booking cancelledBooking = bookingRepository.save(booking);
+        log.info("Booking cancelled due to: {}", reason);
+
+        return cancelledBooking;
+    }
 
     /**
      * Get all bookings for admin with filters

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4CAF50;
+            margin: 0;
+            font-size: 28px;
+        }
+        .success-icon {
+            font-size: 50px;
+            color: #4CAF50;
+        }
+        .booking-details {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .booking-details h2 {
+            color: #333;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .booking-reference {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .booking-reference h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .booking-reference .reference-code {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .ticket-section {
+            margin-top: 20px;
+        }
+        .ticket-section h3 {
+            color: #333;
+            font-size: 16px;
+        }
+        .ticket-details {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-line;
+        }
+        .total-amount {
+            text-align: center;
+            font-size: 24px;
+            color: #4CAF50;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .important-notice {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="success-icon">✓</div>
+            <h1>Booking Confirmed!</h1>
+        </div>
+
+        <p>Thank you for your booking! Your payment has been successfully processed.</p>
+
+        <div class="booking-reference">
+            <h3>Your Booking Reference</h3>
+            <div class="reference-code" th:text="${bookingReference}">ABC123XYZ</div>
+        </div>
+
+        <div class="booking-details">
+            <h2>Event Details</h2>
+            <div class="detail-row">
+                <span class="detail-label">Event:</span>
+                <span class="detail-value" th:text="${eventName}">Concert Name</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date:</span>
+                <span class="detail-value" th:text="${eventDate}">2024-01-15</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Time:</span>
+                <span class="detail-value" th:text="${eventTime}">19:00</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Venue:</span>
+                <span class="detail-value" th:text="${venueName}">Main Stadium</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Number of Tickets:</span>
+                <span class="detail-value" th:text="${ticketCount}">2</span>
+            </div>
+        </div>
+
+        <div class="ticket-section">
+            <h3>Your Tickets</h3>
+            <div class="ticket-details" th:text="${seatDetails}">
+                Seat A1 - Ticket: TKT001
+                Seat A2 - Ticket: TKT002
+            </div>
+        </div>
+
+        <div class="total-amount">
+            Total Paid: <span th:text="${currency}">LKR</span> <span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">5,000.00</span>
+        </div>
+
+        <div class="important-notice">
+            <strong>Important:</strong>
+            <ul>
+                <li>Please arrive at least 30 minutes before the event start time</li>
+                <li>Bring this email or your booking reference for entry</li>
+                <li>Valid ID may be required at the venue</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>If you have any questions, please contact our support team.</p>
+            <p>&copy; 2024 Ticket Booking System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
