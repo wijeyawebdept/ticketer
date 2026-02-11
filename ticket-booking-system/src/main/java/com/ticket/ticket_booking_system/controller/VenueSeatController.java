@@ -118,6 +118,34 @@ public class VenueSeatController {
     }
 
     /**
+     * Remove accessible marking from a seat (admin/organizer only)
+     */
+    @PutMapping("/{seatId}/remove-accessible")
+    public ResponseEntity<Map<String, String>> removeAccessible(@PathVariable String seatId) {
+        try {
+            venueSeatService.removeAccessible(seatId);
+            return ResponseEntity.ok(Map.of("message", "Accessible marking removed", "seatId", seatId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of("message", "Failed to remove accessible marking: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove VIP reservation from a seat (admin/organizer only)
+     */
+    @PutMapping("/{seatId}/remove-vip")
+    public ResponseEntity<Map<String, String>> removeVIPReservation(@PathVariable String seatId) {
+        try {
+            venueSeatService.removeVIPReservation(seatId);
+            return ResponseEntity.ok(Map.of("message", "VIP reservation removed", "seatId", seatId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of("message", "Failed to remove VIP reservation: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Hold seats temporarily (5-minute timer) - Public endpoint for customers
      * POST /api/venue-seats/hold
      */

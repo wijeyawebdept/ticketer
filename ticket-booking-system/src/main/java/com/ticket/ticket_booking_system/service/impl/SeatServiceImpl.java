@@ -1,8 +1,11 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +31,7 @@ import com.ticket.ticket_booking_system.service.SeatWebSocketService;
 public class SeatServiceImpl implements SeatService {
 
     private static final Logger logger = LoggerFactory.getLogger(SeatServiceImpl.class);
+    private static final AtomicBoolean cleanupRunning = new AtomicBoolean(false);
 
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
@@ -318,30 +322,58 @@ public class SeatServiceImpl implements SeatService {
 
     @Override
     @Transactional
-    @Scheduled(fixedRate = 60000) // Run every minute
+    @Scheduled(fixedDelay = 60000, initialDelay = 15000) // Run every minute after previous completes, 15s initial delay
     public void releaseExpiredHolds() {
-        // Find expired holds before releasing them to notify users
-        List<Seat> expiredSeats = seatRepository.findExpiredHolds(LocalDateTime.now());
+        // Prevent concurrent execution
+        if (!cleanupRunning.compareAndSet(false, true)) {
+            logger.debug("SeatServiceImpl cleanup already running, skipping");
+            return;
+        }
+        
+        try {
+            // Use UTC time for consistency
+            LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+            String jobId = "seat-cleanup-" + Thread.currentThread().getName() + "-" + Instant.now().toEpochMilli();
+            
+            logger.debug("[{}] Starting expired seat holds release at {}", jobId, nowUtc);
+            
+            // Find expired holds before releasing them to notify users
+            List<Seat> expiredSeats = seatRepository.findExpiredHolds(nowUtc);
 
-        // Release expired holds
-        seatRepository.releaseExpiredHolds(LocalDateTime.now());
-
-        // Notify WebSocket subscribers about released seats
-        for (Seat seat : expiredSeats) {
-            webSocketService.notifySeatUpdate(
-                    seat.getEvent().getEventId(),
-                    seat,
-                    "RELEASED");
-
-            // Notify the user who held the seat
-            if (seat.getHeldByUser() != null) {
-                SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
-                        seat.getEvent().getEventId(),
-                        "Your seat hold has expired",
-                        "HOLD_EXPIRED",
-                        0);
-                webSocketService.notifyUserSeatHold(seat.getHeldByUser(), seat.getEvent().getEventId(), notification);
+            if (expiredSeats.isEmpty()) {
+                logger.debug("[{}] No expired seat holds to release", jobId);
+                return;
             }
+
+            // Release expired holds
+            int released = seatRepository.releaseExpiredHolds(nowUtc);
+            logger.info("[{}] Released {} expired seat holds", jobId, released);
+
+            // Notify WebSocket subscribers about released seats
+            for (Seat seat : expiredSeats) {
+                try {
+                    webSocketService.notifySeatUpdate(
+                            seat.getEvent().getEventId(),
+                            seat,
+                            "RELEASED");
+
+                    // Notify the user who held the seat
+                    if (seat.getHeldByUser() != null) {
+                        SeatWebSocketService.SeatHoldNotification notification = new SeatWebSocketService.SeatHoldNotification(
+                                seat.getEvent().getEventId(),
+                                "Your seat hold has expired",
+                                "HOLD_EXPIRED",
+                                0);
+                        webSocketService.notifyUserSeatHold(seat.getHeldByUser(), seat.getEvent().getEventId(), notification);
+                    }
+                } catch (Exception e) {
+                    logger.warn("[{}] Failed to notify WebSocket for seat {}: {}", jobId, seat.getSeatId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error during expired seat holds release", e);
+        } finally {
+            cleanupRunning.set(false);
         }
     }
 

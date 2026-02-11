@@ -1,62 +1,73 @@
 package com.ticket.ticket_booking_system.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
-import lombok.Data;
+import lombok.Getter;
 
 @Configuration
-@ConfigurationProperties(prefix = "mpgs")
-@Data
+@Getter
 public class MPGSConfig {
 
-    private Merchant merchant = new Merchant();
-    private Api api = new Api();
-    private String baseUrl;
+    @Value("${mpgs.merchant.id}")
+    private String merchantId;
+
+    @Value("${mpgs.api.url}")
+    private String apiUrl; // e.g. https://cbcmpgs.gateway.mastercard.com/api/rest
+
+    @Value("${mpgs.api.version}")
+    private String apiVersion; // e.g. 100
+
+    @Value("${mpgs.api.password}")
+    private String apiPassword;
+
+    @Value("${mpgs.webhook-secret}")
     private String webhookSecret;
+
+    @Value("${mpgs.currency:LKR}")
     private String currency;
+
+    @Value("${mpgs.success-url}")
     private String successUrl;
+
+    @Value("${mpgs.cancel-url}")
     private String cancelUrl;
+
+    @Value("${mpgs.error-url}")
     private String errorUrl;
 
-    @Data
-    public static class Merchant {
-        private String id;
-    }
-
-    @Data
-    public static class Api {
-        private String url;
-        private String version;
-        private String password;
-    }
-
     /**
-     * Get the MPGS Checkout script URL for frontend
-     * @param sessionId The session ID for checkout
-     * @return Full checkout.js script URL
-     */
-    public String getCheckoutScriptUrl(String sessionId) {
-        return baseUrl + "/checkout/version/" + api.version + "/checkout.js";
-    }
-
-    /**
-     * Get the API endpoint URL for a specific path
-     * @param path The API path (e.g., "/session","/order/123")
-     * @return Full API endpoint URL
+     * Build full API endpoint:
+     * {apiUrl}/version/{v}/merchant/{merchantId}{path}
      */
     public String getApiEndpoint(String path) {
-        return api.url + "/version/" + api.version + "/merchant/" + merchant.id + path;
+        String cleanPath = path.startsWith("/") ? path : "/" + path;
+        return apiUrl + "/version/" + apiVersion + "/merchant/" + merchantId + cleanPath;
     }
 
     /**
-     * Get Basic Authentication header for MPGS API calls
-     * Format: Basic base64(merchant.{merchantId}:{apiPassword})
-     * @return Basic auth header value
+     * MPGS uses HTTP Basic Auth:
+     * username = "merchant.{merchantId}"
+     * password = apiPassword
      */
     public String getBasicAuthHeader() {
-        String credentials = "merchant." + merchant.id + ":" + api.password;
-        return "Basic " + java.util.Base64.getEncoder()
-                .encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String username = "merchant." + merchantId;
+        String raw = username + ":" + apiPassword;
+        String encoded = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+        return "Basic " + encoded;
+    }
+
+    /**
+     * Checkout.js URL for MPGS v63+:
+     * https://{host}/static/checkout/checkout.min.js
+     * 
+     * The old format /checkout/version/{v}/checkout.js is deprecated for v63+
+     */
+    public String getCheckoutScriptUrl() {
+        String base = apiUrl.replace("/api/rest", "");
+        return base + "/static/checkout/checkout.min.js";
     }
 }

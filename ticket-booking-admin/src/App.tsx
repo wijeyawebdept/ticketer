@@ -48,6 +48,7 @@ import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
 import { PaymentSuccess, PaymentCancel, PaymentError } from './pages/Public/Payment';
+import BookingPaymentReturn from './pages/Bookings/BookingPaymentReturn';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -307,6 +308,7 @@ function App() {
               <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />
               <Route path="/gallery" element={<Gallery />} />
               {/* Payment Result Pages */}
+              <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />
               <Route path="/booking/payment-cancel" element={<PaymentCancel />} />
               <Route path="/booking/payment-error" element={<PaymentError />} />

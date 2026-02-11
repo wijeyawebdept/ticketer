@@ -21,7 +21,10 @@ const PaymentSuccess: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Get session ID from URL params or location state
-  const sessionId = searchParams.get('sessionId') || (location.state as any)?.sessionId;
+  const sessionId =
+    searchParams.get('sessionId') ||
+    (location.state as any)?.sessionId ||
+    localStorage.getItem('mpgs_sessionId');
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -35,6 +38,9 @@ const PaymentSuccess: React.FC = () => {
         // Verify payment with backend
         const result = await paymentService.verifyPayment(sessionId);
         setVerificationResult(result);
+
+        // Clear stored sessionId after verification attempt
+        localStorage.removeItem('mpgs_sessionId');
 
         if (!result.success) {
           setError(result.message || 'Payment verification failed');

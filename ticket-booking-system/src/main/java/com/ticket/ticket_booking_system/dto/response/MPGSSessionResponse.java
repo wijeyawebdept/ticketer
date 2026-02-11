@@ -61,4 +61,9 @@ public class MPGSSessionResponse {
      * Error redirect URL
      */
     private String errorUrl;
+
+    /**
+     * Order reference for the payment (used in Checkout.configure)
+     */
+    private String orderReference;
 }

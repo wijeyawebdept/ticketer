@@ -37,12 +37,40 @@ export interface SeatHoldResponse {
   expiresIn?: number;
 }
 
+// VenueSeat interface matching backend entity
+export interface VenueSeat {
+  seatId: string;
+  section: string;
+  rowLabel: string;
+  seatNumber: number;
+  category: {
+    categoryId: number;
+    categoryName: string;
+    basePrice: number;
+    colorCode: string;
+    displayOrder: number;
+  };
+  xPosition: number;
+  yPosition: number;
+  isAisleSeat: boolean;
+  isAccessible: boolean;
+  notes?: string;
+}
+
 export const venueSeatService = {
   /**
    * Get venue layout (all seats with positions)
    */
   getVenueLayout: async () => {
     const response = await axiosInstance.get('/api/venue-seats/layout');
+    return response.data;
+  },
+
+  /**
+   * Get venue layout for a specific venue by venue ID
+   */
+  getVenueLayoutByVenueId: async (venueId: string): Promise<VenueSeat[]> => {
+    const response = await axiosInstance.get<VenueSeat[]>(`/api/venue-seats/layout/${venueId}`);
     return response.data;
   },
 
@@ -97,6 +125,66 @@ export const venueSeatService = {
   initializeEventSeats: async (eventScheduleId: string | number) => {
     const response = await axiosInstance.post(
       `/api/venue-seats/initialize/${eventScheduleId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Lock a seat (admin only)
+   */
+  lockSeat: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/lock`
+    );
+    return response.data;
+  },
+
+  /**
+   * Unlock a seat (admin only)
+   */
+  unlockSeat: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/unlock`
+    );
+    return response.data;
+  },
+
+  /**
+   * Mark a seat as accessible (admin only)
+   */
+  markAccessible: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/accessible`
+    );
+    return response.data;
+  },
+
+  /**
+   * Remove accessible marking from a seat (admin only)
+   */
+  removeAccessible: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/remove-accessible`
+    );
+    return response.data;
+  },
+
+  /**
+   * Reserve a seat for VIP (admin only)
+   */
+  reserveForVIP: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/reserve-vip`
+    );
+    return response.data;
+  },
+
+  /**
+   * Remove VIP reservation from a seat (admin only)
+   */
+  removeVIPReservation: async (seatId: string): Promise<{ message: string; seatId: string }> => {
+    const response = await axiosInstance.put<{ message: string; seatId: string }>(
+      `/api/venue-seats/${seatId}/remove-vip`
     );
     return response.data;
   },

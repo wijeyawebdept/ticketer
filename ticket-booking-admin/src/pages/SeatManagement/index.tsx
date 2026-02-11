@@ -19,7 +19,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
 import {
   EventSeat,
@@ -29,9 +30,16 @@ import {
   LockOpen,
   Lock,
   Cancel,
-  HighlightOff
+  HighlightOff,
+  Info,
+  Star,
+  StarBorder,
+  Accessible,
+  AccessibleForward,
+  SelectAll
 } from '@mui/icons-material';
 import { Seat, SeatService } from '../../services/seat.service';
+import { venueSeatService, VenueSeat } from '../../services/venueSeatService';
 import { useSeatWebSocket } from '../../hooks/useSeatWebSocket';
 import { Event } from '../../types';
 import EventDropdown from '../../components/EventDropdown';
@@ -48,13 +56,20 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   const [eventId, setEventId] = useState<string>(propEventId || '');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
+  const [venueSeats, setVenueSeats] = useState<VenueSeat[]>([]);
+  const [viewMode, setViewMode] = useState<'event' | 'venue'>('venue'); // Default to venue view
   const [, setLoading] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: Seat | null }>({ open: false, seat: null });
+  const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: Seat | VenueSeat | null }>({ open: false, seat: null });
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Type guard to check if seat is a VenueSeat (has category object)
+  const isVenueSeat = (seat: Seat | VenueSeat): seat is VenueSeat => {
+    return 'category' in seat && typeof seat.category === 'object';
+  };
 
   // WebSocket integration
   const {
@@ -65,16 +80,39 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   // Handle event selection from dropdown
   const handleEventChange = (event: Event | null) => {
     setSelectedEvent(event);
+    setSelectedSeats([]);
     if (event) {
       setEventId(event.id);
-      loadSeats(event.id);
+      loadVenueSeats(event);
     } else {
       setEventId('');
       setSeats([]);
+      setVenueSeats([]);
     }
   };
 
-  // Load seats for an event
+  // Load venue seats for an event's venue
+  const loadVenueSeats = useCallback(async (event: Event) => {
+    if (!event.venue?.id) {
+      setError('Event does not have a venue assigned');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const venueLayout = await venueSeatService.getVenueLayoutByVenueId(event.venue.id);
+      setVenueSeats(venueLayout);
+      setSuccess(`Loaded ${venueLayout.length} venue seats for ${event.venue.name}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load venue seats');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load event-specific seats (legacy method)
   const loadSeats = useCallback(async (targetEventId: string) => {
     if (!targetEventId) {
       setError('Please select an event');
@@ -560,6 +598,435 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         </CardContent>
       </Card>
 
+      {/* Venue Information */}
+      {selectedEvent && selectedEvent.venue && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Venue: {selectedEvent.venue.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {selectedEvent.venue.address}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Total Venue Seats: {venueSeats.length}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Venue Seat Map */}
+      {venueSeats.length > 0 && (
+        <>
+          {/* Multi-Select Mode Banner */}
+          {multiSelectMode && (
+            <Alert 
+              severity="info" 
+              sx={{ mb: 2 }}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => setMultiSelectMode(false)}
+                >
+                  Exit Multi-Select
+                </Button>
+              }
+            >
+              <strong>Multi-Select Mode Active:</strong> Click on seats to select/deselect them, then use the bulk action buttons below.
+            </Alert>
+          )}
+
+          {/* Venue Seat Legend */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Venue Seat Legend
+                </Typography>
+                {isAdmin && !multiSelectMode && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<SelectAll />}
+                    onClick={() => setMultiSelectMode(true)}
+                  >
+                    Enable Multi-Select
+                  </Button>
+                )}
+              </Box>
+              <Grid container spacing={2} alignItems="center">
+                {Array.from(new Set(venueSeats.map(s => s.category.categoryName))).map(categoryName => {
+                  const seat = venueSeats.find(s => s.category.categoryName === categoryName);
+                  return (
+                    <Grid item key={categoryName} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 1,
+                          backgroundColor: seat?.category.colorCode || '#4caf50',
+                        }}
+                      />
+                      <Typography variant="body2">
+                        {categoryName} - LKR {seat?.category.basePrice?.toLocaleString()}
+                      </Typography>
+                    </Grid>
+                  );
+                })}
+                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 1,
+                      border: '3px solid #2196f3',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
+                  <Typography variant="body2">Selected</Typography>
+                </Grid>
+                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 1,
+                      backgroundColor: '#9e9e9e',
+                    }}
+                  />
+                  <Typography variant="body2">Locked</Typography>
+                </Grid>
+                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 1,
+                      backgroundColor: '#ffc107',
+                    }}
+                  />
+                  <Typography variant="body2">VIP Reserved</Typography>
+                </Grid>
+                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 1,
+                      backgroundColor: '#00bcd4',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                
+                  </Box>
+                  <Typography variant="body2">Accessible</Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          {/* Venue Seat Grid by Section */}
+          {Object.entries(
+            venueSeats.reduce((acc, seat) => {
+              if (!acc[seat.section]) {
+                acc[seat.section] = {};
+              }
+              if (!acc[seat.section][seat.rowLabel]) {
+                acc[seat.section][seat.rowLabel] = [];
+              }
+              acc[seat.section][seat.rowLabel].push(seat);
+              return acc;
+            }, {} as Record<string, Record<string, VenueSeat[]>>)
+          ).map(([section, rows]) => (
+            <Card key={section} sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Section: {section}
+                </Typography>
+                {Object.entries(rows)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([rowLabel, rowSeats]) => (
+                    <Box key={rowLabel} sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                        Row {rowLabel}
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {rowSeats
+                          .sort((a, b) => a.seatNumber - b.seatNumber)
+                          .map(seat => {
+                            const isSelected = selectedSeats.includes(seat.seatId);
+                            const isLocked = seat.notes?.toLowerCase().includes('[locked]');
+                            const isVIP = seat.notes?.toLowerCase().includes('[vip]');
+                            
+                            return (
+                              <Tooltip
+                                key={seat.seatId}
+                                title={
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      {seat.seatId}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      Category: {seat.category.categoryName}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      Price: LKR {seat.category.basePrice?.toLocaleString()}
+                                    </Typography>
+                                    {seat.isAccessible && (
+                                      <Typography variant="body2" color="info.main">
+                                         Wheelchair Accessible
+                                      </Typography>
+                                    )}
+                                    {seat.isAisleSeat && (
+                                      <Typography variant="body2">Aisle Seat</Typography>
+                                    )}
+                                    {isLocked && (
+                                      <Typography variant="body2" color="error"> LOCKED</Typography>
+                                    )}
+                                    {isVIP && (
+                                      <Typography variant="body2" color="secondary"> VIP Reserved</Typography>
+                                    )}
+                                    {seat.notes && !isLocked && !isVIP && (
+                                      <Typography variant="body2" color="text.secondary">
+                                        Note: {seat.notes}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                }
+                              >
+                                <IconButton
+                                  onClick={() => {
+                                    // In multi-select mode, just toggle selection
+                                    if (multiSelectMode) {
+                                      if (selectedSeats.includes(seat.seatId)) {
+                                        setSelectedSeats(prev => prev.filter(id => id !== seat.seatId));
+                                      } else {
+                                        setSelectedSeats(prev => [...prev, seat.seatId]);
+                                      }
+                                      return;
+                                    }
+                                    // Normal mode: show action dialog
+                                    setSeatActionDialog({ open: true, seat });
+                                  }}
+                                  sx={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 1,
+                                    backgroundColor: isLocked 
+                                      ? '#9e9e9e'  // Grey for locked
+                                      : isVIP 
+                                        ? '#ffc107'  // Yellow/Gold for VIP
+                                        : seat.isAccessible
+                                          ? '#00bcd4'  // Cyan for accessible
+                                          : seat.category.colorCode || '#4caf50',
+                                    border: isSelected 
+                                      ? '3px solid #2196f3' 
+                                      : 'none',
+                                    color: isVIP ? '#000' : 'white',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                      backgroundColor: isLocked 
+                                        ? '#757575'  // Darker grey on hover
+                                        : isVIP
+                                          ? '#ffb300'  // Darker gold on hover
+                                          : seat.isAccessible
+                                            ? '#0097a7'  // Darker cyan on hover
+                                            : seat.category.colorCode || '#388e3c',
+                                      opacity: 0.9,
+                                    },
+                                  }}
+                                >
+                                  {seat.isAccessible ? '♿' : seat.seatNumber}
+                                </IconButton>
+                              </Tooltip>
+                            );
+                          })}
+                      </Box>
+                    </Box>
+                  ))}
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Selected Seats Actions */}
+          {selectedSeats.length > 0 && (
+            <Card sx={{ mb: 3, position: 'sticky', bottom: 16, zIndex: 10 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Selected Seats ({selectedSeats.length})
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {selectedSeats.map(seatId => (
+                    <Chip
+                      key={seatId}
+                      label={seatId}
+                      onDelete={() => setSelectedSeats(prev => prev.filter(id => id !== seatId))}
+                      color="primary"
+                      size="small"
+                    />
+                  ))}
+                </Box>
+                <Grid container spacing={2}>
+                  {isAdmin && (
+                    <>
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.lockSeat(seatId);
+                              }
+                              setSuccess(`Locked ${selectedSeats.length} seats`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to lock seats');
+                            }
+                          }}
+                          startIcon={<Lock />}
+                        >
+                          Lock Seats
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.unlockSeat(seatId);
+                              }
+                              setSuccess(`Unlocked ${selectedSeats.length} seats`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to unlock seats');
+                            }
+                          }}
+                          startIcon={<LockOpen />}
+                        >
+                          Unlock Seats
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.reserveForVIP(seatId);
+                              }
+                              setSuccess(`Reserved ${selectedSeats.length} seats for VIP`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to reserve for VIP');
+                            }
+                          }}
+                          startIcon={<Star />}
+                        >
+                          Reserve VIP
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.removeVIPReservation(seatId);
+                              }
+                              setSuccess(`Removed VIP reservation from ${selectedSeats.length} seats`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to remove VIP reservation');
+                            }
+                          }}
+                          startIcon={<StarBorder />}
+                        >
+                          Remove VIP
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          color="info"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.markAccessible(seatId);
+                              }
+                              setSuccess(`Marked ${selectedSeats.length} seats as accessible`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to mark as accessible');
+                            }
+                          }}
+                          startIcon={<Accessible />}
+                        >
+                          Mark Accessible
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="outlined"
+                          color="info"
+                          onClick={async () => {
+                            try {
+                              for (const seatId of selectedSeats) {
+                                await venueSeatService.removeAccessible(seatId);
+                              }
+                              setSuccess(`Removed accessible marking from ${selectedSeats.length} seats`);
+                              setSelectedSeats([]);
+                              setMultiSelectMode(false);
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to remove accessible marking');
+                            }
+                          }}
+                          startIcon={<AccessibleForward />}
+                        >
+                          Remove Accessible
+                        </Button>
+                      </Grid>
+                    </>
+                  )}
+                  <Grid item>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        setSelectedSeats([]);
+                        setMultiSelectMode(false);
+                      }}
+                    >
+                      Clear Selection
+                    </Button>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
       {/* Seat Map */}
       {displaySeats.length > 0 && (
         <>
@@ -754,50 +1221,241 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         <DialogTitle>
           {seatActionDialog.seat && (
             <Box>
-              <Typography variant="h6">
-                Seat {seatActionDialog.seat.section} - Row {seatActionDialog.seat.rowNumber} - {seatActionDialog.seat.seatNumber}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                LKR {seatActionDialog.seat.price}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {seatActionDialog.seat.isBlocked && 'Status: BLOCKED'}
-                {seatActionDialog.seat.isPermanentHold && 'Status: PERMANENTLY HELD (Admin)'}
-                {!seatActionDialog.seat.isAvailable && !seatActionDialog.seat.isPermanentHold && !seatActionDialog.seat.isBlocked && !seatActionDialog.seat.holdExpiresAt && 'Status: BOOKED'}
-                {seatActionDialog.seat.holdExpiresAt && !seatActionDialog.seat.isPermanentHold && (
-                  <Box component="span" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
-                    Status: HELD - {getCountdown(seatActionDialog.seat.holdExpiresAt)} remaining
-                  </Box>
-                )}
-                {seatActionDialog.seat.isAvailable && !seatActionDialog.seat.isBlocked && !seatActionDialog.seat.isPermanentHold && !seatActionDialog.seat.holdExpiresAt && 'Status: AVAILABLE'}
-              </Typography>
+              {isVenueSeat(seatActionDialog.seat) ? (
+                // VenueSeat display
+                <>
+                  <Typography variant="h6">
+                    Seat {seatActionDialog.seat.section} - Row {seatActionDialog.seat.rowLabel} - {seatActionDialog.seat.seatNumber}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {seatActionDialog.seat.category.categoryName} - LKR {seatActionDialog.seat.category.basePrice?.toLocaleString()}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {seatActionDialog.seat.notes?.toLowerCase().includes('[locked]') && 'Status: LOCKED'}
+                    {seatActionDialog.seat.notes?.toLowerCase().includes('[vip]') && 'Status: VIP RESERVED'}
+                    {seatActionDialog.seat.isAccessible && ' ( Accessible)'}
+                    {!seatActionDialog.seat.notes?.toLowerCase().includes('[locked]') && !seatActionDialog.seat.notes?.toLowerCase().includes('[vip]') && 'Status: AVAILABLE'}
+                  </Typography>
+                </>
+              ) : (
+                // Seat display
+                <>
+                  <Typography variant="h6">
+                    Seat {seatActionDialog.seat.section} - Row {seatActionDialog.seat.rowNumber} - {seatActionDialog.seat.seatNumber}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    LKR {seatActionDialog.seat.price}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {seatActionDialog.seat.isBlocked && 'Status: BLOCKED'}
+                    {seatActionDialog.seat.isPermanentHold && 'Status: PERMANENTLY HELD (Admin)'}
+                    {!seatActionDialog.seat.isAvailable && !seatActionDialog.seat.isPermanentHold && !seatActionDialog.seat.isBlocked && !seatActionDialog.seat.holdExpiresAt && 'Status: BOOKED'}
+                    {seatActionDialog.seat.holdExpiresAt && !seatActionDialog.seat.isPermanentHold && (
+                      <Box component="span" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                        Status: HELD - {getCountdown(seatActionDialog.seat.holdExpiresAt)} remaining
+                      </Box>
+                    )}
+                    {seatActionDialog.seat.isAvailable && !seatActionDialog.seat.isBlocked && !seatActionDialog.seat.isPermanentHold && !seatActionDialog.seat.holdExpiresAt && 'Status: AVAILABLE'}
+                  </Typography>
+                </>
+              )}
             </Box>
           )}
         </DialogTitle>
         <DialogContent>
           {seatActionDialog.seat && (
             <List>
-              {getSeatActions(seatActionDialog.seat).length > 0 ? (
-                getSeatActions(seatActionDialog.seat).map((actionItem, index) => (
-                  <React.Fragment key={actionItem.action}>
-                    <ListItem disablePadding>
-                      <ListItemButton onClick={() => handleSeatAction(actionItem.action, seatActionDialog.seat!)}>
-                        <ListItemIcon sx={{ color: actionItem.color ? `${actionItem.color}.main` : 'inherit' }}>
-                          {actionItem.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={actionItem.label} />
-                      </ListItemButton>
+              {isVenueSeat(seatActionDialog.seat) ? (
+                // VenueSeat actions - Full admin privileges
+                <>
+                  {isAdmin ? (
+                    <>
+                      {/* Select Multiple */}
+                      <ListItem disablePadding>
+                        <ListItemButton onClick={() => {
+                          setMultiSelectMode(true);
+                          if (!selectedSeats.includes(seatActionDialog.seat!.seatId)) {
+                            setSelectedSeats(prev => [...prev, seatActionDialog.seat!.seatId]);
+                          }
+                          setSuccess('Multi-select mode enabled. Click more seats to select them.');
+                          closeSeatActionDialog();
+                        }}>
+                          <ListItemIcon sx={{ color: 'primary.main' }}>
+                            <SelectAll />
+                          </ListItemIcon>
+                          <ListItemText primary="Select Multiple Seats" />
+                        </ListItemButton>
+                      </ListItem>
+                      <Divider />
+
+                      {/* View Seat Details */}
+                      <ListItem disablePadding>
+                        <ListItemButton onClick={() => {
+                          const seat = seatActionDialog.seat as VenueSeat;
+                          alert(`Seat Details:\n\nSeat ID: ${seat.seatId}\nSection: ${seat.section}\nRow: ${seat.rowLabel}\nSeat #: ${seat.seatNumber}\n\nCategory: ${seat.category.categoryName}\nPrice: LKR ${seat.category.basePrice?.toLocaleString()}\n\nAccessible: ${seat.isAccessible ? 'Yes' : 'No'}\nAisle Seat: ${seat.isAisleSeat ? 'Yes' : 'No'}\n\nNotes: ${seat.notes || 'None'}`);
+                        }}>
+                          <ListItemIcon sx={{ color: 'info.main' }}>
+                            <Info />
+                          </ListItemIcon>
+                          <ListItemText primary="View Seat Details" />
+                        </ListItemButton>
+                      </ListItem>
+                      <Divider />
+
+                      {/* Lock/Unlock Seat */}
+                      {(seatActionDialog.seat as VenueSeat).notes?.toLowerCase().includes('[locked]') ? (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.unlockSeat(seatActionDialog.seat!.seatId);
+                              setSuccess('Seat unlocked successfully');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to unlock seat');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'success.main' }}>
+                              <LockOpen />
+                            </ListItemIcon>
+                            <ListItemText primary="Unlock Seat" />
+                          </ListItemButton>
+                        </ListItem>
+                      ) : (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.lockSeat(seatActionDialog.seat!.seatId);
+                              setSuccess('Seat locked successfully');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to lock seat');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'error.main' }}>
+                              <Lock />
+                            </ListItemIcon>
+                            <ListItemText primary="Lock Seat" />
+                          </ListItemButton>
+                        </ListItem>
+                      )}
+                      <Divider />
+
+                      {/* Reserve/Remove VIP */}
+                      {(seatActionDialog.seat as VenueSeat).notes?.toLowerCase().includes('[vip]') ? (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.removeVIPReservation(seatActionDialog.seat!.seatId);
+                              setSuccess('VIP reservation removed');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to remove VIP reservation');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'warning.main' }}>
+                              <StarBorder />
+                            </ListItemIcon>
+                            <ListItemText primary="Remove VIP Reservation" />
+                          </ListItemButton>
+                        </ListItem>
+                      ) : (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.reserveForVIP(seatActionDialog.seat!.seatId);
+                              setSuccess('Seat reserved for VIP');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to reserve for VIP');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'secondary.main' }}>
+                              <Star />
+                            </ListItemIcon>
+                            <ListItemText primary="Reserve for VIP" />
+                          </ListItemButton>
+                        </ListItem>
+                      )}
+                      <Divider />
+
+                      {/* Mark/Remove Accessible */}
+                      {(seatActionDialog.seat as VenueSeat).isAccessible ? (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.removeAccessible(seatActionDialog.seat!.seatId);
+                              setSuccess('Accessible marking removed');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to remove accessible marking');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'grey.500' }}>
+                              <AccessibleForward />
+                            </ListItemIcon>
+                            <ListItemText primary="Remove Accessible Marking" />
+                          </ListItemButton>
+                        </ListItem>
+                      ) : (
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={async () => {
+                            try {
+                              await venueSeatService.markAccessible(seatActionDialog.seat!.seatId);
+                              setSuccess('Seat marked as accessible');
+                              closeSeatActionDialog();
+                              if (selectedEvent) loadVenueSeats(selectedEvent);
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to mark as accessible');
+                            }
+                          }}>
+                            <ListItemIcon sx={{ color: 'info.main' }}>
+                              <Accessible />
+                            </ListItemIcon>
+                            <ListItemText primary="Mark as Accessible" />
+                          </ListItemButton>
+                        </ListItem>
+                      )}
+                    </>
+                  ) : (
+                    <ListItem>
+                      <ListItemText 
+                        primary="Select this seat" 
+                        secondary="Click to add to selection"
+                      />
                     </ListItem>
-                    {index < getSeatActions(seatActionDialog.seat!).length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
+                  )}
+                </>
               ) : (
-                <ListItem>
-                  <ListItemText 
-                    primary="No actions available" 
-                    secondary="This seat cannot be modified in its current state"
-                  />
-                </ListItem>
+                // Seat actions
+                <>
+                  {getSeatActions(seatActionDialog.seat).length > 0 ? (
+                    getSeatActions(seatActionDialog.seat).map((actionItem, index) => (
+                      <React.Fragment key={actionItem.action}>
+                        <ListItem disablePadding>
+                          <ListItemButton onClick={() => handleSeatAction(actionItem.action, seatActionDialog.seat as Seat)}>
+                            <ListItemIcon sx={{ color: actionItem.color ? `${actionItem.color}.main` : 'inherit' }}>
+                              {actionItem.icon}
+                            </ListItemIcon>
+                            <ListItemText primary={actionItem.label} />
+                          </ListItemButton>
+                        </ListItem>
+                        {index < getSeatActions(seatActionDialog.seat as Seat).length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <ListItem>
+                      <ListItemText 
+                        primary="No actions available" 
+                        secondary="This seat cannot be modified in its current state"
+                      />
+                    </ListItem>
+                  )}
+                </>
               )}
             </List>
           )}

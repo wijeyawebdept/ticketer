@@ -36,11 +36,14 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     @Query("SELECT s FROM Seat s WHERE s.event.eventId = :eventId AND s.isAvailable = true AND s.isBlocked = false")
     List<Seat> findAvailableSeatsByEventId(@Param("eventId") UUID eventId);
     
-    @Query("SELECT s FROM Seat s WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now")
+    @Query("SELECT s FROM Seat s WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now AND s.isPermanentHold = false AND s.isBlocked = false")
     List<Seat> findExpiredHolds(@Param("now") LocalDateTime now);
     
     @Modifying
-    @Query("UPDATE Seat s SET s.isAvailable = true, s.holdExpiresAt = null, s.heldByUser = null WHERE s.holdExpiresAt < :now")
+    @Query("UPDATE Seat s SET s.isAvailable = true, s.holdExpiresAt = null, s.heldByUser = null " +
+           "WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now " +
+           "AND (s.isPermanentHold = false OR s.isPermanentHold IS NULL) " +
+           "AND s.isBlocked = false")
     int releaseExpiredHolds(@Param("now") LocalDateTime now);
     
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event.eventId = :eventId AND s.isAvailable = false")

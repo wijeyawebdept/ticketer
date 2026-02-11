@@ -32,9 +32,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Controller for MPGS payment operations
- */
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -48,55 +45,49 @@ public class PaymentController {
     private final SeatService seatService;
     private final UserRepository userRepository;
 
-    /**
-     * Initiate payment - creates pending booking and MPGS session
-     * POST /api/payments/initiate
-     */
     @PostMapping("/initiate")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<MPGSSessionResponse> initiatePayment(
             @Valid @RequestBody InitiatePaymentRequest request,
             Authentication authentication) {
 
-        log.info("Initiating payment for user: {}, amount: {}",
-                authentication.getName(), request.getTotalAmount());
+        log.info("Initiating payment for user: {}, amount: {}", authentication.getName(), request.getTotalAmount());
 
         try {
-            // Get user from authentication
             UUID userId = extractUserIdFromAuth(authentication);
+            log.info("Step 1: User ID extracted: {}", userId);
 
-            // Create PENDING booking
             Booking booking = bookingService.createPendingBooking(userId, request);
+            log.info("Step 2: Pending booking created: {}", booking.getBookingId());
 
-            // Create checkout session with MPGS
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     request.getCurrency()
             );
+            log.info("Step 3: MPGS session created: {}", sessionResponse.getSessionId());
 
-            // Create PENDING transaction record
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     sessionResponse.getSessionId()
             );
-
-            log.info("Payment initiated successfully. BookingID: {}, SessionID: {}",
-                    booking.getBookingId(), sessionResponse.getSessionId());
+            log.info("Step 4: Pending transaction created");
 
             return ResponseEntity.ok(sessionResponse);
 
         } catch (Exception e) {
-            log.error("Payment initiation failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            log.error("Payment initiation failed: {}", e.getMessage(), e);
+            // Return error message so frontend can display it
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(MPGSSessionResponse.builder()
+                            .sessionId(null)
+                            .merchantId(null)
+                            .checkoutScriptUrl(null)
+                            .build());
         }
     }
 
-    /**
-     * Verify payment after MPGS redirect/completion
-     * GET /api/payments/verify?sessionId={sessionId}
-     */
     @GetMapping("/verify")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<PaymentVerificationResponse> verifyPayment(
@@ -106,13 +97,10 @@ public class PaymentController {
         log.info("Verifying payment for session: {}", sessionId);
 
         try {
-            // Retrieve payment result from MPGS
             MPGSPaymentResult result = mpgsPaymentService.verifyPayment(sessionId);
 
-            // Get transaction by session ID
             Transaction transaction = transactionService.getTransactionByReference(sessionId);
             if (transaction == null) {
-                log.error("Transaction not found for session: {}", sessionId);
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("ERROR")
@@ -122,23 +110,17 @@ public class PaymentController {
 
             Booking booking = transaction.getBooking();
 
-            // Update transaction status
-            Transaction.TransactionStatus newStatus = result.isSuccess() ?
-                    Transaction.TransactionStatus.SUCCESS :
-                    Transaction.TransactionStatus.FAILED;
+            Transaction.TransactionStatus newStatus = result.isSuccess()
+                    ? Transaction.TransactionStatus.SUCCESS
+                    : Transaction.TransactionStatus.FAILED;
 
             transactionService.updateTransactionStatus(sessionId, newStatus, result.getRawResponse());
 
             if (result.isSuccess()) {
-                // Confirm booking
                 Booking confirmedBooking = bookingService.confirmBookingAfterPayment(booking.getBookingId());
 
-                // Send confirmation email
                 String customerEmail = booking.getUser().getEmail();
                 emailService.sendBookingConfirmationEmail(confirmedBooking, customerEmail);
-
-                log.info("Payment verified successfully. BookingRef: {}",
-                        confirmedBooking.getBookingReference());
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)
@@ -151,20 +133,17 @@ public class PaymentController {
                         .paymentMethod(result.getCardType())
                         .build());
             } else {
-                // Cancel booking due to payment failure
                 bookingService.cancelBookingAfterPaymentFailure(
                         booking.getBookingId(),
-                        "Payment failed: " + result.getErrorMessage()
+                        "Payment failed: " + (result.getErrorMessage() != null ? result.getErrorMessage() : "Unknown")
                 );
 
-                // Release seat holds
                 try {
                     seatService.releaseSeatHolds(booking.getUser().getUserId());
                 } catch (Exception e) {
                     log.warn("Error releasing seat holds: {}", e.getMessage());
                 }
 
-                // Send failure email
                 String customerEmail = booking.getUser().getEmail();
                 emailService.sendPaymentFailureEmail(
                         customerEmail,
@@ -173,14 +152,12 @@ public class PaymentController {
                         result.getErrorMessage()
                 );
 
-                log.info("Payment verification failed. Reason: {}", result.getErrorMessage());
-
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("FAILED")
-                        .message(result.getErrorMessage() != null ?
-                                result.getErrorMessage() :
-                                "Payment was declined. Please try again.")
+                        .message(result.getErrorMessage() != null
+                                ? result.getErrorMessage()
+                                : "Payment was declined. Please try again.")
                         .build());
             }
 
@@ -194,11 +171,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Webhook endpoint for MPGS callbacks
-     * POST /api/payments/webhook
-     * Note: This endpoint is public and uses signature verification
-     */
     @PostMapping("/webhook")
     public ResponseEntity<Void> handleWebhook(
             @RequestBody String payload,
@@ -210,7 +182,6 @@ public class PaymentController {
             mpgsPaymentService.processWebhook(payload, signature);
             return ResponseEntity.ok().build();
         } catch (SecurityException e) {
-            log.warn("Webhook signature verification failed");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (Exception e) {
             log.error("Webhook processing failed", e);
@@ -218,10 +189,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Get payment status by session ID
-     * GET /api/payments/status?sessionId={sessionId}
-     */
     @GetMapping("/status")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<PaymentVerificationResponse> getPaymentStatus(
@@ -264,9 +231,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Extract user ID from authentication
-     */
     private UUID extractUserIdFromAuth(Authentication authentication) {
         String email = authentication.getName();
         User user = userRepository.findByEmail(email)
