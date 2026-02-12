@@ -60,4 +60,30 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, UUID> 
            "AND bs.venueSeatId IS NOT NULL " +
            "AND bs.booking.status = 'PENDING'")
     Long countHeldSeatsForSchedule(UUID scheduleId);
+
+    /**
+     * Check if a specific seat is booked for a schedule.
+     *
+     * @param venueSeatId the venue seat ID
+     * @param scheduleId the event schedule UUID
+     * @return true if seat is booked
+     */
+    @Query("SELECT COUNT(bs) > 0 FROM BookingSeat bs " +
+           "WHERE bs.venueSeatId = :venueSeatId " +
+           "AND bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.booking.status IN ('CONFIRMED', 'PENDING')")
+    boolean isSeatBooked(String venueSeatId, UUID scheduleId);
+
+    /**
+     * Delete booking seat by venue seat ID and schedule ID.
+     * Used by admin to unreserve a seat.
+     *
+     * @param venueSeatId the venue seat ID
+     * @param scheduleId the event schedule UUID
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM BookingSeat bs " +
+           "WHERE bs.venueSeatId = :venueSeatId " +
+           "AND bs.booking.eventSchedule.scheduleId = :scheduleId")
+    void deleteByVenueSeatIdAndScheduleId(String venueSeatId, UUID scheduleId);
 }

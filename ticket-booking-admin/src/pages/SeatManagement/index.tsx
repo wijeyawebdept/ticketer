@@ -20,7 +20,14 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip
+  Chip,
+  Badge,
+  Paper,
+  Collapse,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   EventSeat,
@@ -36,13 +43,25 @@ import {
   StarBorder,
   Accessible,
   AccessibleForward,
-  SelectAll
+  SelectAll,
+  Refresh,
+  ExpandMore,
+  ExpandLess,
+  Person,
+  AccessTime,
+  Wifi,
+  WifiOff,
+  NotificationsActive,
+  Delete,
+  RemoveCircle,
+  BookmarkRemove
 } from '@mui/icons-material';
 import { Seat, SeatService } from '../../services/seat.service';
-import { venueSeatService, VenueSeat } from '../../services/venueSeatService';
-import { useSeatWebSocket } from '../../hooks/useSeatWebSocket';
-import { Event } from '../../types';
+import { venueSeatService, VenueSeat, SeatDTO } from '../../services/venueSeatService';
+import { useSeatWebSocket, SeatActivityLog } from '../../hooks/useSeatWebSocket';
+import { Event, EventSchedule } from '../../types';
 import EventDropdown from '../../components/EventDropdown';
+import EventScheduleService from '../../services/eventSchedule.service';
 
 interface SeatManagementProps {
   eventId?: string;
@@ -55,39 +74,101 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 }) => {
   const [eventId, setEventId] = useState<string>(propEventId || '');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<EventSchedule | null>(null);
+  const [schedules, setSchedules] = useState<EventSchedule[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [venueSeats, setVenueSeats] = useState<VenueSeat[]>([]);
+  const [seatAvailability, setSeatAvailability] = useState<SeatDTO[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewMode, setViewMode] = useState<'event' | 'venue'>('venue'); // Default to venue view
   const [, setLoading] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: Seat | VenueSeat | null }>({ open: false, seat: null });
+  const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: Seat | VenueSeat | SeatDTO | null }>({ open: false, seat: null });
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showActivityPanel, setShowActivityPanel] = useState(true);
 
-  // Type guard to check if seat is a VenueSeat (has category object)
-  const isVenueSeat = (seat: Seat | VenueSeat): seat is VenueSeat => {
-    return 'category' in seat && typeof seat.category === 'object';
+  // Type guards for seat types
+  const isVenueSeat = (seat: Seat | VenueSeat | SeatDTO): seat is VenueSeat => {
+    return 'category' in seat && typeof seat.category === 'object' && !('status' in seat);
   };
 
-  // WebSocket integration
+  const isSeatDTO = (seat: Seat | VenueSeat | SeatDTO): seat is SeatDTO => {
+    return 'status' in seat && 'categoryName' in seat;
+  };
+
+  const isSeat = (seat: Seat | VenueSeat | SeatDTO): seat is Seat => {
+    return 'eventId' in seat && 'venueId' in seat && !('category' in seat);
+  };
+
+  // WebSocket integration with real-time activity
   const {
     isConnected: wsConnected,
-    seats: wsSeats
-  } = useSeatWebSocket(eventId || '');
+    connectionError: wsError,
+    seats: wsSeats,
+    activityLog,
+    stats: wsStats,
+    clearActivityLog,
+    reconnect: wsReconnect
+  } = useSeatWebSocket(selectedSchedule?.scheduleId || eventId || '');
+
+  // Load schedules when event is selected
+  const loadSchedules = useCallback(async (event: Event) => {
+    try {
+      const eventSchedules = await EventScheduleService.getSchedulesForEvent(event.id);
+      setSchedules(eventSchedules);
+      // Auto-select first schedule if available
+      if (eventSchedules.length > 0) {
+        setSelectedSchedule(eventSchedules[0]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load schedules:', err);
+      setSchedules([]);
+    }
+  }, []);
+
+  // Load seat availability for a specific schedule
+  const loadSeatAvailability = useCallback(async (scheduleId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await venueSeatService.getSeatAvailability(scheduleId);
+      setSeatAvailability(response.seats);
+      setSuccess(`Loaded ${response.seats.length} seats (${response.bookedSeats} booked, ${response.heldSeats} held)`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load seat availability');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Handle event selection from dropdown
-  const handleEventChange = (event: Event | null) => {
+  const handleEventChange = async (event: Event | null) => {
     setSelectedEvent(event);
     setSelectedSeats([]);
+    setSelectedSchedule(null);
+    setSchedules([]);
+    setSeatAvailability([]);
     if (event) {
       setEventId(event.id);
       loadVenueSeats(event);
+      await loadSchedules(event);
     } else {
       setEventId('');
       setSeats([]);
       setVenueSeats([]);
+    }
+  };
+
+  // Handle schedule selection
+  const handleScheduleChange = (schedule: EventSchedule | null) => {
+    setSelectedSchedule(schedule);
+    if (schedule) {
+      loadSeatAvailability(schedule.scheduleId);
+    } else {
+      setSeatAvailability([]);
     }
   };
 
@@ -395,6 +476,38 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     return `${minutes}m ${seconds}s`;
   };
 
+  // Get seat availability info for a venue seat (when schedule is selected)
+  const getSeatAvailabilityInfo = (seatId: string): SeatDTO | undefined => {
+    if (!selectedSchedule || seatAvailability.length === 0) return undefined;
+    return seatAvailability.find(s => s.seatId === seatId);
+  };
+
+  // Admin action to release a seat hold
+  const handleAdminReleaseHold = async (seatId: string) => {
+    if (!selectedSchedule) return;
+    try {
+      await venueSeatService.adminReleaseHold(selectedSchedule.scheduleId, seatId);
+      setSuccess(`Hold released for seat ${seatId}`);
+      closeSeatActionDialog();
+      loadSeatAvailability(selectedSchedule.scheduleId);
+    } catch (err: any) {
+      setError(err.message || 'Failed to release hold');
+    }
+  };
+
+  // Admin action to unreserve a booked seat
+  const handleAdminUnreserveSeat = async (seatId: string) => {
+    if (!selectedSchedule) return;
+    try {
+      await venueSeatService.adminUnreserveSeat(selectedSchedule.scheduleId, seatId);
+      setSuccess(`Booking removed for seat ${seatId}`);
+      closeSeatActionDialog();
+      loadSeatAvailability(selectedSchedule.scheduleId);
+    } catch (err: any) {
+      setError(err.message || 'Failed to unreserve seat');
+    }
+  };
+
   // Handle seat action from dialog
   const handleSeatAction = async (action: string, seat: Seat) => {
     closeSeatActionDialog();
@@ -408,7 +521,6 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         // Enter multi-select mode
         setMultiSelectMode(true);
         setSuccess('Multi-select mode enabled. Click more seats to select them, then use action buttons above.');
-        break;
         break;
       case 'block':
         await toggleSeatBlock(seat.seatId, false);
@@ -527,8 +639,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         // Update seat status based on WebSocket data
         return {
           ...seat,
-          isAvailable: wsSeat.status === 'available',
-          isBlocked: wsSeat.status === 'unavailable'
+          isAvailable: wsSeat.isAvailable,
+          isBlocked: wsSeat.isBlocked
         };
       }
       return seat;
@@ -569,14 +681,36 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Seat Management
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">
+          Seat Management
+        </Typography>
+        {eventId && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Chip
+              icon={wsConnected ? <Wifi /> : <WifiOff />}
+              label={wsConnected ? 'Live' : 'Offline'}
+              color={wsConnected ? 'success' : 'error'}
+              size="small"
+              variant="outlined"
+            />
+            {!wsConnected && (
+              <Button size="small" startIcon={<Refresh />} onClick={wsReconnect}>
+                Reconnect
+              </Button>
+            )}
+          </Box>
+        )}
+      </Box>
 
-      {/* Connection Status */}
-      {!wsConnected && eventId && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          WebSocket connection not established. Real-time updates unavailable.
+      {/* Connection Error Alert */}
+      {wsError && eventId && (
+        <Alert severity="error" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={wsReconnect}>
+            Retry
+          </Button>
+        }>
+          {wsError}
         </Alert>
       )}
 
@@ -595,8 +729,70 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               // The EventDropdown handles its own refresh
             }}
           />
+
+          {/* Schedule Selector */}
+          {selectedEvent && schedules.length > 0 && (
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel id="schedule-select-label">Select Schedule</InputLabel>
+              <Select
+                labelId="schedule-select-label"
+                value={selectedSchedule?.scheduleId || ''}
+                label="Select Schedule"
+                onChange={(e) => {
+                  const schedule = schedules.find(s => s.scheduleId === e.target.value);
+                  handleScheduleChange(schedule || null);
+                }}
+              >
+                {schedules.map((schedule) => (
+                  <MenuItem key={schedule.scheduleId} value={schedule.scheduleId}>
+                    {schedule.scheduleDate} at {schedule.startTime} - {schedule.endTime}
+                    {' '}({schedule.status}) - {schedule.availableSeats}/{schedule.capacity} available
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </CardContent>
       </Card>
+
+      {/* Live Monitoring Banner (when schedule is selected) */}
+      {selectedSchedule && (
+        <Alert 
+          severity="info" 
+          icon={<NotificationsActive />}
+          sx={{ 
+            mb: 3, 
+            backgroundColor: '#e3f2fd',
+            border: '2px solid #2196f3',
+            '& .MuiAlert-message': {
+              width: '100%'
+            }
+          }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              startIcon={<Refresh />}
+              onClick={() => {
+                if (selectedSchedule) {
+                  loadSeatAvailability(selectedSchedule.scheduleId);
+                  setSuccess('Refreshed seat availability');
+                }
+              }}
+            >
+              Refresh
+            </Button>
+          }
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+             LIVE MONITORING: Real-time Customer Seat Selection
+          </Typography>
+          <Typography variant="body2">
+            You are viewing live seat availability for this schedule. Orange seats with  icon are being held by customers during their booking process. 
+            Red seats ✓ are confirmed bookings (sold tickets).
+          </Typography>
+        </Alert>
+      )}
 
       {/* Venue Information */}
       {selectedEvent && selectedEvent.venue && (
@@ -604,13 +800,225 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Venue: {selectedEvent.venue.name}
+              {selectedSchedule && (
+                <Chip 
+                  label={`${selectedSchedule.scheduleDate} ${selectedSchedule.startTime}`}
+                  color="primary"
+                  size="small"
+                  sx={{ ml: 2 }}
+                />
+              )}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {selectedEvent.venue.address}
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               Total Venue Seats: {venueSeats.length}
+              {selectedSchedule && seatAvailability.length > 0 && (
+                <> | Schedule Seats: {seatAvailability.length}</>
+              )}
             </Typography>
+            {/* Comprehensive Seat Statistics (when schedule is selected) */}
+            {selectedSchedule && seatAvailability.length > 0 && (
+              <Paper elevation={2} sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5' }}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                   Seat Statistics for This Schedule
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" color="success.main">
+                        {seatAvailability.filter(s => s.status === 'AVAILABLE').length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Available
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" color="error.main">
+                        {seatAvailability.filter(s => s.status === 'BOOKED').length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Sold (Booked)
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" color="warning.main">
+                        {seatAvailability.filter(s => s.status === 'HELD').length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Held (Customers)
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" sx={{ color: '#9e9e9e' }}>
+                        {seatAvailability.filter(s => s.status === 'LOCKED').length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Locked
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" sx={{ color: '#ffc107' }}>
+                        {seatAvailability.filter(s => s.status === 'VIP_RESERVED').length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        VIP Reserved
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={4} md={2}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" color="primary.main">
+                        {seatAvailability.length}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Seats
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+                {/* Customer Held Seats Details */}
+                {seatAvailability.filter(s => s.status === 'HELD').length > 0 && (
+                  <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ff9800' }}>
+                    <Typography variant="body2" fontWeight="bold" color="warning.dark" gutterBottom>
+                       Customer-Held Seats (In Booking Process):
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      {seatAvailability
+                        .filter(s => s.status === 'HELD')
+                        .slice(0, 10)
+                        .map(seat => (
+                          <Chip
+                            key={seat.seatId}
+                            size="small"
+                            label={`${seat.section}-${seat.rowLabel}${seat.seatNumber} (User #${seat.heldByUserId})`}
+                            color="warning"
+                            variant="outlined"
+                            onClick={() => setSeatActionDialog({ open: true, seat })}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        ))}
+                      {seatAvailability.filter(s => s.status === 'HELD').length > 10 && (
+                        <Chip
+                          size="small"
+                          label={`+${seatAvailability.filter(s => s.status === 'HELD').length - 10} more`}
+                          color="warning"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                )}
+              </Paper>
+            )}
+            {/* WebSocket Real-time Stats */}
+            {wsStats && !selectedSchedule && (
+              <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Chip label={`Available: ${wsStats.availableSeats}`} color="success" size="small" />
+                <Chip label={`Booked: ${wsStats.bookedSeats}`} color="default" size="small" />
+                <Chip label={`Held: ${wsStats.heldSeats}`} color="warning" size="small" />
+                <Chip label={`Blocked: ${wsStats.blockedSeats}`} color="error" size="small" />
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Real-time Activity Panel */}
+      {selectedEvent && wsConnected && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Badge badgeContent={activityLog.length} color="primary" max={99}>
+                  <NotificationsActive color="action" />
+                </Badge>
+                <Typography variant="h6">
+                  Real-time Activity
+                </Typography>
+              </Box>
+              <Box>
+                <IconButton size="small" onClick={() => setShowActivityPanel(!showActivityPanel)}>
+                  {showActivityPanel ? <ExpandLess /> : <ExpandMore />}
+                </IconButton>
+                {activityLog.length > 0 && (
+                  <IconButton size="small" onClick={clearActivityLog} title="Clear activity log">
+                    <Delete fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            </Box>
+            <Collapse in={showActivityPanel}>
+              {activityLog.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                  No activity yet. Seat changes will appear here in real-time.
+                </Typography>
+              ) : (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    maxHeight: 200, 
+                    overflow: 'auto', 
+                    backgroundColor: '#fafafa',
+                    '& > *:not(:last-child)': { borderBottom: '1px solid #eee' }
+                  }}
+                >
+                  {activityLog.map((activity: SeatActivityLog) => (
+                    <Box 
+                      key={activity.id} 
+                      sx={{ 
+                        p: 1.5, 
+                        display: 'flex', 
+                        alignItems: 'flex-start',
+                        gap: 1.5,
+                        '&:hover': { backgroundColor: '#f5f5f5' }
+                      }}
+                    >
+                      <Box sx={{ 
+                        width: 8, 
+                        height: 8, 
+                        borderRadius: '50%', 
+                        mt: 0.75,
+                        backgroundColor: 
+                          activity.action === 'BOOKED' ? '#4caf50' :
+                          activity.action === 'HELD' ? '#ff9800' :
+                          activity.action === 'RELEASED' ? '#2196f3' :
+                          '#9e9e9e'
+                      }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {activity.message}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                          {activity.userEmail && (
+                            <Chip 
+                              icon={<Person sx={{ fontSize: '0.875rem !important' }} />} 
+                              label={activity.userEmail} 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ height: 20, '& .MuiChip-label': { px: 0.5, fontSize: '0.7rem' } }}
+                            />
+                          )}
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <AccessTime sx={{ fontSize: '0.75rem' }} />
+                            {activity.timestamp.toLocaleTimeString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  ))}
+                </Paper>
+              )}
+            </Collapse>
           </CardContent>
         </Card>
       )}
@@ -726,6 +1134,48 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   </Box>
                   <Typography variant="body2">Accessible</Typography>
                 </Grid>
+                {/* Show HELD and BOOKED legend only when schedule is selected */}
+                {selectedSchedule && (
+                  <>
+                    <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 1,
+                          backgroundColor: '#ff9800',
+                          border: '2px dashed #e65100',
+                          position: 'relative',
+                          '&::after': {
+                            content: '"👤"',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            fontSize: '10px',
+                          }
+                        }}
+                      />
+                      <Typography variant="body2" fontWeight="bold" color="warning.dark">
+                        Held by Customer (In Booking)
+                      </Typography>
+                    </Grid>
+                    <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 1,
+                          backgroundColor: '#f44336',
+                          border: '2px solid #d32f2f',
+                        }}
+                      />
+                      <Typography variant="body2" fontWeight="bold" color="error.main">
+                        Booked (Sold)
+                      </Typography>
+                    </Grid>
+                  </>
+                )}
               </Grid>
             </CardContent>
           </Card>
@@ -762,6 +1212,19 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                             const isSelected = selectedSeats.includes(seat.seatId);
                             const isLocked = seat.notes?.toLowerCase().includes('[locked]');
                             const isVIP = seat.notes?.toLowerCase().includes('[vip]');
+                            const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
+                            const isHeld = availabilityInfo?.status === 'HELD';
+                            const isBooked = availabilityInfo?.status === 'BOOKED';
+                            
+                            // Determine background color based on status
+                            const getBackgroundColor = () => {
+                              if (isBooked) return '#f44336'; // Red for booked
+                              if (isHeld) return '#ff9800'; // Orange for held
+                              if (isLocked || availabilityInfo?.status === 'LOCKED') return '#9e9e9e'; // Grey for locked
+                              if (isVIP || availabilityInfo?.status === 'VIP_RESERVED') return '#ffc107'; // Gold for VIP
+                              if (seat.isAccessible) return '#00bcd4'; // Cyan for accessible
+                              return seat.category.colorCode || '#4caf50'; // Default category color
+                            };
                             
                             return (
                               <Tooltip
@@ -777,6 +1240,64 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                                     <Typography variant="body2">
                                       Price: LKR {seat.category.basePrice?.toLocaleString()}
                                     </Typography>
+                                    {/* Show availability status when schedule is selected */}
+                                    {availabilityInfo && (
+                                      <>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight="bold"
+                                          color={
+                                            isBooked ? 'error.main' :
+                                            isHeld ? 'warning.main' :
+                                            'success.main'
+                                          }
+                                        >
+                                          Status: {availabilityInfo.status}
+                                        </Typography>
+                                        {isHeld && availabilityInfo.heldByUserId && (
+                                          <>
+                                            <Typography variant="body2" fontWeight="bold" color="warning.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,152,0,0.3)' }}>
+                                              👤 CUSTOMER SELECTING THIS SEAT
+                                            </Typography>
+                                            <Typography variant="body2" color="warning.main">
+                                              User #{availabilityInfo.heldByUserId}
+                                              {availabilityInfo.heldByUserName && ` - ${availabilityInfo.heldByUserName}`}
+                                              {availabilityInfo.heldByUserEmail && ` (${availabilityInfo.heldByUserEmail})`}
+                                            </Typography>
+                                            {availabilityInfo.holdExpiresAt && (
+                                              <Typography variant="body2" color="warning.main">
+                                                ⏱ Expires in: {getCountdown(availabilityInfo.holdExpiresAt)}
+                                              </Typography>
+                                            )}
+                                            {availabilityInfo.isPermanentHold && (
+                                              <Typography variant="body2" color="error.main">
+                                                ⚠ Permanent Hold (Admin)
+                                              </Typography>
+                                            )}
+                                          </>
+                                        )}
+                                        {isBooked && (
+                                          <>
+                                            <Typography variant="body2" fontWeight="bold" color="error.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(244,67,54,0.3)' }}>
+                                              ✓ SOLD - BOOKING CONFIRMED
+                                            </Typography>
+                                            {availabilityInfo.bookingReference && (
+                                              <Typography variant="body2" color="error.main">
+                                                Booking Ref: {availabilityInfo.bookingReference}
+                                              </Typography>
+                                            )}
+                                            {availabilityInfo.bookedAt && (
+                                              <Typography variant="body2" color="error.main">
+                                                Booked: {new Date(availabilityInfo.bookedAt).toLocaleString()}
+                                              </Typography>
+                                            )}
+                                            <Typography variant="body2" color="error.main">
+                                              Cannot be modified by customers
+                                            </Typography>
+                                          </>
+                                        )}
+                                      </>
+                                    )}
                                     {seat.isAccessible && (
                                       <Typography variant="body2" color="info.main">
                                          Wheelchair Accessible
@@ -810,36 +1331,49 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                                       }
                                       return;
                                     }
-                                    // Normal mode: show action dialog
-                                    setSeatActionDialog({ open: true, seat });
+                                    // Normal mode: show action dialog (with availability info if schedule selected)
+                                    if (availabilityInfo) {
+                                      setSeatActionDialog({ open: true, seat: availabilityInfo });
+                                    } else {
+                                      setSeatActionDialog({ open: true, seat });
+                                    }
                                   }}
                                   sx={{
                                     width: 36,
                                     height: 36,
                                     borderRadius: 1,
-                                    backgroundColor: isLocked 
-                                      ? '#9e9e9e'  // Grey for locked
-                                      : isVIP 
-                                        ? '#ffc107'  // Yellow/Gold for VIP
-                                        : seat.isAccessible
-                                          ? '#00bcd4'  // Cyan for accessible
-                                          : seat.category.colorCode || '#4caf50',
+                                    backgroundColor: getBackgroundColor(),
                                     border: isSelected 
                                       ? '3px solid #2196f3' 
-                                      : 'none',
-                                    color: isVIP ? '#000' : 'white',
+                                      : isHeld 
+                                        ? '2px dashed #ff9800'
+                                        : isBooked
+                                          ? '2px solid #f44336'
+                                          : 'none',
+                                    color: (isVIP || availabilityInfo?.status === 'VIP_RESERVED') ? '#000' : 'white',
                                     fontSize: '0.7rem',
                                     fontWeight: 'bold',
+                                    position: 'relative',
                                     '&:hover': {
-                                      backgroundColor: isLocked 
-                                        ? '#757575'  // Darker grey on hover
-                                        : isVIP
-                                          ? '#ffb300'  // Darker gold on hover
-                                          : seat.isAccessible
-                                            ? '#0097a7'  // Darker cyan on hover
-                                            : seat.category.colorCode || '#388e3c',
-                                      opacity: 0.9,
+                                      opacity: 0.8,
                                     },
+                                    // Show indicator for held/booked seats
+                                    '&::after': (isHeld || isBooked) ? {
+                                      content: isBooked ? '"✓"' : '"👤"',
+                                      position: 'absolute',
+                                      top: -4,
+                                      right: -4,
+                                      fontSize: isBooked ? '0.6rem' : '0.7rem',
+                                      backgroundColor: isBooked ? '#d32f2f' : '#e65100',
+                                      borderRadius: '50%',
+                                      width: 16,
+                                      height: 16,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      border: '1px solid white',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                    } : {},
                                   }}
                                 >
                                   {seat.isAccessible ? '♿' : seat.seatNumber}
@@ -1221,7 +1755,47 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         <DialogTitle>
           {seatActionDialog.seat && (
             <Box>
-              {isVenueSeat(seatActionDialog.seat) ? (
+              {isSeatDTO(seatActionDialog.seat) ? (
+                // SeatDTO display (when schedule is selected)
+                <>
+                  <Typography variant="h6">
+                    Seat {seatActionDialog.seat.section} - Row {seatActionDialog.seat.rowLabel} - {seatActionDialog.seat.seatNumber}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {seatActionDialog.seat.categoryName} - LKR {seatActionDialog.seat.currentPrice?.toLocaleString()}
+                  </Typography>
+                  <Chip 
+                    label={seatActionDialog.seat.status}
+                    color={
+                      seatActionDialog.seat.status === 'BOOKED' ? 'error' :
+                      seatActionDialog.seat.status === 'HELD' ? 'warning' :
+                      seatActionDialog.seat.status === 'LOCKED' ? 'default' :
+                      seatActionDialog.seat.status === 'VIP_RESERVED' ? 'secondary' :
+                      'success'
+                    }
+                    size="small"
+                    sx={{ mt: 1 }}
+                  />
+                  {seatActionDialog.seat.status === 'HELD' && seatActionDialog.seat.heldByUserId && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="caption" display="block">
+                        Held by: User #{seatActionDialog.seat.heldByUserId}
+                        {seatActionDialog.seat.heldByUserName && ` (${seatActionDialog.seat.heldByUserName})`}
+                      </Typography>
+                      {seatActionDialog.seat.holdExpiresAt && (
+                        <Typography variant="caption" display="block" color="warning.main">
+                          Expires: {getCountdown(seatActionDialog.seat.holdExpiresAt)}
+                        </Typography>
+                      )}
+                      {seatActionDialog.seat.isPermanentHold && (
+                        <Typography variant="caption" display="block" color="error.main">
+                          ⚠ Permanent Hold (Admin)
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </>
+              ) : isVenueSeat(seatActionDialog.seat) ? (
                 // VenueSeat display
                 <>
                   <Typography variant="h6">
@@ -1265,6 +1839,77 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         <DialogContent>
           {seatActionDialog.seat && (
             <List>
+              {/* SeatDTO actions (when schedule is selected) */}
+              {isSeatDTO(seatActionDialog.seat) && isAdmin && selectedSchedule && (
+                <>
+                  {/* Admin actions for held seats */}
+                  {seatActionDialog.seat.status === 'HELD' && (
+                    <>
+                      <ListItem disablePadding>
+                        <ListItemButton onClick={() => handleAdminReleaseHold(seatActionDialog.seat!.seatId)}>
+                          <ListItemIcon sx={{ color: 'warning.main' }}>
+                            <RemoveCircle />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="Force Release Hold" 
+                            secondary={`Release hold from User #${(seatActionDialog.seat as SeatDTO).heldByUserId}`}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                      <Divider />
+                    </>
+                  )}
+                  {/* Admin actions for booked seats */}
+                  {seatActionDialog.seat.status === 'BOOKED' && (
+                    <>
+                      <ListItem disablePadding>
+                        <ListItemButton 
+                          onClick={() => handleAdminUnreserveSeat(seatActionDialog.seat!.seatId)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <ListItemIcon sx={{ color: 'error.main' }}>
+                            <BookmarkRemove />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="Unreserve Booked Seat" 
+                            secondary="⚠ Warning: This will cancel the booking"
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                      <Divider />
+                    </>
+                  )}
+                  {/* View seat details */}
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={() => {
+                      const seat = seatActionDialog.seat as SeatDTO;
+                      alert(`Seat Details:\n\nSeat ID: ${seat.seatId}\nSection: ${seat.section}\nRow: ${seat.rowLabel}\nSeat #: ${seat.seatNumber}\n\nCategory: ${seat.categoryName}\nPrice: LKR ${seat.currentPrice?.toLocaleString()}\n\nStatus: ${seat.status}\n${seat.heldByUserId ? `\nHeld by: User #${seat.heldByUserId}${seat.heldByUserName ? ` (${seat.heldByUserName})` : ''}` : ''}${seat.holdExpiresAt ? `\nExpires: ${seat.holdExpiresAt}` : ''}${seat.isPermanentHold ? '\n⚠ Permanent Hold' : ''}`);
+                    }}>
+                      <ListItemIcon sx={{ color: 'info.main' }}>
+                        <Info />
+                      </ListItemIcon>
+                      <ListItemText primary="View Seat Details" />
+                    </ListItemButton>
+                  </ListItem>
+                  <Divider />
+                  {/* Refresh seat data */}
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={() => {
+                      if (selectedSchedule) {
+                        loadSeatAvailability(selectedSchedule.scheduleId);
+                      }
+                      closeSeatActionDialog();
+                    }}>
+                      <ListItemIcon sx={{ color: 'primary.main' }}>
+                        <Refresh />
+                      </ListItemIcon>
+                      <ListItemText primary="Refresh Seat Data" />
+                    </ListItemButton>
+                  </ListItem>
+                </>
+              )}
+
+              {/* VenueSeat actions when no schedule selected */}
               {isVenueSeat(seatActionDialog.seat) ? (
                 // VenueSeat actions - Full admin privileges
                 <>
@@ -1430,8 +2075,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                     </ListItem>
                   )}
                 </>
-              ) : (
-                // Seat actions
+              ) : isSeat(seatActionDialog.seat) ? (
+                // Seat actions (legacy Seat type)
                 <>
                   {getSeatActions(seatActionDialog.seat).length > 0 ? (
                     getSeatActions(seatActionDialog.seat).map((actionItem, index) => (
@@ -1456,7 +2101,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                     </ListItem>
                   )}
                 </>
-              )}
+              ) : null}
             </List>
           )}
         </DialogContent>

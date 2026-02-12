@@ -23,6 +23,7 @@ public class EventScheduleResponse {
     private String eventName;
     private UUID venueId;
     private String venueName;
+    private String venueAddress;
     private LocalDate scheduleDate;
     private LocalTime startTime;
     private LocalTime endTime;

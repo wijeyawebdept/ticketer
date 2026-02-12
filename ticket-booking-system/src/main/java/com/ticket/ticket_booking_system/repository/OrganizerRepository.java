@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,9 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.entity.Organizer;
 
@@ -21,6 +24,12 @@ public interface OrganizerRepository extends JpaRepository<Organizer, UUID>, Jpa
     List<Organizer> findByParentOrganizer_OrganizerId(UUID parentOrganizerId);
     List<Organizer> findByIsEmployee(Boolean isEmployee);
     List<Organizer> findByIsVerified(Boolean isVerified);
+    
+    // Update last login timestamp
+    @Modifying
+    @Transactional
+    @Query("UPDATE Organizer o SET o.lastLoginAt = :timestamp WHERE o.organizerId = :organizerId")
+    int updateLastLoginAt(@Param("organizerId") UUID organizerId, @Param("timestamp") LocalDateTime timestamp);
     
     List<Organizer> findByActive(int active);
     Page<Organizer> findByActive(int active, Pageable pageable);

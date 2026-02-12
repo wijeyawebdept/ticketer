@@ -51,6 +51,7 @@ public class SecurityConfig {
                     "/api/public/**",
                     "/api/venues/**",
                     "/api/payments/webhook",
+                    "/ws/**",
                     "/error"
                 ).permitAll()
                 .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")

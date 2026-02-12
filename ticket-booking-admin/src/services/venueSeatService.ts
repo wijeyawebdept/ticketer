@@ -7,14 +7,24 @@ export interface SeatDTO {
   section: string;
   rowLabel: string;
   seatNumber: number;
-  category: string;
+  categoryName: string;
   colorCode: string;
   xPosition: number;
   yPosition: number;
   isAisleSeat: boolean;
   isAccessible: boolean;
-  status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE';
+  status: 'AVAILABLE' | 'BOOKED' | 'HELD' | 'LOCKED' | 'VIP_RESERVED';
   currentPrice: number;
+  notes?: string;
+  // Hold/Booking information for admin view
+  heldByUserId?: number;
+  heldByUserName?: string;
+  heldByUserEmail?: string;
+  holdExpiresAt?: string;
+  holdCreatedAt?: string;
+  isPermanentHold?: boolean;
+  bookingReference?: string;
+  bookedAt?: string;
 }
 
 export interface SeatAvailabilityResponse {
@@ -22,7 +32,15 @@ export interface SeatAvailabilityResponse {
   totalSeats: number;
   availableSeats: number;
   bookedSeats: number;
-  temporaryHolds: number;
+  heldSeats: number;
+  sharedAreas?: Array<{
+    categoryId: string;
+    categoryName: string;
+    price: number;
+    capacity: number;
+    sharedAreaNumber: number;
+    availableTickets: number;
+  }>;
 }
 
 export interface SeatHoldRequest {
@@ -185,6 +203,36 @@ export const venueSeatService = {
   removeVIPReservation: async (seatId: string): Promise<{ message: string; seatId: string }> => {
     const response = await axiosInstance.put<{ message: string; seatId: string }>(
       `/api/venue-seats/${seatId}/remove-vip`
+    );
+    return response.data;
+  },
+
+  /**
+   * Admin: Force release a seat hold (even if not your hold)
+   */
+  adminReleaseHold: async (eventScheduleId: string, seatId: string): Promise<{ message: string }> => {
+    const response = await axiosInstance.delete<{ message: string }>(
+      `/api/admin/venue-seats/holds/${eventScheduleId}/${seatId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Admin: Unreserve/unbook a booked seat
+   */
+  adminUnreserveSeat: async (eventScheduleId: string, seatId: string): Promise<{ message: string }> => {
+    const response = await axiosInstance.delete<{ message: string }>(
+      `/api/admin/venue-seats/bookings/${eventScheduleId}/${seatId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Admin: Get seat details with booking info
+   */
+  adminGetSeatDetails: async (eventScheduleId: string, seatId: string): Promise<SeatDTO> => {
+    const response = await axiosInstance.get<SeatDTO>(
+      `/api/admin/venue-seats/${eventScheduleId}/${seatId}`
     );
     return response.data;
   },

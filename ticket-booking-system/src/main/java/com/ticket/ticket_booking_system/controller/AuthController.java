@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.config.JwtService;
+import com.ticket.ticket_booking_system.config.LoginSuccessHandler;
 import com.ticket.ticket_booking_system.dto.request.LoginRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
@@ -36,6 +37,7 @@ public class AuthController {
     private final GoogleOAuthService googleOAuthService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginSuccessHandler loginSuccessHandler;
     
     public AuthController(
             UserService userService, 
@@ -43,13 +45,15 @@ public class AuthController {
             JwtService jwtService,
             GoogleOAuthService googleOAuthService,
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            LoginSuccessHandler loginSuccessHandler) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.loginSuccessHandler = loginSuccessHandler;
     }
 
     @PostMapping("/register")
@@ -74,6 +78,9 @@ public class AuthController {
             // Get user details
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
+            
+            // Update last login timestamp
+            loginSuccessHandler.updateLastLogin(loginRequest.getEmail());
             
             // Generate JWT token
             String token = jwtService.generateToken(userDetails);
@@ -144,6 +151,9 @@ public class AuthController {
                 
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
+            
+            // Update last login timestamp for Admin
+            loginSuccessHandler.updateAdminLastLogin(loginRequest.getEmail());
             
             // Generate JWT token
             String token = jwtService.generateToken(userDetails);
@@ -216,6 +226,9 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
             
+            // Update last login timestamp for Organizer
+            loginSuccessHandler.updateOrganizerLastLogin(loginRequest.getEmail());
+            
             // Generate JWT token
             String token = jwtService.generateToken(userDetails);
             
@@ -285,6 +298,9 @@ public class AuthController {
                 
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
+            
+            // Update last login timestamp for OrganizerEmployee
+            loginSuccessHandler.updateOrganizerEmployeeLastLogin(loginRequest.getEmail());
             
             // Generate JWT token
             String token = jwtService.generateToken(userDetails);

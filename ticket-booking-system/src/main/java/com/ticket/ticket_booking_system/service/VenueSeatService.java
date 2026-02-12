@@ -94,28 +94,27 @@ public class VenueSeatService {
         
         // Get booked and held seat IDs for this schedule
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleUuid);
-        Set<String> heldSeatIds = seatHoldRepository.findHeldVenueSeatIdsByScheduleId(eventScheduleUuid, LocalDateTime.now());
+        List<SeatHold> activeHolds = seatHoldRepository.findActiveHoldsByScheduleId(eventScheduleUuid, LocalDateTime.now());
         Long bookedCount = bookingSeatRepository.countBookedSeatsForSchedule(eventScheduleUuid);
         Long heldCount = seatHoldRepository.countActiveHoldsByScheduleId(eventScheduleUuid, LocalDateTime.now());
+        
+        // Build a map of seat IDs to their hold info for quick lookup
+        java.util.Map<String, SeatHold> seatHoldMap = new java.util.HashMap<>();
+        for (SeatHold hold : activeHolds) {
+            seatHoldMap.put(hold.getVenueSeatId(), hold);
+            // Note: User lookup skipped due to userId type mismatch (Long vs UUID)
+        }
         
         List<SeatDTO> seatDTOs = new ArrayList<>();
         
         for (VenueSeat seat : venueSeats) {
-            // Debug logging
-            if (seat.getSeatId().equals("KH-A01")) {
-                System.out.println("DEBUG: Creating DTO for seat KH-A01");
-                System.out.println("  xPosition: " + seat.getXPosition());
-                System.out.println("  yPosition: " + seat.getYPosition());
-                System.out.println("  categoryName: " + seat.getCategory().getCategoryName());
-            }
-            
             // Determine seat status based on bookings, holds, and notes
             String seatStatus;
             String notes = seat.getNotes() != null ? seat.getNotes().toLowerCase() : "";
             
             if (bookedSeatIds.contains(seat.getSeatId())) {
                 seatStatus = SeatStatus.BOOKED.name();
-            } else if (heldSeatIds.contains(seat.getSeatId())) {
+            } else if (seatHoldMap.containsKey(seat.getSeatId())) {
                 seatStatus = "HELD"; // Seat is temporarily held
             } else if (notes.contains("[locked]")) {
                 seatStatus = "LOCKED"; // Custom status for locked seats
@@ -125,23 +124,33 @@ public class VenueSeatService {
                 seatStatus = SeatStatus.AVAILABLE.name();
             }
             
-            SeatDTO dto = new SeatDTO(
-                seat.getSeatId(),
-                seat.getSection(),
-                seat.getRowLabel(),
-                seat.getSeatNumber(),
-                seat.getCategory().getCategoryName(),
-                seat.getCategory().getColorCode(),
-                seat.getXPosition(),
-                seat.getYPosition(),
-                seat.getIsAisleSeat(),
-                seat.getIsAccessible(),
-                seatStatus,
-                seat.getCategory().getBasePrice(), // This becomes currentPrice
-                seat.getNotes() // Include notes for frontend
-            );
+            // Build SeatDTO with hold information
+            SeatDTO.SeatDTOBuilder builder = SeatDTO.builder()
+                .seatId(seat.getSeatId())
+                .section(seat.getSection())
+                .rowLabel(seat.getRowLabel())
+                .seatNumber(seat.getSeatNumber())
+                .categoryName(seat.getCategory().getCategoryName())
+                .colorCode(seat.getCategory().getColorCode())
+                .xPosition(seat.getXPosition())
+                .yPosition(seat.getYPosition())
+                .isAisleSeat(seat.getIsAisleSeat())
+                .isAccessible(seat.getIsAccessible())
+                .status(seatStatus)
+                .currentPrice(seat.getCategory().getBasePrice())
+                .notes(seat.getNotes());
             
-            seatDTOs.add(dto);
+            // Add hold information if seat is held
+            SeatHold hold = seatHoldMap.get(seat.getSeatId());
+            if (hold != null) {
+                builder.heldByUserId(hold.getUserId())
+                       .holdExpiresAt(hold.getExpiresAt())
+                       .holdCreatedAt(hold.getCreatedAt())
+                       .isPermanentHold(hold.getIsPermanent());
+                // Note: User name/email not populated due to userId type mismatch
+            }
+            
+            seatDTOs.add(builder.build());
         }
         
         // Fetch shared area categories for the event

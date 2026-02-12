@@ -27,6 +27,7 @@ interface EventDetails {
   id: number;
   title: string;
   venue: string;
+  venueAddress: string;
   date: string;
   time: string;
   eventId?: string;
@@ -36,7 +37,7 @@ const SeatSelectionPage: React.FC = () => {
   const { eventScheduleId } = useParams<{ eventScheduleId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
+  const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<any[]>([]);
@@ -119,19 +120,44 @@ const SeatSelectionPage: React.FC = () => {
 
   const loadEventDetails = async (scheduleId: string) => {
     try {
-      const response = await axiosInstance.get<{ venueId?: string; venueName?: string }>(`/api/public/events/schedules/${scheduleId}`);
+      const response = await axiosInstance.get<{ 
+        venueId?: string; 
+        venueName?: string; 
+        venueAddress?: string;
+        eventName?: string;
+        scheduleDate?: string;
+        startTime?: string;
+        endTime?: string;
+        eventId?: string;
+      }>(`/api/public/events/schedules/${scheduleId}`);
+      
       if (response.data) {
         setVenueId(response.data.venueId);
+        // Use API response data, fallback to navigation state
+        setEventDetails({
+          id: 0,
+          title: response.data.eventName || eventDetailsFromState?.eventTitle || 'Event',
+          venue: response.data.venueName || eventDetailsFromState?.venueName || 'Venue',
+          venueAddress: response.data.venueAddress || eventDetailsFromState?.venueAddress || '',
+          date: response.data.scheduleDate || eventDetailsFromState?.eventDate || '',
+          time: response.data.startTime 
+            ? `${response.data.startTime}${response.data.endTime ? ` - ${response.data.endTime}` : ''}`
+            : eventDetailsFromState?.eventTime || '',
+          eventId: response.data.eventId || eventDetailsFromState?.eventId,
+        });
+        return;
       }
     } catch (error) {
       console.log('Could not fetch event schedule details:', error);
     }
 
+    // Fallback to navigation state if API fails
     if (eventDetailsFromState) {
       setEventDetails({
         id: 0,
         title: eventDetailsFromState.eventTitle || 'Event',
-        venue: eventDetailsFromState.venueName || 'Kularathna Auditorium',
+        venue: eventDetailsFromState.venueName || 'Venue',
+        venueAddress: eventDetailsFromState.venueAddress || '',
         date: eventDetailsFromState.eventDate || '',
         time: eventDetailsFromState.eventTime || '',
         eventId: eventDetailsFromState.eventId,
@@ -140,7 +166,8 @@ const SeatSelectionPage: React.FC = () => {
       setEventDetails({
         id: 0,
         title: 'Event',
-        venue: 'Kularathna Auditorium',
+        venue: 'Venue',
+        venueAddress: '',
         date: '',
         time: '',
       });
@@ -550,7 +577,97 @@ const SeatSelectionPage: React.FC = () => {
                 Ticket Summary
               </Typography>
 
-              <Box sx={{ mt: 3, pt: 2, borderTop: '2px solid #e0e0e0' }}>
+              {/* Event Details Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: '#ff1955' }}>
+                  {eventDetails?.title}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
+                  <Typography variant="body2">{eventDetails?.date}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
+                  <Typography variant="body2">{eventDetails?.time}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5, gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{eventDetails?.venue}</Typography>
+                    {eventDetails?.venueAddress && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                        {eventDetails.venueAddress}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Selected Tickets Section */}
+              <Box sx={{ mb: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+                  Selected Tickets
+                </Typography>
+                
+                {/* Seated Tickets */}
+                {selectedSeatDetails.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Seats ({selectedSeatDetails.length})</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      {selectedSeatDetails.map((seat, index) => (
+                        <Box 
+                          key={seat?.seatId || index} 
+                          sx={{ 
+                            px: 1, 
+                            py: 0.5, 
+                            backgroundColor: '#fff', 
+                            border: '1px solid #ddd', 
+                            borderRadius: 1,
+                            fontSize: '0.75rem',
+                            fontWeight: 500
+                          }}
+                        >
+                          {seat?.seatId || selectedSeats[index]}
+                        </Box>
+                      ))}
+                    </Box>
+                    {selectedSeatDetails.map((seat, index) => (
+                      <Box key={seat?.seatId || index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {seat?.seatId || selectedSeats[index]} - {seat?.categoryName || 'Standard'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                          {(seat?.currentPrice || 0).toLocaleString()} LKR
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Shared Area Tickets */}
+                {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => (
+                  <Box key={`shared-${selection.areaNumber}`} sx={{ mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">
+                        {selection.categoryName} × {selection.ticketCount}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+
+                {/* Show message if no tickets selected */}
+                {selectedSeatDetails.length === 0 && sharedAreaSelections.length === 0 && (
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    No tickets selected
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Amount Section */}
+              <Box sx={{ pt: 2, borderTop: '2px solid #e0e0e0' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
                   Amount
                 </Typography>

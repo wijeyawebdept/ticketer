@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,7 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 
@@ -17,6 +22,12 @@ public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmpl
     Optional<OrganizerEmployee> findByEmail(String email);
     
     boolean existsByEmail(String email);
+    
+    // Update last login timestamp
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrganizerEmployee oe SET oe.lastLoginAt = :timestamp WHERE oe.employeeId = :employeeId")
+    int updateLastLoginAt(@Param("employeeId") UUID employeeId, @Param("timestamp") LocalDateTime timestamp);
     
     Page<OrganizerEmployee> findByActive(int active, Pageable pageable);
     
