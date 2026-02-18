@@ -25,6 +25,9 @@ export interface InitiatePaymentRequest {
   totalAmount: number;
   currency: string;
   customerInfo: CustomerInfo;
+
+  returnUrl: string;
+  cancelUrl: string;
 }
 
 export interface MPGSSessionResponse {
@@ -69,12 +72,20 @@ declare global {
 }
 
 class PaymentService {
-  async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionResponse> {
-    const response = await api.post<MPGSSessionResponse>('/api/payments/initiate', request);
-    return response.data;
-  }
+async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionResponse> {
+  const returnUrl = `${window.location.origin}/payment/success`;
+  const cancelUrl = `${window.location.origin}/payment/cancel`;
 
-  async verifyPayment(sessionId: string): Promise<PaymentVerificationResponse> {
+  const response = await api.post<MPGSSessionResponse>('/api/payments/initiate', {
+    ...request,
+    returnUrl,
+    cancelUrl,
+  });
+
+  return response.data;
+}
+
+    async verifyPayment(sessionId: string): Promise<PaymentVerificationResponse> {
     const response = await api.get<PaymentVerificationResponse>(
       `/api/payments/verify?sessionId=${encodeURIComponent(sessionId)}`
     );
@@ -111,33 +122,20 @@ class PaymentService {
    * doesn't accept them in session creation.
    * MPGS completes via redirect to returnUrl.
    */
-  startCheckout(
-    sessionId: string,
-    amount: number,
-    currency: string,
-    orderId: string,
-    returnUrl: string
-  ): void {
-    if (!window.Checkout) {
-      throw new Error('MPGS Checkout not loaded');
-    }
-
-    window.Checkout.configure({
-      session: { id: sessionId },
-      order: {
-        amount: amount.toFixed(2),
-        currency: currency,
-        description: 'Tickets Booking',
-        id: orderId,
-      },
-      interaction: {
-        returnUrl: returnUrl,
-      },
-    });
-
-    window.Checkout.showPaymentPage();
+startCheckout(session: any) {
+  if (!(window as any).Checkout) {
+    console.error("MPGS Checkout not loaded");
+    return;
   }
+
+  (window as any).Checkout.configure({
+    session: { id: session.sessionId },
+  });
+
+  (window as any).Checkout.showPaymentPage();
+}
 }
 
 const paymentService = new PaymentService();
 export default paymentService;
+

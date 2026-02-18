@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -42,8 +43,15 @@ public class InitiatePaymentRequest {
 
     // Customer information for booking
     @NotNull(message = "Customer info is required")
+    @Valid
     private CustomerInfo customerInfo;
 
+    // ADD THESE (sent from frontend)
+    @NotBlank(message = "Return URL is required")
+    private String returnUrl;
+
+    @NotBlank(message = "Cancel URL is required")
+    private String cancelUrl;
     /**
      * Customer information
      */
@@ -87,5 +95,12 @@ public class InitiatePaymentRequest {
 
         @NotNull(message = "Price per ticket is required")
         private BigDecimal pricePerTicket;
+
+        @NotBlank(message = "Return URL is required")
+        private String returnUrl;
+
+        @NotBlank(message = "Cancel URL is required")
+        private String cancelUrl;
+
     }
 }

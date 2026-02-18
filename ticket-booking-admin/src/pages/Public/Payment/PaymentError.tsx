@@ -12,6 +12,7 @@ import {
 import ErrorIcon from '@mui/icons-material/Error';
 import paymentService from '../../../services/payment.service';
 
+
 const PaymentError: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();

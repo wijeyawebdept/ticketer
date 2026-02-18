@@ -12,9 +12,13 @@ import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -30,7 +34,6 @@ import com.ticket.ticket_booking_system.repository.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 /**
@@ -38,83 +41,111 @@ import reactor.util.retry.Retry;
  * Handles session creation, payment verification, refunds, and webhooks
  */
 @Service
-@Slf4j
 @RequiredArgsConstructor
+@Slf4j
 public class MPGSPaymentService {
 
     private final MPGSConfig mpgsConfig;
+    private final RestTemplate restTemplate;
     private final WebClient.Builder webClientBuilder;
-    private final TransactionRepository transactionRepository;
-    private final BookingRepository bookingRepository;
     private final ObjectMapper objectMapper;
+    private final BookingRepository bookingRepository;
+    private final TransactionRepository transactionRepository;
 
-    /**
-     * Create a checkout session with MPGS for Hosted Checkout
-     *
-     * CBMPGS session creation accepts ONLY:
-     * - apiOperation: CREATE_CHECKOUT_SESSION
-     * 
-     * Everything else (order, interaction) must be in frontend Checkout.configure()
-     */
-    public MPGSSessionResponse createCheckoutSession(UUID bookingId, BigDecimal amount, String currency) {
-        log.info("Creating MPGS checkout session for booking: {}, amount: {}, currency: {}",
-                bookingId, amount, currency);
+    public MPGSSessionResponse createCheckoutSession(
+            UUID bookingId,
+            BigDecimal amount,
+            String currency,
+            String returnUrl,
+            String cancelUrl
+    ) {
+        String endpoint = mpgsConfig.getApiEndpoint("/session");
+
+        // Use booking reference if you have it; otherwise bookingId is fine.
+        // MPGS order.id must be string-safe and stable.
+        String orderId = bookingId.toString();
+        String amountStr = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        String currencyStr = currency != null ? currency : mpgsConfig.getCurrency();
+
+        // MPGS REST JSON format with nested objects
+        Map<String, Object> order = new HashMap<>();
+        order.put("id", orderId);
+        order.put("amount", amountStr);  // String format to avoid type issues
+        order.put("currency", currencyStr);
+
+        Map<String, Object> interaction = new HashMap<>();
+        interaction.put("operation", "PURCHASE");
+        interaction.put("returnUrl", returnUrl);
+        interaction.put("cancelUrl", cancelUrl);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("apiOperation", "CREATE_CHECKOUT_SESSION");
+        payload.put("order", order);
+        payload.put("interaction", interaction);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", mpgsConfig.getBasicAuthHeader());
+
+        log.info("Creating MPGS checkout session (JSON): endpoint={}, orderId={}, amount={}, currency={}",
+                endpoint, orderId, amountStr, currencyStr);
+        log.debug("MPGS session payload (JSON): {}", payload);
 
         try {
-            String orderReference = "ORD-" + bookingId.toString().substring(0, 13).toUpperCase();
+            ResponseEntity<String> response = restTemplate.exchange(
+                    endpoint,
+                    HttpMethod.POST,
+                    new HttpEntity<Map<String, Object>>(payload, headers),
+                    String.class
+            );
 
-            // CBMPGS only accepts apiOperation - NOTHING else!
-            Map<String, Object> sessionRequest = new HashMap<>();
-            sessionRequest.put("apiOperation", "CREATE_CHECKOUT_SESSION");
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new RuntimeException("MPGS session creation failed. Status=" + response.getStatusCode());
+            }
 
-            // Log the payload for debugging
-            log.info("MPGS session payload: {}", objectMapper.writeValueAsString(sessionRequest));
+            String responseBody = response.getBody();
+            JsonNode responseJson = objectMapper.readTree(responseBody);
+            
+            if (!responseJson.has("session") || !responseJson.get("session").has("id")) {
+                throw new RuntimeException("MPGS response missing session.id: " + responseBody);
+            }
 
-            String endpoint = mpgsConfig.getApiEndpoint("/session");
-
-            WebClient webClient = webClientBuilder
-                    .defaultHeader(HttpHeaders.AUTHORIZATION, mpgsConfig.getBasicAuthHeader())
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .build();
-
-            String responseBody = webClient.post()
-                    .uri(endpoint)
-                    .bodyValue(sessionRequest)
-                    .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                            response -> response.bodyToMono(String.class).flatMap(body -> {
-                                log.error("MPGS create session failed. Status={}, Body={}",
-                                        response.statusCode().value(), body);
-                                return Mono.error(new RuntimeException("MPGS Error: " + body));
-                            }))
-                    .bodyToMono(String.class)
-                    .block();
-
-            JsonNode json = objectMapper.readTree(responseBody);
-            String sessionId = json.get("session").get("id").asText();
-
-            log.info("MPGS session created successfully: {}", sessionId);
+            String sessionId = responseJson.get("session").get("id").asText();
 
             return MPGSSessionResponse.builder()
                     .sessionId(sessionId)
                     .merchantId(mpgsConfig.getMerchantId())
                     .checkoutScriptUrl(mpgsConfig.getCheckoutScriptUrl())
-                    .amount(amount)
-                    .currency(currency)
-                    .bookingId(bookingId)
-                    .successUrl(mpgsConfig.getSuccessUrl())
-                    .cancelUrl(mpgsConfig.getCancelUrl())
-                    .errorUrl(mpgsConfig.getErrorUrl())
-                    .orderReference(orderReference)
                     .build();
 
-        } catch (WebClientResponseException e) {
-            log.error("MPGS API error while creating session: Status={}, Body={}",
-                    e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw new RuntimeException("Failed to create MPGS session: " + e.getResponseBodyAsString(), e);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            String errorBody = e.getResponseBodyAsString();
+            log.error("MPGS rejected the request: Status={}, Body={}", e.getStatusCode(), errorBody);
+            
+            try {
+                JsonNode errorJson = objectMapper.readTree(errorBody);
+                String errorMessage = "MPGS Error: ";
+                
+                if (errorJson.has("error")) {
+                    JsonNode error = errorJson.get("error");
+                    if (error.has("explanation")) {
+                        errorMessage += error.get("explanation").asText();
+                    } else if (error.has("cause")) {
+                        errorMessage += error.get("cause").asText();
+                    } else {
+                        errorMessage += errorBody;
+                    }
+                } else {
+                    errorMessage += errorBody;
+                }
+                
+                throw new RuntimeException(errorMessage, e);
+            } catch (Exception parseEx) {
+                throw new RuntimeException("MPGS Error: " + errorBody, e);
+            }
         } catch (Exception e) {
             log.error("Unexpected error creating MPGS session", e);
-            throw new RuntimeException("Failed to create MPGS session", e);
+            throw new RuntimeException("Failed to create payment session: " + e.getMessage(), e);
         }
     }
 

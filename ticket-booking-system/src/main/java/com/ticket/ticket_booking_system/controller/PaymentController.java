@@ -47,44 +47,59 @@ public class PaymentController {
 
     @PostMapping("/initiate")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<MPGSSessionResponse> initiatePayment(
+    public ResponseEntity<?> initiatePayment(
             @Valid @RequestBody InitiatePaymentRequest request,
             Authentication authentication) {
 
         log.info("Initiating payment for user: {}, amount: {}", authentication.getName(), request.getTotalAmount());
 
+        Booking booking = null;
         try {
             UUID userId = extractUserIdFromAuth(authentication);
-            log.info("Step 1: User ID extracted: {}", userId);
 
-            Booking booking = bookingService.createPendingBooking(userId, request);
-            log.info("Step 2: Pending booking created: {}", booking.getBookingId());
+            booking = bookingService.createPendingBooking(userId, request);
 
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),
                     request.getTotalAmount(),
-                    request.getCurrency()
+                    request.getCurrency(),
+                    request.getReturnUrl(),
+                    request.getCancelUrl()
             );
-            log.info("Step 3: MPGS session created: {}", sessionResponse.getSessionId());
 
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     sessionResponse.getSessionId()
             );
-            log.info("Step 4: Pending transaction created");
 
             return ResponseEntity.ok(sessionResponse);
 
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("MPGS error: status={}, body={}", e.getRawStatusCode(), e.getResponseBodyAsString());
+            
+            // cleanup so you don't keep PENDING junk
+            if (booking != null) {
+                bookingService.cancelBooking(booking.getBookingId().toString());
+            }
+            
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
+                "message", "MPGS rejected the request",
+                "status", e.getRawStatusCode(),
+                "body", e.getResponseBodyAsString()
+            ));
         } catch (Exception e) {
             log.error("Payment initiation failed: {}", e.getMessage(), e);
-            // Return error message so frontend can display it
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(MPGSSessionResponse.builder()
-                            .sessionId(null)
-                            .merchantId(null)
-                            .checkoutScriptUrl(null)
-                            .build());
+
+            // cleanup so you don't keep PENDING junk
+            if (booking != null) {
+                bookingService.cancelBooking(booking.getBookingId().toString());
+            }
+
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
+                    "message", "Payment initiation failed",
+                    "details", e.getMessage()
+            ));
         }
     }
 

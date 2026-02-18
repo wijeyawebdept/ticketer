@@ -284,6 +284,9 @@ const SeatSelectionPage: React.FC = () => {
     setLoading(true);
 
     try {
+      const returnUrl = `${window.location.origin}/payment/success`;
+      const cancelUrl = `${window.location.origin}/payment/cancel`;
+
       const paymentRequest: InitiatePaymentRequest = {
         eventId: eventDetails?.eventId || '',
         scheduleId: eventScheduleId || '',
@@ -295,7 +298,7 @@ const SeatSelectionPage: React.FC = () => {
           ticketCount: selection.ticketCount,
           pricePerTicket: selection.pricePerTicket,
         })),
-        totalAmount: totalPrice + 100,
+        totalAmount: totalPrice + 200,
         currency: 'LKR',
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -304,11 +307,15 @@ const SeatSelectionPage: React.FC = () => {
           phone: customerInfo.phone,
           nic: customerInfo.nic,
         },
+          returnUrl,
+          cancelUrl,
       };
 
       const sessionResponse = await paymentService.initiatePayment(paymentRequest);
 
-      // ✅ store sessionId so return page can verify
+      console.log("MPGS session:", sessionResponse);
+
+      // store sessionId so return page can verify
       localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);
 
       showMessage('success', 'Connecting to payment gateway...');
@@ -318,13 +325,7 @@ const SeatSelectionPage: React.FC = () => {
       setPaymentModalOpen(false);
 
       // Order details must be passed to Checkout.configure() - CBMPGS requires this
-      paymentService.startCheckout(
-        sessionResponse.sessionId,
-        sessionResponse.amount,
-        sessionResponse.currency,
-        sessionResponse.orderReference || sessionResponse.bookingId,
-        sessionResponse.successUrl
-      );
+      paymentService.startCheckout(sessionResponse);
 
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
