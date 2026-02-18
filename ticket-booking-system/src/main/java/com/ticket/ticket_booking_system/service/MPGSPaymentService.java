@@ -61,41 +61,45 @@ public class MPGSPaymentService {
     ) {
         String endpoint = mpgsConfig.getApiEndpoint("/session");
 
-        // Use booking reference if you have it; otherwise bookingId is fine.
-        // MPGS order.id must be string-safe and stable.
         String orderId = bookingId.toString();
         String amountStr = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
         String currencyStr = currency != null ? currency : mpgsConfig.getCurrency();
 
-        // MPGS REST JSON format with nested objects
+        // MPGS Hosted Checkout v67+: Initiate Checkout API
+        // All order details must be sent during session creation
         Map<String, Object> order = new HashMap<>();
         order.put("id", orderId);
-        order.put("amount", amountStr);  // String format to avoid type issues
+        order.put("amount", amountStr);
         order.put("currency", currencyStr);
+        order.put("description", "Event ticket booking");
 
         Map<String, Object> interaction = new HashMap<>();
         interaction.put("operation", "PURCHASE");
         interaction.put("returnUrl", returnUrl);
         interaction.put("cancelUrl", cancelUrl);
+        
+        Map<String, Object> merchant = new HashMap<>();
+        merchant.put("name", "Tickets.lk");
+        interaction.put("merchant", merchant);
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("apiOperation", "CREATE_CHECKOUT_SESSION");
-        payload.put("order", order);
-        payload.put("interaction", interaction);
+        Map<String, Object> sessionRequest = new HashMap<>();
+        sessionRequest.put("apiOperation", "INITIATE_CHECKOUT");
+        sessionRequest.put("order", order);
+        sessionRequest.put("interaction", interaction);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", mpgsConfig.getBasicAuthHeader());
 
-        log.info("Creating MPGS checkout session (JSON): endpoint={}, orderId={}, amount={}, currency={}",
+        log.info("Creating MPGS checkout session: endpoint={}, orderId={}, amount={}, currency={}",
                 endpoint, orderId, amountStr, currencyStr);
-        log.debug("MPGS session payload (JSON): {}", payload);
+        log.debug("MPGS session request: {}", sessionRequest);
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
                     endpoint,
                     HttpMethod.POST,
-                    new HttpEntity<Map<String, Object>>(payload, headers),
+                    new HttpEntity<Map<String, Object>>(sessionRequest, headers),
                     String.class
             );
 
@@ -104,6 +108,8 @@ public class MPGSPaymentService {
             }
 
             String responseBody = response.getBody();
+            log.debug("MPGS session response: {}", responseBody);
+            
             JsonNode responseJson = objectMapper.readTree(responseBody);
             
             if (!responseJson.has("session") || !responseJson.get("session").has("id")) {
@@ -116,6 +122,12 @@ public class MPGSPaymentService {
                     .sessionId(sessionId)
                     .merchantId(mpgsConfig.getMerchantId())
                     .checkoutScriptUrl(mpgsConfig.getCheckoutScriptUrl())
+                    .amount(amount)
+                    .currency(currency != null ? currency : mpgsConfig.getCurrency())
+                    .bookingId(bookingId)
+                    .orderReference(bookingId.toString())
+                    .successUrl(returnUrl)
+                    .cancelUrl(cancelUrl)
                     .build();
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {

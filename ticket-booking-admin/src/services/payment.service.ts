@@ -118,22 +118,21 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
 
   /**
    * Opens MPGS Hosted Checkout payment page.
-   * Order details (amount, currency) must be passed here since CBMPGS
-   * doesn't accept them in session creation.
-   * MPGS completes via redirect to returnUrl.
+   * For MPGS v67+, only session.id is passed to configure().
+   * All order details are sent during session creation on the backend.
    */
-startCheckout(session: any) {
-  if (!(window as any).Checkout) {
-    console.error("MPGS Checkout not loaded");
-    return;
+  startCheckout(session: MPGSSessionResponse) {
+    if (!(window as any).Checkout) {
+      console.error("MPGS Checkout not loaded");
+      return;
+    }
+    
+    (window as any).Checkout.configure({
+      session: { id: session.sessionId }
+    });
+
+    (window as any).Checkout.showPaymentPage();
   }
-
-  (window as any).Checkout.configure({
-    session: { id: session.sessionId },
-  });
-
-  (window as any).Checkout.showPaymentPage();
-}
 }
 
 const paymentService = new PaymentService();
