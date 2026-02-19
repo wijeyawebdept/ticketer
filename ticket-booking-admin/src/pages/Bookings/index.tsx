@@ -33,6 +33,8 @@ const Bookings: React.FC = () => {
     setLoading(true);
     try {
       const data = await BookingService.getAllBookings();
+      console.log('Fetched bookings:', data);
+      console.log('First booking sample:', data[0]);
       setBookings(data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -65,7 +67,7 @@ const Bookings: React.FC = () => {
     if (!selectedBooking) return;
     
     try {
-      await BookingService.cancelBooking(selectedBooking.id);
+      await BookingService.cancelBooking(selectedBooking.bookingId);
       fetchBookings();
       handleCancelDialogClose();
     } catch (error) {
@@ -89,19 +91,42 @@ const Bookings: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'Booking ID', width: 150 },
-    { field: 'eventName', headerName: 'Event', flex: 1, valueGetter: (params) => params.row.event?.name || 'N/A' },
-    { field: 'userName', headerName: 'Customer', flex: 1, valueGetter: (params) => {
-      const user = params.row.user;
-      return user ? `${user.firstName} ${user.lastName}` : 'N/A';
-    }},
+    { field: 'bookingId', headerName: 'Booking ID', width: 150 },
+    { 
+      field: 'eventName', 
+      headerName: 'Event', 
+      flex: 1, 
+      valueGetter: (params) => params.row.eventName || params.row.event?.name || 'N/A' 
+    },
+    { 
+      field: 'userName', 
+      headerName: 'Customer', 
+      flex: 1, 
+      valueGetter: (params) => {
+        if (params.row.userFirstName && params.row.userLastName) {
+          return `${params.row.userFirstName} ${params.row.userLastName}`;
+        }
+        const user = params.row.user;
+        return user ? `${user.firstName} ${user.lastName}` : 'N/A';
+      }
+    },
     { field: 'ticketCount', headerName: 'Tickets', width: 100 },
-    { field: 'totalAmount', headerName: 'Amount', width: 120, valueFormatter: (params) => {
-      return `LKR ${params.value}`;
-    }},
-    { field: 'bookingDate', headerName: 'Booking Date', width: 150, valueFormatter: (params) => {
-      return new Date(params.value as string).toLocaleDateString();
-    }},
+    { 
+      field: 'totalAmount', 
+      headerName: 'Amount', 
+      width: 120, 
+      valueFormatter: (params: any) => {
+        return `LKR ${params.value}`;
+      }
+    },
+    { 
+      field: 'bookingTime', 
+      headerName: 'Booking Date', 
+      width: 150, 
+      valueFormatter: (params: any) => {
+        return new Date(params.value).toLocaleDateString();
+      }
+    },
     { 
       field: 'status', 
       headerName: 'Status', 
@@ -188,6 +213,7 @@ const Bookings: React.FC = () => {
               <DataGrid
                 rows={bookings}
                 columns={columns}
+                getRowId={(row) => row.bookingId}
                 initialState={{
                   pagination: {
                     paginationModel: {
@@ -225,7 +251,7 @@ const Bookings: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Booking ID</Typography>
-                  <Typography variant="body1">{selectedBooking.id}</Typography>
+                  <Typography variant="body1">{selectedBooking.bookingId}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Status</Typography>
@@ -268,7 +294,7 @@ const Bookings: React.FC = () => {
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2">Booking Date</Typography>
                   <Typography variant="body1">
-                    {new Date(selectedBooking.bookingDate).toLocaleString()}
+                    {new Date(selectedBooking.bookingTime).toLocaleString()}
                   </Typography>
                 </Grid>
               </Grid>

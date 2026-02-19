@@ -164,14 +164,59 @@ export interface Venue {
 
 // Booking related types
 export interface Booking {
-  id: string;
   bookingId: string;
-  user: User;
-  event: Event;
-  bookingDate: string;
+  bookingReference: string;
+  bookingTime: string; // Changed from bookingDate to match API
+  bookingDate?: string; // Keep for backward compatibility
   status: BookingStatus;
   totalAmount: number;
   ticketCount: number;
+  attended?: boolean;
+  
+  // User information
+  userId?: string;
+  userFirstName?: string;
+  userLastName?: string;
+  userEmail?: string;
+  user?: User; // Keep for backward compatibility
+  
+  // Event information
+  eventId?: string;
+  eventName?: string;
+  eventDescription?: string;
+  eventImageUrl?: string;
+  event?: Event; // Keep for backward compatibility
+  
+  // Schedule information
+  scheduleId?: string;
+  scheduleDate?: string;
+  scheduleStartTime?: string;
+  scheduleEndTime?: string;
+  scheduleFinalPrice?: number;
+  scheduleStatus?: string;
+  
+  // Venue information
+  venueId?: string;
+  venueName?: string;
+  venueAddress?: string;
+  
+  // Booking seats
+  seats?: BookingSeatInfo[];
+  
+  // Cancellation info
+  cancelledAt?: string;
+  cancellationReason?: string;
+  
+  // Legacy field for backward compatibility
+  id?: string;
+}
+
+export interface BookingSeatInfo {
+  seatId?: string;
+  seatNumber?: string;
+  seatRow?: string;
+  section?: string;
+  price: number;
 }
 
 export enum BookingStatus {

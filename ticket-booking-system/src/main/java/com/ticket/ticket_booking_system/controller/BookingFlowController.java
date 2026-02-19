@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.dto.request.HoldSeatsRequest;
+import com.ticket.ticket_booking_system.dto.response.BookingResponse;
 import com.ticket.ticket_booking_system.dto.response.SeatResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.User;
@@ -211,11 +212,11 @@ public class BookingFlowController {
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<List<Booking>> getMyBookings(Authentication authentication) {
+    public ResponseEntity<List<BookingResponse>> getMyBookings(Authentication authentication) {
         UUID userId = extractUserIdFromAuth(authentication);
         
         log.info("Fetching bookings for user: {}", userId);
-        List<Booking> bookings = bookingService.getBookingsByUserId(userId);
+        List<BookingResponse> bookings = bookingService.getBookingsByUserId(userId);
         return ResponseEntity.ok(bookings);
     }
     

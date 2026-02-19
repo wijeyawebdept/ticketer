@@ -19,6 +19,17 @@ import com.ticket.ticket_booking_system.entity.User;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpecificationExecutor<Booking> {
     
+    // Fetch bookings with all relationships eagerly loaded to avoid lazy loading issues
+    @Query("SELECT DISTINCT b FROM Booking b " +
+           "LEFT JOIN FETCH b.user " +
+           "LEFT JOIN FETCH b.event e " +
+           "LEFT JOIN FETCH e.venue " +
+           "LEFT JOIN FETCH b.eventSchedule " +
+           "LEFT JOIN FETCH b.bookingSeats " +
+           "WHERE b.user = :user " +
+           "ORDER BY b.bookingTime DESC")
+    List<Booking> findByUserWithDetails(User user);
+    
     Page<Booking> findByUser(User user, Pageable pageable);
     
     Page<Booking> findByEvent(Event event, Pageable pageable);

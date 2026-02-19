@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,19 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.dto.request.InitiatePaymentRequest;
+import com.ticket.ticket_booking_system.dto.response.BookingResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
-import com.ticket.ticket_booking_system.entity.VenueSeat;
 
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -385,14 +387,106 @@ public class BookingService {
     }
     
     /**
-     * Get bookings by user ID
+     * Get bookings by user ID (returns DTOs to avoid lazy loading issues)
      */
-    public List<Booking> getBookingsByUserId(UUID userId) {
+    public List<BookingResponse> getBookingsByUserId(UUID userId) {
         log.info("Fetching bookings for user: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
         
-        return bookingRepository.findByUser(user, Pageable.unpaged()).getContent();
+        // Use fetch-join query to load all relationships in one go
+        List<Booking> bookings = bookingRepository.findByUserWithDetails(user);
+        
+        // Map entities to DTOs
+        return bookings.stream()
+                .map(this::mapToBookingResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Map Booking entity to BookingResponse DTO
+     */
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        // Calculate ticket count
+        int ticketCount = booking.getBookingSeats() != null ? booking.getBookingSeats().size() : 0;
+        
+        BookingResponse.BookingResponseBuilder builder = BookingResponse.builder()
+                .bookingId(booking.getBookingId())
+                .bookingReference(booking.getBookingReference())
+                .bookingTime(booking.getBookingTime())
+                .totalAmount(booking.getTotalAmount())
+                .status(booking.getStatus())
+                .attended(booking.getAttended())
+                .ticketCount(ticketCount)
+                .cancelledAt(booking.getCancelledAt())
+                .cancellationReason(booking.getCancellationReason());
+        
+        // Map user information
+        if (booking.getUser() != null) {
+            builder.userId(booking.getUser().getUserId())
+                   .userFirstName(booking.getUser().getFirstName())
+                   .userLastName(booking.getUser().getLastName())
+                   .userEmail(booking.getUser().getEmail());
+        }
+        
+        // Map event information
+        if (booking.getEvent() != null) {
+            Event event = booking.getEvent();
+            builder.eventId(event.getEventId())
+                   .eventName(event.getName())
+                   .eventDescription(event.getDescription())
+                   .eventImageUrl(event.getImageUrl());
+            
+            // Map venue information if available
+            if (event.getVenue() != null) {
+                builder.venueId(event.getVenue().getVenueId())
+                       .venueName(event.getVenue().getName())
+                       .venueAddress(event.getVenue().getAddress());
+            }
+        }
+        
+        // Map schedule information if available
+        if (booking.getEventSchedule() != null) {
+            EventSchedule schedule = booking.getEventSchedule();
+            builder.scheduleId(schedule.getScheduleId())
+                   .scheduleDate(schedule.getScheduleDate() != null ? schedule.getScheduleDate().toString() : null)
+                   .scheduleStartTime(schedule.getStartTime() != null ? schedule.getStartTime().toString() : null)
+                   .scheduleEndTime(schedule.getEndTime() != null ? schedule.getEndTime().toString() : null)
+                   .scheduleFinalPrice(schedule.getPriceAdjustment()) // Use price adjustment
+                   .scheduleStatus(schedule.getStatus() != null ? schedule.getStatus().toString() : null);
+        }
+        
+        // Map booking seats
+        if (booking.getBookingSeats() != null && !booking.getBookingSeats().isEmpty()) {
+            List<BookingResponse.BookingSeatInfo> seatInfos = booking.getBookingSeats().stream()
+                    .map(bookingSeat -> {
+                        BookingResponse.BookingSeatInfo.BookingSeatInfoBuilder seatBuilder = 
+                                BookingResponse.BookingSeatInfo.builder()
+                                .price(bookingSeat.getPriceAtBooking());
+                        
+                        // For shared area tickets, use venue seat ID or shared area number
+                        if (Boolean.TRUE.equals(bookingSeat.getIsSharedAreaTicket())) {
+                            seatBuilder.seatNumber("Shared Area " + bookingSeat.getSharedAreaNumber())
+                                      .section("Shared Area");
+                        } else if (bookingSeat.getVenueSeatId() != null) {
+                            // VenueSeat format (e.g., "L-A-01")
+                            seatBuilder.seatNumber(bookingSeat.getVenueSeatId());
+                        } else if (bookingSeat.getSeat() != null) {
+                            Seat seat = bookingSeat.getSeat();
+                            seatBuilder.seatId(seat.getSeatId())
+                                      .seatNumber(seat.getSeatNumber())
+                                      .seatRow(seat.getRowNumber())
+                                      .section(seat.getSection());
+                        }
+                        
+                        return seatBuilder.build();
+                    })
+                    .collect(Collectors.toList());
+            
+            builder.seats(seatInfos);
+        }
+        
+        return builder.build();
     }
 
     /**

@@ -24,6 +24,7 @@ public class BookingResponse {
     private BigDecimal totalAmount;
     private BookingStatus status;
     private Boolean attended;
+    private Integer ticketCount; // Number of tickets/seats in this booking
     
     // User information
     private UUID userId;

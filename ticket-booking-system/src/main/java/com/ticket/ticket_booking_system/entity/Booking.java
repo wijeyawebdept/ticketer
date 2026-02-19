@@ -8,6 +8,9 @@ import java.util.UUID;
 
 import org.hibernate.annotations.GenericGenerator;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,14 +46,17 @@ public class Booking {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "password", "refreshToken", "googleId"})
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "seats", "organizer", "eventSchedules"})
     private Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "event", "bookings"})
     private EventSchedule eventSchedule;
 
     @Column(nullable = false)
@@ -75,6 +81,7 @@ public class Booking {
     private String cancellationReason;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     @Builder.Default
     private Set<BookingSeat> bookingSeats = new HashSet<>();
 

@@ -5,6 +5,9 @@ import java.util.UUID;
 
 import org.hibernate.annotations.GenericGenerator;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -38,10 +41,12 @@ public class BookingSeat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
+    @JsonBackReference
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "seats", "organizer", "eventSchedules"})
     private Event event;
 
     public void setBooking(Booking booking) {
@@ -54,6 +59,7 @@ public class BookingSeat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = true) // Allow NULL for shared area tickets
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "event"})
     private Seat seat;
 
     @Column(nullable = false)

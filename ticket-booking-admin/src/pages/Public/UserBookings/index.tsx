@@ -66,7 +66,7 @@ const UserBookings: React.FC = () => {
     if (!selectedBooking) return;
     
     try {
-      await BookingService.cancelBooking(selectedBooking.id);
+      await BookingService.cancelBooking(selectedBooking.bookingId);
       fetchBookings();
       handleCancelDialogClose();
     } catch (error) {
@@ -90,17 +90,27 @@ const UserBookings: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'Booking ID', width: 150 },
-    { field: 'eventName', headerName: 'Event', flex: 1, valueGetter: (params: any) => params.row.event?.name || 'N/A' },
-    { field: 'ticketCount', headerName: 'Tickets', width: 100 },
-    { field: 'totalAmount', headerName: 'Amount', width: 120, valueFormatter: (value: any) => {
-      return `LKR ${value}`;
-    }},
+    { field: 'bookingId', headerName: 'Booking ID', width: 150 },
     { 
-      field: 'bookingDate', 
+      field: 'eventName', 
+      headerName: 'Event', 
+      flex: 1, 
+      valueGetter: (params: any) => params.row.eventName || params.row.event?.name || 'N/A' 
+    },
+    { field: 'ticketCount', headerName: 'Tickets', width: 100 },
+    { 
+      field: 'totalAmount', 
+      headerName: 'Amount', 
+      width: 120, 
+      valueFormatter: (params: any) => {
+        return `LKR ${params.value}`;
+      }
+    },
+    { 
+      field: 'bookingTime', 
       headerName: 'Booking Date', 
       width: 150,
-      valueFormatter: (value: any) => new Date(value).toLocaleDateString()
+      valueFormatter: (params: any) => new Date(params.value).toLocaleDateString()
     },
     { 
       field: 'status', 
@@ -171,6 +181,7 @@ const UserBookings: React.FC = () => {
               rows={bookings}
               columns={columns}
               loading={loading}
+              getRowId={(row) => row.bookingId}
               pageSizeOptions={[5, 10, 25]}
               initialState={{
                 pagination: { paginationModel: { pageSize: 10 } },
@@ -188,7 +199,7 @@ const UserBookings: React.FC = () => {
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Booking ID:</Typography>
-                  <Typography>{selectedBooking.id}</Typography>
+                  <Typography>{selectedBooking.bookingId}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Status:</Typography>
@@ -212,7 +223,7 @@ const UserBookings: React.FC = () => {
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2">Booking Date:</Typography>
-                  <Typography>{new Date(selectedBooking.bookingDate).toLocaleString()}</Typography>
+                  <Typography>{new Date(selectedBooking.bookingTime).toLocaleString()}</Typography>
                 </Grid>
               </Grid>
             )}
