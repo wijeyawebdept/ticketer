@@ -180,7 +180,7 @@ const theme = createTheme({
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID!}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>

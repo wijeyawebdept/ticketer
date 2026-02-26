@@ -7,12 +7,20 @@ import java.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class GoogleOAuthService {
@@ -21,6 +29,11 @@ public class GoogleOAuthService {
 
     @Value("${google.oauth.client-id}")
     private String googleClientId;
+
+    @PostConstruct
+    public void logClientId() {
+    logger.info("Google OAuth client id (audience) = {}", googleClientId);
+    }
 
     /**
      * Verify Google OAuth token and extract user information
@@ -66,6 +79,52 @@ public class GoogleOAuthService {
     }
 
     /**
+     * Get user information from Google using access token
+     * @param accessToken The Google OAuth access token from the frontend
+     * @return GoogleUserInfo containing user information
+     * @throws IOException if there's an error communicating with Google
+     */
+    public GoogleUserInfo getUserInfoFromAccessToken(String accessToken) throws IOException {
+        logger.info("Attempting to get user info from Google access token");
+        
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://www.googleapis.com/oauth2/v2/userinfo";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        
+        try {
+            ResponseEntity<JsonNode> response = restTemplate.exchange(
+                url, 
+                HttpMethod.GET, 
+                entity, 
+                JsonNode.class
+            );
+            
+            JsonNode userInfo = response.getBody();
+            if (userInfo == null) {
+                throw new SecurityException("Failed to retrieve user information from Google");
+            }
+            
+            logger.info("Successfully retrieved user info from Google");
+            logger.info("Email: {}", userInfo.get("email").asText());
+            
+            return new GoogleUserInfo(
+                userInfo.get("id").asText(),
+                userInfo.get("email").asText(),
+                userInfo.has("given_name") ? userInfo.get("given_name").asText() : "",
+                userInfo.has("family_name") ? userInfo.get("family_name").asText() : "",
+                userInfo.has("picture") ? userInfo.get("picture").asText() : "",
+                userInfo.has("verified_email") && userInfo.get("verified_email").asBoolean()
+            );
+        } catch (Exception e) {
+            logger.error("Error getting user info from Google: {}", e.getMessage());
+            throw new SecurityException("Failed to validate Google access token: " + e.getMessage());
+        }
+    }
+
+    /**
      * Extract user information from Google token payload
      */
     public static class GoogleUserInfo {
@@ -83,6 +142,16 @@ public class GoogleOAuthService {
             this.lastName = (String) payload.get("family_name");
             this.pictureUrl = (String) payload.get("picture");
             this.emailVerified = Boolean.TRUE.equals(payload.getEmailVerified());
+        }
+
+        public GoogleUserInfo(String googleId, String email, String firstName, 
+                             String lastName, String pictureUrl, boolean emailVerified) {
+            this.googleId = googleId;
+            this.email = email;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.pictureUrl = pictureUrl;
+            this.emailVerified = emailVerified;
         }
 
         // Getters

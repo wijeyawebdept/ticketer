@@ -53,13 +53,13 @@ public class User implements UserDetails {
 
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
-    
+
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
     @Column(name = "profile_picture")
     private String profilePicture;
-    
+
     @Column(name = "google_id", unique = true)
     private String googleId;
 
@@ -80,7 +80,7 @@ public class User implements UserDetails {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -96,7 +96,7 @@ public class User implements UserDetails {
             active = 1; // Ensure active is 1 for new users
         }
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
@@ -141,27 +141,27 @@ public class User implements UserDetails {
         // Active = 1 (enabled), 0 = deactivated, -1 = soft deleted
         return this.active == 1;
     }
-    
+
     // Custom getter for email (since getUsername() returns email)
     public String getEmail() {
         return this.email;
     }
-    
+
     // Custom isActive method for clarity
     public boolean isActive() {
         return this.active == 1;
     }
-    
+
     // Custom setter for active to ensure consistency
     public void setActive(int active) {
         this.active = active;
     }
-    
+
     // Custom getter for ID (alias for getId())
     public UUID getUserId() {
         return this.id;
     }
-    
+
     // Custom setter for ID (alias for setId())
     public void setUserId(UUID userId) {
         this.id = userId;
@@ -183,77 +183,77 @@ public class User implements UserDetails {
         private LocalDateTime createdAt;
         private LocalDateTime lastLoginAt;
         private LocalDateTime updatedAt;
-        
+
         public UserBuilder id(UUID id) {
             this.id = id;
             return this;
         }
-        
+
         public UserBuilder firstName(String firstName) {
             this.firstName = firstName;
             return this;
         }
-        
+
         public UserBuilder lastName(String lastName) {
             this.lastName = lastName;
             return this;
         }
-        
+
         public UserBuilder email(String email) {
             this.email = email;
             return this;
         }
-        
+
         public UserBuilder password(String password) {
             this.password = password;
             return this;
         }
-        
+
         public UserBuilder phoneNumber(String phoneNumber) {
             this.phoneNumber = phoneNumber;
             return this;
         }
-        
+
         public UserBuilder dateOfBirth(LocalDate dateOfBirth) {
             this.dateOfBirth = dateOfBirth;
             return this;
         }
-        
+
         public UserBuilder profilePicture(String profilePicture) {
             this.profilePicture = profilePicture;
             return this;
         }
-        
+
         public UserBuilder role(Role role) {
             this.role = role;
             return this;
         }
-        
+
         public UserBuilder active(int active) {
             this.active = active;
             return this;
         }
-        
+
         public UserBuilder emailVerified(boolean emailVerified) {
             this.emailVerified = emailVerified;
             return this;
         }
-        
+
         public UserBuilder createdAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
             return this;
         }
-        
+
         public UserBuilder lastLoginAt(LocalDateTime lastLoginAt) {
             this.lastLoginAt = lastLoginAt;
             return this;
         }
-        
+
         public UserBuilder updatedAt(LocalDateTime updatedAt) {
             this.updatedAt = updatedAt;
             return this;
         }
-        
+
         public User build() {
             User user = new User();
             user.id = this.id;

@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.ticket.ticket_booking_system.dto.RecentTransactionDTO;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
@@ -224,17 +225,38 @@ public class DashboardServiceImpl implements DashboardService {
         return chartData;
     }
 
-    @Override
-    public Map<String, Object> getRecentTransactions(int count) {
-        Map<String, Object> result = new HashMap<>();
+@Override
+public Map<String, Object> getRecentTransactions(int count) {
+    Map<String, Object> result = new HashMap<>();
 
-        List<Transaction> transactions = transactionRepository.findAll(
-                PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "createdAt")))
-                .getContent();
+    List<Transaction> transactions = transactionRepository
+            .findAllByOrderByCreatedAtDesc(PageRequest.of(0, count))
+            .getContent();
 
-        result.put("transactions", transactions);
-        return result;
-    }
+    List<RecentTransactionDTO> dtoList = transactions.stream()
+            .map(t -> RecentTransactionDTO.builder()
+                    .transactionId(t.getTransactionId())
+                    .transactionReference(t.getTransactionReference())
+                    .amount(t.getAmount())
+                    .type(t.getType())
+                    .status(t.getStatus())
+                    .createdAt(t.getCreatedAt())
+
+                    .bookingId(t.getBooking() != null ? t.getBooking().getBookingId() : null)
+                    .bookingReference(t.getBooking() != null ? t.getBooking().getBookingReference() : null)
+
+                    .eventId(t.getBooking() != null && t.getBooking().getEvent() != null
+                            ? t.getBooking().getEvent().getEventId()
+                            : null)
+                    .eventName(t.getBooking() != null && t.getBooking().getEvent() != null
+                            ? t.getBooking().getEvent().getName()
+                            : null)
+                    .build())
+            .toList();
+
+    result.put("transactions", dtoList);
+    return result;
+}
 
     @Override
     public Map<String, Object> getUpcomingEvents(int count) {

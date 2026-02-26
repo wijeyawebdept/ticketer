@@ -48,12 +48,18 @@ public class FileUploadService {
     }
     
     public void deleteProfilePicture(String profilePicturePath) throws IOException {
-        if (profilePicturePath != null && !profilePicturePath.isEmpty()) {
-            Path filePath = Paths.get(profilePicturePath);
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-            }
-        }
+    if (profilePicturePath == null || profilePicturePath.isBlank()) return;
+
+    // If stored value is a URL (google avatar etc.), don't treat it as a local file path
+    String lower = profilePicturePath.toLowerCase();
+    if (lower.startsWith("http://") || lower.startsWith("https://")) {
+        return;
+    }
+
+    Path filePath = Paths.get(profilePicturePath);
+    if (Files.exists(filePath)) {
+        Files.delete(filePath);
+    }
     }
     
     private void validateFile(MultipartFile file) {

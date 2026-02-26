@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,42 +18,45 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
-    Optional<Transaction> findByTransactionReference(String transactionReference);
+        @EntityGraph(attributePaths = {"booking", "booking.event"})
+        Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    List<Transaction> findByBooking(Booking booking);
+        Optional<Transaction> findByTransactionReference(String transactionReference);
 
-    // Find transactions by booking ID
-    List<Transaction> findByBooking_BookingId(UUID bookingId);
+        List<Transaction> findByBooking(Booking booking);
 
-    // Find transactions by booking ID and type
-    List<Transaction> findByBooking_BookingIdAndType(UUID bookingId, Transaction.TransactionType type);
+        // Find transactions by booking ID
+        List<Transaction> findByBooking_BookingId(UUID bookingId);
 
-    // Find transactions by booking ID, type, and status
-    List<Transaction> findByBooking_BookingIdAndTypeAndStatus(
-            UUID bookingId,
-            Transaction.TransactionType type,
-            Transaction.TransactionStatus status
-    );
+        // Find transactions by booking ID and type
+        List<Transaction> findByBooking_BookingIdAndType(UUID bookingId, Transaction.TransactionType type);
 
-    // Find transactions by status and type, ordered by creation date
-    List<Transaction> findByStatusAndTypeOrderByCreatedAtDesc(
-            Transaction.TransactionStatus status,
-            Transaction.TransactionType type
-    );
+        // Find transactions by booking ID, type, and status
+        List<Transaction> findByBooking_BookingIdAndTypeAndStatus(
+                UUID bookingId,
+                Transaction.TransactionType type,
+                Transaction.TransactionStatus status
+        );
 
-    Page<Transaction> findByType(Transaction.TransactionType type, Pageable pageable);
+        // Find transactions by status and type, ordered by creation date
+        List<Transaction> findByStatusAndTypeOrderByCreatedAtDesc(
+                Transaction.TransactionStatus status,
+                Transaction.TransactionType type
+        );
 
-    Page<Transaction> findByStatus(Transaction.TransactionStatus status, Pageable pageable);
+        Page<Transaction> findByType(Transaction.TransactionType type, Pageable pageable);
 
-    @Query("SELECT t FROM Transaction t WHERE t.createdAt BETWEEN :startDate AND :endDate")
-    List<Transaction> findByDateRange(LocalDateTime startDate, LocalDateTime endDate);
+        Page<Transaction> findByStatus(Transaction.TransactionStatus status, Pageable pageable);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'PAYMENT' AND t.status = 'SUCCESS'")
-    BigDecimal findTotalRevenue();
+        @Query("SELECT t FROM Transaction t WHERE t.createdAt BETWEEN :startDate AND :endDate")
+        List<Transaction> findByDateRange(LocalDateTime startDate, LocalDateTime endDate);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'PAYMENT' AND t.status = 'SUCCESS' AND t.createdAt BETWEEN :startDate AND :endDate")
-    BigDecimal findRevenueForPeriod(LocalDateTime startDate, LocalDateTime endDate);
+        @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'PAYMENT' AND t.status = 'SUCCESS'")
+        BigDecimal findTotalRevenue();
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'REFUND' AND t.status = 'SUCCESS'")
-    BigDecimal findTotalRefunds();
+        @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'PAYMENT' AND t.status = 'SUCCESS' AND t.createdAt BETWEEN :startDate AND :endDate")
+        BigDecimal findRevenueForPeriod(LocalDateTime startDate, LocalDateTime endDate);
+
+        @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'REFUND' AND t.status = 'SUCCESS'")
+        BigDecimal findTotalRefunds();
 }

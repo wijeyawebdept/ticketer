@@ -45,7 +45,7 @@ public class Booking {
     private UUID bookingId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "password", "refreshToken", "googleId"})
     private User user;
 

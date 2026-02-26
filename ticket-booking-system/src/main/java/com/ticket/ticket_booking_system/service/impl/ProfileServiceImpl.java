@@ -140,8 +140,10 @@ public class ProfileServiceImpl implements ProfileService {
         // Check users table first
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
-            if (user.getProfilePicture() != null && !user.getProfilePicture().isEmpty()) {
-                fileUploadService.deleteProfilePicture(user.getProfilePicture());
+            String old = user.getProfilePicture();
+            if (old != null && !old.isBlank() &&
+                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
             user.setProfilePicture(profilePicturePath);
@@ -152,8 +154,10 @@ public class ProfileServiceImpl implements ProfileService {
         // Check admins table
         Admin admin = adminRepository.findByEmail(email).orElse(null);
         if (admin != null) {
-            if (admin.getProfilePicture() != null && !admin.getProfilePicture().isEmpty()) {
-                fileUploadService.deleteProfilePicture(admin.getProfilePicture());
+            String old = admin.getProfilePicture();
+            if (old != null && !old.isBlank() &&
+                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
             admin.setProfilePicture(profilePicturePath);
@@ -164,8 +168,10 @@ public class ProfileServiceImpl implements ProfileService {
         // Check organizers table
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
-            if (organizer.getProfilePicture() != null && !organizer.getProfilePicture().isEmpty()) {
-                fileUploadService.deleteProfilePicture(organizer.getProfilePicture());
+            String old = organizer.getProfilePicture();
+            if (old != null && !old.isBlank() &&
+                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
             organizer.setProfilePicture(profilePicturePath);
@@ -176,8 +182,10 @@ public class ProfileServiceImpl implements ProfileService {
         // Check organizer employees table
         OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
         if (employee != null) {
-            if (employee.getProfilePicture() != null && !employee.getProfilePicture().isEmpty()) {
-                fileUploadService.deleteProfilePicture(employee.getProfilePicture());
+            String old = employee.getProfilePicture();
+            if (old != null && !old.isBlank() &&
+                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
             employee.setProfilePicture(profilePicturePath);

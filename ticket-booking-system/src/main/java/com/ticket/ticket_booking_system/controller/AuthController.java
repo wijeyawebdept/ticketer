@@ -2,7 +2,10 @@ package com.ticket.ticket_booking_system.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +33,8 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
@@ -341,6 +346,103 @@ public class AuthController {
             response.put("error_details", e.getClass().getSimpleName());
             
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<Map<String, Object>> googleLogin(@RequestBody com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest request) {
+        try {
+            String idToken = request.getToken();
+            if (idToken == null || idToken.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Google ID token is required");
+                response.put("error_code", "MISSING_TOKEN");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            logger.info("Processing Google OAuth login (ID token flow)");
+            // Verify Google ID token and extract user info
+            com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = googleOAuthService.verifyGoogleToken(idToken);
+            GoogleOAuthService.GoogleUserInfo googleUserInfo = new GoogleOAuthService.GoogleUserInfo(payload);
+            if (!googleUserInfo.isEmailVerified()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Email is not verified by Google");
+                response.put("error_code", "EMAIL_NOT_VERIFIED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            // User linking/creation logic
+            com.ticket.ticket_booking_system.entity.User user = userRepository.findByGoogleId(googleUserInfo.getGoogleId())
+                .orElse(null);
+            if (user == null) {
+                user = userRepository.findByEmail(googleUserInfo.getEmail())
+                    .orElse(null);
+                if (user != null) {
+                    // Link Google account
+                    user.setGoogleId(googleUserInfo.getGoogleId());
+                    if (googleUserInfo.getPictureUrl() != null && !googleUserInfo.getPictureUrl().isEmpty()
+                        && (user.getProfilePicture() == null || user.getProfilePicture().isEmpty())) {
+                        user.setProfilePicture(googleUserInfo.getPictureUrl());
+                    }
+                    userRepository.save(user);
+                } else {
+                    // Create new user
+                    user = com.ticket.ticket_booking_system.entity.User.builder()
+                        .email(googleUserInfo.getEmail())
+                        .firstName(googleUserInfo.getFirstName() != null && !googleUserInfo.getFirstName().isEmpty() ? googleUserInfo.getFirstName() : "User")
+                        .lastName(googleUserInfo.getLastName() != null && !googleUserInfo.getLastName().isEmpty() ? googleUserInfo.getLastName() : "")
+                        .googleId(googleUserInfo.getGoogleId())
+                        .role(com.ticket.ticket_booking_system.entity.User.Role.USER)
+                        .active(1)
+                        .emailVerified(true)
+                        .profilePicture(googleUserInfo.getPictureUrl())
+                        .password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for OAuth users
+                        .build();
+                    userRepository.save(user);
+                }
+            }
+            if (user.getActive() != 1) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Account is disabled. Please contact administrator.");
+                response.put("error_code", "USER_DISABLED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            loginSuccessHandler.updateLastLogin(user.getEmail());
+            org.springframework.security.core.userdetails.User userDetails =
+                new org.springframework.security.core.userdetails.User(
+                    user.getEmail(),
+                    user.getPassword(),
+                    user.getAuthorities()
+                );
+            String token = jwtService.generateToken(userDetails);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Google login successful");
+            response.put("token", token);
+            response.put("user", Map.of(
+                "id", user.getId(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole().name(),
+                "email", user.getEmail()
+            ));
+            logger.info("Google login successful for user: {}", user.getEmail());
+            return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            logger.error("Security exception during Google login: {}", e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            response.put("error_code", "SECURITY_ERROR");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            logger.error("Error during Google authentication: {}", e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Google authentication failed: " + e.getMessage());
+            response.put("error_code", "AUTHENTICATION_ERROR");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }

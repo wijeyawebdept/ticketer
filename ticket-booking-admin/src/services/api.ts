@@ -98,6 +98,16 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 403) {
       console.error('Authorization error: You do not have permission to access this resource.');
     }
+
+    const data = error.response?.data;
+    const normalizedMessage =
+    (typeof data === 'string' && data) ||
+    data?.message ||
+    error.message ||
+    'Request failed';
+
+    // Ensure error.message is always a string
+    error.message = normalizedMessage;
     
     // Preserve the original error object so that status codes and response data are accessible
     return Promise.reject(error);

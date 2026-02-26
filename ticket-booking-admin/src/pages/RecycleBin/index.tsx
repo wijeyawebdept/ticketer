@@ -153,7 +153,7 @@ const RecycleBin: React.FC = () => {
       fetchRecycleBinItems();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to delete item permanently');
+      setError(err.response?.data?.message || 'Failed to delete item permanently');
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -176,7 +176,7 @@ const RecycleBin: React.FC = () => {
       fetchRecycleBinItems();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to empty recycle bin');
+      setError(err.response?.data?.message || 'Failed to empty recycle bin');
       setTimeout(() => setError(null), 3000);
     }
   };

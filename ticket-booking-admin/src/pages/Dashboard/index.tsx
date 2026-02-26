@@ -103,16 +103,18 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend })
 
 interface DashboardTransaction {
   transactionId: string;
+  transactionReference?: string;
   amount: number;
   status: string;
+  type?: string;
   createdAt: string;
-  booking?: { 
-    event?: { 
-      name: string;
-    };
-  };
-}
 
+  bookingId?: string;
+  bookingReference?: string;
+
+  eventId?: string;
+  eventName?: string; //
+}
 interface DashboardEvent {
   eventId: string;
   name: string;
@@ -330,18 +332,18 @@ const Dashboard: React.FC = () => {
                     <ListItemAvatar>
                       <Avatar 
                         sx={{ 
-                          bgcolor: transaction.status === 'COMPLETED' ? 'success.light' : 'warning.light',
+                          bgcolor: transaction.status === 'SUCCESS' ? 'success.light' : 'warning.light',
                           width: 48,
                           height: 48
                         }}
                       >
-                        {transaction.status === 'COMPLETED' ? <CheckCircleIcon /> : <AccessTimeIcon />}
+                        {transaction.status === 'SUCCESS' ? <CheckCircleIcon /> : <AccessTimeIcon />}
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
                       primary={
                         <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                          {transaction.booking?.event?.name || 'Unknown Event'}
+                          {transaction.eventName || "Unknown Event"}
                         </Typography>
                       }
                       secondary={
@@ -353,7 +355,7 @@ const Dashboard: React.FC = () => {
                     <ListItemSecondaryAction>
                       <Typography
                         variant="h6"
-                        color={transaction.status === 'COMPLETED' ? 'success.main' : 'warning.main'}
+                        color={transaction.status === 'SUCCESS  ' ? 'success.main' : 'warning.main'}
                         sx={{ fontWeight: 700 }}
                       >
                         {formatCurrency(transaction.amount || 0)}
