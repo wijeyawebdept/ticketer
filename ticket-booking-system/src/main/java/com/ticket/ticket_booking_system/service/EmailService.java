@@ -5,203 +5,100 @@ import java.math.BigDecimal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
 
 import com.ticket.ticket_booking_system.entity.Booking;
-import com.ticket.ticket_booking_system.entity.BookingSeat;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Service for sending email notifications
- * Email credentials should be configured in application.properties
- */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    private final TemplateEngine templateEngine;
 
-    @Value("${app.email.from:noreply@ticketbooking.com}")
+    @Value("${app.mail.fromEmail:noreply@dailymirror.lk}")
     private String fromEmail;
 
-    @Value("${spring.mail.username:}")
-    private String emailUsername;
+    @Value("${app.mail.fromName:Website}")
+    private String fromName;
 
-    /**
-     * Send booking confirmation email after successful payment
-     *
-     * @param booking The confirmed booking
-     * @param customerEmail Customer's email address
-     */
-    @Async
-    public void sendBookingConfirmationEmail(Booking booking, String customerEmail) {
-        log.info("Sending booking confirmation email to: {}", customerEmail);
-
-        if (!isEmailConfigured()) {
-            log.warn("Email service not configured. Skipping booking confirmation email.");
-            return;
-        }
-
-        try {
-            // Prepare template variables
-            Context context = new Context();
-            context.setVariable("bookingReference", booking.getBookingReference());
-            context.setVariable("eventName", booking.getEvent().getName());
-            context.setVariable("eventDate", booking.getEventSchedule() != null ?
-                    booking.getEventSchedule().getScheduleDate().toString() : "N/A");
-            context.setVariable("eventTime", booking.getEventSchedule() != null ?
-                    booking.getEventSchedule().getStartTime().toString() : "N/A");
-            context.setVariable("venueName", booking.getEvent().getVenueName() != null ?
-                    booking.getEvent().getVenueName() : "N/A");
-            context.setVariable("totalAmount", booking.getTotalAmount());
-            context.setVariable("currency", "LKR");
-            context.setVariable("ticketCount", booking.getBookingSeats().size());
-
-            // Prepare seat details
-            StringBuilder seatDetails = new StringBuilder();
-            for (BookingSeat bs : booking.getBookingSeats()) {
-                if (bs.getIsSharedAreaTicket() != null && bs.getIsSharedAreaTicket()) {
-                    seatDetails.append("Standing Area Ticket #").append(bs.getTicketCode()).append("\n");
-                } else if (bs.getSeat() != null) {
-                    seatDetails.append("Seat: ").append(bs.getSeat().getRowNumber())
-                              .append(bs.getSeat().getSeatNumber())
-                              .append(" - Ticket: ").append(bs.getTicketCode()).append("\n");
-                } else if (bs.getVenueSeatId() != null) {
-                    // VenueSeat booking (seat is null but venueSeatId is set)
-                    seatDetails.append("Seat: ").append(bs.getVenueSeatId())
-                              .append(" - Ticket: ").append(bs.getTicketCode()).append("\n");
-                }
-            }
-            context.setVariable("seatDetails", seatDetails.toString());
-
-            // Process template
-            String htmlContent = templateEngine.process("emails/booking-confirmation", context);
-
-            // Send email
-            sendHtmlEmail(customerEmail, "Booking Confirmation - " + booking.getBookingReference(), htmlContent);
-
-            log.info("Booking confirmation email sent successfully to: {}", customerEmail);
-
-        } catch (Exception e) {
-            log.error("Failed to send booking confirmation email to: {}", customerEmail, e);
-        }
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
     }
 
-    /**
-     * Send refund confirmation email
-     *
-     * @param booking The refunded booking
-     * @param customerEmail Customer's email address
-     * @param refundAmount Refund amount
-     * @param reason Refund reason
-     */
-    @Async
-    public void sendRefundConfirmationEmail(Booking booking, String customerEmail,
-                                            BigDecimal refundAmount, String reason) {
-        log.info("Sending refund confirmation email to: {}", customerEmail);
-
-        if (!isEmailConfigured()) {
-            log.warn("Email service not configured. Skipping refund confirmation email.");
-            return;
-        }
-
-        try {
-            // Prepare template variables
-            Context context = new Context();
-            context.setVariable("bookingReference", booking.getBookingReference());
-            context.setVariable("eventName", booking.getEvent().getName());
-            context.setVariable("refundAmount", refundAmount);
-            context.setVariable("currency", "LKR");
-            context.setVariable("reason", reason);
-            context.setVariable("originalAmount", booking.getTotalAmount());
-
-            // Process template
-            String htmlContent = templateEngine.process("emails/refund-confirmation", context);
-
-            // Send email
-            sendHtmlEmail(customerEmail, "Refund Processed - " + booking.getBookingReference(), htmlContent);
-
-            log.info("Refund confirmation email sent successfully to: {}", customerEmail);
-
-        } catch (Exception e) {
-            log.error("Failed to send refund confirmation email to: {}", customerEmail, e);
-        }
-    }
-
-    /**
-     * Send payment failure notification email
-     *
-     * @param customerEmail Customer's email address
-     * @param eventName Event name
-     * @param amount Attempted payment amount
-     * @param errorMessage Error message
-     */
-    @Async
-    public void sendPaymentFailureEmail(String customerEmail, String eventName,
-                                        BigDecimal amount, String errorMessage) {
-        log.info("Sending payment failure email to: {}", customerEmail);
-
-        if (!isEmailConfigured()) {
-            log.warn("Email service not configured. Skipping payment failure email.");
-            return;
-        }
-
-        try {
-            // Prepare template variables
-            Context context = new Context();
-            context.setVariable("eventName", eventName);
-            context.setVariable("amount", amount);
-            context.setVariable("currency", "LKR");
-            context.setVariable("errorMessage", errorMessage);
-
-            // Process template
-            String htmlContent = templateEngine.process("emails/payment-failure", context);
-
-            // Send email
-            sendHtmlEmail(customerEmail, "Payment Failed - " + eventName, htmlContent);
-
-            log.info("Payment failure email sent successfully to: {}", customerEmail);
-
-        } catch (Exception e) {
-            log.error("Failed to send payment failure email to: {}", customerEmail, e);
-        }
-    }
-
-    /**
-     * Send HTML email
-     *
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param htmlContent HTML content
-     */
-    private void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
+    public void sendHtml(String toEmail, String subject, String htmlBody) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        MimeMessageHelper helper =
+                new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
 
-        helper.setFrom(fromEmail);
-        helper.setTo(to);
+        try {
+            helper.setFrom(fromEmail, fromName);
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new MessagingException("Invalid From name encoding", e);
+        }
+
+        helper.setTo(toEmail);
         helper.setSubject(subject);
-        helper.setText(htmlContent, true);
+        helper.setText(htmlBody, true);
 
         mailSender.send(message);
     }
 
-    /**
-     * Check if email service is properly configured
-     *
-     * @return true if email credentials are configured
-     */
-    private boolean isEmailConfigured() {
-        return emailUsername != null && !emailUsername.isEmpty() &&
-               !emailUsername.equals("your-email@gmail.com");
+    public void sendBookingConfirmationEmail(Booking booking, String customerEmail) {
+        try {
+            String subject = "Booking Confirmed - " + booking.getBookingReference();
+            String htmlBody = "<html><body>"
+                    + "<h2>Booking Confirmation</h2>"
+                    + "<p>Dear " + booking.getUser().getEmail() + ",</p>"
+                    + "<p>Your booking has been confirmed.</p>"
+                    + "<p><strong>Booking Reference:</strong> " + booking.getBookingReference() + "</p>"
+                    + "<p><strong>Total Amount:</strong> " + booking.getTotalAmount() + "</p>"
+                    + "<p>Thank you for your purchase!</p>"
+                    + "</body></html>";
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Booking confirmation email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send booking confirmation email to {}: {}", customerEmail, e.getMessage());
+        }
+    }
+
+    public void sendPaymentFailureEmail(String customerEmail, String eventName, BigDecimal amount, String errorMessage) {
+        try {
+            String subject = "Payment Failed - " + eventName;
+            String htmlBody = "<html><body>"
+                    + "<h2>Payment Failed</h2>"
+                    + "<p>Dear Customer,</p>"
+                    + "<p>Unfortunately, your payment for <strong>" + eventName + "</strong> could not be processed.</p>"
+                    + "<p><strong>Amount:</strong> " + amount + "</p>"
+                    + "<p><strong>Reason:</strong> " + (errorMessage != null ? errorMessage : "Unknown error") + "</p>"
+                    + "<p>Please try again or contact support.</p>"
+                    + "</body></html>";
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Payment failure email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send payment failure email to {}: {}", customerEmail, e.getMessage());
+        }
+    }
+
+    public void sendRefundConfirmationEmail(Booking booking, String customerEmail, BigDecimal refundAmount, String reason) {
+        try {
+            String subject = "Refund Processed - " + booking.getBookingReference();
+            String htmlBody = "<html><body>"
+                    + "<h2>Refund Confirmation</h2>"
+                    + "<p>Dear " + booking.getUser().getEmail() + ",</p>"
+                    + "<p>Your refund has been successfully processed.</p>"
+                    + "<p><strong>Booking Reference:</strong> " + booking.getBookingReference() + "</p>"
+                    + "<p><strong>Refund Amount:</strong> " + refundAmount + "</p>"
+                    + "<p><strong>Reason:</strong> " + (reason != null ? reason : "N/A") + "</p>"
+                    + "<p>The amount will be credited back to your original payment method within 5-7 business days.</p>"
+                    + "</body></html>";
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Refund confirmation email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send refund confirmation email to {}: {}", customerEmail, e.getMessage());
+        }
     }
 }
