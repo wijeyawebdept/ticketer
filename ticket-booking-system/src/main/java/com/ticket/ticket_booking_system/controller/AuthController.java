@@ -28,6 +28,10 @@ import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.GoogleOAuthService;
 import com.ticket.ticket_booking_system.service.UserService;
 
+import org.springframework.transaction.annotation.Transactional;
+
+import com.ticket.ticket_booking_system.service.EmailService;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -43,6 +47,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LoginSuccessHandler loginSuccessHandler;
+    private final EmailService emailService;
     
     public AuthController(
             UserService userService, 
@@ -51,7 +56,8 @@ public class AuthController {
             GoogleOAuthService googleOAuthService,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            LoginSuccessHandler loginSuccessHandler) {
+            LoginSuccessHandler loginSuccessHandler,
+            EmailService emailService) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
@@ -59,6 +65,7 @@ public class AuthController {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.loginSuccessHandler = loginSuccessHandler;
+        this.emailService = emailService;
     }
 
     @PostMapping("/register")
@@ -350,6 +357,7 @@ public class AuthController {
     }
 
     @PostMapping("/google-login")
+    @Transactional
     public ResponseEntity<Map<String, Object>> googleLogin(@RequestBody com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest request) {
         try {
             String idToken = request.getToken();
@@ -387,18 +395,29 @@ public class AuthController {
                     userRepository.save(user);
                 } else {
                     // Create new user
+                    // NOTE: googleId is intentionally NOT set in the builder to avoid a Lombok
+                    // @Builder.Default + @AllArgsConstructor interaction where builder fields
+                    // may not be persisted correctly on first em.persist() call.
+                    // It is set explicitly via setter below before save.
                     user = com.ticket.ticket_booking_system.entity.User.builder()
                         .email(googleUserInfo.getEmail())
                         .firstName(googleUserInfo.getFirstName() != null && !googleUserInfo.getFirstName().isEmpty() ? googleUserInfo.getFirstName() : "User")
                         .lastName(googleUserInfo.getLastName() != null && !googleUserInfo.getLastName().isEmpty() ? googleUserInfo.getLastName() : "")
-                        .googleId(googleUserInfo.getGoogleId())
                         .role(com.ticket.ticket_booking_system.entity.User.Role.USER)
                         .active(1)
                         .emailVerified(true)
                         .profilePicture(googleUserInfo.getPictureUrl())
                         .password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for OAuth users
                         .build();
-                    userRepository.save(user);
+                    user.setGoogleId(googleUserInfo.getGoogleId()); // Set explicitly to ensure it persists
+                    user = userRepository.save(user);
+                    // Send welcome email for new Google-registered users
+                    try {
+                        emailService.sendWelcomeEmail(user.getEmail(), user.getFirstName());
+                        logger.info("Welcome email sent to new Google user: {}", user.getEmail());
+                    } catch (Exception emailEx) {
+                        logger.warn("Failed to send welcome email for Google user {}: {}", user.getEmail(), emailEx.getMessage());
+                    }
                 }
             }
             if (user.getActive() != 1) {
@@ -443,6 +462,39 @@ public class AuthController {
             response.put("message", "Google authentication failed: " + e.getMessage());
             response.put("error_code", "AUTHENTICATION_ERROR");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email is required."));
+        }
+        // Always return 200 to avoid exposing whether the email exists
+        userService.forgotPassword(email.trim().toLowerCase());
+        return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        String newPassword = body.get("newPassword");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Reset token is required."));
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Password must be at least 8 characters."));
+        }
+        try {
+            userService.resetPasswordWithToken(token.trim(), newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password has been reset successfully. You can now log in."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error resetting password: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "An unexpected error occurred. Please try again."));
         }
     }
 }

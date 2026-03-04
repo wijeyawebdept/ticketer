@@ -67,34 +67,34 @@ interface SeatButtonProps {
   seatType: string;
 }
 
-const SeatButton = styled(Button)<SeatButtonProps>(({ theme, status, seatType }) => {
-  let backgroundColor = '#4CAF50'; // available - green
-  let hoverColor = '#45a049';
+const SeatButton = styled(Button)<SeatButtonProps>(({ theme, status }) => {
+  // Unified colour scheme
+  let backgroundColor = '#FFFFFF'; // available – white
+  let textColor = '#333333';
+  let hoverColor = '#e0e0e0';
   let cursor = 'pointer';
+  let border = '1px solid rgba(0,0,0,0.2)';
 
   if (status === 'selected') {
-    backgroundColor = '#2196F3'; // blue
-    hoverColor = '#1976D2';
+    backgroundColor = '#FF0000'; // red – selected
+    textColor = '#fff';
+    hoverColor = '#cc0000';
+    border = 'none';
   } else if (status === 'booked') {
-    backgroundColor = '#f44336'; // red
+    backgroundColor = '#FF0000'; // red – sold (same as selected)
+    textColor = '#fff';
     cursor = 'not-allowed';
+    border = 'none';
   } else if (status === 'held') {
-    backgroundColor = '#FF9800'; // orange
+    backgroundColor = '#FFD700'; // yellow – temporarily held
+    textColor = '#333';
     cursor = 'not-allowed';
+    border = 'none';
   } else if (status === 'blocked') {
-    backgroundColor = '#9E9E9E'; // gray
+    backgroundColor = '#6c757d'; // grey – locked
+    textColor = '#fff';
     cursor = 'not-allowed';
-  }
-
-  // Adjust for seat type
-  if (status === 'available') {
-    if (seatType === 'PREMIUM') {
-      backgroundColor = '#2196F3';
-      hoverColor = '#1976D2';
-    } else if (seatType === 'VIP') {
-      backgroundColor = '#FF9800';
-      hoverColor = '#F57C00';
-    }
+    border = 'none';
   }
 
   return {
@@ -105,15 +105,16 @@ const SeatButton = styled(Button)<SeatButtonProps>(({ theme, status, seatType })
     padding: 0,
     fontSize: '0.75rem',
     backgroundColor,
-    color: '#fff',
+    color: textColor,
     cursor,
+    border,
     '&:hover': {
       backgroundColor: cursor === 'pointer' ? hoverColor : backgroundColor,
     },
     '&:disabled': {
       backgroundColor,
-      color: '#fff',
-      opacity: 0.7,
+      color: textColor,
+      opacity: 0.85,
     },
   };
 });
@@ -379,27 +380,23 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
         })}
       </SeatMapContainer>
 
-      {/* Legend */}
+      {/* Legend – unified */}
       <LegendContainer>
         <LegendItem>
-          <LegendBox color="#4CAF50" />
-          <Typography variant="body2">Available (Regular)</Typography>
+          <LegendBox color="#FFFFFF" sx={{ border: '1px solid rgba(0,0,0,0.2)' }} />
+          <Typography variant="body2">Available</Typography>
         </LegendItem>
         <LegendItem>
-          <LegendBox color="#2196F3" />
-          <Typography variant="body2">Premium / Selected</Typography>
+          <LegendBox color="#FF0000" />
+          <Typography variant="body2">Sold / Selected</Typography>
         </LegendItem>
         <LegendItem>
-          <LegendBox color="#FF9800" />
-          <Typography variant="body2">VIP / Held</Typography>
+          <LegendBox color="#6c757d" />
+          <Typography variant="body2">Locked</Typography>
         </LegendItem>
         <LegendItem>
-          <LegendBox color="#f44336" />
-          <Typography variant="body2">Booked</Typography>
-        </LegendItem>
-        <LegendItem>
-          <LegendBox color="#9E9E9E" />
-          <Typography variant="body2">Blocked</Typography>
+          <LegendBox color="#FFD700" />
+          <Typography variant="body2">Temporarily Hold</Typography>
         </LegendItem>
       </LegendContainer>
 

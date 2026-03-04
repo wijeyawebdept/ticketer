@@ -56,6 +56,16 @@ public interface UserService {
     Map<String, Object> bulkOperation(BulkUserOperationRequest request);
     
     void resetPassword(UUID id, String newPassword);
-    
+
+    /**
+     * Initiates the forgot-password flow: generates a token and sends a reset email.
+     */
+    void forgotPassword(String email);
+
+    /**
+     * Validates the reset token and updates the user's password.
+     */
+    void resetPasswordWithToken(String token, String newPassword);
+
     boolean isEmailExists(String email);
 }

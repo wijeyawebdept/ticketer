@@ -1,186 +1,244 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Confirmation</title>
+    <title>Payment Confirmation - Ticketer</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+            background-color: #f0f2f5;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 24px 12px;
         }
-        .container {
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+        .wrapper { max-width: 620px; margin: 0 auto; }
         .header {
+            background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%);
+            border-radius: 12px 12px 0 0;
+            padding: 30px 24px 24px;
             text-align: center;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            color: #fff;
         }
-        .header h1 {
-            color: #4CAF50;
-            margin: 0;
-            font-size: 28px;
+        .header .check { font-size: 52px; line-height: 1; }
+        .header h1 { font-size: 26px; margin-top: 10px; font-weight: 700; letter-spacing: 0.5px; }
+        .header p  { font-size: 14px; margin-top: 6px; opacity: 0.88; }
+        .card {
+            background: #ffffff;
+            border-radius: 0 0 12px 12px;
+            padding: 28px 24px 32px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
-        .success-icon {
-            font-size: 50px;
-            color: #4CAF50;
-        }
-        .booking-details {
-            background-color: #f9f9f9;
+        .ref-banner {
+            background: #e8f5e9;
+            border: 2px dashed #4caf50;
             border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
+            text-align: center;
+            padding: 14px 20px;
+            margin-bottom: 24px;
         }
-        .booking-details h2 {
-            color: #333;
-            margin-top: 0;
-            font-size: 18px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
+        .ref-banner .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .ref-banner .code  { font-size: 28px; font-weight: 800; color: #1b5e20; letter-spacing: 3px; margin-top: 4px; }
+        .section { margin-bottom: 22px; }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
         }
-        .detail-row {
+        .row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .detail-label {
-            color: #666;
-            font-weight: 500;
-        }
-        .detail-value {
-            color: #333;
-            font-weight: 600;
-        }
-        .booking-reference {
-            background-color: #4CAF50;
-            color: white;
-            text-align: center;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        .booking-reference h3 {
-            margin: 0 0 5px 0;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid #f0f0f0;
             font-size: 14px;
-            font-weight: normal;
         }
-        .booking-reference .reference-code {
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 2px;
+        .row:last-child { border-bottom: none; }
+        .row .lbl { color: #777; }
+        .row .val { font-weight: 600; color: #222; text-align: right; max-width: 60%; }
+        .amount-box {
+            background: #1b5e20;
+            color: #fff;
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 4px 0 22px;
         }
-        .ticket-section {
-            margin-top: 20px;
-        }
-        .ticket-section h3 {
-            color: #333;
-            font-size: 16px;
-        }
-        .ticket-details {
-            background-color: #fff3e0;
+        .amount-box .amount-label { font-size: 14px; opacity: 0.85; }
+        .amount-box .amount-value { font-size: 22px; font-weight: 800; }
+        .ticket-item {
+            background: #fff8e1;
             border-left: 4px solid #ff9800;
-            padding: 15px;
-            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            font-size: 14px;
             white-space: pre-line;
         }
-        .total-amount {
-            text-align: center;
-            font-size: 24px;
-            color: #4CAF50;
-            font-weight: bold;
-            margin: 20px 0;
+        .receipt-box {
+            background: #f3f8ff;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 22px;
         }
-        .footer {
-            text-align: center;
-            color: #888;
+        .paid-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            border-radius: 20px;
+            padding: 3px 12px;
             font-size: 12px;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            font-weight: 700;
         }
-        .important-notice {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
+        .qr-section {
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 22px;
+            background: #fafafa;
         }
+        .qr-section img { width: 180px; height: 180px; display: block; margin: 0 auto 12px; }
+        .qr-section .qr-title { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+        .qr-section .qr-sub   { font-size: 12px; color: #888; }
+        .notice {
+            background: #e3f2fd;
+            border-left: 4px solid #1976d2;
+            border-radius: 0 6px 6px 0;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #1565c0;
+            margin-bottom: 22px;
+        }
+        .notice ul { padding-left: 18px; margin-top: 6px; }
+        .notice li { margin-bottom: 4px; }
+        .footer { text-align: center; color: #aaa; font-size: 12px; margin-top: 24px; }
+        .footer p { margin: 3px 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="success-icon">✓</div>
-            <h1>Booking Confirmed!</h1>
+<div class="wrapper">
+
+    <div class="header">
+        <div class="check">&#10003;</div>
+        <h1>Payment Confirmed!</h1>
+        <p>Your tickets are booked. A copy of this receipt has been saved to your account.</p>
+    </div>
+
+    <div class="card">
+
+        <div class="ref-banner">
+            <div class="label">Booking Reference</div>
+            <div class="code" th:text="${bookingReference}">BK-XXXXXXXX</div>
         </div>
 
-        <p>Thank you for your booking! Your payment has been successfully processed.</p>
-
-        <div class="booking-reference">
-            <h3>Your Booking Reference</h3>
-            <div class="reference-code" th:text="${bookingReference}">ABC123XYZ</div>
-        </div>
-
-        <div class="booking-details">
-            <h2>Event Details</h2>
-            <div class="detail-row">
-                <span class="detail-label">Event:</span>
-                <span class="detail-value" th:text="${eventName}">Concert Name</span>
+        <div class="section">
+            <div class="section-title">Event Details</div>
+            <div class="row">
+                <span class="lbl">Event</span>
+                <span class="val" th:text="${eventName}">Event Name</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Date:</span>
-                <span class="detail-value" th:text="${eventDate}">2024-01-15</span>
+            <div class="row">
+                <span class="lbl">Date</span>
+                <span class="val" th:text="${eventDate}">01 January 2026</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Time:</span>
-                <span class="detail-value" th:text="${eventTime}">19:00</span>
+            <div class="row">
+                <span class="lbl">Time</span>
+                <span class="val" th:text="${eventTime}">07:00 PM</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Venue:</span>
-                <span class="detail-value" th:text="${venueName}">Main Stadium</span>
+            <div class="row">
+                <span class="lbl">Venue</span>
+                <span class="val" th:text="${venueName}">Venue Name</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Number of Tickets:</span>
-                <span class="detail-value" th:text="${ticketCount}">2</span>
-            </div>
-        </div>
-
-        <div class="ticket-section">
-            <h3>Your Tickets</h3>
-            <div class="ticket-details" th:text="${seatDetails}">
-                Seat A1 - Ticket: TKT001
-                Seat A2 - Ticket: TKT002
+            <div class="row">
+                <span class="lbl">No. of Tickets</span>
+                <span class="val" th:text="${ticketCount}">1</span>
             </div>
         </div>
 
-        <div class="total-amount">
-            Total Paid: <span th:text="${currency}">LKR</span> <span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">5,000.00</span>
+        <div class="amount-box">
+            <span class="amount-label">Total Amount Paid</span>
+            <span class="amount-value">
+                <span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">0.00</span>
+            </span>
         </div>
 
-        <div class="important-notice">
-            <strong>Important:</strong>
+        <div class="section">
+            <div class="section-title">Your Tickets</div>
+            <div class="ticket-item" th:text="${seatDetails}">Row A, Seat 1 - TK-XXXX</div>
+        </div>
+
+        <div th:if="${transactionId != null}">
+
+            <div class="section">
+                <div class="section-title">Payment Receipt</div>
+                <div class="receipt-box">
+                    <div class="row">
+                        <span class="lbl">Status</span>
+                        <span class="paid-badge">&#10003; PAID</span>
+                    </div>
+                    <div class="row">
+                        <span class="lbl">Amount Charged</span>
+                        <span class="val">
+                            <span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">0.00</span>
+                        </span>
+                    </div>
+                    <div class="row" th:if="${paymentDate != null}">
+                        <span class="lbl">Payment Date &amp; Time</span>
+                        <span class="val" th:text="${paymentDate}">04 March 2026, 07:45 PM</span>
+                    </div>
+                    <div class="row" th:if="${paymentMethod != null}">
+                        <span class="lbl">Payment Method</span>
+                        <span class="val" th:text="${paymentMethod}">Visa</span>
+                    </div>
+                    <div class="row">
+                        <span class="lbl">Transaction ID</span>
+                        <span class="val" style="font-size:12px; word-break:break-all;" th:text="${transactionId}">TXN-XXXX</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="qr-section" th:if="${qrCodeBase64 != null}">
+                <div class="qr-title">Scan at Entry</div>
+                <div class="qr-sub" style="margin-bottom:14px;">Present this QR code at the venue gate</div>
+                <img th:src="|data:image/png;base64,${qrCodeBase64}|" alt="Booking QR Code"/>
+                <div class="qr-title" th:text="${bookingReference}">BK-XXXXXXXX</div>
+                <div class="qr-sub">This QR code contains your booking and payment details</div>
+            </div>
+
+        </div>
+
+        <div class="notice">
+            <strong>Important - Please read before the event</strong>
             <ul>
-                <li>Please arrive at least 30 minutes before the event start time</li>
-                <li>Bring this email or your booking reference for entry</li>
-                <li>Valid ID may be required at the venue</li>
+                <li>Arrive at least <strong>30 minutes</strong> before the event start time</li>
+                <li>Present this email or your QR code at the entrance gate</li>
+                <li>A valid photo ID may be required for entry</li>
+                <li>Tickets are non-transferable and non-refundable unless stated otherwise</li>
             </ul>
         </div>
 
-        <div class="footer">
-            <p>If you have any questions, please contact our support team.</p>
-            <p>&copy; 2024 Ticket Booking System. All rights reserved.</p>
-        </div>
+        <p style="font-size:13px; color:#555;">
+            If you have any questions, contact our support team with your booking reference
+            <strong th:text="${bookingReference}">BK-XXXXXXXX</strong>.
+        </p>
+
     </div>
+
+    <div class="footer">
+        <p>This email was sent by <strong>Ticketer</strong></p>
+        <p>&copy; 2026 Ticketer. All rights reserved.</p>
+        <p>Please do not reply - this address is not monitored.</p>
+    </div>
+
+</div>
 </body>
 </html>

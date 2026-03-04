@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Assignment – Ticketer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 24px 12px;
+        }
+        .wrapper { max-width: 600px; margin: 0 auto; }
+
+        .header {
+            background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+            border-radius: 12px 12px 0 0;
+            padding: 28px 24px 22px;
+            text-align: center;
+            color: #fff;
+        }
+        .header .icon { font-size: 48px; line-height: 1; }
+        .header h1 { font-size: 24px; margin-top: 10px; font-weight: 700; }
+        .header p  { font-size: 14px; margin-top: 6px; opacity: 0.88; }
+
+        .card {
+            background: #ffffff;
+            border-radius: 0 0 12px 12px;
+            padding: 28px 24px 32px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .greeting { font-size: 16px; margin-bottom: 18px; color: #333; }
+        .greeting strong { color: #1565c0; }
+
+        .section { margin-bottom: 22px; }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 9px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .row:last-child { border-bottom: none; }
+        .row .lbl { color: #888; min-width: 130px; }
+        .row .val { font-weight: 600; color: #222; text-align: right; }
+
+        .event-banner {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #1976d2;
+            border-radius: 0 8px 8px 0;
+            padding: 16px 18px;
+            margin-bottom: 22px;
+        }
+        .event-banner .event-label { font-size: 11px; color: #1565c0; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        .event-banner .event-name  { font-size: 20px; font-weight: 800; color: #0d47a1; margin-top: 4px; }
+
+        .role-box {
+            background: #f3f8ff;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 22px;
+        }
+        .role-box .role-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .role-box .role-value { font-size: 16px; font-weight: 700; color: #1565c0; margin-top: 4px; }
+
+        .notes-box {
+            background: #fffde7;
+            border-left: 4px solid #ffc107;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            margin-bottom: 22px;
+            font-size: 14px;
+            color: #555;
+        }
+        .notes-box .notes-label { font-size: 11px; color: #f57f17; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
+
+        .cta {
+            text-align: center;
+            margin: 24px 0;
+        }
+        .cta a {
+            display: inline-block;
+            background: #1565c0;
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 32px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 24px;
+        }
+        .footer p { margin: 3px 0; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+
+    <div class="header">
+        <div class="icon">&#128203;</div>
+        <h1>You've Been Assigned to an Event</h1>
+        <p>A new event task has been assigned to you by your organizer</p>
+    </div>
+
+    <div class="card">
+
+        <p class="greeting">
+            Hi <strong th:text="${employeeFirstName}">Employee</strong>,
+        </p>
+        <p style="font-size:14px; color:#555; margin-bottom:20px;">
+            You have been assigned to work at the following event. Please review the details below.
+        </p>
+
+        <!-- Event name banner -->
+        <div class="event-banner">
+            <div class="event-label">Event</div>
+            <div class="event-name" th:text="${eventName}">Event Name</div>
+        </div>
+
+        <!-- Assignment details -->
+        <div class="section">
+            <div class="section-title">Assignment Details</div>
+            <div class="row">
+                <span class="lbl">Assigned By</span>
+                <span class="val" th:text="${assignedByName}">Organizer Name</span>
+            </div>
+            <div class="row">
+                <span class="lbl">Your Email</span>
+                <span class="val" th:text="${employeeEmail}">employee@email.com</span>
+            </div>
+        </div>
+
+        <!-- Role (shown when provided) -->
+        <div class="role-box" th:if="${roleDescription != null and !#strings.isEmpty(roleDescription)}">
+            <div class="role-label">Your Role</div>
+            <div class="role-value" th:text="${roleDescription}">Staff</div>
+        </div>
+
+        <!-- Notes (shown when provided) -->
+        <div class="notes-box" th:if="${notes != null and !#strings.isEmpty(notes)}">
+            <div class="notes-label">Notes from Organizer</div>
+            <div th:text="${notes}">Additional instructions...</div>
+        </div>
+
+        <p style="font-size:13px; color:#555; margin-bottom:20px;">
+            Please sign in to your portal to view full event details, schedule, and further instructions from your organizer.
+        </p>
+
+        <div class="cta">
+            <a th:href="${loginUrl}">View My Assignments</a>
+        </div>
+
+        <p style="font-size:12px; color:#aaa; text-align:center;">
+            If you believe this assignment was made in error, please contact your organizer directly.
+        </p>
+
+    </div>
+
+    <div class="footer">
+        <p>This email was sent by <strong>Ticketer</strong></p>
+        <p>&copy; 2026 Ticketer. All rights reserved.</p>
+        <p>Please do not reply — this address is not monitored.</p>
+    </div>
+
+</div>
+</body>
+</html>

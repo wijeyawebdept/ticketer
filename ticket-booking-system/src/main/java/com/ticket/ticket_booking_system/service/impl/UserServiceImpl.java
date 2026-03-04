@@ -1,11 +1,13 @@
 package com.ticket.ticket_booking_system.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,7 @@ import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.UserService;
 
@@ -48,6 +51,10 @@ public class UserServiceImpl implements UserService {
     private final BookingRepository bookingRepository;
     private final PasswordEncoder passwordEncoder;
     private final RecycleBinService recycleBinService;
+    private final EmailService emailService;
+
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendUrl;
 
     public UserServiceImpl(
             UserRepository userRepository, 
@@ -56,7 +63,8 @@ public class UserServiceImpl implements UserService {
             OrganizerEmployeeRepository employeeRepository,
             BookingRepository bookingRepository,
             PasswordEncoder passwordEncoder,
-            RecycleBinService recycleBinService) {
+            RecycleBinService recycleBinService,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
@@ -64,6 +72,7 @@ public class UserServiceImpl implements UserService {
         this.bookingRepository = bookingRepository;
         this.passwordEncoder = passwordEncoder;
         this.recycleBinService = recycleBinService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -105,6 +114,11 @@ public class UserServiceImpl implements UserService {
 
         // Create corresponding Admin or Organizer record based on role
         createRoleSpecificRecord(savedUser, roleName);
+
+        // Send welcome email for regular user registrations
+        if ("USER".equals(roleName)) {
+            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFirstName());
+        }
 
         return mapUserToResponse(savedUser);
     }
@@ -386,6 +400,42 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id.toString()));
 
         user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        // Silently return if email not found — avoid user enumeration
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            user.setResetPasswordToken(token);
+            user.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
+            userRepository.save(user);
+
+            String resetLink = frontendUrl + "/reset-password?token=" + token;
+            emailService.sendPasswordResetEmail(
+                    user.getEmail(),
+                    user.getFirstName(),
+                    resetLink
+            );
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPasswordWithToken(String token, String newPassword) {
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset link."));
+
+        if (user.getResetPasswordTokenExpiry() == null
+                || user.getResetPasswordTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Password reset link has expired. Please request a new one.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
         userRepository.save(user);
     }
 

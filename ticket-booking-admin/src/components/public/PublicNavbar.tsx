@@ -168,7 +168,7 @@ const PublicNavbar: React.FC = () => {
               },
             }}
           >
-            Tickets.lk
+            Ticketer.lk
           </Typography>
 
           {isMobile ? (

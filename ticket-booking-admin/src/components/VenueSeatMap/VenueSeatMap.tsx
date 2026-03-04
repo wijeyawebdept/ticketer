@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, Button, Box, Typography, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import './VenueSeatMap.css';
 
 interface VenueSeatData {
@@ -77,6 +78,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   selectedSeats = [],
   bookedSeats = [],
 }) => {
+  const { isRestrictedUser } = useAuth();
   const [venueSeats, setVenueSeats] = useState<VenueSeatData[]>([]);
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
   const [localSelectedSeats, setLocalSelectedSeats] = useState<Set<string>>(new Set(selectedSeats));
@@ -264,43 +266,32 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   const getSeatColor = useCallback((seat: VenueSeatData): string => {
     const status = seatStatuses.get(seat.seatId);
-    
-    // Selected seats
-    if (localSelectedSeats.has(seat.seatId)) {
-      return '#FFA500'; // Orange for selected
-    }
-    
-    // Status-based colors
+
+    // Selected by the current user
+    if (localSelectedSeats.has(seat.seatId)) return '#FF0000';
+
+    // Status-based colours – same for everyone
     if (status) {
       switch (status.status) {
         case 'BOOKED':
-          return '#FF4444'; // Red for sold
-        case 'LOCKED':
-          return '#6c757d'; // Gray for locked
         case 'VIP_RESERVED':
-          // Determine VIP tier by category name and notes
-          const notes = status.notes?.toLowerCase() || '';
-          const categoryName = seat.categoryName?.toLowerCase() || '';
-          
-          if (categoryName.includes('platinum') || notes.includes('platinum')) {
-            return '#dc3545'; // Red for VIP Platinum
-          } else if (categoryName.includes('gold') || notes.includes('gold')) {
-            return '#9c27b0'; // Purple for VIP Gold
-          } else if (categoryName.includes('silver') || notes.includes('silver')) {
-            return '#2196f3'; // Blue for VIP Silver
-          }
-          // Default VIP color
-          return '#dc3545'; // Red
+          return '#FF0000'; // Red – sold
+        case 'LOCKED':
+          // Nelum Pokuna Outdoor Arena: locked seats invisible to customers
+          if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && !isRestrictedUser())
+            return 'transparent';
+          return '#6c757d'; // Grey – locked
         case 'TEMPORARY_HOLD':
-          return '#FFD700'; // Gold for temporary hold
+          return '#FFD700'; // Yellow – temporarily held
         case 'NOT_FOR_SALE':
-          return '#E0E0E0'; // Light gray for not for sale
+          return 'transparent'; // Hidden
       }
     }
-    
-    // Use color code from database (category-based colors)
-    return seat.colorCode || '#4CAF50';
-  }, [seatStatuses, localSelectedSeats]);
+
+    // Available seats: admin/organizer = category colour, customers = white
+    if (isRestrictedUser()) return seat.colorCode || '#4CAF50';
+    return '#FFFFFF';
+  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -378,33 +369,54 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             </span>
           </div>
 
-          {/* Legend - Dynamic from database */}
+          {/* Legend */}
           <div className="venue-legend">
-            {/* Get unique categories from venue seats */}
-            {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
-              const seat = venueSeats.find(s => s.categoryName === categoryName);
-              return (
-                <div key={`category-${index}-${categoryName}`} className="legend-item">
-                  <span 
-                    className="legend-color" 
-                    style={{ backgroundColor: seat?.colorCode || '#4CAF50' }}
-                  />
-                  <span>{categoryName}</span>
+            {isRestrictedUser() ? (
+              // Admin / Organizer – seat category colours + status indicators
+              <>
+                {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
+                  const seat = venueSeats.find(s => s.categoryName === categoryName);
+                  return (
+                    <div key={`cat-${index}`} className="legend-item">
+                      <span className="legend-color" style={{ backgroundColor: seat?.colorCode || '#4CAF50' }} />
+                      <span>{categoryName}</span>
+                    </div>
+                  );
+                })}
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
+                  <span>Sold / Selected</span>
                 </div>
-              );
-            })}
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#FF4444' }} />
-              <span>Sold</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#000000' }} />
-              <span>Locked</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#FFA500' }} />
-              <span>Selected</span>
-            </div>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                  <span>Locked</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
+                  <span>Temporarily Hold</span>
+                </div>
+              </>
+            ) : (
+              // Customer – simplified status legend
+              <>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(255,255,255,0.4)' }} />
+                  <span>Available</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
+                  <span>Sold / Selected</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                  <span>Locked</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
+                  <span>Temporarily Hold</span>
+                </div>
+              </>
+            )}
           </div>
 
       {/* SVG Seat Map */}
@@ -470,6 +482,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             {venueSeats.map((seat: VenueSeatData) => {
               const status = seatStatuses.get(seat.seatId);
               const isUnavailable = status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status);
+              // For Nelum Pokuna Outdoor Arena: locked seats are invisible to customers — disable all interaction
+              const isHiddenLockedSeat =
+                status?.status === 'LOCKED' &&
+                venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' &&
+                !isRestrictedUser();
               
               return (
                 <circle
@@ -479,12 +496,18 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   cy={seat.yPosition}
                   r="6"
                   fill={getSeatColor(seat)}
-                  stroke={localSelectedSeats.has(seat.seatId) ? '#000' : 'none'}
-                  strokeWidth="2"
+                  stroke={
+                    localSelectedSeats.has(seat.seatId)
+                      ? '#cc0000'
+                      : (!isRestrictedUser() && (!seatStatuses.get(seat.seatId) || seatStatuses.get(seat.seatId)?.status === 'AVAILABLE')
+                          ? 'rgba(255,255,255,0.35)'
+                          : 'none')
+                  }
+                  strokeWidth="1.5"
                   className="seat-circle"
                   style={{ 
-                    cursor: isUnavailable ? 'not-allowed' : 'pointer',
-                    pointerEvents: isPanning.current ? 'none' : 'auto'
+                    cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer',
+                    pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto'
                   }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
@@ -567,19 +590,24 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         </svg>
       </div>
 
-      {/* Hover tooltip */}
-      {hoveredSeat && (
-        <div className="seat-tooltip">
-          <strong>{hoveredSeat.seatId}</strong>
-          <div>Section: {hoveredSeat.section}</div>
-          <div>Row: {hoveredSeat.rowLabel}, Seat: {hoveredSeat.seatNumber}</div>
-          <div>Category: {hoveredSeat.categoryName}</div>
-          {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
-            <div>Price: Rs.{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
-          )}
-          <div>Status: {seatStatuses.get(hoveredSeat.seatId)?.status || 'AVAILABLE'}</div>
-        </div>
-      )}
+      {/* Hover tooltip - hide locked seat details from customers */}
+      {hoveredSeat && (() => {
+        const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
+        // Customers and unauthenticated users should not see details of locked seats
+        if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
+        return (
+          <div className="seat-tooltip">
+            <strong>{hoveredSeat.seatId}</strong>
+            <div>Section: {hoveredSeat.section}</div>
+            <div>Row: {hoveredSeat.rowLabel}, Seat: {hoveredSeat.seatNumber}</div>
+            <div>Category: {hoveredSeat.categoryName}</div>
+            {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
+              <div>Price: Rs.{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
+            )}
+            <div>Status: {hoveredStatus || 'AVAILABLE'}</div>
+          </div>
+        );
+      })()}
 
       {/* Dynamic Shared Area Dialog */}
       <Dialog 

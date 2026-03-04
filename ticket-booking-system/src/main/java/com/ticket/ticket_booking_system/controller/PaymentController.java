@@ -135,7 +135,12 @@ public class PaymentController {
                 Booking confirmedBooking = bookingService.confirmBookingAfterPayment(booking.getBookingId());
 
                 String customerEmail = booking.getUser().getEmail();
-                emailService.sendBookingConfirmationEmail(confirmedBooking, customerEmail);
+                emailService.sendBookingConfirmationEmail(
+                        confirmedBooking,
+                        customerEmail,
+                        transaction.getTransactionId().toString(),
+                        result.getCardType()
+                );
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)

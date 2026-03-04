@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Ticketer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #4caf50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2e7d32;
+            margin: 0;
+            font-size: 28px;
+        }
+        .icon {
+            font-size: 50px;
+        }
+        .highlight-box {
+            background-color: #e8f5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .highlight-box p {
+            margin: 0 0 8px 0;
+            color: #1b5e20;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 0 0;
+        }
+        .feature-list li {
+            padding: 6px 0;
+            color: #2e7d32;
+        }
+        .feature-list li::before {
+            content: "✓ ";
+            font-weight: bold;
+        }
+        .btn-wrapper {
+            text-align: center;
+            margin: 28px 0;
+        }
+        .btn-explore {
+            display: inline-block;
+            background-color: #4caf50;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+        }
+        .footer p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon"></div>
+            <h1>Welcome to Ticketer!</h1>
+        </div>
+
+        <!-- Greeting -->
+        <p>Hi <strong th:text="${firstName}">there</strong>,</p>
+        <p>Your account has been created successfully. We're thrilled to have you on board!</p>
+
+        <!-- What you can do -->
+        <div class="highlight-box">
+            <p><strong>With your Ticketer account you can:</strong></p>
+            <ul class="feature-list">
+                <li>Browse and book tickets for upcoming events</li>
+                <li>Choose your preferred seats on interactive seat maps</li>
+                <li>View and manage all your bookings in one place</li>
+                <li>Receive e-tickets directly to your inbox</li>
+            </ul>
+        </div>
+
+        <!-- CTA -->
+        <div class="btn-wrapper">
+            <a th:href="${browseUrl}" class="btn-explore">Explore Events</a>
+        </div>
+
+        <p>If you have any questions or need help, feel free to reach out to our support team.</p>
+        <p>Enjoy the experience!</p>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This email was sent by <strong>Ticketer</strong></p>
+            <p>© 2026 Ticketer. All rights reserved.</p>
+            <p>Please do not reply to this email — it is sent from an unmonitored address.</p>
+        </div>
+    </div>
+</body>
+</html>

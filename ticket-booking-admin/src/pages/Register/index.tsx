@@ -9,8 +9,10 @@ import {
   Alert,
   CircularProgress,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Divider
 } from '@mui/material';
+import { GoogleLogin } from '@react-oauth/google';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -73,6 +75,35 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleCredentialSuccess = async (credentialResponse: any) => {
+    setIsGoogleLoading(true);
+    setError(null);
+    try {
+      const idToken = credentialResponse?.credential;
+      if (!idToken) throw new Error('Google did not return an ID token.');
+      AuthService.setStorageType('localStorage');
+      const response = await AuthService.googleLogin(idToken);
+      if (response.user) {
+        const normalizedRole = response.user.role.replace('ROLE_', '');
+        if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
+          navigate('/events');
+        } else {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_data');
+          setError('Access denied. This login is for customers only.');
+        }
+      } else {
+        setError('Google sign-in succeeded but no user was returned. Please try again.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
     hasUppercase: false,
@@ -169,7 +200,7 @@ const Register: React.FC = () => {
               color: '#2c3e50',
             }}
           >
-            Welcome to Tickets.lk
+            Welcome to Ticketer.lk
           </Typography>
           <Typography 
             component="h2" 
@@ -391,6 +422,26 @@ const Register: React.FC = () => {
                 >
                   {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Register'}
                 </Button>
+
+                <Divider sx={{ my: 2 }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
+                    OR
+                  </Typography>
+                </Divider>
+
+                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleCredentialSuccess}
+                      onError={() => {
+                        setError('Google sign-in failed. Please try again.');
+                        setIsGoogleLoading(false);
+                      }}
+                      text="continue_with"
+                    />
+                  </Box>
+                  {isGoogleLoading && <CircularProgress size={24} />}
+                </Box>
 
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
                   <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>

@@ -172,7 +172,7 @@ const Gallery: React.FC = () => {
         }}
       >
         <Typography variant="body2">
-          © 2025 Tickets.lk - All Rights Reserved
+          © 2026 Ticketer.lk - All Rights Reserved
         </Typography>
       </Box>
     </Box>

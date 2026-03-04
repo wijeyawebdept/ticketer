@@ -49,6 +49,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final SeatRepository seatRepository;
     private final VenueSeatRepository venueSeatRepository;
+    private final EmailService emailService;
 
     /**
      * Create a PENDING booking before payment is processed
@@ -332,7 +333,14 @@ public class BookingService {
                 }
             }
             
-            return bookingRepository.save(booking);
+            Booking saved = bookingRepository.save(booking);
+
+            // Notify customer by email when booking is cancelled by admin
+            if (bookingStatus == Booking.BookingStatus.CANCELLED && saved.getUser() != null) {
+                emailService.sendBookingCancellationEmail(saved, saved.getUser().getEmail());
+            }
+
+            return saved;
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid booking status: " + status);
         }

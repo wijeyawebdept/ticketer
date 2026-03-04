@@ -16,6 +16,7 @@ import OrganizerEmployeeLayout from './components/layout/OrganizerEmployeeLayout
 import Login from './pages/Login';
 import RestrictedLogin from './pages/RestrictedLogin';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import Users from './pages/Users';
@@ -192,6 +193,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/login/restricted" element={<RestrictedLogin />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integration-test" element={<IntegrationTest />} />
               <Route path="/auth-debug" element={
                 <Suspense fallback={<div>Loading debug tools...</div>}>

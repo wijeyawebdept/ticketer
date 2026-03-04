@@ -21,12 +21,15 @@ import com.ticket.ticket_booking_system.repository.EventEmployeeAssignmentReposi
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.EventEmployeeAssignmentService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignmentService {
 
     private final EventEmployeeAssignmentRepository assignmentRepository;
@@ -34,6 +37,7 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     private final OrganizerEmployeeRepository employeeRepository;
     private final OrganizerRepository organizerRepository;
     private final AdminRepository adminRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -111,7 +115,13 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
             EventEmployeeAssignment saved = assignmentRepository.save(assignment);
             assignments.add(convertToDTO(saved));
 
-            System.out.println("Assigned employee " + employee.getEmail() + " to event " + event.getName());
+            log.info("Assigned employee {} to event {}", employee.getEmail(), event.getName());
+
+            // Send assignment notification email to the employee
+            emailService.sendEventAssignmentEmail(
+                    employee, event, organizer,
+                    empAssignment.getRoleDescription(),
+                    empAssignment.getNotes());
         }
 
         return assignments;

@@ -38,55 +38,55 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RefundController {
 
-    private final MPGSPaymentService mpgsPaymentService;
-    private final TransactionService transactionService;
-    private final BookingService bookingService;
-    private final BookingRepository bookingRepository;
-    private final EmailService emailService;
-    private final EventScheduleService eventScheduleService;
+        private final MPGSPaymentService mpgsPaymentService;
+        private final TransactionService transactionService;
+        private final BookingService bookingService;
+        private final BookingRepository bookingRepository;
+        private final EmailService emailService;
+        private final EventScheduleService eventScheduleService;
 
-    /**
-     * Initiate a refund
-     * POST /api/refunds/initiate
-     */
-    @PostMapping("/initiate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
-    public ResponseEntity<PaymentVerificationResponse> initiateRefund(
-            @Valid @RequestBody RefundRequest request) {
+        /**
+      * Initiate a refund
+      * POST /api/refunds/initiate
+      */
+        @PostMapping("/initiate")
+        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
+        public ResponseEntity<PaymentVerificationResponse> initiateRefund(
+                @Valid @RequestBody RefundRequest request) {
 
         log.info("Initiating refund for booking: {}, amount: {}",
                 request.getBookingId(), request.getAmount());
 
         try {
             // Validate booking exists and is eligible for refund
-            Booking booking = bookingRepository.findById(request.getBookingId())
-                    .orElseThrow(() -> new RuntimeException("Booking not found"));
+                Booking booking = bookingRepository.findById(request.getBookingId())
+                        .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-            if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
+                if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
                 return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("INVALID")
                         .message("Only confirmed bookings can be refunded. Current status: " + booking.getStatus())
                         .build());
-            }
+                }
 
             // Check if there's a successful payment
-            if (!transactionService.hasSuccessfulPayment(request.getBookingId())) {
+                if (!transactionService.hasSuccessfulPayment(request.getBookingId())) {
                 return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("INVALID")
                         .message("No successful payment found for this booking")
                         .build());
-            }
+                }
 
             // Process refund through MPGS
-            Transaction refundTransaction = mpgsPaymentService.processRefund(
-                    request.getBookingId(),
-                    request.getAmount(),
-                    request.getReason()
-            );
+                Transaction refundTransaction = mpgsPaymentService.processRefund(
+                        request.getBookingId(),
+                        request.getAmount(),
+                        request.getReason()
+                );
 
-            if (refundTransaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
+                if (refundTransaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
                 // Update booking status to REFUNDED
                 booking.setStatus(Booking.BookingStatus.REFUNDED);
                 booking.setCancellationReason(request.getReason());
@@ -121,50 +121,50 @@ public class RefundController {
                         .amount(refundAmount)
                         .message("Refund processed successfully")
                         .build());
-            } else {
+                } else {
                 log.error("Refund failed for booking: {}", request.getBookingId());
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("FAILED")
                         .message("Refund processing failed. Please try again or contact MPGS support.")
                         .build());
-            }
+                }
 
         } catch (Exception e) {
-            log.error("Refund initiation failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(PaymentVerificationResponse.builder()
-                            .success(false)
-                            .status("ERROR")
-                            .message("Refund failed: " + e.getMessage())
-                            .build());
+                log.error("Refund initiation failed", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(PaymentVerificationResponse.builder()
+                                .success(false)
+                                .status("ERROR")
+                                .message("Refund failed: " + e.getMessage())
+                                .build());
         }
-    }
+        }
 
-    /**
+        /**
      * Get refund status for a booking
      * GET /api/refunds/booking/{bookingId}
      */
-    @GetMapping("/booking/{bookingId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'USER')")
-    public ResponseEntity<?> getRefundStatus(@PathVariable UUID bookingId) {
+        @GetMapping("/booking/{bookingId}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'USER')")
+        public ResponseEntity<?> getRefundStatus(@PathVariable UUID bookingId) {
 
         log.info("Getting refund status for booking: {}", bookingId);
 
         try {
             // Get booking
-            Booking booking = bookingRepository.findById(bookingId)
-                    .orElseThrow(() -> new RuntimeException("Booking not found"));
+                Booking booking = bookingRepository.findById(bookingId)
+                        .orElseThrow(() -> new RuntimeException("Booking not found"));
 
             // Get all transactions for this booking
-            List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
+                List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
 
             // Find refund transactions
-            List<Transaction> refundTransactions = transactions.stream()
-                    .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
-                    .toList();
+                List<Transaction> refundTransactions = transactions.stream()
+                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
+                        .toList();
 
-            if (refundTransactions.isEmpty()) {
+                if (refundTransactions.isEmpty()) {
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
                         .status("NO_REFUND")
@@ -172,54 +172,54 @@ public class RefundController {
                         .bookingReference(booking.getBookingReference())
                         .message("No refund found for this booking")
                         .build());
-            }
+                }
 
             // Get the most recent refund
-            Transaction latestRefund = refundTransactions.get(0);
+                Transaction latestRefund = refundTransactions.get(0);
 
-            return ResponseEntity.ok(PaymentVerificationResponse.builder()
-                    .success(latestRefund.getStatus() == Transaction.TransactionStatus.SUCCESS)
-                    .status(latestRefund.getStatus().name())
-                    .transactionId(latestRefund.getTransactionId().toString())
-                    .bookingId(bookingId)
-                    .bookingReference(booking.getBookingReference())
-                    .amount(latestRefund.getAmount())
-                    .message("Refund status: " + latestRefund.getStatus())
-                    .build());
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(latestRefund.getStatus() == Transaction.TransactionStatus.SUCCESS)
+                        .status(latestRefund.getStatus().name())
+                        .transactionId(latestRefund.getTransactionId().toString())
+                        .bookingId(bookingId)
+                        .bookingReference(booking.getBookingReference())
+                        .amount(latestRefund.getAmount())
+                        .message("Refund status: " + latestRefund.getStatus())
+                        .build());
 
         } catch (Exception e) {
-            log.error("Error getting refund status", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(PaymentVerificationResponse.builder()
-                            .success(false)
-                            .status("ERROR")
-                            .message("Error checking refund status: " + e.getMessage())
-                            .build());
+                log.error("Error getting refund status", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(PaymentVerificationResponse.builder()
+                                .success(false)
+                                .status("ERROR")
+                                .message("Error checking refund status: " + e.getMessage())
+                                .build());
         }
-    }
+        }
 
-    /**
+        /**
      * Get all refund transactions for a booking
      * GET /api/refunds/booking/{bookingId}/transactions
      */
-    @GetMapping("/booking/{bookingId}/transactions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
-    public ResponseEntity<List<Transaction>> getRefundTransactions(@PathVariable UUID bookingId) {
+        @GetMapping("/booking/{bookingId}/transactions")
+        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
+        public ResponseEntity<List<Transaction>> getRefundTransactions(@PathVariable UUID bookingId) {
 
         log.info("Getting refund transactions for booking: {}", bookingId);
 
         try {
-            List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
+                List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
 
-            List<Transaction> refundTransactions = transactions.stream()
-                    .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
-                    .toList();
+                List<Transaction> refundTransactions = transactions.stream()
+                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
+                        .toList();
 
-            return ResponseEntity.ok(refundTransactions);
+                return ResponseEntity.ok(refundTransactions);
 
         } catch (Exception e) {
-            log.error("Error getting refund transactions", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+                log.error("Error getting refund transactions", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
-    }
+        }
 }

@@ -20,8 +20,10 @@ import com.ticket.ticket_booking_system.entity.User;
 public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
     
     Optional<User> findByEmail(String email);
-    
+
     Optional<User> findByGoogleId(String googleId);
+
+    Optional<User> findByResetPasswordToken(String resetPasswordToken);
     
     boolean existsByEmail(String email);
     

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Cancelled</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #ef5350;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #c62828;
+            margin: 0;
+            font-size: 28px;
+        }
+        .icon {
+            font-size: 50px;
+        }
+        .details-box {
+            background-color: #ffebee;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .details-box h2 {
+            color: #c62828;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #ffcdd2;
+            padding-bottom: 10px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ffcdd2;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+            text-align: right;
+        }
+        .reason-box {
+            background-color: #fff8e1;
+            border-left: 4px solid #f9a825;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #6d4c41;
+        }
+        .reason-box strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #bf360c;
+        }
+        .info-note {
+            background-color: #e3f2fd;
+            border-radius: 6px;
+            padding: 14px 18px;
+            font-size: 14px;
+            color: #1565c0;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+        }
+        .footer p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon">❌</div>
+            <h1>Booking Cancelled</h1>
+        </div>
+
+        <!-- Greeting -->
+        <p>Hi <strong th:text="${firstName}">there</strong>,</p>
+        <p>We're writing to let you know that your booking has been cancelled. Here are the details:</p>
+
+        <!-- Booking details -->
+        <div class="details-box">
+            <h2>Cancellation Details</h2>
+            <div class="detail-row">
+                <span class="detail-label">Booking Reference</span>
+                <span class="detail-value" th:text="${bookingReference}">N/A</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Event</span>
+                <span class="detail-value" th:text="${eventName}">N/A</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value" style="color:#c62828;">Cancelled</span>
+            </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="reason-box" th:if="${cancellationReason != null and !cancellationReason.isEmpty()}">
+            <strong>Reason for cancellation:</strong>
+            <span th:text="${cancellationReason}">N/A</span>
+        </div>
+
+        <!-- Refund note -->
+        <div class="info-note">
+            💳 If you paid for this booking, a refund will be processed separately and you will receive a refund confirmation email. Refunds typically appear within 5–7 business days.
+        </div>
+
+        <p>We apologise for any inconvenience. If you believe this cancellation was made in error or have any questions, please contact our support team.</p>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This email was sent by <strong>Ticketer</strong></p>
+            <p>© 2026 Ticketer. All rights reserved.</p>
+            <p>Please do not reply to this email — it is sent from an unmonitored address.</p>
+        </div>
+    </div>
+</body>
+</html>
