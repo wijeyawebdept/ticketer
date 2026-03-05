@@ -16,7 +16,6 @@ import {
   Button,
   IconButton,
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
@@ -66,7 +65,6 @@ const SeatSelectionPage: React.FC = () => {
   const [deliveryMethod, setDeliveryMethod] = useState('online');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
-  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
     lastName: '',
