@@ -145,7 +145,7 @@ public class EmailService {
      * Called immediately after a successful payment gateway response.
      */
     public void sendBookingConfirmationEmail(Booking booking, String customerEmail,
-                                             String transactionId, String paymentMethod) {
+            String transactionId, String paymentMethod) {
         try {
             String seatDetails = booking.getBookingSeats().stream()
                     .sorted((a, b) -> {
@@ -337,6 +337,45 @@ public class EmailService {
             log.error("Failed to send booking cancellation email to {}: {}", customerEmail, e.getMessage());
         }
     }
+    // ── Email verification code ───────────────────────────────────────────────
+
+    public void sendEmailVerificationCode(String customerEmail, String firstName, String code) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("firstName", firstName);
+            ctx.setVariable("code", code);
+
+            String htmlBody = templateEngine.process("emails/email-verification", ctx);
+            String subject = "Your Ticketer Verification Code: " + code;
+
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Email verification code sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send email verification code to {}: {}", customerEmail, e.getMessage());
+        }
+    }
+    // ── Login notification email ─────────────────────────────────────────────
+
+    public void sendLoginNotificationEmail(String customerEmail, String firstName) {
+        try {
+            String loginTime = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("dd MMMM yyyy, hh:mm a"));
+
+            Context ctx = new Context();
+            ctx.setVariable("firstName", firstName);
+            ctx.setVariable("email", customerEmail);
+            ctx.setVariable("loginTime", loginTime);
+            ctx.setVariable("changePasswordUrl", frontendBaseUrl + "/change-password");
+
+            String htmlBody = templateEngine.process("emails/login-notification", ctx);
+            String subject = "New Login to Your Ticketer Account";
+
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Login notification email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send login notification email to {}: {}", customerEmail, e.getMessage());
+        }
+    }
 
     // ── Step 6: Contact form email (migrated from MailService) ────────────────
 
@@ -376,6 +415,26 @@ public class EmailService {
             log.info("Event assignment email sent to: {}", employee.getEmail());
         } catch (Exception e) {
             log.error("Failed to send event assignment email to {}: {}", employee.getEmail(), e.getMessage());
+        }
+    }
+
+    // ── Organizer event assignment email (admin assigns an event to an organizer) ──
+
+    public void sendOrganizerEventAssignmentEmail(Organizer organizer, Event event) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("organizerFirstName", organizer.getFirstName());
+            ctx.setVariable("organizerEmail",     organizer.getEmail());
+            ctx.setVariable("eventName",          event.getName());
+            ctx.setVariable("eventId",            event.getEventId());
+            ctx.setVariable("loginUrl",           frontendBaseUrl + "/organizer/login");
+
+            String html    = templateEngine.process("emails/organizer-event-assignment", ctx);
+            String subject = "New Event Assigned to You: " + event.getName();
+            sendHtml(organizer.getEmail(), subject, html);
+            log.info("Organizer event assignment email sent to: {}", organizer.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send organizer event assignment email to {}: {}", organizer.getEmail(), e.getMessage());
         }
     }
 

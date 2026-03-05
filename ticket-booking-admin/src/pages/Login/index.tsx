@@ -65,6 +65,44 @@ const Login: React.FC = () => {
   const location = useLocation();
   const { login } = useAuth();
 
+  // Email verification step (shown when user hasn't verified their email)
+  const [showVerifyStep, setShowVerifyStep] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  const handleVerify = async () => {
+    setVerifyLoading(true);
+    setVerifyError(null);
+    try {
+      await AuthService.verifyEmail(pendingEmail, verifyCode.trim());
+      setShowVerifyStep(false);
+      setVerifyCode('');
+      setSuccessMessage('Email verified successfully! You can now sign in.');
+    } catch (err: any) {
+      setVerifyError(err.response?.data?.message || 'Invalid or expired code. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResendLoading(true);
+    setResendSuccess(false);
+    setVerifyError(null);
+    try {
+      await AuthService.sendVerificationCode(pendingEmail);
+      setResendSuccess(true);
+    } catch (err: any) {
+      setVerifyError('Failed to resend code. Please try again.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   // Check for success message from registration and load remember me preference
   useEffect(() => {
     const state = location.state as { message?: string } | undefined;
@@ -102,6 +140,9 @@ const Login: React.FC = () => {
       if (response.user) {
         const normalizedRole = response.user.role.replace('ROLE_', '');
         if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
+          // Notify AuthContext to reload user from localStorage so the navbar updates immediately
+          window.dispatchEvent(new Event('authRefresh'));
+
           const pendingBooking = sessionStorage.getItem('pendingBooking');
           const from = (location.state as any)?.from;
 
@@ -196,6 +237,10 @@ const Login: React.FC = () => {
           errorMessage = 'Invalid email or password. Please check your credentials and try again.';
         } else if (errorCode === 'USER_DISABLED') {
           errorMessage = 'Your account has been disabled. Please contact the administrator.';
+        } else if (errorCode === 'EMAIL_NOT_VERIFIED') {
+          setPendingEmail(values.email);
+          setShowVerifyStep(true);
+          return;
         } else if (responseMessage.includes('user not found') || responseMessage.includes('no user') || responseMessage.includes('does not exist')) {
           errorMessage = 'This email is not registered. Please create an account first.';
         } else {
@@ -370,6 +415,59 @@ const Login: React.FC = () => {
               </Alert>
             )}
 
+            {/* ── Email Verification Step ── */}
+            {showVerifyStep ? (
+              <>
+                <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
+                  Your email <strong>{pendingEmail}</strong> is not verified yet.<br />
+                  Enter the 6-digit code we sent to your inbox.
+                </Typography>
+
+                {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
+                {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
+
+                <TextField
+                  fullWidth
+                  label="6-digit Verification Code"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value)}
+                  inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '22px', textAlign: 'center', fontWeight: 700 } }}
+                  placeholder="------"
+                  sx={{ mb: 2 }}
+                />
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disabled={verifyLoading || verifyCode.length !== 6}
+                  onClick={handleVerify}
+                  sx={{ py: 1.5, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
+                >
+                  {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
+                </Button>
+
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Didn't receive a code?{' '}
+                    <span
+                      onClick={resendLoading ? undefined : handleResendCode}
+                      style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
+                    >
+                      {resendLoading ? 'Sending...' : 'Resend Code'}
+                    </span>
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
+                    <span
+                      onClick={() => { setShowVerifyStep(false); setVerifyCode(''); setVerifyError(null); }}
+                      style={{ color: '#999', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Back to login
+                    </span>
+                  </Typography>
+                </Box>
+              </>
+            ) : (
+              <>
             {error && (
               <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
                 {error}
@@ -543,6 +641,8 @@ const Login: React.FC = () => {
                 );
               }}
             </Formik>
+            </>
+            )}
           </Box>
         </Paper>
       </Container>

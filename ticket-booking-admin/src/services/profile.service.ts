@@ -44,4 +44,24 @@ export const profileService = {
     });
     return response.data as { message: string };
   },
+
+  // Toggle login email notifications on/off
+  updateLoginEmailPreference: async (enabled: boolean): Promise<{ loginEmailEnabled: boolean; message: string }> => {
+    const response = await api.patch('/api/profile/login-email-preference', { loginEmailEnabled: enabled });
+    return response.data as { loginEmailEnabled: boolean; message: string };
+  },
+
+  // Update email, sms, marketing notification preferences
+  updateNotificationPreferences: async (
+    emailNotifications: boolean,
+    smsNotifications: boolean,
+    marketingEmails: boolean
+  ): Promise<{ message: string }> => {
+    const response = await api.patch('/api/profile/notification-preferences', {
+      emailNotifications,
+      smsNotifications,
+      marketingEmails,
+    });
+    return response.data as { message: string };
+  },
 };

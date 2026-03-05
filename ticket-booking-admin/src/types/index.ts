@@ -277,6 +277,10 @@ export interface ProfileDTO {
   createdAt: string;
   lastLoginAt?: string;
   updatedAt?: string;
+  loginEmailEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
+  marketingEmailsEnabled: boolean;
 }
 
 export interface ProfileUpdateDTO {

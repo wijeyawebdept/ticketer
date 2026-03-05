@@ -25,8 +25,8 @@ public interface EventEmployeeAssignmentRepository extends JpaRepository<EventEm
     // Check if employee is already assigned to event
     boolean existsByEvent_EventIdAndEmployee_EmployeeIdAndIsActiveTrue(UUID eventId, UUID employeeId);
     
-    // Find specific assignment
-    EventEmployeeAssignment findByEvent_EventIdAndEmployee_EmployeeIdAndIsActiveTrue(UUID eventId, UUID employeeId);
+    // Find specific assignment(s) — returns a List to safely handle any duplicate active rows
+    List<EventEmployeeAssignment> findByEvent_EventIdAndEmployee_EmployeeIdAndIsActiveTrue(UUID eventId, UUID employeeId);
     
     // Get all assignments for events owned by organizer
     @Query("SELECT ea FROM EventEmployeeAssignment ea WHERE ea.event.organizer.organizerId = :organizerId AND ea.isActive = true")

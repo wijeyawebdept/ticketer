@@ -66,4 +66,10 @@ public class MPGSSessionResponse {
      * Order reference for the payment (used in Checkout.configure)
      */
     private String orderReference;
+
+    /**
+     * MPGS successIndicator returned during session creation.
+     * Must be compared against resultIndicator returned in the redirect URL to verify payment.
+     */
+    private String successIndicator;
 }

@@ -28,4 +28,8 @@ public class ProfileDTO {
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
     private LocalDateTime updatedAt;
+    private boolean loginEmailEnabled;
+    private boolean emailNotificationsEnabled;
+    private boolean smsNotificationsEnabled;
+    private boolean marketingEmailsEnabled;
 }

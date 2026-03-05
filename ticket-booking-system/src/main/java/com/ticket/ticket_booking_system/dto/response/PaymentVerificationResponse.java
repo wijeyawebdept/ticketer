@@ -56,4 +56,15 @@ public class PaymentVerificationResponse {
      * Payment method used
      */
     private String paymentMethod;
+
+    // ── Receipt / download fields ──────────────────────────────────────────────
+
+    private String eventName;
+    private String eventDate;
+    private String eventTime;
+    private String venueName;
+    private Integer ticketCount;
+    /** Newline-separated seat/ticket details */
+    private String seatDetails;
+    private String paymentDate;
 }

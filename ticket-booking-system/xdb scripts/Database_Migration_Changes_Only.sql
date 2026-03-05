@@ -514,7 +514,7 @@ BEGIN
 END $$;
 
 ALTER TABLE transactions ADD CONSTRAINT transactions_status_check 
-    CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'CANCELLED'));
+    CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED', 'CANCELLED'));
 
 -- Add foreign key constraint for user_id
 ALTER TABLE transactions ADD CONSTRAINT fk_transactions_user 

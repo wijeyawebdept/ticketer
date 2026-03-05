@@ -18,4 +18,7 @@ public interface ProfileService {
     void changePassword(String email, String currentPassword, String newPassword);
     
     void changeEmail(String currentEmail, String newEmail, String password);
+
+    boolean toggleLoginEmailPreference(String email, boolean enabled);
+    void updateNotificationPreferences(String email, boolean emailNotifications, boolean smsNotifications, boolean marketingEmails);
 }

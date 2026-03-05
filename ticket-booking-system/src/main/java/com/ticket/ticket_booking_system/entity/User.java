@@ -90,6 +90,28 @@ public class User implements UserDetails {
     @Column(name = "reset_password_token_expiry")
     private LocalDateTime resetPasswordTokenExpiry;
 
+    @Column(name = "email_verification_code", length = 6)
+    private String emailVerificationCode;
+
+    @Column(name = "email_verification_code_expiry")
+    private LocalDateTime emailVerificationCodeExpiry;
+
+    @Column(name = "login_email_enabled", nullable = false)
+    @Builder.Default
+    private boolean loginEmailEnabled = true;
+
+    @Column(name = "email_notifications_enabled", nullable = false)
+    @Builder.Default
+    private boolean emailNotificationsEnabled = true;
+
+    @Column(name = "sms_notifications_enabled", nullable = false)
+    @Builder.Default
+    private boolean smsNotificationsEnabled = false;
+
+    @Column(name = "marketing_emails_enabled", nullable = false)
+    @Builder.Default
+    private boolean marketingEmailsEnabled = false;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

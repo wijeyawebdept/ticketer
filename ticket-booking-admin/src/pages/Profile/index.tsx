@@ -13,9 +13,11 @@ import {
   Snackbar,
   CircularProgress,
   Divider,
-  Chip
+  Chip,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
-import { PhotoCamera, Save, Edit, Cancel } from '@mui/icons-material';
+import { PhotoCamera, Save, Edit, Cancel, NotificationsActive, NotificationsOff } from '@mui/icons-material';
 import { Formik, Form, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { ProfileDTO, ProfileUpdateDTO } from '../../types';
@@ -52,6 +54,8 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loginEmailToggling, setLoginEmailToggling] = useState(false);
+  const [loginEmailEnabled, setLoginEmailEnabled] = useState<boolean>(true);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -67,6 +71,7 @@ const Profile: React.FC = () => {
       setLoading(true);
       const profileData = await profileService.getProfile();
       setProfile(profileData);
+      setLoginEmailEnabled(profileData.loginEmailEnabled ?? true);
     } catch (error) {
       console.error('Error loading profile:', error);
       showSnackbar('Failed to load profile', 'error');
@@ -124,6 +129,20 @@ const Profile: React.FC = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleLoginEmailToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setLoginEmailToggling(true);
+    try {
+      const result = await profileService.updateLoginEmailPreference(enabled);
+      setLoginEmailEnabled(result.loginEmailEnabled);
+      showSnackbar(result.message, 'success');
+    } catch (error) {
+      showSnackbar('Failed to update preference', 'error');
+    } finally {
+      setLoginEmailToggling(false);
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -466,6 +485,66 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Notification Preferences — only for regular USER accounts */}
+        {profile.role === 'USER' && (
+          <Grid item xs={12}>
+            <Card
+              sx={{
+                borderRadius: 3,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(0,0,0,0.05)',
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2', mb: 1 }}>
+                  Notification Preferences
+                </Typography>
+                <Divider sx={{ mb: 3 }} />
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: loginEmailEnabled ? '#e8f5e9' : '#fafafa',
+                    border: `1px solid ${loginEmailEnabled ? '#a5d6a7' : '#e0e0e0'}`,
+                    transition: 'background-color 0.3s',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    {loginEmailEnabled
+                      ? <NotificationsActive sx={{ color: 'success.main', fontSize: 28 }} />
+                      : <NotificationsOff sx={{ color: 'text.disabled', fontSize: 28 }} />}
+                    <Box>
+                      <Typography variant="body1" fontWeight={600}>
+                        Login email notifications
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Receive an email each time you sign in to your account.
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={loginEmailEnabled}
+                        onChange={handleLoginEmailToggle}
+                        disabled={loginEmailToggling}
+                        color="success"
+                      />
+                    }
+                    label={loginEmailEnabled ? 'On' : 'Off'}
+                    labelPlacement="start"
+                    sx={{ ml: 2, mr: 0 }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
 
       <Snackbar

@@ -36,12 +36,17 @@ public class TransactionService {
      * @param gatewaySessionId Session ID from payment gateway
      * @return Created transaction
      */
-    public Transaction createPendingTransaction(UUID bookingId, BigDecimal amount, String gatewaySessionId) {
+    public Transaction createPendingTransaction(UUID bookingId, BigDecimal amount, String gatewaySessionId, String successIndicator) {
         log.info("Creating pending transaction for booking: {}, amount: {}, sessionId: {}",
                  bookingId, amount, gatewaySessionId);
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        // Store successIndicator in paymentGatewayResponse so it can be retrieved during verification
+        String initialResponse = successIndicator != null
+                ? "{\"successIndicator\":\"" + successIndicator + "\"}"
+                : null;
 
         Transaction transaction = Transaction.builder()
                 .booking(booking)
@@ -49,6 +54,7 @@ public class TransactionService {
                 .amount(amount)
                 .type(Transaction.TransactionType.PAYMENT)
                 .status(Transaction.TransactionStatus.PENDING)
+                .paymentGatewayResponse(initialResponse)
                 .build();
 
         transaction = transactionRepository.save(transaction);

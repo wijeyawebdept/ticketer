@@ -24,6 +24,13 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Optional<User> findByGoogleId(String googleId);
 
     Optional<User> findByResetPasswordToken(String resetPasswordToken);
+
+    Optional<User> findByEmailVerificationCode(String emailVerificationCode);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE User u SET u.emailVerified = true, u.emailVerificationCode = null, u.emailVerificationCodeExpiry = null WHERE u.email = :email")
+    int verifyUserEmail(@Param("email") String email);
     
     boolean existsByEmail(String email);
     

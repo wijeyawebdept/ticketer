@@ -96,7 +96,8 @@ const UserProfile: React.FC = () => {
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     smsNotifications: false,
-    marketingEmails: false
+    marketingEmails: false,
+    loginEmailNotifications: true
   });
 
   // Security settings
@@ -150,6 +151,13 @@ const UserProfile: React.FC = () => {
       setLoading(true);
       const data = await profileService.getProfile();
       setProfile(data);
+      setNotificationSettings(prev => ({
+        ...prev,
+        emailNotifications: data.emailNotificationsEnabled ?? true,
+        smsNotifications: data.smsNotificationsEnabled ?? false,
+        marketingEmails: data.marketingEmailsEnabled ?? false,
+        loginEmailNotifications: data.loginEmailEnabled ?? true
+      }));
     } catch (error: any) {
       setSnackbar({
         open: true,
@@ -227,7 +235,14 @@ const UserProfile: React.FC = () => {
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([
+        profileService.updateNotificationPreferences(
+          notificationSettings.emailNotifications,
+          notificationSettings.smsNotifications,
+          notificationSettings.marketingEmails
+        ),
+        profileService.updateLoginEmailPreference(notificationSettings.loginEmailNotifications),
+      ]);
       setSnackbar({
         open: true,
         message: 'Notification preferences saved successfully',
@@ -977,6 +992,33 @@ const UserProfile: React.FC = () => {
                   />
                   <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', ml: 5 }}>
                     Receive promotional emails about new events and special offers
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch 
+                        checked={notificationSettings.loginEmailNotifications}
+                        onChange={handleNotificationChange}
+                        name="loginEmailNotifications"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#ff1955',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#ff1955',
+                          }
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ color: '#fff' }}>
+                        Login Email Notifications
+                      </Typography>
+                    }
+                  />
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', ml: 5 }}>
+                    Receive an email each time you sign in to your account
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>

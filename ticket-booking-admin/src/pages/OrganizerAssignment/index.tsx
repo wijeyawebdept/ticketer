@@ -38,7 +38,7 @@ interface Event {
   name: string;
   description: string;
   status: string;
-  category: string;
+  category: string | { id: string; categoryName: string; description?: string; active?: boolean; createdAt?: string; updatedAt?: string } | null;
   basePrice: number;
   createdAt: string;
   createdByType?: string; // "ADMIN", "SUPER_ADMIN", "ORGANIZER", etc.
@@ -216,7 +216,16 @@ const OrganizerAssignment: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={event.category || 'N/A'} size="small" />
+                      <Chip
+                        label={
+                          event.category
+                            ? typeof event.category === 'object'
+                              ? event.category.categoryName
+                              : event.category
+                            : 'N/A'
+                        }
+                        size="small"
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip

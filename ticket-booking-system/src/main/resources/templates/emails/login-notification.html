@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Login to Your Account</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1565c0;
+            margin: 0;
+            font-size: 26px;
+        }
+        .icon {
+            font-size: 48px;
+        }
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #1976d2;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-box p {
+            margin: 6px 0;
+            color: #0d47a1;
+        }
+        .info-box .label {
+            font-weight: 600;
+            display: inline-block;
+            min-width: 110px;
+        }
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .warning-box p {
+            margin: 0;
+            color: #e65100;
+            font-size: 14px;
+        }
+        .btn-wrapper {
+            text-align: center;
+            margin: 28px 0;
+        }
+        .btn-secure {
+            display: inline-block;
+            background-color: #1976d2;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+        }
+        .footer p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon"></div>
+            <h1>New Login Detected</h1>
+        </div>
+
+        <!-- Greeting -->
+        <p>Hi <strong th:text="${firstName}">there</strong>,</p>
+        <p>We noticed a successful login to your Ticketer account. Here are the details:</p>
+
+        <!-- Login details -->
+        <div class="info-box">
+            <p><span class="label">Date &amp; Time:</span> <span th:text="${loginTime}">N/A</span></p>
+            <p><span class="label">Email:</span> <span th:text="${email}">N/A</span></p>
+        </div>
+
+        <!-- Warning -->
+        <div class="warning-box">
+            <p> If this wasn't you, your account may be compromised. Please change your password immediately and contact our support team.</p>
+        </div>
+
+        <!-- CTA -->
+        <div class="btn-wrapper">
+            <a th:href="${changePasswordUrl}" class="btn-secure">Change My Password</a>
+        </div>
+
+        <p>If this was you, no action is needed. You can safely ignore this email.</p>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This email was sent by <strong>Ticketer</strong></p>
+            <p>© 2026 Ticketer. All rights reserved.</p>
+            <p>Please do not reply to this email — it is sent from an unmonitored address.</p>
+        </div>
+    </div>
+</body>
+</html>

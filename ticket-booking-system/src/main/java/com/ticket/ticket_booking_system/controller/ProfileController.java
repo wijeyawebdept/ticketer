@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -144,5 +145,51 @@ public class ProfileController {
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
+    }
+
+    @PatchMapping("/login-email-preference")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Map<String, Object>> updateLoginEmailPreference(
+            @RequestBody Map<String, Boolean> body,
+            Authentication authentication) {
+
+        Boolean enabled = body.get("loginEmailEnabled");
+        if (enabled == null) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("message", "loginEmailEnabled field is required");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+
+        boolean updated = profileService.toggleLoginEmailPreference(email, enabled);
+        Map<String, Object> response = new HashMap<>();
+        response.put("loginEmailEnabled", updated);
+        response.put("message", updated ? "Login email notifications enabled." : "Login email notifications disabled.");
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/notification-preferences")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Map<String, Object>> updateNotificationPreferences(
+            @RequestBody Map<String, Boolean> body,
+            Authentication authentication) {
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+
+        boolean emailNotifications = body.getOrDefault("emailNotifications", true);
+        boolean smsNotifications = body.getOrDefault("smsNotifications", false);
+        boolean marketingEmails = body.getOrDefault("marketingEmails", false);
+
+        profileService.updateNotificationPreferences(email, emailNotifications, smsNotifications, marketingEmails);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Notification preferences saved successfully.");
+        response.put("emailNotifications", emailNotifications);
+        response.put("smsNotifications", smsNotifications);
+        response.put("marketingEmails", marketingEmails);
+        return ResponseEntity.ok(response);
     }
 }

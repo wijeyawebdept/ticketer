@@ -211,6 +211,10 @@ public class ProfileServiceImpl implements ProfileService {
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
                 .updatedAt(user.getUpdatedAt())
+                .loginEmailEnabled(user.isLoginEmailEnabled())
+                .emailNotificationsEnabled(user.isEmailNotificationsEnabled())
+                .smsNotificationsEnabled(user.isSmsNotificationsEnabled())
+                .marketingEmailsEnabled(user.isMarketingEmailsEnabled())
                 .build();
     }
     
@@ -376,5 +380,24 @@ public class ProfileServiceImpl implements ProfileService {
         }
         
         throw new ResourceNotFoundException("User", "email", currentEmail);
+    }
+
+    @Override
+    public boolean toggleLoginEmailPreference(String email, boolean enabled) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        user.setLoginEmailEnabled(enabled);
+        userRepository.save(user);
+        return user.isLoginEmailEnabled();
+    }
+
+    @Override
+    public void updateNotificationPreferences(String email, boolean emailNotifications, boolean smsNotifications, boolean marketingEmails) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        user.setEmailNotificationsEnabled(emailNotifications);
+        user.setSmsNotificationsEnabled(smsNotifications);
+        user.setMarketingEmailsEnabled(marketingEmails);
+        userRepository.save(user);
     }
 }

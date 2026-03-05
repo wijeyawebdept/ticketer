@@ -241,3 +241,4 @@ ALTER TABLE booking_seats ADD CONSTRAINT chk_seat_or_shared_area
 
 
 
+

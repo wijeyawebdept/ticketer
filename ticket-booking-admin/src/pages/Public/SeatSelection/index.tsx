@@ -284,8 +284,8 @@ const SeatSelectionPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const returnUrl = `${window.location.origin}/payment/success`;
-      const cancelUrl = `${window.location.origin}/payment/cancel`;
+      const returnUrl = `${window.location.origin}/booking/payment-success`;
+      const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
 
       const paymentRequest: InitiatePaymentRequest = {
         eventId: eventDetails?.eventId || '',

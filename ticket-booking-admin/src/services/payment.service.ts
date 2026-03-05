@@ -52,6 +52,14 @@ export interface PaymentVerificationResponse {
   message: string;
   amount?: number;
   paymentMethod?: string;
+  // Receipt fields
+  eventName?: string;
+  eventDate?: string;
+  eventTime?: string;
+  venueName?: string;
+  ticketCount?: number;
+  seatDetails?: string;
+  paymentDate?: string;
 }
 
 export interface RefundRequest {
@@ -73,8 +81,8 @@ declare global {
 
 class PaymentService {
 async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionResponse> {
-  const returnUrl = `${window.location.origin}/payment/success`;
-  const cancelUrl = `${window.location.origin}/payment/cancel`;
+  const returnUrl = `${window.location.origin}/booking/payment-success`;
+  const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
 
   const response = await api.post<MPGSSessionResponse>('/api/payments/initiate', {
     ...request,
@@ -88,6 +96,15 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
     async verifyPayment(sessionId: string): Promise<PaymentVerificationResponse> {
     const response = await api.get<PaymentVerificationResponse>(
       `/api/payments/verify?sessionId=${encodeURIComponent(sessionId)}`
+    );
+    return response.data;
+  }
+
+  async verifyPaymentByBooking(bookingId: string, resultIndicator?: string): Promise<PaymentVerificationResponse> {
+    const params = new URLSearchParams({ bookingId });
+    if (resultIndicator) params.append('resultIndicator', resultIndicator);
+    const response = await api.get<PaymentVerificationResponse>(
+      `/api/payments/verify-by-booking?${params.toString()}`
     );
     return response.data;
   }

@@ -77,6 +77,42 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  // Email verification step
+  const [verificationStep, setVerificationStep] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  const handleVerify = async () => {
+    setVerifyLoading(true);
+    setVerifyError(null);
+    try {
+      await AuthService.verifyEmail(registeredEmail, verificationCode.trim());
+      navigate('/login', { state: { message: 'Email verified! You can now sign in.' } });
+    } catch (err: any) {
+      setVerifyError(err.response?.data?.message || 'Invalid or expired code. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResendLoading(true);
+    setResendSuccess(false);
+    setVerifyError(null);
+    try {
+      await AuthService.sendVerificationCode(registeredEmail);
+      setResendSuccess(true);
+    } catch (err: any) {
+      setVerifyError(err.response?.data?.message || 'Failed to resend code. Please try again.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const handleGoogleCredentialSuccess = async (credentialResponse: any) => {
     setIsGoogleLoading(true);
     setError(null);
@@ -146,7 +182,8 @@ const Register: React.FC = () => {
       };
       
       await AuthService.register(formData);
-      navigate('/login', { state: { message: 'Registration successful! You can now log in.' } });
+      setRegisteredEmail(values.email);
+      setVerificationStep(true);
     } catch (err: any) {
       console.error('Registration error details:', err);
       if (err.response?.data?.errors) {
@@ -190,6 +227,55 @@ const Register: React.FC = () => {
             alignItems: 'center',
           }}
         >
+
+          {/* ── Email Verification Step ────────────────────────── */}
+          {verificationStep ? (
+            <>
+              <Typography component="h1" variant="h5" sx={{ mb: 1, fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#2c3e50' }}>
+                Verify Your Email
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
+                We sent a 6-digit verification code to <strong>{registeredEmail}</strong>.<br />
+                Please enter it below to activate your account.
+              </Typography>
+
+              {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
+              {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
+
+              <TextField
+                fullWidth
+                label="6-digit Verification Code"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '22px', textAlign: 'center', fontWeight: 700 } }}
+                placeholder="------"
+                sx={{ mb: 2 }}
+              />
+
+              <Button
+                fullWidth
+                variant="contained"
+                disabled={verifyLoading || verificationCode.length !== 6}
+                onClick={handleVerify}
+                sx={{ py: 1.5, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
+              >
+                {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
+              </Button>
+
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ color: '#666' }}>
+                  Didn\'t receive a code?{' '}
+                  <span
+                    onClick={resendLoading ? undefined : handleResendCode}
+                    style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
+                  >
+                    {resendLoading ? 'Sending...' : 'Resend Code'}
+                  </span>
+                </Typography>
+              </Box>
+            </>
+          ) : (
+            <>
           <Typography 
             component="h1" 
             variant="h5" 
@@ -454,6 +540,8 @@ const Register: React.FC = () => {
               </Form>
             )}
           </Formik>
+        </>
+        )}
         </Box>
       </Paper>
     </Container>

@@ -59,18 +59,25 @@ public class PaymentController {
 
             booking = bookingService.createPendingBooking(userId, request);
 
+            // Embed bookingId in returnUrl so MPGS sends it back in the redirect URL.
+            // This avoids any localStorage/sessionStorage unreliability after external redirects.
+            String returnUrl = request.getReturnUrl()
+                    + (request.getReturnUrl().contains("?") ? "&" : "?")
+                    + "bookingId=" + booking.getBookingId().toString();
+
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     request.getCurrency(),
-                    request.getReturnUrl(),
+                    returnUrl,
                     request.getCancelUrl()
             );
 
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
                     request.getTotalAmount(),
-                    sessionResponse.getSessionId()
+                    sessionResponse.getSessionId(),
+                    sessionResponse.getSuccessIndicator()
             );
 
             return ResponseEntity.ok(sessionResponse);
@@ -112,8 +119,7 @@ public class PaymentController {
         log.info("Verifying payment for session: {}", sessionId);
 
         try {
-            MPGSPaymentResult result = mpgsPaymentService.verifyPayment(sessionId);
-
+            // Look up transaction first to get the MPGS orderId (= booking UUID)
             Transaction transaction = transactionService.getTransactionByReference(sessionId);
             if (transaction == null) {
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
@@ -124,6 +130,24 @@ public class PaymentController {
             }
 
             Booking booking = transaction.getBooking();
+
+            // Idempotency: if booking is already confirmed (e.g. page refresh), return success immediately
+            if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
+                log.info("Booking {} already confirmed, returning cached success", booking.getBookingId());
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(true)
+                        .status("SUCCESS")
+                        .transactionId(transaction.getTransactionId().toString())
+                        .bookingId(booking.getBookingId())
+                        .bookingReference(booking.getBookingReference())
+                        .amount(booking.getTotalAmount())
+                        .message("Payment successful! Your booking is confirmed.")
+                        .build());
+            }
+
+            // Verify against MPGS using the ORDER endpoint (orderId = bookingId = MPGS order.id set during session creation)
+            String orderId = booking.getBookingId().toString();
+            MPGSPaymentResult result = mpgsPaymentService.verifyPaymentByOrder(orderId);
 
             Transaction.TransactionStatus newStatus = result.isSuccess()
                     ? Transaction.TransactionStatus.SUCCESS
@@ -187,6 +211,202 @@ public class PaymentController {
                     .success(false)
                     .status("ERROR")
                     .message("Failed to verify payment. Please contact support.")
+                    .build());
+        }
+    }
+
+    /**
+     * Verify payment using the booking ID that MPGS echoes back in the returnUrl redirect.
+     * Uses the successIndicator/resultIndicator comparison — the official MPGS Hosted Checkout
+     * verification approach, requires no additional MPGS API call.
+     */
+    @GetMapping("/verify-by-booking")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<PaymentVerificationResponse> verifyPaymentByBooking(
+            @RequestParam UUID bookingId,
+            @RequestParam(required = false) String resultIndicator,
+            Authentication authentication) {
+
+        log.info("Verifying payment by bookingId: {}, resultIndicator: {}", bookingId, resultIndicator);
+
+        try {
+            Booking booking;
+            try {
+                booking = bookingService.getBookingById(bookingId.toString());
+            } catch (RuntimeException e) {
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("ERROR")
+                        .message("Booking not found. Please contact support.")
+                        .build());
+            }
+
+            // Idempotency: already confirmed (e.g. page refresh)
+            if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
+                log.info("Booking {} already confirmed, returning cached success", bookingId);
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(true)
+                        .status("SUCCESS")
+                        .bookingId(booking.getBookingId())
+                        .bookingReference(booking.getBookingReference())
+                        .amount(booking.getTotalAmount())
+                        .message("Payment successful! Your booking is confirmed.")
+                        .build());
+            }
+
+            // Look up the PENDING transaction to retrieve stored successIndicator
+            Transaction transaction = transactionService.getTransactionsByBookingId(bookingId)
+                    .stream()
+                    .filter(t -> t.getType() == Transaction.TransactionType.PAYMENT)
+                    .findFirst()
+                    .orElse(null);
+
+            if (transaction == null) {
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("ERROR")
+                        .message("Transaction not found. Please contact support.")
+                        .build());
+            }
+
+            // Extract successIndicator stored during session creation
+            boolean isSuccess = false;
+            String storedSuccessIndicator = null;
+            try {
+                String gatewayResponse = transaction.getPaymentGatewayResponse();
+                if (gatewayResponse != null) {
+                    com.fasterxml.jackson.databind.JsonNode node =
+                            new com.fasterxml.jackson.databind.ObjectMapper().readTree(gatewayResponse);
+                    if (node.has("successIndicator")) {
+                        storedSuccessIndicator = node.get("successIndicator").asText();
+                    }
+                }
+            } catch (Exception parseEx) {
+                log.warn("Could not parse stored gateway response: {}", parseEx.getMessage());
+            }
+
+            if (resultIndicator != null && storedSuccessIndicator != null) {
+                // Official MPGS approach: compare resultIndicator from redirect URL vs stored successIndicator
+                isSuccess = resultIndicator.equals(storedSuccessIndicator);
+                log.info("MPGS indicator comparison: result={}, stored={}, match={}",
+                        resultIndicator, storedSuccessIndicator, isSuccess);
+            } else {
+                // Fallback: query the MPGS order API directly
+                log.warn("Falling back to MPGS order API (resultIndicator={}, storedSuccessIndicator={})",
+                        resultIndicator, storedSuccessIndicator);
+                MPGSPaymentResult fallbackResult = mpgsPaymentService.verifyPaymentByOrder(bookingId.toString());
+                isSuccess = fallbackResult.isSuccess();
+                log.info("MPGS order API fallback result: success={}", isSuccess);
+            }
+
+            String rawResponse = "{\"resultIndicator\":\"" + resultIndicator + "\","
+                    + "\"successIndicator\":\"" + storedSuccessIndicator + "\","
+                    + "\"match\":" + isSuccess + "}";
+
+            Transaction.TransactionStatus newStatus = isSuccess
+                    ? Transaction.TransactionStatus.SUCCESS
+                    : Transaction.TransactionStatus.FAILED;
+
+            transactionService.updateTransactionStatus(
+                    transaction.getTransactionReference(), newStatus, rawResponse);
+
+            if (isSuccess) {
+                Booking confirmedBooking = bookingService.confirmBookingAfterPayment(bookingId);
+
+                // Build receipt details from the fully-loaded confirmedBooking
+                String eventName = confirmedBooking.getEvent() != null ? confirmedBooking.getEvent().getName() : "N/A";
+                String eventDate = "N/A";
+                String eventTime = "N/A";
+                if (confirmedBooking.getEventSchedule() != null) {
+                    if (confirmedBooking.getEventSchedule().getScheduleDate() != null)
+                        eventDate = confirmedBooking.getEventSchedule().getScheduleDate()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy"));
+                    if (confirmedBooking.getEventSchedule().getStartTime() != null)
+                        eventTime = confirmedBooking.getEventSchedule().getStartTime()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
+                }
+                String venueName = "N/A";
+                if (confirmedBooking.getEvent() != null) {
+                    venueName = confirmedBooking.getEvent().getVenueName() != null
+                            ? confirmedBooking.getEvent().getVenueName()
+                            : (confirmedBooking.getEvent().getVenue() != null
+                                    ? confirmedBooking.getEvent().getVenue().getName() : "N/A");
+                }
+                String seatDetails = confirmedBooking.getBookingSeats().stream()
+                        .sorted((a, b) -> {
+                            if (Boolean.TRUE.equals(a.getIsSharedAreaTicket()) && !Boolean.TRUE.equals(b.getIsSharedAreaTicket())) return 1;
+                            if (!Boolean.TRUE.equals(a.getIsSharedAreaTicket()) && Boolean.TRUE.equals(b.getIsSharedAreaTicket())) return -1;
+                            return 0;
+                        })
+                        .map(bs -> {
+                            if (Boolean.TRUE.equals(bs.getIsSharedAreaTicket()))
+                                return "Shared Area #" + bs.getSharedAreaNumber() + " - " + bs.getTicketCode();
+                            String seatLabel = bs.getSeat() != null
+                                    ? "Row " + bs.getSeat().getRow() + ", Seat " + bs.getSeat().getSeatNumber()
+                                    : (bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat");
+                            return seatLabel + " - " + bs.getTicketCode();
+                        })
+                        .collect(java.util.stream.Collectors.joining("\n"));
+                String paymentDate = java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy, hh:mm a"));
+
+                String customerEmail = confirmedBooking.getUser().getEmail();
+                emailService.sendBookingConfirmationEmail(
+                        confirmedBooking,
+                        customerEmail,
+                        transaction.getTransactionId().toString(),
+                        null
+                );
+
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(true)
+                        .status("SUCCESS")
+                        .transactionId(transaction.getTransactionId().toString())
+                        .bookingId(confirmedBooking.getBookingId())
+                        .bookingReference(confirmedBooking.getBookingReference())
+                        .amount(confirmedBooking.getTotalAmount())
+                        .message("Payment successful! Your booking is confirmed.")
+                        .eventName(eventName)
+                        .eventDate(eventDate)
+                        .eventTime(eventTime)
+                        .venueName(venueName)
+                        .ticketCount(confirmedBooking.getBookingSeats().size())
+                        .seatDetails(seatDetails)
+                        .paymentDate(paymentDate)
+                        .build());
+            } else {
+                bookingService.cancelBookingAfterPaymentFailure(
+                        bookingId,
+                        "Payment indicators did not match"
+                );
+
+                try {
+                    seatService.releaseSeatHolds(booking.getUser().getUserId());
+                } catch (Exception e) {
+                    log.warn("Error releasing seat holds: {}", e.getMessage());
+                }
+
+                String customerEmail = booking.getUser().getEmail();
+                emailService.sendPaymentFailureEmail(
+                        customerEmail,
+                        booking.getEvent().getName(),
+                        booking.getTotalAmount(),
+                        "Payment verification failed"
+                );
+
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("FAILED")
+                        .message("Payment was declined. Please try again.")
+                        .build());
+            }
+
+        } catch (Exception e) {
+            log.error("Payment verification by booking error: {}", e.getMessage(), e);
+            return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                    .success(false)
+                    .status("ERROR")
+                    .message("Failed to verify payment: " + e.getMessage())
                     .build());
         }
     }

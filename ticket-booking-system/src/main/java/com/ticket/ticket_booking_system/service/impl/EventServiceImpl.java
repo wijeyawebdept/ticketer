@@ -41,6 +41,7 @@ import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
+import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.EventService; // Added import
 import com.ticket.ticket_booking_system.service.FileUploadService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
@@ -63,6 +64,7 @@ public class EventServiceImpl implements EventService {
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
     private final SeatRepository seatRepository; // Added repository for seat deletion
     private final RecycleBinService recycleBinService; // Added for soft delete
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -702,6 +704,13 @@ public class EventServiceImpl implements EventService {
         // Assign organizer to event
         event.setOrganizer(organizer);
         Event savedEvent = eventRepository.save(event);
+
+        // Notify organizer by email
+        try {
+            emailService.sendOrganizerEventAssignmentEmail(organizer, savedEvent);
+        } catch (Exception e) {
+            System.err.println("⚠ Failed to send organizer assignment email: " + e.getMessage());
+        }
 
         return mapEventToResponse(savedEvent);
     }

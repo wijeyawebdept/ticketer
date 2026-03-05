@@ -161,10 +161,13 @@ public class BookingService {
         int totalTickets = booking.getBookingSeats().size();
         eventScheduleService.reserveSeats(booking.getEventSchedule().getScheduleId(), totalTickets);
 
-        Booking confirmedBooking = bookingRepository.save(booking);
-        log.info("Booking confirmed with reference: {}", confirmedBooking.getBookingReference());
+        bookingRepository.save(booking);
+        log.info("Booking confirmed with reference: {}", booking.getBookingReference());
 
-        return confirmedBooking;
+        // Re-fetch with all lazy associations loaded so the caller (e.g. email service)
+        // can access user, event, eventSchedule, bookingSeats without a LazyInitializationException.
+        return bookingRepository.findByIdWithDetails(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found after confirmation: " + bookingId));
     }
 
     /**

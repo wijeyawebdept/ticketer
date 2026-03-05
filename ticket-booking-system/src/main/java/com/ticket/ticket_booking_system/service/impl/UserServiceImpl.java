@@ -115,9 +115,9 @@ public class UserServiceImpl implements UserService {
         // Create corresponding Admin or Organizer record based on role
         createRoleSpecificRecord(savedUser, roleName);
 
-        // Send welcome email for regular user registrations
+        // Send email verification code so the user can activate their account
         if ("USER".equals(roleName)) {
-            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFirstName());
+            sendVerificationCode(savedUser.getEmail());
         }
 
         return mapUserToResponse(savedUser);
@@ -437,6 +437,46 @@ public class UserServiceImpl implements UserService {
         user.setResetPasswordToken(null);
         user.setResetPasswordTokenExpiry(null);
         userRepository.save(user);
+    }
+
+    @Override
+    public void sendVerificationCode(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found for email: " + email));
+
+        // Generate a random 6-digit code
+        String code = String.format("%06d", new java.util.Random().nextInt(1_000_000));
+
+        user.setEmailVerificationCode(code);
+        user.setEmailVerificationCodeExpiry(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        emailService.sendEmailVerificationCode(user.getEmail(), user.getFirstName(), code);
+    }
+
+    @Override
+    @Transactional
+    public void verifyEmail(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found for this email."));
+
+        if (user.isEmailVerified()) {
+            return; // already verified
+        }
+
+        if (user.getEmailVerificationCode() == null || !user.getEmailVerificationCode().equals(code)) {
+            throw new IllegalArgumentException("Invalid verification code. Please check the code and try again.");
+        }
+
+        if (user.getEmailVerificationCodeExpiry() == null ||
+                user.getEmailVerificationCodeExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification code has expired. Please request a new one.");
+        }
+
+        userRepository.verifyUserEmail(email);
+
+        // Send welcome email now that verification is complete
+        emailService.sendWelcomeEmail(user.getEmail(), user.getFirstName());
     }
 
     @Override

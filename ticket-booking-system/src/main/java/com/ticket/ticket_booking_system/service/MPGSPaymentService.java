@@ -118,6 +118,11 @@ public class MPGSPaymentService {
 
             String sessionId = responseJson.get("session").get("id").asText();
 
+            // successIndicator is used to verify the payment after redirect (compare with resultIndicator)
+            String successIndicator = responseJson.has("successIndicator")
+                    ? responseJson.get("successIndicator").asText()
+                    : null;
+
             return MPGSSessionResponse.builder()
                     .sessionId(sessionId)
                     .merchantId(mpgsConfig.getMerchantId())
@@ -128,6 +133,7 @@ public class MPGSPaymentService {
                     .orderReference(bookingId.toString())
                     .successUrl(returnUrl)
                     .cancelUrl(cancelUrl)
+                    .successIndicator(successIndicator)
                     .build();
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
@@ -272,6 +278,110 @@ public class MPGSPaymentService {
             throw new RuntimeException("Failed to verify payment: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             log.error("Unexpected error verifying payment", e);
+            throw new RuntimeException("Failed to verify payment", e);
+        }
+    }
+
+    /**
+     * Verify payment result from MPGS using the Order ID (= booking UUID).
+     * This is the correct approach for Hosted Checkout v67+: after redirect,
+     * query GET /order/{orderId} to retrieve the real payment outcome.
+     */
+    public MPGSPaymentResult verifyPaymentByOrder(String orderId) {
+        log.info("Verifying payment for MPGS order: {}", orderId);
+
+        try {
+            String endpoint = mpgsConfig.getApiEndpoint("/order/" + orderId);
+
+            WebClient webClient = webClientBuilder
+                    .defaultHeader(HttpHeaders.AUTHORIZATION, mpgsConfig.getBasicAuthHeader())
+                    .build();
+
+            String responseBody = webClient.get()
+                    .uri(endpoint)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+                            .maxBackoff(Duration.ofSeconds(10))
+                            .filter(this::isRetryableException))
+                    .block();
+
+            JsonNode responseJson = objectMapper.readTree(responseBody);
+            // MPGS GET /order/{id} may return the order at root or wrapped under "order"
+            JsonNode order = responseJson.has("order") ? responseJson.get("order") : responseJson;
+
+            String orderStatus = order.has("status") ? order.get("status").asText() : "";
+            String gatewayCode = orderStatus;
+            String errorMessage = "";
+            String cardType = "";
+            String cardLast4 = "";
+
+            boolean isSuccess = "CAPTURED".equalsIgnoreCase(orderStatus)
+                    || "APPROVED".equalsIgnoreCase(orderStatus)
+                    || "SUCCESS".equalsIgnoreCase(orderStatus);
+
+            if (order.has("transaction") && order.get("transaction").isArray() && order.get("transaction").size() > 0) {
+                JsonNode tx = order.get("transaction").get(0);
+
+                if (tx.has("gatewayCode")) {
+                    gatewayCode = tx.get("gatewayCode").asText();
+                    isSuccess = isSuccess || "APPROVED".equalsIgnoreCase(gatewayCode);
+                }
+
+                if (tx.has("sourceOfFunds")) {
+                    JsonNode sof = tx.get("sourceOfFunds");
+                    if (sof.has("provided") && sof.get("provided").has("card")) {
+                        JsonNode card = sof.get("provided").get("card");
+                        if (card.has("number")) {
+                            String fullCard = card.get("number").asText();
+                            cardLast4 = fullCard.length() >= 4
+                                    ? fullCard.substring(fullCard.length() - 4)
+                                    : fullCard;
+                        }
+                        if (card.has("scheme")) {
+                            cardType = card.get("scheme").asText();
+                        }
+                    }
+                }
+            }
+
+            if (!isSuccess && order.has("error")) {
+                JsonNode err = order.get("error");
+                if (err.has("explanation")) errorMessage = err.get("explanation").asText();
+                else if (err.has("cause")) errorMessage = err.get("cause").asText();
+            }
+
+            BigDecimal amount = order.has("amount")
+                    ? new BigDecimal(order.get("amount").asText())
+                    : BigDecimal.ZERO;
+            String currency = order.has("currency")
+                    ? order.get("currency").asText()
+                    : mpgsConfig.getCurrency();
+
+            log.info("Order verification result: OrderID={}, Status={}, GatewayCode={}, Success={}",
+                    orderId, orderStatus, gatewayCode, isSuccess);
+
+            return MPGSPaymentResult.builder()
+                    .success(isSuccess)
+                    .resultIndicator(orderStatus)
+                    .sessionVersion("1")
+                    .orderId(orderId)
+                    .transactionId(orderId)
+                    .amount(amount)
+                    .currency(currency)
+                    .gatewayCode(gatewayCode)
+                    .errorMessage(errorMessage)
+                    .rawResponse(responseBody)
+                    .cardType(cardType)
+                    .cardLast4(cardLast4)
+                    .build();
+
+        } catch (WebClientResponseException e) {
+            log.error("MPGS API error while verifying order: Status={}, Body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Failed to verify payment: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error verifying order", e);
             throw new RuntimeException("Failed to verify payment", e);
         }
     }

@@ -103,6 +103,14 @@ class AuthService {
     }
   }
 
+  async sendVerificationCode(email: string): Promise<void> {
+    await axios.post('/api/auth/send-verification', { email });
+  }
+
+  async verifyEmail(email: string, code: string): Promise<void> {
+    await axios.post('/api/auth/verify-email', { email, code });
+  }
+
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       console.log('Logging in user with endpoint: /api/auth/login');

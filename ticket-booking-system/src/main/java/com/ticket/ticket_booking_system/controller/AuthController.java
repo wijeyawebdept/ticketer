@@ -9,11 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,13 +21,16 @@ import com.ticket.ticket_booking_system.config.LoginSuccessHandler;
 import com.ticket.ticket_booking_system.dto.request.LoginRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.GoogleOAuthService;
 import com.ticket.ticket_booking_system.service.UserService;
-
-import org.springframework.transaction.annotation.Transactional;
-
-import com.ticket.ticket_booking_system.service.EmailService;
 
 import jakarta.validation.Valid;
 
@@ -45,6 +45,9 @@ public class AuthController {
     private final JwtService jwtService;
     private final GoogleOAuthService googleOAuthService;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final LoginSuccessHandler loginSuccessHandler;
     private final EmailService emailService;
@@ -55,6 +58,9 @@ public class AuthController {
             JwtService jwtService,
             GoogleOAuthService googleOAuthService,
             UserRepository userRepository,
+            AdminRepository adminRepository,
+            OrganizerRepository organizerRepository,
+            OrganizerEmployeeRepository organizerEmployeeRepository,
             PasswordEncoder passwordEncoder,
             LoginSuccessHandler loginSuccessHandler,
             EmailService emailService) {
@@ -63,6 +69,9 @@ public class AuthController {
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
+        this.organizerRepository = organizerRepository;
+        this.organizerEmployeeRepository = organizerEmployeeRepository;
         this.passwordEncoder = passwordEncoder;
         this.loginSuccessHandler = loginSuccessHandler;
         this.emailService = emailService;
@@ -74,29 +83,85 @@ public class AuthController {
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
+    @PostMapping("/send-verification")
+    public ResponseEntity<Map<String, Object>> sendVerificationCode(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Email is required."));
+        }
+        try {
+            userService.sendVerificationCode(email);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Verification code sent to " + email));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String code  = body.get("code");
+        if (email == null || code == null || email.isBlank() || code.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Email and code are required."));
+        }
+        try {
+            userService.verifyEmail(email, code);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Email verified successfully! You can now sign in."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Authenticate the user
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Get user details
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
-            
+            // Public portal: authenticate ONLY against the users (customers) table.
+            // Admins, organizers, and organizer employees who share the same email must
+            // use the restricted login portal. This means a staff member can have a
+            // separate customer account under the same email and buy tickets normally.
+            com.ticket.ticket_booking_system.entity.User user =
+                    userRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+
+            if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Invalid email or password");
+                response.put("error_code", "INVALID_CREDENTIALS");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // Block if account is inactive / soft-deleted
+            if (!user.isEnabled()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Account is disabled. Please contact administrator.");
+                response.put("error_code", "USER_DISABLED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // Block login if email is not verified
+            if (!user.isEmailVerified()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Please verify your email before logging in. Check your inbox for the verification code.");
+                response.put("error_code", "EMAIL_NOT_VERIFIED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            try {
+                if (user.isLoginEmailEnabled()) {
+                    emailService.sendLoginNotificationEmail(user.getEmail(), user.getFirstName());
+                }
+            } catch (Exception emailEx) {
+                logger.warn("Failed to send login notification email to {}: {}", user.getEmail(), emailEx.getMessage());
+            }
+
             // Update last login timestamp
             loginSuccessHandler.updateLastLogin(loginRequest.getEmail());
-            
-            // Generate JWT token
-            String token = jwtService.generateToken(userDetails);
-            
+
+            // Generate JWT token — User entity implements UserDetails (ROLE_USER authority)
+            String token = jwtService.generateToken(user);
+
             // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
@@ -106,32 +171,17 @@ public class AuthController {
                 "id", user.getId(),
                 "firstName", user.getFirstName(),
                 "lastName", user.getLastName(),
-                "role", user.getRole(),
+                "role", user.getRole().name(),
                 "email", user.getEmail()
             ));
-            
+
             return ResponseEntity.ok(response);
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Account is disabled. Please contact administrator.");
-            response.put("error_code", "USER_DISABLED");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Invalid email or password");
-            response.put("error_code", "INVALID_CREDENTIALS");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "Login failed: " + e.getMessage());
             response.put("error_code", "AUTHENTICATION_ERROR");
             response.put("error_details", e.getClass().getSimpleName());
-            
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
@@ -139,73 +189,66 @@ public class AuthController {
     @PostMapping("/admin/login")
     public ResponseEntity<Map<String, Object>> adminLogin(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Authenticate the user
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Get user details
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
-            
-            // Check if user has ADMIN or SUPER_ADMIN role
-            String userRole = user.getRole();
-            if (!"ADMIN".equals(userRole) && !"SUPER_ADMIN".equals(userRole)) {
+            // Authenticate directly against the admins table — prevents users table (role=USER)
+            // from shadowing an admin if both entries share the same email.
+            Admin admin = adminRepository.findByEmail(loginRequest.getEmail())
+                .orElse(null);
+
+            if (admin == null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
                 response.put("message", "Access denied. Only administrators can access the admin panel.");
                 response.put("error_code", "INSUFFICIENT_PRIVILEGES");
-                
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
+            // Verify password against the admin's stored password
+            if (!passwordEncoder.matches(loginRequest.getPassword(), admin.getPassword())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Invalid email or password");
+                response.put("error_code", "INVALID_CREDENTIALS");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // Check account is active
+            if (!admin.isEnabled()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Account is disabled. Please contact administrator.");
+                response.put("error_code", "USER_DISABLED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
             // Update last login timestamp for Admin
             loginSuccessHandler.updateAdminLastLogin(loginRequest.getEmail());
-            
-            // Generate JWT token
-            String token = jwtService.generateToken(userDetails);
-            
+
+            // Generate JWT token using Admin as UserDetails
+            String token = jwtService.generateToken(admin);
+
+            String adminRole = admin.getRole().name();
+
             // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Admin login successful");
             response.put("token", token);
             response.put("user", Map.of(
-                "id", user.getId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "role", user.getRole(),
-                "email", user.getEmail(),
-                "isSuperAdmin", "SUPER_ADMIN".equals(userRole)
+                "id", admin.getAdminId(),
+                "firstName", admin.getFirstName(),
+                "lastName", admin.getLastName(),
+                "role", adminRole,
+                "email", admin.getEmail(),
+                "isSuperAdmin", "SUPER_ADMIN".equals(adminRole)
             ));
-            
+
             return ResponseEntity.ok(response);
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Account is disabled. Please contact administrator.");
-            response.put("error_code", "USER_DISABLED");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Invalid email or password");
-            response.put("error_code", "INVALID_CREDENTIALS");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "Login failed: " + e.getMessage());
             response.put("error_code", "AUTHENTICATION_ERROR");
             response.put("error_details", e.getClass().getSimpleName());
-            
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
@@ -213,72 +256,63 @@ public class AuthController {
     @PostMapping("/organizer/login")
     public ResponseEntity<Map<String, Object>> organizerLogin(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Authenticate the user
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Get user details
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
-            
-            // Check if user has ORGANIZER role
-            String userRole = user.getRole();
-            if (!"ORGANIZER".equals(userRole)) {
+            // Authenticate directly against the organizers table — this prevents the
+            // users table (role=USER) from shadowing an organizer who also has a customer account.
+            Organizer organizer = organizerRepository.findByEmail(loginRequest.getEmail())
+                .orElse(null);
+
+            if (organizer == null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
                 response.put("message", "Access denied. Only organizers can access the organizer panel.");
                 response.put("error_code", "INSUFFICIENT_PRIVILEGES");
-                
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
+            // Verify password against the organizer's stored password
+            if (!passwordEncoder.matches(loginRequest.getPassword(), organizer.getPassword())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Invalid email or password");
+                response.put("error_code", "INVALID_CREDENTIALS");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // Check account is active
+            if (!organizer.isEnabled()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Account is disabled. Please contact administrator.");
+                response.put("error_code", "USER_DISABLED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
             // Update last login timestamp for Organizer
             loginSuccessHandler.updateOrganizerLastLogin(loginRequest.getEmail());
-            
-            // Generate JWT token
-            String token = jwtService.generateToken(userDetails);
-            
+
+            // Generate JWT token using Organizer as UserDetails (its getAuthorities() returns ROLE_ORGANIZER)
+            String token = jwtService.generateToken(organizer);
+
             // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Organizer login successful");
             response.put("token", token);
             response.put("user", Map.of(
-                "id", user.getId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "role", user.getRole(),
-                "email", user.getEmail()
+                "id", organizer.getOrganizerId(),
+                "firstName", organizer.getFirstName(),
+                "lastName", organizer.getLastName(),
+                "role", "ORGANIZER",
+                "email", organizer.getEmail()
             ));
-            
+
             return ResponseEntity.ok(response);
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Account is disabled. Please contact administrator.");
-            response.put("error_code", "USER_DISABLED");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Invalid email or password");
-            response.put("error_code", "INVALID_CREDENTIALS");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "Login failed: " + e.getMessage());
             response.put("error_code", "AUTHENTICATION_ERROR");
             response.put("error_details", e.getClass().getSimpleName());
-            
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
@@ -286,72 +320,63 @@ public class AuthController {
     @PostMapping("/organizer-employee/login")
     public ResponseEntity<Map<String, Object>> organizerEmployeeLogin(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Authenticate the user
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Get user details
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            UserResponse user = userService.getUserByEmail(loginRequest.getEmail());
-            
-            // Check if user has ORGANIZER_EMPLOYEE role
-            String userRole = user.getRole();
-            if (!"ORGANIZER_EMPLOYEE".equals(userRole)) {
+            // Authenticate directly against the organizer_employees table — this prevents
+            // the users table (role=USER) from shadowing an employee who also has a customer account.
+            OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(loginRequest.getEmail())
+                .orElse(null);
+
+            if (employee == null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
                 response.put("message", "Access denied. Only organizer employees can access this panel.");
                 response.put("error_code", "INSUFFICIENT_PRIVILEGES");
-                
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
+            // Verify password against the employee's stored password
+            if (!passwordEncoder.matches(loginRequest.getPassword(), employee.getPassword())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Invalid email or password");
+                response.put("error_code", "INVALID_CREDENTIALS");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            // Check account is active
+            if (!employee.isEnabled()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Account is disabled. Please contact administrator.");
+                response.put("error_code", "USER_DISABLED");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
             // Update last login timestamp for OrganizerEmployee
             loginSuccessHandler.updateOrganizerEmployeeLastLogin(loginRequest.getEmail());
-            
-            // Generate JWT token
-            String token = jwtService.generateToken(userDetails);
-            
+
+            // Generate JWT token using OrganizerEmployee as UserDetails
+            String token = jwtService.generateToken(employee);
+
             // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Organizer employee login successful");
             response.put("token", token);
             response.put("user", Map.of(
-                "id", user.getId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "role", user.getRole(),
-                "email", user.getEmail()
+                "id", employee.getEmployeeId(),
+                "firstName", employee.getFirstName(),
+                "lastName", employee.getLastName(),
+                "role", "ORGANIZER_EMPLOYEE",
+                "email", employee.getEmail()
             ));
-            
+
             return ResponseEntity.ok(response);
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Account is disabled. Please contact administrator.");
-            response.put("error_code", "USER_DISABLED");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Invalid email or password");
-            response.put("error_code", "INVALID_CREDENTIALS");
-            
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "Login failed: " + e.getMessage());
             response.put("error_code", "AUTHENTICATION_ERROR");
             response.put("error_details", e.getClass().getSimpleName());
-            
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
@@ -428,6 +453,16 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
             loginSuccessHandler.updateLastLogin(user.getEmail());
+
+            // Send login notification email (fire-and-forget)
+            try {
+                if (user.isLoginEmailEnabled()) {
+                    emailService.sendLoginNotificationEmail(user.getEmail(), user.getFirstName());
+                }
+            } catch (Exception emailEx) {
+                logger.warn("Failed to send login notification email to {}: {}", user.getEmail(), emailEx.getMessage());
+            }
+
             org.springframework.security.core.userdetails.User userDetails =
                 new org.springframework.security.core.userdetails.User(
                     user.getEmail(),

@@ -180,7 +180,9 @@ const EventAssignments: React.FC = () => {
   };
 
   const getEventName = (eventId: string) => {
-    const event = events.find((e) => e.eventId === eventId);
+    // EventResponse from the backend uses 'id', while the EventAssignments DTO uses 'eventId'.
+    // Check both to be safe.
+    const event = events.find((e) => (e.eventId ?? (e as any).id) === eventId);
     return event?.name || 'Unknown Event';
   };
 
@@ -268,11 +270,14 @@ const EventAssignments: React.FC = () => {
             <FormControl fullWidth>
               <InputLabel>Event</InputLabel>
               <Select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} label="Event">
-                {events.map((event) => (
-                  <MenuItem key={event.id || event.eventId} value={event.id || event.eventId}>
-                    {event.name}
-                  </MenuItem>
-                ))}
+                {events.map((event) => {
+                  const evId = event.eventId ?? (event as any).id;
+                  return (
+                    <MenuItem key={evId} value={evId}>
+                      {event.name}
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
 

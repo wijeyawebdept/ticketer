@@ -158,21 +158,24 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     }
 
     /**
-     * Internal method to remove employee from event
+     * Internal method to remove employee from event.
+     * Uses a List query so that any accidental duplicate active assignments are
+     * all deactivated in one shot rather than blowing up with an
+     * IncorrectResultSizeDataAccessException.
      */
     private void removeEmployeeFromEventInternal(UUID eventId, UUID employeeId) {
-        // Find and deactivate assignment
-        EventEmployeeAssignment assignment = assignmentRepository
+        List<EventEmployeeAssignment> assignments = assignmentRepository
                 .findByEvent_EventIdAndEmployee_EmployeeIdAndIsActiveTrue(eventId, employeeId);
 
-        if (assignment == null) {
+        if (assignments == null || assignments.isEmpty()) {
             throw new ResourceNotFoundException("Assignment", "eventId and employeeId", eventId + " and " + employeeId);
         }
 
-        assignment.setIsActive(false);
-        assignmentRepository.save(assignment);
+        assignments.forEach(a -> a.setIsActive(false));
+        assignmentRepository.saveAll(assignments);
 
-        System.out.println("Removed employee " + employeeId + " from event " + eventId);
+        log.info("Removed employee {} from event {} ({} assignment(s) deactivated)",
+                employeeId, eventId, assignments.size());
     }
 
     @Override

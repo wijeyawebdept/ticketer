@@ -68,4 +68,14 @@ public interface UserService {
     void resetPasswordWithToken(String token, String newPassword);
 
     boolean isEmailExists(String email);
+
+    /**
+     * Generates a 6-digit verification code, saves it, and emails it to the user.
+     */
+    void sendVerificationCode(String email);
+
+    /**
+     * Validates the verification code for the given email and marks the account as verified.
+     */
+    void verifyEmail(String email, String code);
 }
