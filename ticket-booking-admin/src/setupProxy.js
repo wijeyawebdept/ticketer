@@ -29,4 +29,15 @@ module.exports = function(app) {
       }
     })
   );
+
+  // Proxy WebSocket connections so they work through tunnels (ngrok, etc.)
+  app.use(
+    '/ws',
+    createProxyMiddleware({
+      target: 'http://localhost:8081',
+      changeOrigin: true,
+      ws: true,
+      logLevel: 'debug',
+    })
+  );
 };

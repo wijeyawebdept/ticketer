@@ -25,6 +25,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EventCategory {
 
+    @SuppressWarnings("deprecation")
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")

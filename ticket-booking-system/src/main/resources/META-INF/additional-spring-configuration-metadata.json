@@ -1,0 +1,122 @@
+{"properties": [
+  {
+    "name": "application.security.jwt.secret-key",
+    "type": "java.lang.String",
+    "description": "A description for 'application.security.jwt.secret-key'"
+  },
+  {
+    "name": "application.security.jwt.expiration",
+    "type": "java.lang.String",
+    "description": "A description for 'application.security.jwt.expiration'"
+  },
+  {
+    "name": "application.security.jwt.refresh-token.expiration",
+    "type": "java.lang.String",
+    "description": "A description for 'application.security.jwt.refresh-token.expiration'"
+  },
+  {
+    "name": "app.upload.profile-pictures",
+    "type": "java.lang.String",
+    "description": "A description for 'app.upload.profile-pictures'"
+  },
+  {
+    "name": "google.oauth.client-id",
+    "type": "java.lang.String",
+    "description": "A description for 'google.oauth.client-id'"
+  },
+  {
+    "name": "mpgs.merchant.id",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.merchant.id'"
+  },
+  {
+    "name": "mpgs.api.url",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.api.url'"
+  },
+  {
+    "name": "mpgs.api.version",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.api.version'"
+  },
+  {
+    "name": "mpgs.api.password",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.api.password'"
+  },
+  {
+    "name": "mpgs.webhook-secret",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.webhook-secret'"
+  },
+  {
+    "name": "mpgs.currency",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.currency'"
+  },
+  {
+    "name": "mpgs.success-url",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.success-url'"
+  },
+  {
+    "name": "mpgs.cancel-url",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.cancel-url'"
+  },
+  {
+    "name": "mpgs.error-url",
+    "type": "java.lang.String",
+    "description": "A description for 'mpgs.error-url'"
+  },
+  {
+    "name": "app.frontend.base-url",
+    "type": "java.lang.String",
+    "description": "A description for 'app.frontend.base-url'"
+  },
+  {
+    "name": "app.mail.fromEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromEmail'"
+  },
+  {
+    "name": "app.mail.fromName",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromName'"
+  },
+  {
+    "name": "app.mail.fromName",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromName'"
+  },
+  {
+    "name": "app.mail.fromEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromEmail'"
+  },
+  {
+    "name": "app.mail.toEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.toEmail'"
+  },
+  {
+    "name": "app.mail.toEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.toEmail'"
+  },
+  {
+    "name": "app.mail.fromEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromEmail'"
+  },
+  {
+    "name": "app.mail.toEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.toEmail'"
+  },
+  {
+    "name": "app.mail.fromEmail",
+    "type": "java.lang.String",
+    "description": "A description for 'app.mail.fromEmail'"
+  }
+]}

@@ -40,6 +40,7 @@ public class RefundController {
 
         private final MPGSPaymentService mpgsPaymentService;
         private final TransactionService transactionService;
+        @SuppressWarnings("unused")
         private final BookingService bookingService;
         private final BookingRepository bookingRepository;
         private final EmailService emailService;

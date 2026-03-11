@@ -19,8 +19,13 @@ class SeatWebSocketService {
 
   constructor() {
     this.client = new Client({
-      // Use SockJS for better browser compatibility
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+      // Use SockJS for better browser compatibility.
+      // URL is built from window.location so it works both locally and through
+      // tunnels like ngrok without any hardcoded hostnames.
+      webSocketFactory: () => {
+        const wsUrl = `${window.location.protocol}//${window.location.host}/ws`;
+        return new SockJS(wsUrl);
+      },
       
       // Connection settings
       connectHeaders: {},

@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
+// Empty baseURL so all API calls use relative paths and are routed through
+// the dev server proxy (setupProxy.js). This allows the site to work when
+// shared via ngrok or any other tunnel without changing any URLs.
+const API_URL = process.env.REACT_APP_API_URL ?? '';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,

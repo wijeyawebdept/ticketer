@@ -194,15 +194,15 @@ public class RecycleBinService {
         
         // Delete the actual entity from database
         switch (entityType) {
-            case "USER":
+            case "USER" -> {
                 userRepository.deleteById(entityId);
                 System.out.println("User permanently deleted: " + entityId);
-                break;
-            case "ADMIN":
+            }
+            case "ADMIN" -> {
                 adminRepository.deleteById(entityId);
                 System.out.println("Admin permanently deleted: " + entityId);
-                break;
-            case "ORGANIZER":
+            }
+            case "ORGANIZER" -> {
                 // Delete all employees of this organizer first
                 System.out.println("Deleting employees for organizer: " + entityId);
                 organizerEmployeeRepository.deleteByOrganizer_OrganizerId(entityId);
@@ -220,12 +220,12 @@ public class RecycleBinService {
                 // Finally, delete the organizer
                 organizerRepository.deleteById(entityId);
                 System.out.println("Organizer permanently deleted: " + entityId);
-                break;
-            case "ORGANIZER_EMPLOYEE":
+            }
+            case "ORGANIZER_EMPLOYEE" -> {
                 organizerEmployeeRepository.deleteById(entityId);
                 System.out.println("Organizer Employee permanently deleted: " + entityId);
-                break;
-            case "EVENT":
+            }
+            case "EVENT" -> {
                 // Delete associated event schedules first to avoid foreign key constraint violation
                 System.out.println("Deleting event schedules for event: " + entityId);
                 eventScheduleRepository.deleteByEvent_EventId(entityId);
@@ -238,21 +238,20 @@ public class RecycleBinService {
                 // Finally, delete the event
                 eventRepository.deleteById(entityId);
                 System.out.println("Event permanently deleted: " + entityId);
-                break;
-            case "VENUE":
+            }
+            case "VENUE" -> {
                 // Delete associated template seats first to avoid foreign key constraint violation
                 System.out.println("Deleting template seats for venue: " + entityId);
                 seatRepository.deleteByVenueId(entityId);
                 // Finally, delete the venue
                 venueRepository.deleteById(entityId);
                 System.out.println("Venue permanently deleted: " + entityId);
-                break;
-            case "SCHEDULE":
+            }
+            case "SCHEDULE" -> {
                 eventScheduleRepository.deleteById(entityId);
                 System.out.println("Event Schedule permanently deleted: " + entityId);
-                break;
-            default:
-                throw new RuntimeException("Unknown entity type: " + entityType);
+            }
+            default -> throw new RuntimeException("Unknown entity type: " + entityType);
         }
         
         // Remove from recycle bin
@@ -260,6 +259,7 @@ public class RecycleBinService {
     }
 
     @Transactional
+    @SuppressWarnings("UseSpecificCatch")
     public RecycleBinDTO restoreItem(UUID recycleId) {
         RecycleBin recycleBin = recycleBinRepository.findById(recycleId)
                 .orElseThrow(() -> new RuntimeException("Recycle bin item not found with id: " + recycleId));
@@ -268,32 +268,15 @@ public class RecycleBinService {
             String entityType = recycleBin.getEntityType();
             
             switch (entityType) {
-                case "USER":
-                    restoreUser(recycleBin);
-                    break;
-                case "ADMIN":
-                    restoreAdmin(recycleBin);
-                    break;
-                case "ORGANIZER":
-                    restoreOrganizer(recycleBin);
-                    break;
-                case "ORGANIZER_EMPLOYEE":
-                    restoreOrganizerEmployee(recycleBin);
-                    break;
-                case "EVENT":
-                    restoreEvent(recycleBin);
-                    break;
-                case "VENUE":
-                    restoreVenue(recycleBin);
-                    break;
-                case "SCHEDULE":
-                    restoreSchedule(recycleBin);
-                    break;
-                case "EVENT_CATEGORY":
-                    restoreEventCategory(recycleBin);
-                    break;
-                default:
-                    throw new RuntimeException("Unknown entity type: " + entityType);
+                case "USER" -> restoreUser(recycleBin);
+                case "ADMIN" -> restoreAdmin(recycleBin);
+                case "ORGANIZER" -> restoreOrganizer(recycleBin);
+                case "ORGANIZER_EMPLOYEE" -> restoreOrganizerEmployee(recycleBin);
+                case "EVENT" -> restoreEvent(recycleBin);
+                case "VENUE" -> restoreVenue(recycleBin);
+                case "SCHEDULE" -> restoreSchedule(recycleBin);
+                case "EVENT_CATEGORY" -> restoreEventCategory(recycleBin);
+                default -> throw new RuntimeException("Unknown entity type: " + entityType);
             }
             
             // Remove from recycle bin after successful restore
@@ -410,39 +393,39 @@ public class RecycleBinService {
             
             try {
                 switch (entityType) {
-                    case "USER":
+                    case "USER" -> {
                         if (userRepository.existsById(entityId)) {
                             userRepository.deleteById(entityId);
                             System.out.println("User permanently deleted: " + entityId);
                         } else {
                             System.out.println("User not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "ADMIN":
+                    }
+                    case "ADMIN" -> {
                         if (adminRepository.existsById(entityId)) {
                             adminRepository.deleteById(entityId);
                             System.out.println("Admin permanently deleted: " + entityId);
                         } else {
                             System.out.println("Admin not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "ORGANIZER":
+                    }
+                    case "ORGANIZER" -> {
                         if (organizerRepository.existsById(entityId)) {
                             organizerRepository.deleteById(entityId);
                             System.out.println("Organizer permanently deleted: " + entityId);
                         } else {
                             System.out.println("Organizer not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "ORGANIZER_EMPLOYEE":
+                    }
+                    case "ORGANIZER_EMPLOYEE" -> {
                         if (organizerEmployeeRepository.existsById(entityId)) {
                             organizerEmployeeRepository.deleteById(entityId);
                             System.out.println("Organizer Employee permanently deleted: " + entityId);
                         } else {
                             System.out.println("Organizer Employee not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "EVENT":
+                    }
+                    case "EVENT" -> {
                         if (eventRepository.existsById(entityId)) {
                             // Delete associated event schedules first
                             System.out.println("Deleting event schedules for event: " + entityId);
@@ -461,8 +444,8 @@ public class RecycleBinService {
                         } else {
                             System.out.println("Event not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "VENUE":
+                    }
+                    case "VENUE" -> {
                         if (venueRepository.existsById(entityId)) {
                             // Delete associated template seats first
                             System.out.println("Deleting template seats for venue: " + entityId);
@@ -472,17 +455,16 @@ public class RecycleBinService {
                         } else {
                             System.out.println("Venue not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "EVENT_CATEGORY":
+                    }
+                    case "EVENT_CATEGORY" -> {
                         if (eventCategoryRepository.existsById(entityId)) {
                             eventCategoryRepository.deleteById(entityId);
                             System.out.println("Event Category permanently deleted: " + entityId);
                         } else {
                             System.out.println("Event Category not found (already deleted): " + entityId);
                         }
-                        break;
-                    default:
-                        System.err.println("Unknown entity type: " + entityType);
+                    }
+                    default -> System.err.println("Unknown entity type: " + entityType);
                 }
             } catch (Exception e) {
                 System.err.println("ERROR deleting entity " + entityId + " (" + entityType + "): " + e.getClass().getSimpleName() + " - " + e.getMessage());
@@ -509,15 +491,15 @@ public class RecycleBinService {
             
             try {
                 switch (entityType) {
-                    case "USER":
+                    case "USER" -> {
                         if (userRepository.existsById(entityId)) {
                             userRepository.deleteById(entityId);
                             System.out.println("User permanently deleted: " + entityId);
                         } else {
                             System.out.println("User not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "EVENT":
+                    }
+                    case "EVENT" -> {
                         if (eventRepository.existsById(entityId)) {
                             // Delete associated event schedules first
                             System.out.println("Deleting event schedules for event: " + entityId);
@@ -533,8 +515,8 @@ public class RecycleBinService {
                         } else {
                             System.out.println("Event not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "VENUE":
+                    }
+                    case "VENUE" -> {
                         if (venueRepository.existsById(entityId)) {
                             // Delete associated template seats first
                             System.out.println("Deleting template seats for venue: " + entityId);
@@ -544,25 +526,24 @@ public class RecycleBinService {
                         } else {
                             System.out.println("Venue not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "SCHEDULE":
+                    }
+                    case "SCHEDULE" -> {
                         if (eventScheduleRepository.existsById(entityId)) {
                             eventScheduleRepository.deleteById(entityId);
                             System.out.println("Event Schedule permanently deleted: " + entityId);
                         } else {
                             System.out.println("Event Schedule not found (already deleted): " + entityId);
                         }
-                        break;
-                    case "EVENT_CATEGORY":
+                    }
+                    case "EVENT_CATEGORY" -> {
                         if (eventCategoryRepository.existsById(entityId)) {
                             eventCategoryRepository.deleteById(entityId);
                             System.out.println("Event Category permanently deleted: " + entityId);
                         } else {
                             System.out.println("Event Category not found (already deleted): " + entityId);
                         }
-                        break;
-                    default:
-                        System.err.println("Unknown entity type: " + entityType);
+                    }
+                    default -> System.err.println("Unknown entity type: " + entityType);
                 }
             } catch (Exception e) {
                 System.err.println("ERROR deleting entity " + entityId + " (" + entityType + "): " + e.getClass().getSimpleName() + " - " + e.getMessage());
@@ -577,47 +558,48 @@ public class RecycleBinService {
     }
 
     // Helper method to permanently delete an entity from database
+    @SuppressWarnings("unused")
     private void permanentlyDeleteEntity(String entityType, UUID entityId) {
         try {
             switch (entityType.toUpperCase()) {
-                case "USER":
+                case "USER" -> {
                     if (userRepository.existsById(entityId)) {
                         userRepository.deleteById(entityId);
                     }
-                    break;
-                case "ORGANIZER":
+                }
+                case "ORGANIZER" -> {
                     if (organizerRepository.existsById(entityId)) {
                         organizerRepository.deleteById(entityId);
                     }
-                    break;
-                case "ORGANIZER_EMPLOYEE":
+                }
+                case "ORGANIZER_EMPLOYEE" -> {
                     if (organizerEmployeeRepository.existsById(entityId)) {
                         organizerEmployeeRepository.deleteById(entityId);
                     }
-                    break;
-                case "ADMIN":
+                }
+                case "ADMIN" -> {
                     if (adminRepository.existsById(entityId)) {
                         adminRepository.deleteById(entityId);
                     }
-                    break;
-                case "EVENT":
+                }
+                case "EVENT" -> {
                     if (eventRepository.existsById(entityId)) {
                         seatRepository.deleteByEventId(entityId);
                         ticketCategoryRepository.deleteByEventId(entityId);
                         eventRepository.deleteById(entityId);
                     }
-                    break;
-                case "VENUE":
+                }
+                case "VENUE" -> {
                     if (venueRepository.existsById(entityId)) {
                         seatRepository.deleteByVenueId(entityId);
                         venueRepository.deleteById(entityId);
                     }
-                    break;
-                case "EVENT_CATEGORY":
+                }
+                case "EVENT_CATEGORY" -> {
                     if (eventCategoryRepository.existsById(entityId)) {
                         eventCategoryRepository.deleteById(entityId);
                     }
-                    break;
+                }
             }
         } catch (Exception e) {
             System.err.println("ERROR deleting entity " + entityId + " (" + entityType + "): " + e.getMessage());

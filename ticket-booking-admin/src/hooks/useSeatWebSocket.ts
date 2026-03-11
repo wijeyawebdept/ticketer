@@ -40,7 +40,11 @@ export interface SeatStatsMessage {
   timestamp: number;
 }
 
-const WS_URL = process.env.REACT_APP_WS_URL || 'http://localhost:8081/ws';
+// Derived at call-time so the hook works through tunnels (ngrok, etc.) as well
+// as local development without any changes.
+const getWsUrl = () =>
+  process.env.REACT_APP_WS_URL ??
+  `${window.location.protocol}//${window.location.host}/ws`;
 
 export const useSeatWebSocket = (eventId: string) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -77,7 +81,7 @@ export const useSeatWebSocket = (eventId: string) => {
     if (!eventId || clientRef.current?.active) return;
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(WS_URL) as WebSocket,
+      webSocketFactory: () => new SockJS(getWsUrl()) as WebSocket,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
