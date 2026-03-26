@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.UuidGenerator;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -36,8 +38,8 @@ public class Event {
 
     @Id
     @Column(name = "event_id")
-    @GeneratedValue(generator = "uuid2")
-    @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private java.util.UUID eventId;
 
     @Column(nullable = false, length = 255)

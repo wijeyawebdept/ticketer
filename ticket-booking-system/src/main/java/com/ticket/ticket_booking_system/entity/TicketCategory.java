@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.UuidGenerator;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -29,8 +31,8 @@ public class TicketCategory {
 
     @Id
     @Column(name = "category_id")
-    @GeneratedValue(generator = "uuid2")
-    @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private UUID categoryId;
 
     @Column(nullable = false, length = 100)

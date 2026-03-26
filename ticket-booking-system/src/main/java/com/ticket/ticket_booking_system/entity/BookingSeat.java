@@ -3,7 +3,7 @@ package com.ticket.ticket_booking_system.entity;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -34,8 +34,8 @@ import lombok.ToString;
 public class BookingSeat {
 
     @Id
-    @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     @Column(name = "booking_seat_id")
     private UUID bookingSeatId;
 

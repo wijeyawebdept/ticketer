@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
@@ -28,8 +29,8 @@ public class Venue {
 
     @Id
     @Column(name = "venue_id")
-    @GeneratedValue(generator = "uuid2")
-    @org.hibernate.annotations.GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @GeneratedValue
+    @UuidGenerator
     private java.util.UUID venueId;
 
     @Column(nullable = false, length = 100)
