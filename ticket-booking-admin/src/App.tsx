@@ -42,6 +42,9 @@ import { UserRole } from './types';
 
 // Public pages
 import Home from './pages/Public/Home';
+import About from './pages/Public/About';
+import Services from './pages/Public/Services';
+import Contact from './pages/Public/Contact';
 import EventDetails from './pages/Public/EventDetails';
 import Gallery from './pages/Public/Gallery';
 import PublicEvents from './pages/Public/Events';
@@ -305,6 +308,9 @@ function App() {
             <Route element={<PublicRoute />}>
               <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/events" element={<PublicEvents />} />
               <Route path="/event/:id" element={<EventDetails />} />
               <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />

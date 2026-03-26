@@ -197,8 +197,36 @@ public class BookingService {
      * Get all bookings for admin with filters
      */
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, Pageable pageable) {
-        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null);
-        return bookingRepository.findAll(spec, pageable);
+        log.info("Fetching all bookings for admin with filters - eventId: {}, userId: {}, status: {}, search: {}", eventId, userId, status, search);
+        
+        try {
+            Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null);
+            Page<Booking> page = bookingRepository.findAll(spec, pageable);
+            
+            // Eagerly load all relationships for each booking to prevent LazyInitializationException
+            page.getContent().forEach(booking -> {
+                if (booking.getUser() != null) {
+                    booking.getUser().getFirstName(); // Trigger lazy load
+                }
+                if (booking.getEvent() != null) {
+                    booking.getEvent().getName(); // Trigger lazy load
+                    if (booking.getEvent().getVenue() != null) {
+                        booking.getEvent().getVenue().getName(); // Trigger lazy load
+                    }
+                }
+                if (booking.getEventSchedule() != null) {
+                    booking.getEventSchedule().getStartTime(); // Trigger lazy load
+                }
+                if (booking.getBookingSeats() != null) {
+                    booking.getBookingSeats().size(); // Trigger lazy load
+                }
+            });
+            
+            return page;
+        } catch (Exception e) {
+            log.error("Error fetching bookings for admin", e);
+            throw new RuntimeException("Failed to fetch bookings: " + e.getMessage(), e);
+        }
     }
     
     /**
@@ -633,16 +661,29 @@ public class BookingService {
                 }
             }
 
-            // Search in booking reference, user details, or event title
+            // Search in booking ID, booking reference, user details, or event title
             if (search != null && !search.trim().isEmpty()) {
                 String searchPattern = "%" + search.toLowerCase() + "%";
-                Predicate searchPredicate = criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("bookingReference")), searchPattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("firstName")), searchPattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("lastName")), searchPattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("email")), searchPattern),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("event").get("name")), searchPattern)
-                );
+                
+                // Try to match as UUID first for booking ID
+                List<Predicate> searchPredicates = new ArrayList<>();
+                
+                // Search by booking ID (UUID)
+                try {
+                    UUID searchUuid = UUID.fromString(search.trim());
+                    searchPredicates.add(criteriaBuilder.equal(root.get("bookingId"), searchUuid));
+                } catch (IllegalArgumentException e) {
+                    // Not a valid UUID, continue with pattern matching
+                }
+                
+                // Pattern matching searches
+                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("bookingReference")), searchPattern));
+                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("firstName")), searchPattern));
+                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("lastName")), searchPattern));
+                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("email")), searchPattern));
+                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("event").get("name")), searchPattern));
+                
+                Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
                 predicates.add(searchPredicate);
             }
 

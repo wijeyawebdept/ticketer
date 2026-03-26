@@ -18,6 +18,7 @@ import {
 import { Search as SearchIcon, CalendarToday, LocationOn } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import { Event } from '../../../types';
 
@@ -106,12 +107,11 @@ const Events: React.FC = () => {
         backgroundColor: '#242a33',
         minHeight: '100vh',
         pt: 10,
-        pb: 6,
       }}
     >
       <PublicNavbar />
       
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ pb: 8 }}>
         <Box sx={{ textAlign: 'center', mb: 6 }}>
           <Typography
             variant="h1"
@@ -359,6 +359,7 @@ const Events: React.FC = () => {
           </>
         )}
       </Container>
+      <PublicFooter />
     </Box>
   );
 };

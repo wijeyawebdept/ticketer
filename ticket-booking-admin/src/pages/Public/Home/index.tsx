@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CalendarToday, LocationOn } from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import { Event } from '../../../types';
 
@@ -765,6 +766,7 @@ const Home: React.FC = () => {
           </Button>
         </Box>
       </Container>
+      <PublicFooter />
     </Box>
   );
 };

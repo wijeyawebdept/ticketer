@@ -4,16 +4,10 @@ import {
   Typography,
   Paper,
   Button,
-  Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
   Chip,
   Container,
 } from '@mui/material';
-import { Visibility as VisibilityIcon, Cancel as CancelIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import { BookingService } from '../../../services';
@@ -22,9 +16,6 @@ import { Booking, BookingStatus } from '../../../types';
 const UserBookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState<boolean>(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetchBookings();
@@ -39,38 +30,6 @@ const UserBookings: React.FC = () => {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleViewDetails = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setIsDetailsDialogOpen(true);
-  };
-
-  const handleCancelClick = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setIsCancelDialogOpen(true);
-  };
-
-  const handleDetailsDialogClose = () => {
-    setIsDetailsDialogOpen(false);
-    setSelectedBooking(null);
-  };
-
-  const handleCancelDialogClose = () => {
-    setIsCancelDialogOpen(false);
-    setSelectedBooking(null);
-  };
-
-  const handleCancelConfirm = async () => {
-    if (!selectedBooking) return;
-    
-    try {
-      await BookingService.cancelBooking(selectedBooking.bookingId);
-      fetchBookings();
-      handleCancelDialogClose();
-    } catch (error) {
-      console.error('Error canceling booking:', error);
     }
   };
 
@@ -124,32 +83,6 @@ const UserBookings: React.FC = () => {
         />
       )
     },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 150,
-      sortable: false,
-      renderCell: (params: any) => (
-        <Box>
-          <IconButton 
-            size="small" 
-            onClick={() => handleViewDetails(params.row)}
-            color="primary"
-          >
-            <VisibilityIcon />
-          </IconButton>
-          {params.row.status === BookingStatus.CONFIRMED && (
-            <IconButton 
-              size="small" 
-              onClick={() => handleCancelClick(params.row)}
-              color="error"
-            >
-              <CancelIcon />
-            </IconButton>
-          )}
-        </Box>
-      )
-    },
   ];
 
   return (
@@ -190,64 +123,6 @@ const UserBookings: React.FC = () => {
             />
           </Box>
         </Paper>
-
-        {/* Details Dialog */}
-        <Dialog open={isDetailsDialogOpen} onClose={handleDetailsDialogClose} maxWidth="md" fullWidth>
-          <DialogTitle>Booking Details</DialogTitle>
-          <DialogContent>
-            {selectedBooking && (
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Booking ID:</Typography>
-                  <Typography>{selectedBooking.bookingId}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Status:</Typography>
-                  <Chip 
-                    label={selectedBooking.status} 
-                    color={getStatusChipColor(selectedBooking.status)}
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Event:</Typography>
-                  <Typography>{selectedBooking.event?.name || 'N/A'}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Ticket Count:</Typography>
-                  <Typography>{selectedBooking.ticketCount}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Total Amount:</Typography>
-                  <Typography>LKR {selectedBooking.totalAmount}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="subtitle2">Booking Date:</Typography>
-                  <Typography>{new Date(selectedBooking.bookingTime).toLocaleString()}</Typography>
-                </Grid>
-              </Grid>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleDetailsDialogClose}>Close</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Cancel Confirmation Dialog */}
-        <Dialog open={isCancelDialogOpen} onClose={handleCancelDialogClose}>
-          <DialogTitle>Cancel Booking</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to cancel this booking? This action cannot be undone.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCancelDialogClose}>No, Keep It</Button>
-            <Button onClick={handleCancelConfirm} color="error" variant="contained">
-              Yes, Cancel Booking
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Container>
     </Box>
   );

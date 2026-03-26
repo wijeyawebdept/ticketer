@@ -19,11 +19,13 @@ import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.service.BookingService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/admin/bookings")
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminBookingController {
 
     private final BookingService bookingService;
@@ -39,8 +41,13 @@ public class AdminBookingController {
             @RequestParam(required = false) String search,
             Pageable pageable) {
         
-        Page<Booking> bookings = bookingService.getAllBookingsForAdmin(eventId, userId, status, search, pageable);
-        return ResponseEntity.ok(bookings);
+        try {
+            Page<Booking> bookings = bookingService.getAllBookingsForAdmin(eventId, userId, status, search, pageable);
+            return ResponseEntity.ok(bookings);
+        } catch (Exception e) {
+            log.error("Error fetching bookings", e);
+            throw e;
+        }
     }
 
     /**

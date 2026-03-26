@@ -45,9 +45,25 @@ class BookingService {
     return '/api';
   }
 
-  async getAllBookings(): Promise<Booking[]> {
+  async getAllBookings(params?: any): Promise<any> {
     const basePath = this.getBasePath();
-    const response = await api.get<Booking[]>(`${basePath}/bookings`);
+    
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.eventId) queryParams.append('eventId', params.eventId);
+    if (params?.userId) queryParams.append('userId', params.userId);
+    
+    // Add pagination parameters - Spring Data expects 0-based page index
+    // page parameter is 0-based, size is items per page
+    queryParams.append('page', params?.page?.toString() || '0');
+    queryParams.append('size', params?.size?.toString() || '25');
+    
+    const url = `${basePath}/bookings${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await api.get<any>(url);
+    
+    // Return the full response (which could be array or Page object)
     return response.data;
   }
 
