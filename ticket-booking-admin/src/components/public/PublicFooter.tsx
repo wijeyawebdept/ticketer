@@ -90,8 +90,8 @@ const PublicFooter: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <MailOutline sx={{ mr: 1, color: '#fff' }} />
-                <Link href="mailto:support@mytickets.lk" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>
-                  support@mytickets.lk
+                <Link href="mailto:support@ticketer.lk" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>
+                  support@ticketer.lk
                 </Link>
               </Box>
             </Grid>
@@ -104,11 +104,11 @@ const PublicFooter: React.FC = () => {
         <Container maxWidth="lg">
           <Grid container justifyContent="space-between" alignItems="center">
             <Grid item sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Link href="#" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Privacy Policy</Link>
+              <Link href="/privacy-policy" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Privacy Policy</Link>
               <Typography sx={{ color: '#cbd5e1' }}>|</Typography>
-              <Link href="#" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Cookie Policy</Link>
+              <Link href="/cookie-policy" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Cookie Policy</Link>
               <Typography sx={{ color: '#cbd5e1' }}>|</Typography>
-              <Link href="#" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Terms and Conditions</Link>
+              <Link href="/terms-and-conditions" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Terms and Conditions</Link>
             </Grid>
             <Grid item>
               <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif' }}>

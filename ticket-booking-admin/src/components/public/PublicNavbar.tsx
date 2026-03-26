@@ -156,7 +156,7 @@ const PublicNavbar: React.FC = () => {
               flexGrow: 1,
               fontFamily: 'Raleway, sans-serif',
               fontWeight: 700,
-              color: '#fff',
+              color: '#fcd0a5',
               cursor: 'pointer',
               fontSize: '1.25rem',
               lineHeight: 'inherit',
@@ -168,7 +168,7 @@ const PublicNavbar: React.FC = () => {
               },
             }}
           >
-            Ticketer.lk
+            Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
           </Typography>
 
           {isMobile ? (

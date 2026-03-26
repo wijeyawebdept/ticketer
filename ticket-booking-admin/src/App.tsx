@@ -48,6 +48,9 @@ import Contact from './pages/Public/Contact';
 import EventDetails from './pages/Public/EventDetails';
 import Gallery from './pages/Public/Gallery';
 import PublicEvents from './pages/Public/Events';
+import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+import CookiePolicy from './pages/Public/CookiePolicy';
+import TermsAndConditions from './pages/Public/TermsAndConditions';
 import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
@@ -315,6 +318,9 @@ function App() {
               <Route path="/event/:id" element={<EventDetails />} />
               <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />
               <Route path="/gallery" element={<Gallery />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               {/* Payment Result Pages */}
               <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />
