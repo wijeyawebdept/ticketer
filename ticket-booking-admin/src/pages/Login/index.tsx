@@ -50,7 +50,6 @@ interface LoginFormValues {
 }
 
 const Login: React.FC = () => {
-  console.log("CLIENT ID USED:", process.env.REACT_APP_GOOGLE_CLIENT_ID);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -131,9 +130,6 @@ const Login: React.FC = () => {
       const idToken = credentialResponse?.credential; // ID token JWT, starts with eyJ
       if (!idToken) throw new Error('Google did not return an ID token (credential).');
 
-      // Set storage type to localStorage for customer logins
-      AuthService.setStorageType('localStorage');
-
       // Exchange Google ID token for our backend JWT token
       const response = await AuthService.googleLogin(idToken);
 
@@ -171,10 +167,6 @@ const Login: React.FC = () => {
   ) => {
     try {
       setError(null);
-      console.log('Attempting login with:', { email: values.email, rememberMe });
-
-      // Set storage type to localStorage for customer logins (shared across tabs)
-      AuthService.setStorageType('localStorage');
 
       // Save remember me preference
       localStorage.setItem('rememberMe', rememberMe.toString());
@@ -185,13 +177,11 @@ const Login: React.FC = () => {
       localStorage.removeItem('user');
 
       await login(values.email, values.password);
-      console.log('Login successful, token stored in localStorage:', !!localStorage.getItem('auth_token'));
 
       // Redirect based on user role
       const userData = localStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
-        console.log('User role after login:', user.role);
 
         const normalizedRole = user.role.replace('ROLE_', '');
 

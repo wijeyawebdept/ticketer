@@ -42,9 +42,23 @@ export interface SeatStatsMessage {
 
 // Derived at call-time so the hook works through tunnels (ngrok, etc.) as well
 // as local development without any changes.
-const getWsUrl = () =>
-  process.env.REACT_APP_WS_URL ??
-  `${window.location.protocol}//${window.location.host}/ws`;
+const getWsUrl = () => {
+  // If explicitly configured, use that
+  if (process.env.REACT_APP_WS_URL) {
+    return process.env.REACT_APP_WS_URL;
+  }
+  
+  // For development: connect directly to backend WebSocket
+  // SockJS requires HTTP/HTTPS URLs, not WebSocket URLs
+  if (process.env.NODE_ENV === 'development') {
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+    return `${protocol}://localhost:8081/ws`;
+  }
+  
+  // For production: use the same host
+  const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+  return `${protocol}://${window.location.host}/ws`;
+};
 
 export const useSeatWebSocket = (eventId: string) => {
   const [isConnected, setIsConnected] = useState(false);

@@ -1,0 +1,173 @@
+
+> ticket-booking-admin@0.1.0 build
+> react-scripts build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiled with warnings.
+
+[eslint] 
+src\App.tsx
+  Line 66:7:  'GOOGLE_CLIENT_ID' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\components\EventDropdown.tsx
+  Line 11:3:  'ListItem' is defined but never used                 @typescript-eslint/no-unused-vars
+  Line 12:3:  'ListItemText' is defined but never used             @typescript-eslint/no-unused-vars
+  Line 13:3:  'ListItemSecondaryAction' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\components\PublicRoute.tsx
+  Line 13:9:  'location' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\components\VenueSeatMap\VenueSeatMap.tsx
+  Line 111:6:  React Hook useEffect has a missing dependency: 'fetchSeatAvailability'. Either include it or remove the dependency array                                                                                                                        react-hooks/exhaustive-deps
+  Line 186:9:  The 'handleSeatClick' function makes the dependencies of useCallback Hook (at line 248) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'handleSeatClick' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+src\hooks\useSeatWebSocket.ts
+  Line 196:42:  The ref value 'reconnectTimeoutRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'reconnectTimeoutRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+src\pages\AdminEventAssignments\index.tsx
+  Line 279:9:  'getEmployeesForEvent' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Banners\index.tsx
+  Line 11:3:  'Grid' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Dashboard\index.tsx
+  Line 18:3:    'LinearProgress' is defined but never used            @typescript-eslint/no-unused-vars
+  Line 32:27:   'AccountBalanceWalletIcon' is defined but never used  @typescript-eslint/no-unused-vars
+  Line 33:25:   'ConfirmationNumberIcon' is defined but never used    @typescript-eslint/no-unused-vars
+  Line 136:27:  'currency' is assigned a value but never used         @typescript-eslint/no-unused-vars
+
+src\pages\Employees\index.tsx
+  Line 24:3:   'InputAdornment' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  Line 29:13:  'DeleteIcon' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  Line 31:23:  'RestoreIcon' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  Line 89:6:   React Hook useEffect has a missing dependency: 'fetchEmployees'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 94:6:   React Hook useEffect has a missing dependency: 'fetchEmployees'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 248:9:  'handleRestoreEmployee' is assigned a value but never used                                                         @typescript-eslint/no-unused-vars
+
+src\pages\EventCategories\index.tsx
+  Line 22:13:  'DeleteIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\EventSchedules\index.tsx
+  Line 231:9:  'getTotalScheduledCapacity' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\pages\OrganizerEmployees\index.tsx
+  Line 28:13:  'DeleteIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Profile\index.tsx
+  Line 21:24:  'FormikHelpers' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Public\About\index.tsx
+  Line 9:3:    'List' is defined but never used             @typescript-eslint/no-unused-vars
+  Line 10:3:   'ListItem' is defined but never used         @typescript-eslint/no-unused-vars
+  Line 11:3:   'ListItemIcon' is defined but never used     @typescript-eslint/no-unused-vars
+  Line 12:3:   'ListItemText' is defined but never used     @typescript-eslint/no-unused-vars
+  Line 13:3:   'Divider' is defined but never used          @typescript-eslint/no-unused-vars
+  Line 16:18:  'CheckCircleIcon' is defined but never used  @typescript-eslint/no-unused-vars
+  Line 17:15:  'SecurityIcon' is defined but never used     @typescript-eslint/no-unused-vars
+  Line 18:12:  'GroupIcon' is defined but never used        @typescript-eslint/no-unused-vars
+  Line 19:17:  'TrendingUpIcon' is defined but never used   @typescript-eslint/no-unused-vars
+
+src\pages\Public\Contact\index.tsx
+  Line 8:3:  'CardContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Public\CookiePolicy\index.tsx
+  Line 14:6:  React Hook useEffect has a missing dependency: 'loadContent'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Public\EventDetails\index.tsx
+  Line 59:10:  'checkingSeating' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  Line 272:9:  'handlePaymentMethodChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Public\Gallery\index.tsx
+  Line 8:3:  'Card' is defined but never used       @typescript-eslint/no-unused-vars
+  Line 9:3:  'CardMedia' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Public\Home\index.tsx
+  Line 26:7:   'carouselImages' is assigned a value but never used                                                                       @typescript-eslint/no-unused-vars
+  Line 56:9:   'isTablet' is assigned a value but never used                                                                             @typescript-eslint/no-unused-vars
+  Line 333:6:  React Hook useEffect has a missing dependency: 'carouselImages.length'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Public\PrivacyPolicy\index.tsx
+  Line 11:10:  'error' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+  Line 15:6:   React Hook useEffect has a missing dependency: 'loadContent'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Public\SeatSelection\index.tsx
+  Line 80:6:   React Hook useEffect has a missing dependency: 'loadEventDetails'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+  Line 117:6:  React Hook useEffect has a missing dependency: 'handleHoldExpired'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Public\Services\index.tsx
+  Line 16:13:  'SearchIcon' is defined but never used              @typescript-eslint/no-unused-vars
+  Line 21:14:  'SupportIcon' is defined but never used             @typescript-eslint/no-unused-vars
+  Line 22:25:  'AdminPanelSettingsIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Public\TermsAndConditions\index.tsx
+  Line 14:6:  React Hook useEffect has a missing dependency: 'loadContent'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\RestrictedLogin\index.tsx
+  Line 19:25:   'AdminIcon' is defined but never used          @typescript-eslint/no-unused-vars
+  Line 25:10:   'UserRole' is defined but never used           @typescript-eslint/no-unused-vars
+  Line 51:11:   'login' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  Line 103:17:  'userRole' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Users\index.tsx
+  Line 20:3:   'Checkbox' is defined but never used                     @typescript-eslint/no-unused-vars
+  Line 21:3:   'Menu' is defined but never used                         @typescript-eslint/no-unused-vars
+  Line 22:3:   'ListItemIcon' is defined but never used                 @typescript-eslint/no-unused-vars
+  Line 23:3:   'ListItemText' is defined but never used                 @typescript-eslint/no-unused-vars
+  Line 39:15:  'MoreVertIcon' is defined but never used                 @typescript-eslint/no-unused-vars
+  Line 65:10:  'bulkMenuAnchor' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  Line 178:9:  'handleBulkMenuOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\pages\Venues\index.tsx
+  Line 74:9:   'canAccessSeating' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+  Line 498:6:  React Hook useMemo has a missing dependency: 'handleSeatingArrangement'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\services\api.ts
+  Line 51:7:  'storageType' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src\services\banner.service.ts
+  Line 168:1:  Assign instance to a variable before exporting as module default  import/no-anonymous-default-export
+
+src\services\eventCategory.service.ts
+  Line 89:1:  Assign instance to a variable before exporting as module default  import/no-anonymous-default-export
+
+src\services\eventSchedule.service.ts
+  Line 3:8:  'AuthService' is defined but never used  @typescript-eslint/no-unused-vars
+
+src\services\pageContent.service.ts
+  Line 49:1:  Assign instance to a variable before exporting as module default  import/no-anonymous-default-export
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  549.5 kB  build\static\js\main.ba2cf33e.js
+  5.82 kB   build\static\css\main.6853b846.css
+  1.67 kB   build\static\js\295.cf4b4348.chunk.js
+  1.63 kB   build\static\js\730.ec371ea3.chunk.js
+
+The bundle size is significantly larger than recommended.
+Consider reducing it with code splitting: https://goo.gl/9VhYWB
+You can also analyze the project dependencies: https://goo.gl/LeUzfb
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

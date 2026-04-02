@@ -12,6 +12,7 @@ import { RoleService } from './role.service';
 import RecycleBinService from './recycle-bin.service';
 import EmployeeService from './employee.service';
 import OrganizerService from './organizer.service';
+import BannerService from './banner.service';
 
 export {
   AuthService,
@@ -27,5 +28,6 @@ export {
   profileService,
   RoleService,
   RecycleBinService,
-  EmployeeService
+  EmployeeService,
+  BannerService
 };

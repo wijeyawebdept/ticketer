@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -50,9 +51,12 @@ public class SecurityConfig {
                     "/api/public/**",
                     "/api/venues/**",
                     "/api/payments/webhook",
+                    "/api/contact",
+                    "/contact",
                     "/ws/**",
                     "/error"
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/**").permitAll()
                 .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
                 .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
                 .anyRequest().authenticated()

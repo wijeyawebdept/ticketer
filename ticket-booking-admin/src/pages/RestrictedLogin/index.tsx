@@ -72,12 +72,9 @@ const RestrictedLogin: React.FC = () => {
   ) => {
     try {
       setError(null);
-      console.log('Attempting restricted login with:', { email: values.email });
       
-      // Set storage type to sessionStorage for restricted logins (tab-specific)
-      AuthService.setStorageType('sessionStorage');
-      
-      // Clear only sessionStorage tokens (don't touch localStorage for customer sessions)
+      // Clear sessionStorage tokens
+      // Note: Each tab maintains independent sessions using sessionStorage
       sessionStorage.removeItem('auth_token');
       sessionStorage.removeItem('user_data');
       sessionStorage.removeItem('user');
@@ -88,28 +85,22 @@ const RestrictedLogin: React.FC = () => {
       
       try {
         // Try admin login first
-        console.log('Trying admin login...');
         loginResponse = await AuthService.adminLogin({ email: values.email, password: values.password });
         userRole = loginResponse.user?.role || loginResponse.role || '';
-        console.log('Admin login successful, role:', userRole);
       } catch (adminError: any) {
         // Any 403 error means wrong role/insufficient privileges, try next login type
         if (adminError.response?.status === 403) {
           // Not an admin, try organizer
           try {
-            console.log('Not an admin (403), trying organizer login...');
             loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
             userRole = loginResponse.user?.role || loginResponse.role || '';
-            console.log('Organizer login successful, role:', userRole);
           } catch (organizerError: any) {
             // Any 403 error means wrong role, try organizer employee
             if (organizerError.response?.status === 403) {
               // Not an organizer, try organizer employee
               try {
-                console.log('Not an organizer (403), trying organizer employee login...');
                 loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
                 userRole = loginResponse.user?.role || loginResponse.role || '';
-                console.log('Organizer employee login successful, role:', userRole);
               } catch (employeeError: any) {
                 // If all three failed, throw the last error
                 throw employeeError;
@@ -129,8 +120,6 @@ const RestrictedLogin: React.FC = () => {
         throw new Error('Login failed - no valid response received');
       }
       
-      console.log('Restricted login successful, token stored in sessionStorage:', !!sessionStorage.getItem('auth_token'));
-      
       // Trigger auth refresh event to update AuthContext
       window.dispatchEvent(new Event('authRefresh'));
       
@@ -138,7 +127,6 @@ const RestrictedLogin: React.FC = () => {
       const userData = sessionStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
-        console.log('User role after login:', user.role);
         
         const normalizedRole = user.role.replace('ROLE_', '');
         
@@ -164,10 +152,6 @@ const RestrictedLogin: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      console.error('Login error:', err);
-      console.error('Response status:', err.response?.status);
-      console.error('Response data:', err.response?.data);
-      
       let errorMessage = 'Login failed. Please try again.';
       
       // Handle specific error cases with detailed messages

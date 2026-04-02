@@ -50,7 +50,6 @@ const PublicNavbar: React.FC = () => {
     const fetchCategories = async () => {
       try {
         const categoryData = await EventCategoryService.getPublicActiveCategories();
-        console.log('Fetched categories in navbar:', categoryData);
         setCategories(categoryData);
       } catch (error) {
         console.error('Failed to fetch categories:', error);

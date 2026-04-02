@@ -53,7 +53,9 @@ public class DashboardServiceImpl implements DashboardService {
     public Map<String, Object> getDashboardOverview() {
         Map<String, Object> overview = new HashMap<>();
 
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime today = LocalDate.now().atStartOfDay();
+        LocalDateTime todayEnd = today.plusDays(1); // End of today (tomorrow at midnight)
         LocalDateTime weekStart = today.minusDays(7);
         LocalDateTime monthStart = today.withDayOfMonth(1);
 
@@ -71,13 +73,13 @@ public class DashboardServiceImpl implements DashboardService {
         overview.put("activeEventsCount", activeEvents.size());
 
         // Bookings stats
-        Long todayBookings = bookingRepository.countTodayBookings(today);
+        Long todayBookings = bookingRepository.countBookingsBetweenDates(today, todayEnd);
         overview.put("todayBookings", todayBookings != null ? todayBookings : 0);
 
-        Long weekBookings = bookingRepository.countBookingsBetweenDates(weekStart, today);
+        Long weekBookings = bookingRepository.countBookingsBetweenDates(weekStart, todayEnd);
         overview.put("weekBookings", weekBookings != null ? weekBookings : 0);
 
-        Long monthBookings = bookingRepository.countBookingsBetweenDates(monthStart, today);
+        Long monthBookings = bookingRepository.countBookingsBetweenDates(monthStart, todayEnd);
         overview.put("monthBookings", monthBookings != null ? monthBookings : 0);
 
         // SUPER_ADMIN exclusive fields - Role counts
@@ -228,32 +230,37 @@ public class DashboardServiceImpl implements DashboardService {
 public Map<String, Object> getRecentTransactions(int count) {
     Map<String, Object> result = new HashMap<>();
 
-    List<Transaction> transactions = transactionRepository
-            .findAllByOrderByCreatedAtDesc(PageRequest.of(0, count))
-            .getContent();
+    try {
+        // Use the new eager-loading query method and apply limit manually
+        List<Transaction> transactions = transactionRepository
+                .findAllRecentTransactionsEager()
+                .stream()
+                .limit(count)
+                .toList();
 
-    List<RecentTransactionDTO> dtoList = transactions.stream()
-            .map(t -> RecentTransactionDTO.builder()
-                    .transactionId(t.getTransactionId())
-                    .transactionReference(t.getTransactionReference())
-                    .amount(t.getAmount())
-                    .type(t.getType())
-                    .status(t.getStatus())
-                    .createdAt(t.getCreatedAt())
+        List<RecentTransactionDTO> dtoList = transactions.stream()
+                .map(t -> {
+                    Event event = t.getBooking() != null ? t.getBooking().getEvent() : null;
+                    return RecentTransactionDTO.builder()
+                            .transactionId(t.getTransactionId())
+                            .transactionReference(t.getTransactionReference())
+                            .amount(t.getAmount())
+                            .type(t.getType())
+                            .status(t.getStatus())
+                            .createdAt(t.getCreatedAt())
+                            .bookingId(t.getBooking() != null ? t.getBooking().getBookingId() : null)
+                            .bookingReference(t.getBooking() != null ? t.getBooking().getBookingReference() : null)
+                            .eventId(event != null ? event.getEventId() : null)
+                            .eventName(event != null ? event.getName() : null)
+                            .build();
+                })
+                .toList();
 
-                    .bookingId(t.getBooking() != null ? t.getBooking().getBookingId() : null)
-                    .bookingReference(t.getBooking() != null ? t.getBooking().getBookingReference() : null)
-
-                    .eventId(t.getBooking() != null && t.getBooking().getEvent() != null
-                            ? t.getBooking().getEvent().getEventId()
-                            : null)
-                    .eventName(t.getBooking() != null && t.getBooking().getEvent() != null
-                            ? t.getBooking().getEvent().getName()
-                            : null)
-                    .build())
-            .toList();
-
-    result.put("transactions", dtoList);
+        result.put("transactions", dtoList);
+    } catch (Exception e) {
+        result.put("error", "Error fetching recent transactions: " + e.getMessage());
+        result.put("transactions", new ArrayList<>());
+    }
     return result;
 }
 

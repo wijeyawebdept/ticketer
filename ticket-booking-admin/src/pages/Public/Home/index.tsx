@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, CalendarToday, LocationOn } from '@mui/icons
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
+import BannerService, { BannerResponse } from '../../../services/banner.service';
 import { Event } from '../../../types';
 
 // Import carousel images from public folder
@@ -227,10 +228,53 @@ const Home: React.FC = () => {
   const [dealEvents, setDealEvents] = useState<Event[]>([]);
   const [dealScrollPosition, setDealScrollPosition] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [banners, setBanners] = useState<BannerResponse[]>([]);
   const [timeFilter, setTimeFilter] = useState<'this-month' | 'next-month'>('this-month');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+
+  // Get carousel images - use banners if available, fallback to default images
+  const carouselImages = banners.length > 0 
+    ? banners.map(banner => banner.imageBase64)
+    : ['/images/1.jpg', '/images/2.jpg', '/images/3.jpg'];
+
+  // Load banners on component mount - always fetch fresh data without cache
+  useEffect(() => {
+    const loadBanners = async () => {
+      try {
+        // Get list of active banners with metadata
+        const activeBanners = await BannerService.getActiveBanners();
+        if (activeBanners && activeBanners.length > 0) {
+          // Sort by displayOrder to ensure correct carousel order
+          const sortedBanners = activeBanners.sort((a, b) => a.displayOrder - b.displayOrder);
+          
+          // Fetch full banner data (with images) for each banner
+          const fullBannersWithImages = await Promise.all(
+            sortedBanners.map(banner => 
+              BannerService.getBannerById(banner.bannerId)
+                .catch(() => banner) // Fallback to banner without image if fetch fails
+            )
+          );
+          
+          setBanners(fullBannersWithImages);
+        } else {
+          // If no active banners, use empty array (will fallback to default images)
+          setBanners([]);
+        }
+      } catch (error) {
+        console.warn('Failed to load banners, using default images:', error);
+        // Fall back to default images silently
+        setBanners([]);
+      }
+    };
+
+    loadBanners();
+    
+    // Optional: Refresh banners every 30 seconds to catch real-time updates
+    const refreshInterval = setInterval(loadBanners, 30000);
+    return () => clearInterval(refreshInterval);
+  }, []);
 
   // Load upcoming events based on time filter
   useEffect(() => {
@@ -238,8 +282,6 @@ const Home: React.FC = () => {
       try {
         setLoading(true);
         const response = await EventService.getUpcomingPublishedEvents(0, 6);
-        console.log('Upcoming events response:', response);
-        console.log('First upcoming event:', response.content?.[0]);
         
         // Separate deal events from regular events
         const allEvents = response.content || [];
@@ -335,6 +377,7 @@ const Home: React.FC = () => {
           position: 'relative',
           width: '100%',
           overflow: 'hidden',
+          height: { xs: '300px', sm: '400px', md: '500px', lg: '600px' },
         }}
       >
         <Box
@@ -342,6 +385,7 @@ const Home: React.FC = () => {
             display: 'flex',
             transition: 'transform 0.5s ease-in-out',
             transform: `translateX(-${activeSlide * 100}%)`,
+            height: '100%',
           }}
         >
           {carouselImages.map((image, index) => (
@@ -352,9 +396,11 @@ const Home: React.FC = () => {
               alt={`Slide ${index + 1}`}
               sx={{
                 width: '100%',
-                height: 'auto',
+                height: '100%',
                 flexShrink: 0,
                 display: 'block',
+                objectFit: 'cover',
+                objectPosition: 'center',
               }}
             />
           ))}

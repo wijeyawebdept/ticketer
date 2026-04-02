@@ -119,7 +119,6 @@ const Register: React.FC = () => {
     try {
       const idToken = credentialResponse?.credential;
       if (!idToken) throw new Error('Google did not return an ID token.');
-      AuthService.setStorageType('localStorage');
       const response = await AuthService.googleLogin(idToken);
       if (response.user) {
         const normalizedRole = response.user.role.replace('ROLE_', '');

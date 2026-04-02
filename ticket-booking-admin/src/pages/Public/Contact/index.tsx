@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
+import { sendContact } from '../../../api/mail';
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -69,14 +70,25 @@ const Contact: React.FC = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Combine subject and message for the API
+      const fullMessage = `Subject: ${formData.subject}\n\n${formData.message}`;
+      
+      await sendContact({
+        name: formData.name,
+        email: formData.email,
+        message: fullMessage,
+      });
+
       setSubmitted(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
-      setLoading(false);
       // Reset success message after 5 seconds
       setTimeout(() => setSubmitted(false), 5000);
-    }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contactInfo = [

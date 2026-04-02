@@ -146,7 +146,7 @@ const SeatSelectionPage: React.FC = () => {
         return;
       }
     } catch (error) {
-      console.log('Could not fetch event schedule details:', error);
+      // Event schedule fetch failed silently
     }
 
     // Fallback to navigation state if API fails
@@ -311,7 +311,7 @@ const SeatSelectionPage: React.FC = () => {
 
       const sessionResponse = await paymentService.initiatePayment(paymentRequest);
 
-      console.log("MPGS session:", sessionResponse);
+      // MPGS session created
 
       // store sessionId so return page can verify
       localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);

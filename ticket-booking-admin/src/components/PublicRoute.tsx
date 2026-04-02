@@ -35,10 +35,6 @@ const PublicRoute: React.FC = () => {
   const userRole = user.role;
   const userRoleStr = String(userRole).replace(/ /g, '_');
   
-  console.log('PublicRoute - Checking access:');
-  console.log('User Role:', userRole, '(normalized:', userRoleStr + ')');
-  console.log('Current Location:', location.pathname);
-  
   // Check if user is admin, organizer, or employee
   const isAdmin = userRoleStr === 'ADMIN' || userRoleStr === 'ROLE_ADMIN' || 
                   userRoleStr === 'SUPER_ADMIN' || userRoleStr === 'ROLE_SUPER_ADMIN';
@@ -48,30 +44,25 @@ const PublicRoute: React.FC = () => {
 
   // Redirect admins to admin dashboard
   if (isAdmin) {
-    console.log('Admin user trying to access public page - redirecting to /dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
   // Redirect organizers to organizer dashboard
   if (isOrganizer) {
-    console.log('Organizer user trying to access public page - redirecting to /organizer/dashboard');
     return <Navigate to="/organizer/dashboard" replace />;
   }
 
   // Redirect organizer employees to employee dashboard
   if (isOrganizerEmployee) {
-    console.log('Organizer Employee trying to access public page - redirecting to /employee/dashboard');
     return <Navigate to="/employee/dashboard" replace />;
   }
 
   // Allow regular users to access public pages
   if (isUser) {
-    console.log('Regular user accessing public page - allowed');
     return <Outlet />;
   }
 
   // Fallback - if role is unrecognized, redirect to login
-  console.log('Unrecognized role - redirecting to login');
   return <Navigate to="/login" replace />;
 };
 

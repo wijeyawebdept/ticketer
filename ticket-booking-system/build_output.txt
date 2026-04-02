@@ -1,0 +1,58 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+[0.010s][warning][cds] The shared archive file was created by a different version or build of HotSpot
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.ticket:ticket-booking-system >------------------
+[INFO] Building ticket-booking-system 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.4.1:clean (default-clean) @ ticket-booking-system ---
+[INFO] Deleting d:\GitHub Projects\Ticket-Booking-System\ticket-booking-system\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ticket-booking-system ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 13 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.0:compile (default-compile) @ ticket-booking-system ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 219 source files with javac [debug parameters release 21] to target\classes
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit
+WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/controller/PaymentController.java: Some input files use or override a deprecated API.
+[INFO] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/controller/PaymentController.java: Recompile with -Xlint:deprecation for details.
+[INFO] -------------------------------------------------------------
+[WARNING] COMPILATION WARNING : 
+[INFO] -------------------------------------------------------------
+[WARNING] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/entity/EventSchedule.java:[50,24] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/entity/EventSchedule.java:[54,28] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[WARNING] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/entity/EventSchedule.java:[68,21] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[INFO] 3 warnings 
+[INFO] -------------------------------------------------------------
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[16,8] com.ticket.ticket_booking_system.service.impl.PageContentServiceImpl is not abstract and does not override abstract method getPageContentById(java.util.UUID) in com.ticket.ticket_booking_system.service.PageContentService
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[23,5] method does not override or implement a method from a supertype
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[59,5] method does not override or implement a method from a supertype
+[INFO] 3 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.749 s
+[INFO] Finished at: 2026-04-02T16:03:24+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.0:compile (default-compile) on project ticket-booking-system: Compilation failure: Compilation failure: 
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[16,8] com.ticket.ticket_booking_system.service.impl.PageContentServiceImpl is not abstract and does not override abstract method getPageContentById(java.util.UUID) in com.ticket.ticket_booking_system.service.PageContentService
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[23,5] method does not override or implement a method from a supertype
+[ERROR] /d:/GitHub Projects/Ticket-Booking-System/ticket-booking-system/src/main/java/com/ticket/ticket_booking_system/service/impl/PageContentServiceImpl.java:[59,5] method does not override or implement a method from a supertype
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

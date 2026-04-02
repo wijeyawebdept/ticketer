@@ -40,9 +40,6 @@ const Events: React.FC = () => {
         ? await EventService.searchPublishedEvents(searchQuery, page, 12)
         : await EventService.getPublishedEvents(page, 12);
       
-      console.log('Events response:', response);
-      console.log('First event:', response.content?.[0]);
-      
       // Sort events to show deals first
       const sortedEvents = (response.content || []).sort((a: Event, b: Event) => {
         if (a.hasDeal && !b.hasDeal) return -1;
@@ -69,9 +66,7 @@ const Events: React.FC = () => {
   };
 
   const handleEventClick = (event: Event) => {
-    console.log('Clicked event:', event);
     const eventId = event.id || event.eventId;
-    console.log('Event ID:', eventId);
     if (eventId) {
       navigate(`/event/${eventId}`);
     } else {

@@ -2,6 +2,24 @@ import axios from './api';
 import jwt_decode from 'jwt-decode';
 import { UserRole } from '../types';
 
+// Development mode check
+const isDev = process.env.NODE_ENV === 'development' && process.env.REACT_APP_DEBUG_LOGS === 'true';
+
+// Dev-only logger - logs sensitive data only in development with DEBUG flag enabled
+const devLog = (message: string, data?: any) => {
+  if (isDev) {
+    console.log(`[DEV] ${message}`, data);
+  }
+};
+
+// Error logger - always used for non-sensitive errors
+const errorLog = (message: string, error?: any) => {
+  if (error?.response?.status && error?.response?.status !== 401 && error?.response?.status !== 403) {
+    // Only log non-auth errors to avoid exposing auth details
+    console.error(`[ERROR] ${message}:`, error?.message || error);
+  }
+};
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -51,38 +69,12 @@ interface DecodedToken {
 }
 
 class AuthService {
-  private storageType: 'localStorage' | 'sessionStorage' = 'localStorage';
+  private storageType: 'localStorage' | 'sessionStorage' = 'sessionStorage';
 
   constructor() {
-    // Auto-detect storage type based on current page URL
-    this.detectStorageType();
-  }
-
-  private detectStorageType() {
-    const currentPath = window.location.pathname;
-    // If on admin, organizer, or employee routes, use sessionStorage
-    // Otherwise use localStorage for customer routes
-    if (currentPath.includes('/dashboard') || 
-        currentPath.includes('/admin') || 
-        currentPath.includes('/organizer') || 
-        currentPath.includes('/employee') ||
-        currentPath.includes('/users') ||
-        currentPath.includes('/admins') ||
-        currentPath.includes('/venues') ||
-        currentPath.includes('/seats') ||
-        currentPath.includes('/recycle-bin') ||
-        currentPath.includes('/settings') ||
-        currentPath.includes('/event-assignments') ||
-        currentPath.includes('/organizer-assignment') ||
-        currentPath === '/restricted-login') {
-      this.storageType = 'sessionStorage';
-    } else {
-      this.storageType = 'localStorage';
-    }
-  }
-
-  setStorageType(type: 'localStorage' | 'sessionStorage') {
-    this.storageType = type;
+    // IMPORTANT: Always use sessionStorage to keep each tab's session independent
+    // DO NOT use localStorage as it's shared across all tabs of the same domain
+    this.storageType = 'sessionStorage';
   }
 
   private getStorage(): Storage {
@@ -113,33 +105,23 @@ class AuthService {
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('Logging in user with endpoint: /api/auth/login');
       const response = await axios.post<LoginResponse>('/api/auth/login', credentials);
-      console.log('Login response:', response.status, response.statusText);
       
       if (response.data.token) {
         const storage = this.getStorage();
         storage.setItem('auth_token', response.data.token);
-        console.log('Token stored in:', this.storageType);
         
-        // Debug the JWT token and get role from it
+        // Decode JWT token
         let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
-          console.log('JWT Token decoded:', decoded);
-          console.log('User from API response:', response.data.user);
-          console.log('Role from JWT:', decoded.role);
           userRole = decoded.role;
-          if (response.data.user) {
-            console.log('Role from API response:', response.data.user.role);
-          }
         } catch (err) {
-          console.error('Error decoding JWT token:', err);
+          devLog('Error decoding JWT token:', err);
         }
         
         // Store user data with role from JWT token
         if (response.data.user) {
-          // Normalize the role by removing ROLE_ prefix if present
           const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
           
           const userData = {
@@ -147,12 +129,11 @@ class AuthService {
             email: response.data.user.email,
             firstName: response.data.user.firstName,
             lastName: response.data.user.lastName,
-            role: normalizedRole // Use normalized role
+            role: normalizedRole
           };
           storage.setItem('user_data', JSON.stringify({ email: userData.email }));
-          storage.setItem('user', JSON.stringify(userData)); // Store for role-based redirect
-          console.log('Stored user data in', this.storageType, ':', userData);
-          console.log('Normalized role stored:', normalizedRole);
+          storage.setItem('user', JSON.stringify(userData));
+          devLog('User logged in successfully');
         }
       }
       
@@ -168,13 +149,10 @@ class AuthService {
           user: response.data.user
         };
       } else {
-        // Fallback if user is not present in response
         return response.data;
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      console.error('Response status:', error.response?.status);
-      console.error('Response data:', error.response?.data);
+      errorLog('Login error', error);
       throw error;
     }
   }
@@ -184,27 +162,14 @@ class AuthService {
     storage.removeItem('auth_token');
     storage.removeItem('user_data');
     storage.removeItem('user');
-    console.log('Logged out from', this.storageType);
+    devLog('User logged out');
   }
 
   getCurrentUser(): LoginResponse | null {
     try {
-      // Auto-detect storage type based on current page
-      this.detectStorageType();
-      
-      // Check current storage type first, then fallback to the other
+      // Always use sessionStorage (one storage type per tab)
       const storage = this.getStorage();
-      let token = storage.getItem('auth_token');
-      let userStorage: Storage = storage;
-      
-      // If not found in current storage, check the other one
-      if (!token) {
-        const alternateStorage = this.storageType === 'sessionStorage' ? localStorage : sessionStorage;
-        token = alternateStorage.getItem('auth_token');
-        if (token) {
-          userStorage = alternateStorage;
-        }
-      }
+      const token = storage.getItem('auth_token');
       
       if (token) {
         const decoded = jwt_decode<DecodedToken>(token);
@@ -219,7 +184,7 @@ class AuthService {
         // Try to get user details from storage
         let email = '';
         try {
-          const userData = userStorage.getItem('user_data');
+          const userData = storage.getItem('user_data');
           if (userData) {
             const user = JSON.parse(userData);
             email = user.email || '';
@@ -247,19 +212,8 @@ class AuthService {
 
   isAuthenticated(): boolean {
     const storage = this.getStorage();
-    let token = storage.getItem('auth_token');
-    
-    // Also check the alternate storage
-    if (!token) {
-      const alternateStorage = this.storageType === 'sessionStorage' ? localStorage : sessionStorage;
-      token = alternateStorage.getItem('auth_token');
-    }
-    
+    const token = storage.getItem('auth_token');
     const user = this.getCurrentUser();
-    
-    // For debugging
-    console.log('Auth check - token exists:', !!token, '(storage:', this.storageType, ')');
-    console.log('Auth check - valid user object:', !!user);
     
     return token !== null && user !== null;
   }
@@ -272,34 +226,21 @@ class AuthService {
 
   async adminLogin(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('Logging in admin with endpoint: /api/auth/admin/login');
       const response = await axios.post<LoginResponse>('/api/auth/admin/login', credentials);
-      console.log('Admin login response:', response.status, response.statusText);
-      console.log('Admin login response data:', JSON.stringify(response.data));
       
       if (response.data && response.data.token) {
         const storage = this.getStorage();
         storage.setItem('auth_token', response.data.token);
-        console.log('Token stored in:', this.storageType);
         
-        // Debug the JWT token and get role from it
         let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
-          console.log('JWT Token decoded:', decoded);
-          console.log('User from API response:', response.data.user);
-          console.log('Role from JWT:', decoded.role);
           userRole = decoded.role;
-          if (response.data.user) {
-            console.log('Role from API response:', response.data.user.role);
-          }
         } catch (err) {
-          console.error('Error decoding JWT token:', err);
+          devLog('Error decoding JWT token:', err);
         }
         
-        // Store user data with role from JWT token
         if (response.data.user && response.data.user.id) {
-          // Normalize the role by removing ROLE_ prefix if present
           const normalizedRole = (userRole || response.data.user.role || '').replace(/^ROLE_/, '');
           
           const userData = {
@@ -311,23 +252,7 @@ class AuthService {
           };
           storage.setItem('user_data', JSON.stringify({ email: userData.email }));
           storage.setItem('user', JSON.stringify(userData));
-          console.log('Stored user data in', this.storageType, ':', userData);
-          console.log('Normalized role stored:', normalizedRole);
-        } else {
-          console.warn('No user object in response, creating minimal user data from JWT');
-          // If no user object, create one from JWT
-          const decoded = jwt_decode<DecodedToken>(response.data.token);
-          const normalizedRole = (decoded.role || '').replace(/^ROLE_/, '');
-          const userData = {
-            id: decoded.sub || '',
-            email: credentials.email,
-            firstName: '',
-            lastName: '',
-            role: normalizedRole
-          };
-          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
-          storage.setItem('user', JSON.stringify(userData));
-          console.log('Stored minimal user data from JWT in', this.storageType, ':', userData);
+          devLog('Admin logged in successfully');
         }
       }
       
@@ -341,46 +266,28 @@ class AuthService {
         user: response.data?.user
       };
     } catch (error: any) {
-      console.error('Admin login error:', error);
-      if (error?.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-      } else if (error?.message) {
-        console.error('Error message:', error.message);
-      }
+      errorLog('Admin login error', error);
       throw error;
     }
   }
 
   async organizerLogin(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('Logging in organizer with endpoint: /api/auth/organizer/login');
       const response = await axios.post<LoginResponse>('/api/auth/organizer/login', credentials);
-      console.log('Organizer login response:', response.status, response.statusText);
       
       if (response.data.token) {
         const storage = this.getStorage();
         storage.setItem('auth_token', response.data.token);
-        console.log('Token stored in:', this.storageType);
         
-        // Debug the JWT token and get role from it
         let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
-          console.log('JWT Token decoded:', decoded);
-          console.log('User from API response:', response.data.user);
-          console.log('Role from JWT:', decoded.role);
           userRole = decoded.role;
-          if (response.data.user) {
-            console.log('Role from API response:', response.data.user.role);
-          }
         } catch (err) {
-          console.error('Error decoding JWT token:', err);
+          devLog('Error decoding JWT token:', err);
         }
         
-        // Store user data with role from JWT token
         if (response.data.user) {
-          // Normalize the role by removing ROLE_ prefix if present
           const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
           
           const userData = {
@@ -392,8 +299,7 @@ class AuthService {
           };
           storage.setItem('user_data', JSON.stringify({ email: userData.email }));
           storage.setItem('user', JSON.stringify(userData));
-          console.log('Stored user data in', this.storageType, ':', userData);
-          console.log('Normalized role stored:', normalizedRole);
+          devLog('Organizer logged in successfully');
         }
       }
       
@@ -407,46 +313,28 @@ class AuthService {
         user: response.data.user
       };
     } catch (error: any) {
-      console.error('Organizer login error:', error);
-      if (error?.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-      } else if (error?.message) {
-        console.error('Error message:', error.message);
-      }
+      errorLog('Organizer login error', error);
       throw error;
     }
   }
 
   async organizerEmployeeLogin(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log('Logging in organizer employee with endpoint: /api/auth/organizer-employee/login');
       const response = await axios.post<LoginResponse>('/api/auth/organizer-employee/login', credentials);
-      console.log('Organizer employee login response:', response.status, response.statusText);
       
       if (response.data.token) {
         const storage = this.getStorage();
         storage.setItem('auth_token', response.data.token);
-        console.log('Token stored in:', this.storageType);
         
-        // Debug the JWT token and get role from it
         let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
-          console.log('JWT Token decoded:', decoded);
-          console.log('User from API response:', response.data.user);
-          console.log('Role from JWT:', decoded.role);
           userRole = decoded.role;
-          if (response.data.user) {
-            console.log('Role from API response:', response.data.user.role);
-          }
         } catch (err) {
-          console.error('Error decoding JWT token:', err);
+          devLog('Error decoding JWT token:', err);
         }
         
-        // Store user data with role from JWT token
         if (response.data.user) {
-          // Normalize the role by removing ROLE_ prefix if present
           const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
           
           const userData = {
@@ -458,8 +346,7 @@ class AuthService {
           };
           storage.setItem('user_data', JSON.stringify({ email: userData.email }));
           storage.setItem('user', JSON.stringify(userData));
-          console.log('Stored user data in', this.storageType, ':', userData);
-          console.log('Normalized role stored:', normalizedRole);
+          devLog('Organizer employee logged in successfully');
         }
       }
       
@@ -473,13 +360,7 @@ class AuthService {
         user: response.data.user
       };
     } catch (error: any) {
-      console.error('Organizer employee login error:', error);
-      if (error?.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-      } else if (error?.message) {
-        console.error('Error message:', error.message);
-      }
+      errorLog('Organizer employee login error', error);
       throw error;
     }
   }
@@ -496,12 +377,9 @@ class AuthService {
 
   async googleLogin(googleToken: string): Promise<LoginResponse> {
     try {
-      console.log('Logging in with Google token');
       const response = await axios.post<LoginResponse>('/api/auth/google-login', {
         token: googleToken
       });
-      
-      console.log('Google login response:', response.status, response.statusText);
       
       if (response.data.token) {
         const storage = this.getStorage();
@@ -511,10 +389,9 @@ class AuthService {
         let userRole = '';
         try {
           const decoded = jwt_decode<DecodedToken>(response.data.token);
-          console.log('JWT Token decoded:', decoded);
           userRole = decoded.role;
         } catch (err) {
-          console.error('Error decoding JWT token:', err);
+          devLog('Error decoding JWT token:', err);
         }
         
         // Store user data
@@ -527,13 +404,13 @@ class AuthService {
             role: userRole || response.data.user.role
           };
           storage.setItem('user', JSON.stringify(userData));
-          console.log('User data stored in', this.storageType, ':', userData);
+          devLog('Google login successful');
         }
       }
       
       return response.data;
     } catch (error: any) {
-      console.error('Google login error:', error);
+      errorLog('Google login error', error);
       throw error;
     }
   }

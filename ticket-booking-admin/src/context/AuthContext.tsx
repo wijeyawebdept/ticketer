@@ -28,7 +28,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadUser = React.useCallback(() => {
     try {
       const currentUser = AuthService.getCurrentUser();
-      console.log('AuthContext loading user:', currentUser);
       setUser(currentUser ? { 
         id: currentUser.id, 
         email: currentUser.email || '',
