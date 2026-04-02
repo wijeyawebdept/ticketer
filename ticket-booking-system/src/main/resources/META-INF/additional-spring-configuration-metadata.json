@@ -85,38 +85,8 @@
     "description": "A description for 'app.mail.fromName'"
   },
   {
-    "name": "app.mail.fromName",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.fromName'"
-  },
-  {
-    "name": "app.mail.fromEmail",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.fromEmail'"
-  },
-  {
     "name": "app.mail.toEmail",
     "type": "java.lang.String",
     "description": "A description for 'app.mail.toEmail'"
-  },
-  {
-    "name": "app.mail.toEmail",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.toEmail'"
-  },
-  {
-    "name": "app.mail.fromEmail",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.fromEmail'"
-  },
-  {
-    "name": "app.mail.toEmail",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.toEmail'"
-  },
-  {
-    "name": "app.mail.fromEmail",
-    "type": "java.lang.String",
-    "description": "A description for 'app.mail.fromEmail'"
   }
 ]}
