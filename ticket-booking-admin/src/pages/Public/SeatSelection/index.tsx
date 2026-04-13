@@ -20,6 +20,7 @@ import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
+import { useAuth } from '../../../context/AuthContext';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -36,6 +37,7 @@ const SeatSelectionPage: React.FC = () => {
   const { eventScheduleId } = useParams<{ eventScheduleId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -73,6 +75,7 @@ const SeatSelectionPage: React.FC = () => {
     email: '',
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (eventScheduleId) {
       loadEventDetails(eventScheduleId);
@@ -100,6 +103,8 @@ const SeatSelectionPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showBookingSummary]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (holdTimer > 0) {
       const interval = setInterval(() => {
@@ -265,7 +270,19 @@ const SeatSelectionPage: React.FC = () => {
     showMessage('error', 'Your seat hold has expired. Please select seats again.');
   };
 
-  const handleProceedToPayment = () => setPaymentModalOpen(true);
+  const handleProceedToPayment = () => {
+    if (!isAuthenticated()) {
+      // Redirect to login page and return here after login
+      navigate('/login', {
+        state: {
+          from: `/seat-selection/${eventScheduleId}`,
+          returnMessage: 'Please sign in to continue with your booking',
+        },
+      });
+    } else {
+      setPaymentModalOpen(true);
+    }
+  };
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
 
   const handleCustomerInfoChange = (field: string, value: string) => {

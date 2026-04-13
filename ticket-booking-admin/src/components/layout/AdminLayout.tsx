@@ -36,7 +36,8 @@ import {
   RestoreFromTrash as RecycleBinIcon,
   Assignment as AssignmentIcon,
   PersonAdd as PersonAddIcon,
-  Collections as CollectionsIcon
+  Collections as CollectionsIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -163,6 +164,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.events'), icon: <EventIcon />, path: '/admin/events' },
     { text: 'Event Categories', icon: <EventIcon />, path: '/event-categories' },
     { text: 'Banners', icon: <CollectionsIcon />, path: '/banners' },
+    { text: 'Page Content Manager', icon: <DescriptionIcon />, path: '/page-content' },
     { text: 'Employee Assignment', icon: <AssignmentIcon />, path: '/event-assignments' },
     { text: 'Organizer Assignment', icon: <PersonAddIcon />, path: '/organizer-assignment' },
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/venues' },

@@ -75,7 +75,7 @@ const PublicFooter: React.FC = () => {
                 About Us
               </Typography>
               <Link href="/about" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Who We Are</Link>
-              <Link href="#" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>FAQ</Link>
+              <Link href="/faq" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>FAQ</Link>
               <Link href="/contact" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Contact Us</Link>
             </Grid>
 

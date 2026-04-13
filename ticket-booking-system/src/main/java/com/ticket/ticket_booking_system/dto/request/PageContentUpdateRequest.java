@@ -1,6 +1,6 @@
 package com.ticket.ticket_booking_system.dto.request;
 
-import com.ticket.ticket_booking_system.entity.PageContent.PageType;
+import com.ticket.ticket_booking_system.entity.PageType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

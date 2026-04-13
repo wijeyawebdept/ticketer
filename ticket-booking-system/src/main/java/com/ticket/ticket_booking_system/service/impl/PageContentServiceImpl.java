@@ -1,12 +1,22 @@
 package com.ticket.ticket_booking_system.service.impl;
 
 import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
+
 import com.ticket.ticket_booking_system.dto.request.PageContentUpdateRequest;
 import com.ticket.ticket_booking_system.dto.response.PageContentResponse;
-import com.ticket.ticket_booking_system.entity.*;
-import com.ticket.ticket_booking_system.repository.*;
+import com.ticket.ticket_booking_system.entity.CookiePolicy;
+import com.ticket.ticket_booking_system.entity.FAQ;
+import com.ticket.ticket_booking_system.entity.PageType;
+import com.ticket.ticket_booking_system.entity.PrivacyPolicy;
+import com.ticket.ticket_booking_system.entity.TermsAndConditions;
+import com.ticket.ticket_booking_system.repository.CookiePolicyRepository;
+import com.ticket.ticket_booking_system.repository.FAQRepository;
+import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
+import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
 import com.ticket.ticket_booking_system.service.PageContentService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -150,29 +160,41 @@ public class PageContentServiceImpl implements PageContentService {
     private PageContentResponse convertToResponse(Object content, String pageType) {
         if (content instanceof PrivacyPolicy p) {
             return PageContentResponse.builder()
+                    .contentId(p.getId())
+                    .pageType(PageType.PRIVACY_POLICY)
                     .title(p.getTitle())
                     .content(p.getContent())
+                    .createdAt(p.getCreatedAt())
                     .updatedAt(p.getUpdatedAt())
                     .updatedBy(p.getUpdatedBy())
                     .build();
         } else if (content instanceof TermsAndConditions t) {
             return PageContentResponse.builder()
+                    .contentId(t.getId())
+                    .pageType(PageType.TERMS_AND_CONDITIONS)
                     .title(t.getTitle())
                     .content(t.getContent())
+                    .createdAt(t.getCreatedAt())
                     .updatedAt(t.getUpdatedAt())
                     .updatedBy(t.getUpdatedBy())
                     .build();
         } else if (content instanceof CookiePolicy c) {
             return PageContentResponse.builder()
+                    .contentId(c.getId())
+                    .pageType(PageType.COOKIE_POLICY)
                     .title(c.getTitle())
                     .content(c.getContent())
+                    .createdAt(c.getCreatedAt())
                     .updatedAt(c.getUpdatedAt())
                     .updatedBy(c.getUpdatedBy())
                     .build();
         } else if (content instanceof FAQ f) {
             return PageContentResponse.builder()
+                    .contentId(f.getId())
+                    .pageType(PageType.FAQ)
                     .title(f.getTitle())
                     .content(f.getContent())
+                    .createdAt(f.getCreatedAt())
                     .updatedAt(f.getUpdatedAt())
                     .updatedBy(f.getUpdatedBy())
                     .build();

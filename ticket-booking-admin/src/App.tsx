@@ -1,7 +1,9 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+// @ts-ignore
 import { ToastContainer } from 'react-toastify';
+// @ts-ignore
 import 'react-toastify/dist/ReactToastify.css';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
@@ -39,6 +41,7 @@ import AdminEventAssignments from './pages/AdminEventAssignments';
 import OrganizerAssignment from './pages/OrganizerAssignment';
 import EventCategories from './pages/EventCategories';
 import Banners from './pages/Banners';
+import PageContentManager from './pages/PageContentManager';
 import { UserRole } from './types';
 
 // Public pages
@@ -52,6 +55,7 @@ import PublicEvents from './pages/Public/Events';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import CookiePolicy from './pages/Public/CookiePolicy';
 import TermsAndConditions from './pages/Public/TermsAndConditions';
+import FAQ from './pages/Public/FAQ';
 import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
@@ -61,9 +65,6 @@ import BookingPaymentReturn from './pages/Bookings/BookingPaymentReturn';
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
 const AuthTesterPage = lazy(() => import('./pages/AuthTester'));
-
-// Google OAuth Client ID - Replace with your actual Client ID
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE';
 
 // Create enhanced theme
 const theme = createTheme({
@@ -225,6 +226,8 @@ function App() {
                   <Route path="/admin/event-categories" element={<EventCategories />} />
                   <Route path="/admin/banners" element={<Banners />} />
                   <Route path="/banners" element={<Banners />} />
+                  <Route path="/admin/page-content" element={<PageContentManager />} />
+                  <Route path="/page-content" element={<PageContentManager />} />
                   <Route path="/admin/users" element={<Users />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/admin/admins" element={<Admins />} />
@@ -324,6 +327,7 @@ function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/faq" element={<FAQ />} />
               {/* Payment Result Pages */}
               <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />

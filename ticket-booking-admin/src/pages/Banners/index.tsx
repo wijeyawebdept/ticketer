@@ -35,6 +35,11 @@ import {
   Block as DeactivateIcon,
 } from '@mui/icons-material';
 import BannerService, { BannerResponse } from '../../services/banner.service';
+import {
+  validateBannerImage,
+  BannerValidationResult,
+  getBannerGuidanceText,
+} from '../../services/bannerValidation.service';
 
 interface BannerFormData {
   title: string;
@@ -64,6 +69,8 @@ export default function BannersPage() {
   
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<BannerValidationResult | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Load banners
   useEffect(() => {
@@ -84,16 +91,35 @@ export default function BannersPage() {
     }
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files[0]) {
       const file = files[0];
-      setSelectedImage(file);
       
-      // Create preview
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setValidationError('Please select a valid image file');
+        setSelectedImage(null);
+        setImagePreview(null);
+        return;
+      }
+
+      setSelectedImage(file);
+      setValidationError(null);
+      
+      // Create preview and validate dimensions
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         setImagePreview(reader.result as string);
+        
+        // Validate banner dimensions
+        try {
+          const result = await validateBannerImage(file);
+          setValidationResult(result);
+        } catch (err) {
+          console.error('Validation error:', err);
+          setValidationError(err instanceof Error ? err.message : 'Failed to validate image');
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -158,6 +184,8 @@ export default function BannersPage() {
     });
     setSelectedImage(null);
     setImagePreview(null);
+    setValidationResult(null);
+    setValidationError(null);
   };
 
   const handleFormChange = (
@@ -468,6 +496,19 @@ export default function BannersPage() {
         <DialogContent sx={{ pt: 2 }}>
           {dialogMode !== 'view' ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Banner Guidelines Alert */}
+              <Alert severity="info" sx={{ mb: 1 }}>
+                <Box sx={{ fontSize: '0.85rem' }}>
+                  <strong>Banner Dimension Guidelines:</strong><br/>
+                  <strong>Recommended:</strong> 1920×800px (Perfect for hero banners)<br/>
+                  <strong>Alternatives:</strong> 1920×600px or 1920×900px<br/>
+                  <strong>Minimum Width:</strong> 1280px (for desktop display)<br/>
+                  <strong>Safe Zone:</strong> Keep important content in the center area (away from edges)<br/>
+                  <strong>File Format:</strong> JPG, PNG, or WebP (compressed for fast loading)<br/>
+                  <strong>Best Practice:</strong> Optimize image size to under 500KB for fast page load.
+                </Box>
+              </Alert>
+
               <TextField
                 label="Title"
                 name="title"
@@ -507,6 +548,8 @@ export default function BannersPage() {
                   <MenuItem value="ARCHIVED">Archived</MenuItem>
                 </Select>
               </FormControl>
+
+              {/* Image Upload Section */}
               <Box>
                 <input
                   accept="image/*"
@@ -525,17 +568,106 @@ export default function BannersPage() {
                   </Button>
                 </label>
               </Box>
+
+              {/* Validation Error */}
+              {validationError && (
+                <Alert severity="error">
+                  {validationError}
+                </Alert>
+              )}
+
+              {/* Validation Results */}
+              {validationResult && (
+                <Card variant="outlined" sx={{ backgroundColor: validationResult.isValid ? '#f1f8e9' : '#fff3e0' }}>
+                  <CardContent>
+                    <Box sx={{ fontSize: '0.9rem' }}>
+                      <Box sx={{ mb: 1 }}>
+                        <strong>Image Dimensions:</strong> {validationResult.width}×{validationResult.height}px ({validationResult.aspectRatio.toFixed(2)}:1)
+                      </Box>
+
+                      {validationResult.issues.length > 0 && (
+                        <Box sx={{ mb: 1 }}>
+                          <strong>Issues Found:</strong>
+                          <Box sx={{ ml: 1, mt: 0.5 }}>
+                            {validationResult.issues.map((issue, idx) => (
+                              <Alert
+                                key={idx}
+                                severity={issue.severity}
+                                sx={{ py: 0.5, mb: 0.5, fontSize: '0.85rem' }}
+                              >
+                                {issue.message}
+                              </Alert>
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {validationResult.recommendations.length > 0 && (
+                        <Box>
+                          <strong>✅ Recommendations:</strong>
+                          <Box sx={{ ml: 1, mt: 0.5 }}>
+                            {validationResult.recommendations.map((rec, idx) => (
+                              <Box key={idx} sx={{ fontSize: '0.85rem', my: 0.5 }}>
+                                • {rec}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {validationResult.isValid && (
+                        <Box sx={{ mt: 1, color: 'success.main', fontWeight: 500 }}>
+                          ✓ Image meets all requirements!
+                        </Box>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Image Preview */}
               {imagePreview && (
                 <Box sx={{ mt: 2 }}>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    style={{
-                      maxWidth: '100%',
-                      height: 'auto',
+                  <Box sx={{ mb: 1, fontSize: '0.9rem', fontWeight: 500 }}>Preview:</Box>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      backgroundColor: '#f5f5f5',
                       borderRadius: '4px',
+                      overflow: 'hidden',
                     }}
-                  />
+                  >
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        height: 'auto',
+                        display: 'block',
+                      }}
+                    />
+                    {/* Safe zone indicator overlay */}
+                    {validationResult && validationResult.isValid && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          border: '2px dashed rgba(76, 175, 80, 0.5)',
+                          margin: '60px',
+                          pointerEvents: 'none',
+                          borderRadius: '4px',
+                        }}
+                        title="Safe zone - keep important content within this area"
+                      />
+                    )}
+                  </Box>
+                  <Box sx={{ fontSize: '0.75rem', color: '#666', mt: 1 }}>
+                    💡 Green dashed box shows the safe zone for important content
+                  </Box>
                 </Box>
               )}
             </Box>

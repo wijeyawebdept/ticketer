@@ -50,6 +50,8 @@ public class SecurityConfig {
                     "/uploads/profile-pictures/**",
                     "/api/public/**",
                     "/api/venues/**",
+                    "/api/venue-seats/layout",
+                    "/api/venue-seats/availability/**",
                     "/api/payments/webhook",
                     "/api/contact",
                     "/contact",

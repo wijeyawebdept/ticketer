@@ -215,8 +215,8 @@ const EventDetails: React.FC = () => {
   };
 
   const handleNextClick = () => {
-    // If venue has seating layout, redirect to seat selection page
-    if (hasSeatingLayout && selectedShowtime) {
+    // If showtime is selected, redirect to seat selection page
+    if (selectedShowtime) {
       // Find the selected schedule details
       const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
       
@@ -233,25 +233,7 @@ const EventDetails: React.FC = () => {
       return;
     }
 
-    // Check if user is authenticated
-    if (!isAuthenticated()) {
-      // Save booking state before redirecting to login
-      const bookingState = {
-        eventId: id,
-        scheduleId: selectedShowtime,
-        ticketQuantities: ticketQuantities,
-        customerInfo: customerInfo,
-        returnUrl: window.location.pathname
-      };
-      
-      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingState));
-      
-      // Redirect to login page
-      navigate('/login', { state: { from: window.location.pathname } });
-      return;
-    }
-    
-    // If authenticated, open checkout modal directly
+    // If no showtime selected, open checkout modal (for venues without seating)
     setCheckoutModalOpen(true);
   };
 
