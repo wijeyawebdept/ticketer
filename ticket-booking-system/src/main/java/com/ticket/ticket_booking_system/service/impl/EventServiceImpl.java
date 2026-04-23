@@ -552,6 +552,12 @@ public class EventServiceImpl implements EventService {
                             .description(ticketCategory.getDescription())
                             .isSharedArea(ticketCategory.getIsSharedArea())
                             .sharedAreaNumber(ticketCategory.getSharedAreaNumber())
+                            .dealActive(ticketCategory.getDealActive())
+                            .dealType(ticketCategory.getDealType())
+                            .dealDiscountPercentage(ticketCategory.getDealDiscountPercentage())
+                            .dealBuyQuantity(ticketCategory.getDealBuyQuantity())
+                            .dealFreeQuantity(ticketCategory.getDealFreeQuantity())
+                            .dealLabel(ticketCategory.getDealLabel())
                             .createdAt(ticketCategory.getCreatedAt())
                             .updatedAt(ticketCategory.getUpdatedAt())
                             .build())
@@ -612,6 +618,10 @@ public class EventServiceImpl implements EventService {
                     .build();
         }
 
+        // Determine if any ticket category has an active deal
+        boolean hasDeal = ticketCategoryResponses.stream()
+                .anyMatch(tc -> Boolean.TRUE.equals(tc.getDealActive()));
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -631,6 +641,7 @@ public class EventServiceImpl implements EventService {
                 .createdByType(event.getCreatedByType()) // Include creator type for filtering
                 .category(categoryResponse) // Include category object
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
+                .hasDeal(hasDeal) // Derived from ticket categories
                 .build();
     }
 

@@ -38,6 +38,7 @@ import {
   PersonAdd as PersonAddIcon,
   Collections as CollectionsIcon,
   Description as DescriptionIcon,
+  LocalOffer as LocalOfferIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -162,6 +163,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/organizers' },
     { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/organizer-employees' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/admin/events' },
+    { text: 'Deals', icon: <LocalOfferIcon />, path: '/admin/deals' },
     { text: 'Event Categories', icon: <EventIcon />, path: '/event-categories' },
     { text: 'Banners', icon: <CollectionsIcon />, path: '/banners' },
     { text: 'Page Content Manager', icon: <DescriptionIcon />, path: '/page-content' },

@@ -132,8 +132,15 @@ public class BookingService {
 
         // NOTE: Do NOT update schedule availability yet - only after payment confirmation
 
+        // Set customer details and booking details
+        booking.setCustomerEmail(user.getEmail());
+        booking.setCustomerPhone(user.getPhoneNumber());
+        booking.setNumberOfTickets(booking.getBookingSeats().size());
+        booking.setFinalAmount(request.getTotalAmount());
+
         Booking savedBooking = bookingRepository.save(booking);
-        log.info("PENDING booking created with reference: {}", savedBooking.getBookingReference());
+        log.info("PENDING booking created with reference: {} for customer: {}", 
+                savedBooking.getBookingReference(), user.getEmail());
 
         return savedBooking;
     }
@@ -156,6 +163,20 @@ public class BookingService {
 
         // Update status to CONFIRMED
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
+
+        // Ensure customer details are set (in case they weren't during creation)
+        if (booking.getCustomerEmail() == null && booking.getUser() != null) {
+            booking.setCustomerEmail(booking.getUser().getEmail());
+        }
+        if (booking.getCustomerPhone() == null && booking.getUser() != null) {
+            booking.setCustomerPhone(booking.getUser().getPhoneNumber());
+        }
+        if (booking.getNumberOfTickets() == null || booking.getNumberOfTickets() == 0) {
+            booking.setNumberOfTickets(booking.getBookingSeats().size());
+        }
+        if (booking.getFinalAmount() == null) {
+            booking.setFinalAmount(booking.getTotalAmount());
+        }
 
         // Update schedule availability
         int totalTickets = booking.getBookingSeats().size();
@@ -194,7 +215,7 @@ public class BookingService {
     }
 
     /**
-     * Get all bookings for admin with filters
+     * Get all bookings for admin with filters and proper eager loading
      */
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, Pageable pageable) {
         log.info("Fetching all bookings for admin with filters - eventId: {}, userId: {}, status: {}, search: {}", eventId, userId, status, search);
@@ -203,38 +224,77 @@ public class BookingService {
             Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null);
             Page<Booking> page = bookingRepository.findAll(spec, pageable);
             
-            // Eagerly load all relationships for each booking to prevent LazyInitializationException
+            // Eagerly load all relationships while still in transaction
             page.getContent().forEach(booking -> {
+                // Force initialization of lazy-loaded collections and relationships
                 if (booking.getUser() != null) {
-                    booking.getUser().getFirstName(); // Trigger lazy load
+                    booking.getUser().getFirstName();
+                    booking.getUser().getLastName();
+                    booking.getUser().getEmail();
                 }
                 if (booking.getEvent() != null) {
-                    booking.getEvent().getName(); // Trigger lazy load
+                    booking.getEvent().getName();
+                    booking.getEvent().getDescription();
                     if (booking.getEvent().getVenue() != null) {
-                        booking.getEvent().getVenue().getName(); // Trigger lazy load
+                        booking.getEvent().getVenue().getName();
+                        booking.getEvent().getVenue().getAddress();
                     }
                 }
                 if (booking.getEventSchedule() != null) {
-                    booking.getEventSchedule().getStartTime(); // Trigger lazy load
+                    booking.getEventSchedule().getStartTime();
+                    booking.getEventSchedule().getEndTime();
+                    booking.getEventSchedule().getScheduleDate();
                 }
+                // Initialize booking seats collection
                 if (booking.getBookingSeats() != null) {
-                    booking.getBookingSeats().size(); // Trigger lazy load
+                    booking.getBookingSeats().size();
+                    booking.getBookingSeats().forEach(seat -> {
+                        if (seat.getSeat() != null) {
+                            seat.getSeat().getSeatId();
+                        }
+                    });
                 }
             });
             
+            log.info("Successfully fetched {} bookings for admin", page.getContent().size());
             return page;
         } catch (Exception e) {
-            log.error("Error fetching bookings for admin", e);
+            log.error("Error fetching bookings for admin: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to fetch bookings: " + e.getMessage(), e);
         }
     }
     
     /**
-     * Get all bookings for admin with schedule filter
+     * Get all bookings for admin with schedule filter and proper eager loading
      */
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, String scheduleId, Pageable pageable) {
         Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, scheduleId);
-        return bookingRepository.findAll(spec, pageable);
+        Page<Booking> page = bookingRepository.findAll(spec, pageable);
+        
+        // Eagerly load all relationships while still in transaction
+        page.getContent().forEach(booking -> {
+            if (booking.getUser() != null) {
+                booking.getUser().getFirstName();
+                booking.getUser().getLastName();
+                booking.getUser().getEmail();
+            }
+            if (booking.getEvent() != null) {
+                booking.getEvent().getName();
+                booking.getEvent().getDescription();
+                if (booking.getEvent().getVenue() != null) {
+                    booking.getEvent().getVenue().getName();
+                }
+            }
+            if (booking.getEventSchedule() != null) {
+                booking.getEventSchedule().getStartTime();
+                booking.getEventSchedule().getEndTime();
+            }
+            if (booking.getBookingSeats() != null) {
+                booking.getBookingSeats().size();
+            }
+        });
+        
+        return page;
     }
     
     /**
@@ -664,27 +724,54 @@ public class BookingService {
             // Search in booking ID, booking reference, user details, or event title
             if (search != null && !search.trim().isEmpty()) {
                 String searchPattern = "%" + search.toLowerCase() + "%";
-                
-                // Try to match as UUID first for booking ID
                 List<Predicate> searchPredicates = new ArrayList<>();
+                
+                log.info("Search triggered with pattern: '{}'", search);
                 
                 // Search by booking ID (UUID)
                 try {
                     UUID searchUuid = UUID.fromString(search.trim());
                     searchPredicates.add(criteriaBuilder.equal(root.get("bookingId"), searchUuid));
+                    log.info("Added UUID search predicate");
                 } catch (IllegalArgumentException e) {
                     // Not a valid UUID, continue with pattern matching
+                    log.debug("Search term is not a valid UUID: {}", search);
                 }
                 
-                // Pattern matching searches
-                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("bookingReference")), searchPattern));
-                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("firstName")), searchPattern));
-                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("lastName")), searchPattern));
-                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("user").get("email")), searchPattern));
-                searchPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("event").get("name")), searchPattern));
+                // Pattern matching searches - booking reference
+                searchPredicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("bookingReference")), 
+                    searchPattern
+                ));
+                log.info("Added booking reference search predicate");
+                
+                // Search in event fields (safe - event is required, non-null)
+                searchPredicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("event").get("name")), 
+                    searchPattern
+                ));
+                log.info("Added event name search predicate");
+                
+                // Search in user fields - use left join to handle null users safely
+                jakarta.persistence.criteria.Join<Booking, User> userJoin = root.join("user", jakarta.persistence.criteria.JoinType.LEFT);
+                searchPredicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(userJoin.get("firstName")), 
+                    searchPattern
+                ));
+                searchPredicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(userJoin.get("lastName")), 
+                    searchPattern
+                ));
+                searchPredicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(userJoin.get("email")), 
+                    searchPattern
+                ));
+                log.info("Added user field search predicates (firstName, lastName, email)");
                 
                 Predicate searchPredicate = criteriaBuilder.or(searchPredicates.toArray(new Predicate[0]));
                 predicates.add(searchPredicate);
+                
+                log.info("Search predicate combined with {} total conditions", searchPredicates.size());
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

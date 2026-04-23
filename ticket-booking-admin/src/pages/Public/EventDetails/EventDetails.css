@@ -1,0 +1,23 @@
+/* Event countdown timer for EventDetails page */
+.event-countdown.countdown-normal .countdown-text strong {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.event-countdown.countdown-warning .countdown-text strong {
+  background: linear-gradient(135deg, #ffc107 0%, #ffca28 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.event-countdown.countdown-urgent .countdown-text strong {
+  background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+

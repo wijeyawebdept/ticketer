@@ -61,6 +61,10 @@ import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
 import { PaymentSuccess, PaymentCancel, PaymentError } from './pages/Public/Payment';
 import BookingPaymentReturn from './pages/Bookings/BookingPaymentReturn';
+import PublicDeals from './pages/Public/Deals';
+import AdminDeals from './pages/Deals';
+import OrganizerDeals from './pages/OrganizerDeals';
+import EmployeeDeals from './pages/EmployeeDeals';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -240,6 +244,7 @@ function App() {
                   <Route path="/event-assignments" element={<AdminEventAssignments />} />
                   <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
                   <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
+                  <Route path="/admin/deals" element={<AdminDeals role="admin" />} />
                 <Route path="/venues" element={<Venues />} />
                 <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
@@ -266,6 +271,7 @@ function App() {
                 <Route path="/organizer/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/organizer/venues" element={<Venues />} />
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
+                <Route path="/organizer/deals" element={<OrganizerDeals />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/organizer/employees" element={<Employees />} />
@@ -285,6 +291,7 @@ function App() {
                 <Route path="/employee/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/employee/venues" element={<Venues />} />
                 <Route path="/employee/venues/:id/seating" element={<SeatingArrangement />} />
+                <Route path="/employee/deals" element={<EmployeeDeals />} />
                 <Route path="/employee/bookings" element={<Bookings />} />
                 <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/employee/recycle-bin" element={<RecycleBin />} />
@@ -328,6 +335,7 @@ function App() {
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/deals" element={<PublicDeals />} />
               {/* Payment Result Pages */}
               <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />

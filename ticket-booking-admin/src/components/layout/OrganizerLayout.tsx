@@ -34,7 +34,8 @@ import {
   EventSeat as EventSeatIcon,
   People as PeopleIcon,
   Assignment as AssignmentIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  LocalOffer as LocalOfferIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -153,6 +154,7 @@ const OrganizerLayout: React.FC = () => {
   const menuItems = [
     { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/organizer/dashboard' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/organizer/events' },
+    { text: 'Deals', icon: <LocalOfferIcon />, path: '/organizer/deals' },
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/organizer/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/organizer/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/organizer/bookings' },

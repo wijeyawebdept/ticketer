@@ -59,6 +59,29 @@ public class TicketCategory {
     @Column(name = "shared_area_number")
     private Integer sharedAreaNumber;
 
+    // Deal fields – original price is never changed; discounted price is computed dynamically
+    @Builder.Default
+    @Column(name = "deal_active")
+    private Boolean dealActive = false;
+
+    /** Which kind of deal is active. Defaults to PERCENTAGE_DISCOUNT for backward-compat. */
+    @Column(name = "deal_type", length = 30)
+    private String dealType; // "PERCENTAGE_DISCOUNT" | "BUY_X_GET_Y_FREE"
+
+    // --- PERCENTAGE_DISCOUNT fields ---
+    @Column(name = "deal_discount_percentage", precision = 5, scale = 2)
+    private java.math.BigDecimal dealDiscountPercentage;
+
+    // --- BUY_X_GET_Y_FREE fields ---
+    @Column(name = "deal_buy_quantity")
+    private Integer dealBuyQuantity;   // e.g. 5  → "buy 5 …"
+
+    @Column(name = "deal_free_quantity")
+    private Integer dealFreeQuantity;  // e.g. 1  → "… get 1 free"
+
+    @Column(name = "deal_label", length = 150)
+    private String dealLabel;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

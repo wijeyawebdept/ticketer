@@ -30,6 +30,9 @@ public class EventResponse {
     // Added ticket categories field
     private List<TicketCategoryResponse> ticketCategories;
 
+    // Derived: true if any ticket category has dealActive = true
+    private boolean hasDeal;
+
     // Builder pattern
     public static Builder builder() {
         return new Builder();
@@ -173,6 +176,14 @@ public class EventResponse {
         this.ticketCategories = ticketCategories;
     }
 
+    public boolean isHasDeal() {
+        return hasDeal;
+    }
+
+    public void setHasDeal(boolean hasDeal) {
+        this.hasDeal = hasDeal;
+    }
+
     public EventScheduleResponse getNextSchedule() {
         return nextSchedule;
     }
@@ -268,6 +279,11 @@ public class EventResponse {
         // Added builder method for ticketCategories
         public Builder ticketCategories(List<TicketCategoryResponse> ticketCategories) {
             eventResponse.setTicketCategories(ticketCategories);
+            return this;
+        }
+
+        public Builder hasDeal(boolean hasDeal) {
+            eventResponse.setHasDeal(hasDeal);
             return this;
         }
 

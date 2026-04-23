@@ -80,6 +80,18 @@ public class Booking {
     @Lob
     private String cancellationReason;
 
+    @Column(name = "number_of_tickets")
+    private Integer numberOfTickets;
+
+    @Column(name = "customer_email", length = 255)
+    private String customerEmail;
+
+    @Column(name = "customer_phone", length = 20)
+    private String customerPhone;
+
+    @Column(name = "final_amount")
+    private BigDecimal finalAmount;
+
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default

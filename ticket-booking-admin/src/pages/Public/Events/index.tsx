@@ -15,7 +15,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { Search as SearchIcon, CalendarToday, LocationOn } from '@mui/icons-material';
+import { Search as SearchIcon, CalendarToday, LocationOn, LocalOffer } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
@@ -194,130 +194,158 @@ const Events: React.FC = () => {
         ) : (
           <>
             <Grid container spacing={3}>
-              {events.map((event) => (
-                <Grid item xs={12} sm={6} md={4} key={event.id || event.eventId}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      borderRadius: 2,
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 24px rgba(255, 25, 85, 0.3)',
-                      },
-                    }}
-                    onClick={() => handleEventClick(event)}
-                  >
-                    <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', gap: 1, flexDirection: 'row-reverse' }}>
-                      {event.hasDeal && (
-                        <Chip
-                          label="Deal"
-                          size="small"
-                          sx={{
-                            backgroundColor: '#00c853',
-                            color: '#fff',
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
-                          }}
-                        />
-                      )}
-                      {event.ticketsAvailable === 0 && (
-                        <Chip
-                          label="Sold Out"
-                          size="small"
-                          sx={{
-                            backgroundColor: '#dc3545',
-                            color: '#fff',
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
-                          }}
-                        />
-                      )}
-                    </Box>
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
-                      alt={event.name}
-                      sx={{ objectFit: 'cover' }}
-                    />
-                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontFamily: 'Raleway, sans-serif',
-                          fontWeight: 700,
-                          color: '#2c3e50',
-                          mb: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {event.name}
-                      </Typography>
+              {events.map((event) => {
+                  // Compute lowest discounted price from ticket categories with deals
+                  const dealCategories = (event.ticketCategories || []).filter(
+                    (tc: any) => tc.dealActive && tc.dealDiscountPercentage > 0
+                  );
+                  const lowestDealPrice = dealCategories.length > 0
+                    ? Math.min(...dealCategories.map((tc: any) =>
+                        tc.price * (1 - tc.dealDiscountPercentage / 100)
+                      ))
+                    : null;
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}
-                        >
-                          {formatDate(event.startDateTime)}
-                        </Typography>
+                  return (
+                  <Grid item xs={12} sm={6} md={4} key={event.id || event.eventId}>
+                    <Card
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: 2,
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 8px 24px rgba(255, 25, 85, 0.3)',
+                        },
+                      }}
+                      onClick={() => handleEventClick(event)}
+                    >
+                      <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 1, display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                        {event.hasDeal && (
+                          <Chip
+                            icon={<LocalOffer sx={{ fontSize: '13px !important' }} />}
+                            label="Deal"
+                            size="small"
+                            sx={{
+                              backgroundColor: '#00c853',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '0.72rem',
+                              height: 24,
+                              '& .MuiChip-icon': { color: '#fff' },
+                            }}
+                          />
+                        )}
+                        {event.ticketsAvailable === 0 && (
+                          <Chip
+                            label="Sold Out"
+                            size="small"
+                            sx={{
+                              backgroundColor: '#dc3545',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                            }}
+                          />
+                        )}
                       </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <LocationOn sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontFamily: 'Raleway, sans-serif',
-                            color: '#666',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {event.venue?.name || 'TBA'}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.1)' }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontFamily: 'Raleway, sans-serif',
-                            color: '#999',
-                            fontSize: '0.75rem',
-                            mb: 0.5,
-                          }}
-                        >
-                          Starting from
-                        </Typography>
+                      <CardMedia
+                        component="img"
+                        height="200"
+                        image={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
+                        alt={event.name}
+                        sx={{ objectFit: 'cover' }}
+                      />
+                      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                         <Typography
                           variant="h6"
                           sx={{
                             fontFamily: 'Raleway, sans-serif',
                             fontWeight: 700,
-                            color: '#ff1955',
-                            fontSize: '1.25rem',
+                            color: '#2c3e50',
+                            mb: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
                           }}
                         >
-                          {formatPrice(event.basePrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                          {event.name}
                         </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
+                          <Typography
+                            variant="body2"
+                            sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}
+                          >
+                            {formatDate(event.startDateTime)}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <LocationOn sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily: 'Raleway, sans-serif',
+                              color: '#666',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {event.venue?.name || 'TBA'}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily: 'Raleway, sans-serif',
+                              color: '#999',
+                              fontSize: '0.75rem',
+                              mb: 0.5,
+                            }}
+                          >
+                            Starting from
+                          </Typography>
+                          {lowestDealPrice !== null ? (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                sx={{ fontFamily: 'Raleway, sans-serif', color: '#aaa', textDecoration: 'line-through', display: 'block', fontSize: '0.8rem' }}
+                              >
+                                {formatPrice(event.basePrice)} upwards
+                              </Typography>
+                              <Typography
+                                variant="h6"
+                                sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#ff1955', fontSize: '1.2rem' }}
+                              >
+                                {formatPrice(lowestDealPrice)}{' '}
+                                <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography
+                              variant="h6"
+                              sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#ff1955', fontSize: '1.25rem' }}
+                            >
+                              {formatPrice(event.basePrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                            </Typography>
+                          )}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  );
+                })}
             </Grid>
 
             {totalPages > 1 && (

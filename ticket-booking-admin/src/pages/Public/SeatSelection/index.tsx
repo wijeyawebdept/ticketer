@@ -21,6 +21,7 @@ import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
 import { useAuth } from '../../../context/AuthContext';
+import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -51,6 +52,10 @@ const SeatSelectionPage: React.FC = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showBookingSummary, setShowBookingSummary] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [countdownText, setCountdownText] = useState<string>('');
+  const [showCountdown, setShowCountdown] = useState<boolean>(false);
+  const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
+  const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const summaryRef = React.useRef<HTMLDivElement>(null);
   const seatMapRef = React.useRef<HTMLDivElement>(null);
 
@@ -120,6 +125,61 @@ const SeatSelectionPage: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [holdTimer]);
+
+  // Countdown timer effect - Initialize countdown when event details change
+  useEffect(() => {
+    if (!eventDetails || !eventDetails.date || !eventDetails.time) {
+      setShowCountdown(false);
+      return;
+    }
+
+    // Calculate initial countdown
+    const timeRemaining = calculateTimeRemaining(eventDetails.date, eventDetails.time);
+
+    if (timeRemaining > 0) {
+      const formattedCountdown = formatCountdown(timeRemaining);
+      const status = getCountdownStatus(timeRemaining);
+
+      setCountdownText(formattedCountdown);
+      setCountdownStatus(status);
+      setShowCountdown(true);
+    } else {
+      setShowCountdown(false);
+    }
+  }, [eventDetails]);
+
+  // Countdown timer effect - Update countdown every second
+  useEffect(() => {
+    if (!eventDetails || !eventDetails.date || !eventDetails.time || !showCountdown) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const timeRemaining = calculateTimeRemaining(eventDetails.date, eventDetails.time);
+
+      if (timeRemaining > 0) {
+        const formattedCountdown = formatCountdown(timeRemaining);
+        const status = getCountdownStatus(timeRemaining);
+
+        setCountdownText(formattedCountdown);
+        setCountdownStatus(status);
+      } else {
+        // Countdown expired - hide it
+        setShowCountdown(false);
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+      }
+    }, 1000);
+
+    countdownIntervalRef.current = interval;
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, [eventDetails, showCountdown]);
 
   const loadEventDetails = async (scheduleId: string) => {
     try {
@@ -378,6 +438,13 @@ const SeatSelectionPage: React.FC = () => {
             <span>{eventDetails.date}</span>
             <span>{eventDetails.time}</span>
           </p>
+          {showCountdown && countdownText && (
+            <div className={`event-countdown countdown-${countdownStatus}`}>
+              <span className="countdown-text">
+                <strong>Event starts in:</strong> {countdownText}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

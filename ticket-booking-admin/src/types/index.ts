@@ -63,12 +63,53 @@ export interface EventCategoryRequest {
 }
 
 export interface TicketCategory {
+  categoryId?: string;
   categoryName: string;
   description?: string;
   price: number;
   capacity: number;
   isSharedArea?: boolean;
   sharedAreaNumber?: number;
+  // Deal fields
+  dealActive?: boolean;
+  dealType?: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE';
+  dealDiscountPercentage?: number;
+  dealBuyQuantity?: number;
+  dealFreeQuantity?: number;
+  dealLabel?: string;
+  discountedPrice?: number;
+}
+
+export interface TicketCategoryDeal {
+  categoryId: string;
+  categoryName: string;
+  description?: string;
+  originalPrice: number;
+  discountedPrice: number;
+  dealType: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE';
+  dealDiscountPercentage?: number;
+  dealBuyQuantity?: number;
+  dealFreeQuantity?: number;
+  dealLabel?: string;
+  dealActive: boolean;
+  capacity: number;
+  isSharedArea: boolean;
+  sharedAreaNumber?: number;
+  eventId: string;
+  eventName: string;
+  eventImageUrl?: string;
+  eventStartDateTime?: string;
+  venueName?: string;
+}
+
+export interface TicketDealRequest {
+  categoryId: string;
+  dealActive: boolean;
+  dealType?: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE';
+  dealDiscountPercentage?: number;
+  dealBuyQuantity?: number;
+  dealFreeQuantity?: number;
+  dealLabel?: string;
 }
 
 export interface Event {

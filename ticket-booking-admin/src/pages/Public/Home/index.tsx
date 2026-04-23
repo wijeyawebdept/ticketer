@@ -253,11 +253,20 @@ const Home: React.FC = () => {
           const fullBannersWithImages = await Promise.all(
             sortedBanners.map(banner => 
               BannerService.getBannerById(banner.bannerId)
-                .catch(() => banner) // Fallback to banner without image if fetch fails
+                .catch((error) => {
+                  console.warn(`Failed to load banner ${banner.bannerId}, it may have been deactivated:`, error);
+                  return null; // Mark as failed, will be filtered out
+                })
             )
           );
           
-          setBanners(fullBannersWithImages);
+          // Filter out any banners that failed to load (e.g., deactivated)
+          // and only keep banners with image data
+          const validBanners = fullBannersWithImages.filter(
+            (banner): banner is BannerResponse => banner !== null && banner.imageBase64 !== undefined
+          );
+          
+          setBanners(validBanners);
         } else {
           // If no active banners, use empty array (will fallback to default images)
           setBanners([]);
@@ -271,8 +280,8 @@ const Home: React.FC = () => {
 
     loadBanners();
     
-    // Optional: Refresh banners every 30 seconds to catch real-time updates
-    const refreshInterval = setInterval(loadBanners, 30000);
+    // Refresh banners every 15 seconds to catch real-time updates (was 30s, now faster)
+    const refreshInterval = setInterval(loadBanners, 15000);
     return () => clearInterval(refreshInterval);
   }, []);
 
@@ -377,7 +386,7 @@ const Home: React.FC = () => {
           position: 'relative',
           width: '100%',
           overflow: 'hidden',
-          height: { xs: '300px', sm: '400px', md: '500px', lg: '600px' },
+          height: { xs: '200px', sm: '280px', md: '350px', lg: '420px' },
         }}
       >
         <Box
@@ -399,7 +408,7 @@ const Home: React.FC = () => {
                 height: '100%',
                 flexShrink: 0,
                 display: 'block',
-                objectFit: 'cover',
+                objectFit: 'contain',
                 objectPosition: 'center',
               }}
             />

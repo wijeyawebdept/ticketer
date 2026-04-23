@@ -30,6 +30,8 @@ import EventScheduleService from '../../../services/eventSchedule.service';
 import { Event, EventSchedule } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import axiosInstance from '../../../services/api';
+import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
+import './EventDetails.css';
 
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +60,10 @@ const EventDetails: React.FC = () => {
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
   const [checkingSeating, setCheckingSeating] = useState(true);
   const [showSeatingMessage, setShowSeatingMessage] = useState(false);
+  const [countdownText, setCountdownText] = useState<string>('');
+  const [showCountdown, setShowCountdown] = useState<boolean>(false);
+  const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
+  const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Check if venue has seating layout
   useEffect(() => {
@@ -199,6 +205,72 @@ const EventDetails: React.FC = () => {
       }
     }
   }, [isAuthenticated, id]);
+
+  // Countdown timer effect - Initialize countdown when event and selected showtime change
+  useEffect(() => {
+    if (!selectedShowtime || !schedules.length) {
+      setShowCountdown(false);
+      return;
+    }
+
+    const selected = schedules.find(s => s.scheduleId === selectedShowtime);
+    if (!selected) {
+      setShowCountdown(false);
+      return;
+    }
+
+    // Calculate initial countdown
+    const timeRemaining = calculateTimeRemaining(selected.scheduleDate, selected.startTime);
+
+    if (timeRemaining > 0) {
+      const formattedCountdown = formatCountdown(timeRemaining);
+      const status = getCountdownStatus(timeRemaining);
+
+      setCountdownText(formattedCountdown);
+      setCountdownStatus(status);
+      setShowCountdown(true);
+    } else {
+      setShowCountdown(false);
+    }
+  }, [selectedShowtime, schedules]);
+
+  // Countdown timer effect - Update countdown every second
+  useEffect(() => {
+    if (!selectedShowtime || !schedules.length || !showCountdown) {
+      return;
+    }
+
+    const selected = schedules.find(s => s.scheduleId === selectedShowtime);
+    if (!selected) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const timeRemaining = calculateTimeRemaining(selected.scheduleDate, selected.startTime);
+
+      if (timeRemaining > 0) {
+        const formattedCountdown = formatCountdown(timeRemaining);
+        const status = getCountdownStatus(timeRemaining);
+
+        setCountdownText(formattedCountdown);
+        setCountdownStatus(status);
+      } else {
+        // Countdown expired - hide it
+        setShowCountdown(false);
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+      }
+    }, 1000);
+
+    countdownIntervalRef.current = interval;
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, [selectedShowtime, schedules, showCountdown]);
 
   // Get ticket categories from event data
   const ticketCategories = event?.ticketCategories || [];
@@ -573,29 +645,66 @@ const EventDetails: React.FC = () => {
             >
               {/* Showtime Selection */}
               {schedules.length > 0 ? (
-                <Box
-                  sx={{
-                    marginTop: '20px',
-                    backgroundColor: '#eee',
-                    paddingTop: '10px',
-                    paddingBottom: '10px',
-                    paddingLeft: '15px',
-                    paddingRight: '15px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  <Typography
+                <Box>
+                  {showCountdown && countdownText && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 1,
+                        marginTop: '20px',
+                        marginBottom: '20px',
+                      }}
+                      className={`event-countdown countdown-${countdownStatus}`}
+                    >
+                      <Typography sx={{ 
+                        fontWeight: 800, 
+                        fontSize: '22px', 
+                        background: 'linear-gradient(135deg, #ff1955 0%, #ff4080 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        textShadow: '0 2px 4px rgba(255, 25, 85, 0.3)',
+                        margin: 0,
+                      }}>
+                        Event starts in:
+                      </Typography>
+                      <Typography sx={{ 
+                        fontSize: '18px', 
+                        color: '#250e2a5c', 
+                        fontWeight: 600,
+                        textShadow: '0 2px 8px rgba(255, 25, 85, 0.3)',
+                      }}>
+                        {countdownText}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box
                     sx={{
-                      marginTop: '15px',
+                      marginTop: '20px',
+                      backgroundColor: '#eee',
+                      paddingTop: '10px',
+                      paddingBottom: '10px',
+                      paddingLeft: '15px',
+                      paddingRight: '15px',
                       marginBottom: '10px',
-                      fontWeight: 700,
-                      fontFamily: 'Raleway, sans-serif',
-                      fontSize: '14px',
                     }}
                   >
-                    Select Show Time:
-                  </Typography>
-                  <RadioGroup
+                    <Typography
+                      sx={{
+                        marginTop: '15px',
+                        marginBottom: '10px',
+                        fontWeight: 700,
+                        fontFamily: 'Raleway, sans-serif',
+                        fontSize: '14px',
+                      }}
+                    >
+                      Select Show Time:
+                    </Typography>
+                    <RadioGroup
                     value={selectedShowtime}
                     onChange={handleShowtimeChange}
                     sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
@@ -623,6 +732,7 @@ const EventDetails: React.FC = () => {
                       );
                     })}
                   </RadioGroup>
+                  </Box>
                 </Box>
               ) : (
                 <Box
@@ -663,7 +773,7 @@ const EventDetails: React.FC = () => {
                   <Typography fontWeight="bold">SEAT TYPE</Typography>
                 </Grid>
                 <Grid item xs={4}>
-                  <Typography fontWeight="bold">FULL(RS.)</Typography>
+                  <Typography fontWeight="bold">PRICE (RS.)</Typography>
                 </Grid>
                 <Grid item xs={4}>
                   <Typography fontWeight="bold">Tickets</Typography>
@@ -675,8 +785,20 @@ const EventDetails: React.FC = () => {
                 ticketCategories.map((category: any, index: number) => {
                   const categoryName = category.categoryName || category.name;
                   const categoryPrice = category.price || 0;
+                  const hasActiveDeal = Boolean(category.dealActive);
+                  const isPctDeal = hasActiveDeal && (!category.dealType || category.dealType === 'PERCENTAGE_DISCOUNT') && category.dealDiscountPercentage > 0;
+                  const isBuyGetDeal = hasActiveDeal && category.dealType === 'BUY_X_GET_Y_FREE';
+                  const discountedPrice = isPctDeal
+                    ? categoryPrice * (1 - (category.dealDiscountPercentage || 0) / 100)
+                    : categoryPrice;
                   const maxCapacity = Math.min(category.capacity || 10, 10);
                   
+                  // Build badge label
+                  const badgeLabel = category.dealLabel
+                    || (isPctDeal ? `${category.dealDiscountPercentage}% OFF`
+                    : isBuyGetDeal ? `Buy ${category.dealBuyQuantity} Get ${category.dealFreeQuantity} Free`
+                    : 'Deal');
+                  const badgeColor = isBuyGetDeal ? '#7b1fa2' : '#00c853';
                   return (
                     <Grid
                       key={index}
@@ -685,13 +807,55 @@ const EventDetails: React.FC = () => {
                         borderBottom: '1px solid #444',
                         pb: 2,
                         mb: 2,
+                        alignItems: 'center',
                       }}
                     >
                       <Grid item xs={4}>
-                        <Typography variant="body2">{categoryName}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{categoryName}</Typography>
+                        {hasActiveDeal && (
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              backgroundColor: badgeColor,
+                              color: '#fff',
+                              borderRadius: '4px',
+                              px: 0.75,
+                              py: 0.25,
+                              mt: 0.5,
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              letterSpacing: '0.5px',
+                            }}
+                          >
+                            🏷 {badgeLabel}
+                          </Box>
+                        )}
                       </Grid>
                       <Grid item xs={4}>
-                        <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                        {isPctDeal ? (
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{ textDecoration: 'line-through', color: '#999', display: 'block' }}
+                            >
+                              Rs.{Number(categoryPrice).toFixed(2)}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: '#e53935' }}>
+                              Rs.{Number(discountedPrice).toFixed(2)}
+                            </Typography>
+                          </Box>
+                        ) : isBuyGetDeal ? (
+                          <Box>
+                            <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 600 }}>
+                              {category.dealFreeQuantity} free with {category.dealBuyQuantity}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                        )}
                       </Grid>
                       <Grid item xs={4}>
                         <FormControl fullWidth size="small">

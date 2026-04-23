@@ -159,6 +159,13 @@ public class BannerServiceImpl implements BannerService {
     public BannerResponse getBannerById(UUID bannerId) {
         Banner banner = bannerRepository.findById(bannerId)
                 .orElseThrow(() -> new RuntimeException("Banner not found"));
+        
+        // Check if banner is ACTIVE for public access
+        if (banner.getStatus() != BannerStatus.ACTIVE) {
+            log.warn("Attempted to access inactive banner: {} with status: {}", bannerId, banner.getStatus());
+            throw new RuntimeException("Banner is not available");
+        }
+        
         return convertToResponse(banner);
     }
 
