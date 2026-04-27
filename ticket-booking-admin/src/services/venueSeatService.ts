@@ -256,7 +256,6 @@ export class SeatWebSocketService {
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {
-      console.log('WebSocket connected for event:', this.eventScheduleId);
     };
 
     this.socket.onmessage = (event) => {
@@ -264,16 +263,13 @@ export class SeatWebSocketService {
         const updatedSeats: SeatDTO[] = JSON.parse(event.data);
         this.onUpdate(updatedSeats);
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
       }
     };
 
     this.socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
     };
 
     this.socket.onclose = () => {
-      console.log('WebSocket disconnected');
       // Attempt reconnection after 5 seconds
       setTimeout(() => this.connect(), 5000);
     };

@@ -61,7 +61,6 @@ const Admins: React.FC = () => {
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Starting to fetch admins...');
       
       // Build query parameters
       const params = new URLSearchParams();
@@ -77,7 +76,6 @@ const Admins: React.FC = () => {
         : '/api/admin/admins';
       
       const response = await api.get<{ content: Admin[] }>(url);
-      console.log('Admins data received:', response.data);
       
       const adminsData = response.data.content || [];
       
@@ -85,12 +83,10 @@ const Admins: React.FC = () => {
       let filteredAdmins = adminsData;
       if (!isSuperAdmin()) {
         filteredAdmins = adminsData.filter(admin => admin.role !== 'SUPER_ADMIN');
-        console.log('Filtered admins (excluding SUPER_ADMIN):', filteredAdmins);
       }
       
       setAdmins(filteredAdmins);
     } catch (error) {
-      console.error('Error fetching admins:', error);
     } finally {
       setLoading(false);
     }
@@ -144,7 +140,6 @@ const Admins: React.FC = () => {
       fetchAdmins();
       handleDeleteDialogClose();
     } catch (error) {
-      console.error('Error deleting admin:', error);
     }
   };
 
@@ -153,7 +148,6 @@ const Admins: React.FC = () => {
       await api.patch(`/api/admin/admins/${adminId}/activate`);
       fetchAdmins();
     } catch (error) {
-      console.error('Error activating admin:', error);
     }
   };
 
@@ -162,7 +156,6 @@ const Admins: React.FC = () => {
       await api.patch(`/api/admin/admins/${adminId}/deactivate`);
       fetchAdmins();
     } catch (error) {
-      console.error('Error deactivating admin:', error);
     }
   };
 
@@ -179,7 +172,6 @@ const Admins: React.FC = () => {
       setSelectedAdminIds([]);
       fetchAdmins();
     } catch (error) {
-      console.error('Error performing bulk operation:', error);
     }
   };
 

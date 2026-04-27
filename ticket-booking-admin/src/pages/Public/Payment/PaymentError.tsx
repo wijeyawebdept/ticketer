@@ -39,7 +39,6 @@ const PaymentError: React.FC = () => {
             setErrorMessage(result.message);
           }
         } catch (err: any) {
-          console.error('Error checking payment status:', err);
         }
       }
 

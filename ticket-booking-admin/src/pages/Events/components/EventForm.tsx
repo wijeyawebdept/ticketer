@@ -109,7 +109,9 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(event?.imageUrl || null);
+  // For edit mode: keep existing URL as preview until a new file is chosen
+  const existingImageUrl = event?.imageUrl || null;
+  const [imagePreview, setImagePreview] = useState<string | null>(existingImageUrl);
   const [uploading, setUploading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venueLoading, setVenueLoading] = useState(false);
@@ -195,10 +197,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         }
         break;
         
-      case 3: // Media & Publish (required image upload)
-        // Check if image is uploaded (required field)
-        // If editing existing event with image, skip this validation
-        if (!event?.imageUrl && !values.imageFile && !imagePreview) {
+      case 3: // Media & Publish
+        // Image is required only when CREATING a new event
+        // When editing, the existing image (existingImageUrl) is kept if no new file is chosen
+        if (!existingImageUrl && !values.imageFile && !imagePreview) {
           stepErrorMessages.push('Event image is required');
         }
         break;
@@ -274,7 +276,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         const venueData = await VenueService.getAllVenues();
         setVenues(venueData);
       } catch (error) {
-        console.error('Error fetching venues:', error);
       } finally {
         setVenueLoading(false);
       }
@@ -291,7 +292,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         const categoryData = await EventCategoryService.getActiveCategories();
         setCategories(categoryData);
       } catch (error) {
-        console.error('Error fetching categories:', error);
       } finally {
         setCategoryLoading(false);
       }
@@ -301,17 +301,13 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   }, []);
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
-    console.log('=== IMAGE CHANGE HANDLER CALLED ===');
     const file = e.target.files?.[0];
-    console.log('Selected file:', file);
     
     if (file) {
-      console.log('File details:', { name: file.name, type: file.type, size: file.size });
       
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        console.log('Invalid file type:', file.type);
         setValidationError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
         e.target.value = ''; // Clear the input
         return;
@@ -320,28 +316,23 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB in bytes
       if (file.size > maxSize) {
-        console.log('File too large:', file.size);
         setValidationError('Image size must not exceed 5MB. Please choose a smaller file.');
         e.target.value = ''; // Clear the input
         return;
       }
       
-      console.log('File validation passed, setting image states...');
       setValidationError(null);
       setSelectedImage(file);
       setFieldValue('imageFile', file);
-      console.log('selectedImage state updated, imageFile field set');
       
       // Create a preview
       const reader = new FileReader();
       reader.onload = (e) => {
         const preview = e.target?.result as string || null;
-        console.log('Preview created:', preview ? 'Yes' : 'No');
         setImagePreview(preview);
       };
       reader.readAsDataURL(file);
     } else {
-      console.log('No file selected');
     }
   };
 
@@ -446,18 +437,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             [EventStatus.DRAFT, EventStatus.PUBLISHED, EventStatus.CANCELLED, EventStatus.COMPLETED],
             'Invalid event status selected'
           ),
-        imageFile: Yup.mixed()
-          .test('file-required', 'Event image is required', function(value) {
-            // If editing existing event with image, imageFile is optional (can keep existing image)
-            // If creating new event, imageFile is required
-            if (event?.imageUrl) {
-              // Editing: optional
-              return true;
-            } else {
-              // Creating: required
-              return value !== null;
-            }
-          }),
+        imageFile: Yup.mixed().nullable(), // Image validation handled by validateStep
         ticketCategories: Yup.array().of(
           Yup.object().shape({
             categoryName: Yup.string()
@@ -497,16 +477,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         })
       })}
       onSubmit={async (values: FormValues, { setSubmitting, resetForm, setErrors, validateForm, setTouched }: FormikHelpers<FormValues>) => {
-        console.log('=== FORM SUBMISSION STARTED ===');
-        console.log('Form values:', values);
-        console.log('Is editing existing event:', !!event?.id);
-        console.log('Event ID:', event?.id);
-        console.log('Selected image:', selectedImage);
         
         try {
-          // Validate all steps before submission
+          // Validate ALL steps including step 3 (Media)
           const allErrors: { [key: number]: string[] } = {};
-          for (let i = 0; i < steps.length - 1; i++) {
+          for (let i = 0; i < steps.length; i++) {
             const stepErrs = validateStep(i, values, {}, {});
             if (stepErrs.length > 0) {
               allErrors[i] = stepErrs;
@@ -564,7 +539,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 return;
               }
             } catch (error) {
-              console.error('Error checking event schedules:', error);
               setValidationError('Failed to verify event schedules. Please try again.');
               setSubmitting(false);
               setUploading(false);
@@ -589,39 +563,28 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 isSharedArea: category.isSharedArea || false,
                 sharedAreaNumber: category.sharedAreaNumber || null
               };
-              console.log('Mapping ticket category:', category.categoryName, '-> isSharedArea:', mapped.isSharedArea, 'sharedAreaNumber:', mapped.sharedAreaNumber);
               return mapped;
             })
           };
           
-          console.log('=== TICKET CATEGORIES BEING SENT ===');
           eventDataForApi.ticketCategories.forEach((cat: any, idx: number) => {
-            console.log(`Category ${idx + 1}: ${cat.categoryName}, isSharedArea: ${cat.isSharedArea}, sharedAreaNumber: ${cat.sharedAreaNumber}`);
           });
           
           let savedEvent;
           
           if (event?.id) {
             // Update existing event
-            console.log('Updating event with ID:', event.id);
-            console.log('Event data:', eventDataForApi);
             savedEvent = await EventService.updateEvent(event.id, eventDataForApi);
-            console.log('Event updated successfully:', savedEvent);
           } else {
             // Create new event
-            console.log('Creating new event');
-            console.log('Event data:', eventDataForApi);
             savedEvent = await EventService.createEvent(eventDataForApi);
-            console.log('Event created successfully:', savedEvent);
           }
           
           // Upload the image if one is selected
           if (selectedImage && savedEvent.id) {
-            console.log('Uploading image for event ID:', savedEvent.id);
             const formData = new FormData();
             formData.append('file', selectedImage);
             const imageUrl = await EventService.uploadEventImage(savedEvent.id, formData);
-            console.log('Image uploaded successfully:', imageUrl);
           }
           
           setValidationError(null);
@@ -630,12 +593,9 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           setImagePreview(null);
           if (onSuccess) onSuccess();
         } catch (error) {
-          console.error('=== FORM SUBMISSION ERROR ===');
-          console.error(`Error ${event ? 'updating' : 'creating'} event:`, error);
           
           // Extract error message from API response
           const apiError = error as ApiError;
-          console.error('API Error response:', apiError.response);
           
           if (apiError.response?.data?.message) {
             setValidationError(apiError.response.data.message);
@@ -800,7 +760,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 return; // Don't change the status
                               }
                             } catch (error) {
-                              console.error('Error checking event schedules:', error);
                               setSnackbar({ 
                                 open: true, 
                                 message: 'Failed to verify event schedules. Please try again.', 
@@ -1349,28 +1308,48 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
               
             case 3:
               // Step 4: Media & Publish
+              // Determine whether image upload is required (only when creating)
+              const isEditMode = Boolean(existingImageUrl);
+              const imageIsValid = Boolean(imagePreview); // either existing URL or newly selected file
               return (
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                      Event Image <span style={{ color: '#d32f2f' }}>*</span>
+                      Event Image{!isEditMode && <span style={{ color: '#d32f2f' }}> *</span>}
+                      {isEditMode && (
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1, fontWeight: 'normal' }}>
+                          (optional — existing image kept if not changed)
+                        </Typography>
+                      )}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Upload an eye-catching image to attract more attendees. This is required. Recommended size: 1920x1080px
+                      {isEditMode
+                        ? 'You can replace the existing image or leave it unchanged. Recommended size: 1920x1080px'
+                        : 'Upload an eye-catching image to attract more attendees. This is required. Recommended size: 1920x1080px'}
                     </Typography>
                     
-                    <Card sx={{ p: 3, borderRadius: 2, border: '2px dashed', borderColor: imagePreview ? 'success.main' : (errors.imageFile && touched.imageFile ? 'error.main' : 'divider'), bgcolor: imagePreview ? 'success.50' : 'background.paper' }}>
+                    <Card sx={{
+                      p: 3, borderRadius: 2, border: '2px dashed',
+                      borderColor: imageIsValid ? 'success.main' : (errors.imageFile && touched.imageFile && !isEditMode ? 'error.main' : 'divider'),
+                      bgcolor: imageIsValid ? 'success.50' : 'background.paper'
+                    }}>
                       <Box sx={{ textAlign: 'center' }}>
-                        <CloudUploadIcon sx={{ fontSize: 48, color: imagePreview ? 'success.main' : (errors.imageFile && touched.imageFile ? 'error.main' : 'text.secondary'), mb: 2 }} />
+                        <CloudUploadIcon sx={{
+                          fontSize: 48,
+                          color: imageIsValid ? 'success.main' : (errors.imageFile && touched.imageFile && !isEditMode ? 'error.main' : 'text.secondary'),
+                          mb: 2
+                        }} />
                         <Button
-                          variant={imagePreview ? "outlined" : "contained"}
+                          variant={imageIsValid ? "outlined" : "contained"}
                           component="label"
-                          startIcon={imagePreview ? <CheckCircleIcon /> : <CloudUploadIcon />}
-                          color={imagePreview ? "success" : "primary"}
+                          startIcon={imageIsValid ? <CheckCircleIcon /> : <CloudUploadIcon />}
+                          color={imageIsValid ? "success" : "primary"}
                           size="large"
                           sx={{ mb: 1 }}
                         >
-                          {imagePreview ? 'Image Selected - Change' : 'Choose Event Image *'}
+                          {imageIsValid
+                            ? (selectedImage ? 'New Image Selected — Change' : 'Current Image — Change')
+                            : 'Choose Event Image *'}
                           <input
                             type="file"
                             accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -1381,11 +1360,13 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                             }}
                           />
                         </Button>
-                        <FormHelperText 
-                          error={Boolean(errors.imageFile && touched.imageFile)}
+                        <FormHelperText
+                          error={Boolean(errors.imageFile && touched.imageFile && !isEditMode)}
                           sx={{ textAlign: 'center', fontSize: '0.875rem' }}
                         >
-                          {errors.imageFile && touched.imageFile ? errors.imageFile as string : 'Supported formats: JPEG, PNG, GIF, WebP (max 5MB) - Required'}
+                          {errors.imageFile && touched.imageFile && !isEditMode
+                            ? errors.imageFile as string
+                            : 'Supported formats: JPEG, PNG, GIF, WebP (max 5MB)'}
                         </FormHelperText>
                       </Box>
                       
@@ -1393,7 +1374,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                         <Box sx={{ mt: 3 }}>
                           <Typography variant="subtitle2" gutterBottom sx={{ textAlign: 'center', color: 'success.main', mb: 2 }}>
                             <CheckCircleIcon sx={{ fontSize: 18, verticalAlign: 'middle', mr: 0.5 }} />
-                            Preview:
+                            {selectedImage ? 'New Image Preview:' : 'Current Image Preview:'}
                           </Typography>
                           <ImagePreview src={imagePreview} alt="Event preview" />
                           {selectedImage && (
@@ -1528,12 +1509,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     disabled={isSubmitting || uploading}
                     startIcon={uploading ? <CircularProgress size={20} /> : <SaveIcon />}
                     onClick={() => {
-                      console.log('=== SUBMIT BUTTON CLICKED ===');
-                      console.log('Active step:', activeStep);
-                      console.log('Steps length:', steps.length);
-                      console.log('Is submitting:', isSubmitting);
-                      console.log('Is uploading:', uploading);
-                      console.log('Button disabled:', isSubmitting || uploading);
                     }}
                   >
                     {getButtonText(uploading, isSubmitting, values.status)}

@@ -60,7 +60,6 @@ const Organizers: React.FC = () => {
   const fetchOrganizers = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Starting to fetch organizers...');
       
       // Build query parameters for search and filter
       const params = new URLSearchParams();
@@ -76,12 +75,10 @@ const Organizers: React.FC = () => {
         : '/api/admin/organizers';
       
       const response = await api.get<{ content: Organizer[] }>(url);
-      console.log('Organizers data received:', response.data);
       
       const organizersData = response.data.content || [];
       setOrganizers(organizersData);
     } catch (error) {
-      console.error('Error fetching organizers:', error);
     } finally {
       setLoading(false);
     }
@@ -135,7 +132,6 @@ const Organizers: React.FC = () => {
       fetchOrganizers();
       handleDeleteDialogClose();
     } catch (error) {
-      console.error('Error deleting organizer:', error);
     }
   };
 
@@ -144,7 +140,6 @@ const Organizers: React.FC = () => {
       await api.patch(`/api/admin/organizers/${organizerId}/activate`);
       fetchOrganizers();
     } catch (error) {
-      console.error('Error activating organizer:', error);
     }
   };
 
@@ -153,7 +148,6 @@ const Organizers: React.FC = () => {
       await api.patch(`/api/admin/organizers/${organizerId}/deactivate`);
       fetchOrganizers();
     } catch (error) {
-      console.error('Error deactivating organizer:', error);
     }
   };
 
@@ -173,7 +167,6 @@ const Organizers: React.FC = () => {
       setSelectedOrganizerIds([]);
       fetchOrganizers();
     } catch (error) {
-      console.error('Error performing bulk operation:', error);
     }
   };
 

@@ -73,7 +73,6 @@ const UserDetailsDialog: React.FC<UserDetailsDialogProps> = ({ userId, open, onC
       const data = await UserService.getUserDetails(userId);
       setUserDetails(data);
     } catch (error) {
-      console.error('Error fetching user details:', error);
     } finally {
       setLoading(false);
     }

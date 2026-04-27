@@ -69,7 +69,6 @@ class UserService {
     page?: number;
     size?: number;
   }): Promise<User[]> {
-    console.log(' Fetching users from API with params:', params);
     
     const queryParams = new URLSearchParams();
     if (params?.search) queryParams.append('search', params.search);
@@ -80,7 +79,6 @@ class UserService {
     
     const url = `/api/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await api.get<PaginatedResponse<User>>(url);
-    console.log(' Raw API response:', response.data);
     
     // Extract the users array from the paginated response
     return response.data.content || [];

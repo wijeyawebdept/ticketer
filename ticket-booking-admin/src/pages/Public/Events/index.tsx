@@ -50,7 +50,6 @@ const Events: React.FC = () => {
       setEvents(sortedEvents);
       setTotalPages(response.totalPages || 0);
     } catch (error) {
-      console.error('Error loading events:', error);
     } finally {
       setLoading(false);
     }
@@ -70,7 +69,6 @@ const Events: React.FC = () => {
     if (eventId) {
       navigate(`/event/${eventId}`);
     } else {
-      console.error('Event ID is missing:', event);
     }
   };
 

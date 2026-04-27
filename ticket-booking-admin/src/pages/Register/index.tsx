@@ -184,9 +184,7 @@ const Register: React.FC = () => {
       setRegisteredEmail(values.email);
       setVerificationStep(true);
     } catch (err: any) {
-      console.error('Registration error details:', err);
       if (err.response?.data?.errors) {
-        console.error('Validation errors:', err.response.data.errors);
       }
       
       let errorMessage = 'Registration failed. Please check your information and try again.';

@@ -84,7 +84,6 @@ export default function PageContentManager() {
           }));
         } catch (error) {
           // If page doesn't exist yet, initialize with empty values
-          console.warn(`Page content not found for ${page.key}`);
           setFormData(prev => ({
             ...prev,
             [page.key]: {
@@ -97,7 +96,6 @@ export default function PageContentManager() {
       
       setContents(allContents);
     } catch (error) {
-      console.error('Error loading page contents:', error);
       setSnackbar({
         open: true,
         message: 'Error loading page contents',
@@ -161,7 +159,6 @@ export default function PageContentManager() {
       // Reload to get updated data
       loadAllPageContents();
     } catch (error) {
-      console.error('Error saving page content:', error);
       setSnackbar({
         open: true,
         message: 'Error saving page content',

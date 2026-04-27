@@ -185,8 +185,6 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
       // Fetch full availability including shared areas (eventId here is actually scheduleId)
       const availability = await seatBookingService.getSeatAvailabilityWithSharedAreas(eventId);
       
-      console.log('Availability response:', availability);
-      console.log('Shared areas:', availability.sharedAreas);
       
       // Transform SeatDTOs to SeatWithStatus using the new method
       const seatsWithStatus = seatBookingService.transformSeatDTOsWithStatus(
@@ -199,11 +197,9 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
       
       // Set shared/standing areas from availability response
       if (availability.sharedAreas && availability.sharedAreas.length > 0) {
-        console.log('Setting standing areas:', availability.sharedAreas);
         setStandingAreas(availability.sharedAreas);
       }
     } catch (err: any) {
-      console.error('Error fetching seats:', err);
       setError(err.message || 'Failed to load seats');
     } finally {
       setLoading(false);

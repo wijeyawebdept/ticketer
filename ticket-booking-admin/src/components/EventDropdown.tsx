@@ -80,7 +80,6 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
       
       setEvents(eventsData);
     } catch (error) {
-      console.error('Error fetching events:', error);
       setErrorMessage('Failed to load events. Please try again.');
     } finally {
       setLoading(false);

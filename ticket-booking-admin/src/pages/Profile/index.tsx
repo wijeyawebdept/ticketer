@@ -73,7 +73,6 @@ const Profile: React.FC = () => {
       setProfile(profileData);
       setLoginEmailEnabled(profileData.loginEmailEnabled ?? true);
     } catch (error) {
-      console.error('Error loading profile:', error);
       showSnackbar('Failed to load profile', 'error');
     } finally {
       setLoading(false);
@@ -99,7 +98,6 @@ const Profile: React.FC = () => {
       setEditing(false);
       showSnackbar('Profile updated successfully', 'success');
     } catch (error) {
-      console.error('Error updating profile:', error);
       showSnackbar('Failed to update profile', 'error');
     }
   };
@@ -116,7 +114,6 @@ const Profile: React.FC = () => {
       await loadProfile();
       showSnackbar('Profile picture updated successfully', 'success');
     } catch (error) {
-      console.error('Error uploading profile picture:', error);
       showSnackbar('Failed to upload profile picture', 'error');
     } finally {
       setUploading(false);

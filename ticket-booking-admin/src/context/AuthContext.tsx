@@ -46,7 +46,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Listen for custom auth refresh events (triggered after login/logout)
   useEffect(() => {
     const handleAuthRefresh = () => {
-      console.log('Auth refresh event received');
       loadUser();
     };
 
@@ -75,7 +74,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Invalid login response format');
       }
     } catch (error) {
-      console.error('Login failed:', error);
       throw error;
     }
   }, []);

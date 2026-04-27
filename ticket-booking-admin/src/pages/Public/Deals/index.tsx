@@ -43,7 +43,6 @@ const Deals: React.FC = () => {
         const data = await dealService.getPublicDeals();
         setDeals(data);
       } catch (err) {
-        console.error('Failed to load deals:', err);
       } finally {
         setLoading(false);
       }

@@ -34,7 +34,6 @@ const Transactions: React.FC = () => {
       const data = await TransactionService.getAllTransactions();
       setTransactions(data);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
     } finally {
       setLoading(false);
     }

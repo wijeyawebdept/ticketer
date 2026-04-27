@@ -23,7 +23,6 @@ export const calculateTimeRemaining = (targetDate: string, targetTime: string): 
     // Return 0 if time has passed, otherwise return remaining time
     return remaining > 0 ? remaining : 0;
   } catch (error) {
-    console.error('Error calculating time remaining:', error);
     return 0;
   }
 };

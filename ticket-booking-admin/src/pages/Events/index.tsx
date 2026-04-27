@@ -67,7 +67,6 @@ const Events: React.FC = () => {
     setLoading(true);
     try {
       const response = await EventService.getAllEvents();
-      console.log('Events - Raw API response:', response);
       
       // Handle Page response from backend
       let eventsData: any[] = [];
@@ -84,7 +83,6 @@ const Events: React.FC = () => {
       
       setEvents(eventsData);
     } catch (error) {
-      console.error('Error fetching events:', error);
     } finally {
       setLoading(false);
     }
@@ -133,7 +131,6 @@ const Events: React.FC = () => {
           return;
         }
       } catch (error) {
-        console.error('Error checking event schedules:', error);
         setSnackbar({ 
           open: true, 
           message: 'Failed to verify event schedules. Please try again.', 
@@ -149,7 +146,6 @@ const Events: React.FC = () => {
       fetchEvents(); // Refresh the events list
       handleContextMenuClose();
     } catch (error) {
-      console.error('Error changing event status:', error);
       setSnackbar({ 
         open: true, 
         message: 'Failed to change event status. Please try again.', 
@@ -179,7 +175,6 @@ const Events: React.FC = () => {
       fetchEvents();
       handleDeleteDialogClose();
     } catch (error) {
-      console.error('Error moving event to recycle bin:', error);
     }
   };
 
@@ -218,7 +213,6 @@ const Events: React.FC = () => {
       setSelectedEventIds([]);
       fetchEvents();
     } catch (error) {
-      console.error('Error bulk publishing events:', error);
       setSnackbar({ 
         open: true, 
         message: 'Failed to publish some events. Please try again.', 
@@ -237,7 +231,6 @@ const Events: React.FC = () => {
       setSelectedEventIds([]);
       fetchEvents();
     } catch (error) {
-      console.error('Error bulk deactivating events:', error);
     }
   };
 
@@ -255,7 +248,6 @@ const Events: React.FC = () => {
       setSelectedEventIds([]);
       fetchEvents();
     } catch (error) {
-      console.error('Error bulk deleting events:', error);
     }
   };
 
@@ -385,9 +377,6 @@ const Events: React.FC = () => {
           </IconButton>
           <IconButton
             onClick={() => {
-              console.log('Schedule button clicked - Full row data:', params.row);
-              console.log('Schedule button clicked - eventId:', params.row.eventId);
-              console.log('Schedule button clicked - id:', params.row.id);
               const idToUse = params.row.eventId || params.row.id;
               if (idToUse && idToUse !== 'undefined') {
                 // Detect user role and navigate to appropriate path
@@ -407,12 +396,10 @@ const Events: React.FC = () => {
                       basePath = '/employee';
                     }
                   } catch (e) {
-                    console.error('Error parsing user:', e);
                   }
                 }
                 navigate(`${basePath}/events/${idToUse}/schedules`);
               } else {
-                console.error('Cannot navigate - no valid ID found in row:', params.row);
               }
             }}
             size="small"

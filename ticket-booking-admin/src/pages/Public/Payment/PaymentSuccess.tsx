@@ -50,7 +50,6 @@ const PaymentSuccess: React.FC = () => {
           setError(result.message || 'Payment verification failed');
         }
       } catch (err: any) {
-        console.error('Payment verification error:', err);
         setError('Failed to verify payment. Please contact support.');
       } finally {
         setLoading(false);

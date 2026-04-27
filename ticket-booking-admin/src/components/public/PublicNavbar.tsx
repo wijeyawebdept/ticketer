@@ -50,7 +50,6 @@ const PublicNavbar: React.FC = () => {
         const categoryData = await EventCategoryService.getPublicActiveCategories();
         setCategories(categoryData);
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
       }
     };
 
@@ -65,7 +64,6 @@ const PublicNavbar: React.FC = () => {
           const profileData = await profileService.getProfile();
           setProfile(profileData);
         } catch (error) {
-          console.error('Failed to fetch profile:', error);
         }
       } else {
         setProfile(null);

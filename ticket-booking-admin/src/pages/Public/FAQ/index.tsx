@@ -22,7 +22,6 @@ const FAQ: React.FC = () => {
       setTitle(data.title);
       setContent(data.content);
     } catch (err) {
-      console.error('Error loading FAQ:', err);
       setError(true);
       setContent(getDefaultContent());
     } finally {

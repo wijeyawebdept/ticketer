@@ -254,7 +254,6 @@ const Home: React.FC = () => {
             sortedBanners.map(banner => 
               BannerService.getBannerById(banner.bannerId)
                 .catch((error) => {
-                  console.warn(`Failed to load banner ${banner.bannerId}, it may have been deactivated:`, error);
                   return null; // Mark as failed, will be filtered out
                 })
             )
@@ -272,7 +271,6 @@ const Home: React.FC = () => {
           setBanners([]);
         }
       } catch (error) {
-        console.warn('Failed to load banners, using default images:', error);
         // Fall back to default images silently
         setBanners([]);
       }
@@ -324,7 +322,6 @@ const Home: React.FC = () => {
         
         setEvents(filteredEvents);
       } catch (error) {
-        console.error('Error loading events:', error);
       } finally {
         setLoading(false);
       }

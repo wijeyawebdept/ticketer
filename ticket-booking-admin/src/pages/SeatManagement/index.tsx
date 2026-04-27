@@ -124,7 +124,6 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         setSelectedSchedule(eventSchedules[0]);
       }
     } catch (err: any) {
-      console.error('Failed to load schedules:', err);
       setSchedules([]);
     }
   }, []);

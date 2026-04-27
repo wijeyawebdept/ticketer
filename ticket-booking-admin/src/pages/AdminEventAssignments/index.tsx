@@ -131,7 +131,6 @@ const AdminEventAssignments: React.FC = () => {
       setOrganizers(organizersData.data.content || organizersData.data);
     } catch (error) {
       showErrorToast('Failed to load data');
-      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -147,7 +146,6 @@ const AdminEventAssignments: React.FC = () => {
       // Handle paginated response
       return response.data.content || response.data;
     } catch (error) {
-      console.error('Error fetching employees:', error);
       return [];
     }
   };
@@ -181,7 +179,6 @@ const AdminEventAssignments: React.FC = () => {
       fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to assign employees');
-      console.error('Error assigning employees:', error);
     }
   };
 
@@ -202,7 +199,6 @@ const AdminEventAssignments: React.FC = () => {
       fetchData();
     } catch (error) {
       showErrorToast('Failed to update assignment');
-      console.error('Error updating assignment:', error);
     }
   };
 
@@ -210,18 +206,14 @@ const AdminEventAssignments: React.FC = () => {
     if (!unassigningEmployee) return;
 
     try {
-      console.log('Unassigning employee:', unassigningEmployee.employeeId, 'from event:', unassigningEmployee.eventId);
       await api.delete(`/api/admin/event-assignments/events/${unassigningEmployee.eventId}/employees/${unassigningEmployee.employeeId}`);
-      console.log('Unassign successful, refreshing data...');
       showSuccessToast('Employee unassigned successfully');
       setUnassignDialogOpen(false);
       setUnassigningEmployee(null);
       // Force immediate refresh
       await fetchData();
-      console.log('Data refreshed, assignments count:', assignments.length);
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to unassign employee');
-      console.error('Error unassigning employee:', error);
     }
   };
 
@@ -235,17 +227,11 @@ const AdminEventAssignments: React.FC = () => {
   
   const getOrganizerEvents = (organizerId: string) => {
     const filteredEvents = events.filter(event => event.organizer?.id === organizerId);
-    console.log('getOrganizerEvents called with:', organizerId);
-    console.log('All events:', events);
-    console.log('Filtered events:', filteredEvents);
     return filteredEvents;
   };
   
   const getOrganizerEmployees = (organizerId: string) => {
     const filteredEmployees = employees.filter(emp => emp.organizerId === organizerId && emp.active);
-    console.log('getOrganizerEmployees called with:', organizerId);
-    console.log('All employees:', employees);
-    console.log('Filtered employees:', filteredEmployees);
     return filteredEmployees;
   };
 
@@ -458,9 +444,7 @@ const AdminEventAssignments: React.FC = () => {
                   value={selectedEventId}
                   onChange={(e) => {
                     const value = typeof e.target.value === 'string' ? e.target.value : '';
-                    console.log('Event selected - raw value:', e.target.value, 'processed:', value);
                     const selectedEvent = events.find(ev => ev.eventId === value);
-                    console.log('Selected event object:', selectedEvent);
                     setSelectedEventId(value);
                     setSelectedEmployeeIds([]);
                   }}
@@ -493,7 +477,6 @@ const AdminEventAssignments: React.FC = () => {
                   multiple
                   value={selectedEmployeeIds}
                   onChange={(e) => {
-                    console.log('Employees selected:', e.target.value);
                     setSelectedEmployeeIds(e.target.value as string[]);
                   }}
                   label="Step 3: Select Employees"

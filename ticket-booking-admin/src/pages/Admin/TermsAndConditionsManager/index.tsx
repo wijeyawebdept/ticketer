@@ -44,7 +44,6 @@ const TermsAndConditionsManager: React.FC = () => {
       setContent(data);
       setFormData({ title: data.title, content: data.content });
     } catch (error) {
-      console.error('Error loading terms and conditions:', error);
       setSnackbar({ open: true, message: 'Error loading terms and conditions', severity: 'error' });
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ const TermsAndConditionsManager: React.FC = () => {
       setEditDialogOpen(false);
       loadContent();
     } catch (error) {
-      console.error('Error saving terms and conditions:', error);
       setSnackbar({ open: true, message: 'Error saving terms and conditions', severity: 'error' });
     } finally {
       setSaving(false);

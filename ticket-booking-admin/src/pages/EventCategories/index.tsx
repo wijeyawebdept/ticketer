@@ -56,7 +56,6 @@ const EventCategories: React.FC = () => {
       const response = await EventCategoryService.getAllCategories();
       setCategories(response);
     } catch (error) {
-      console.error('Error fetching categories:', error);
       setSnackbar({ open: true, message: 'Failed to load categories', severity: 'error' });
     } finally {
       setLoading(false);
@@ -95,7 +94,6 @@ const EventCategories: React.FC = () => {
       fetchCategories();
       handleDialogClose();
     } catch (error: any) {
-      console.error('Error saving category:', error);
       const errorMessage = error.response?.data?.message || 'Failed to save category';
       setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     } finally {
@@ -112,7 +110,6 @@ const EventCategories: React.FC = () => {
       fetchCategories();
       handleDeleteDialogClose();
     } catch (error) {
-      console.error('Error deleting category:', error);
       setSnackbar({ open: true, message: 'Failed to delete category', severity: 'error' });
     }
   };
@@ -123,7 +120,6 @@ const EventCategories: React.FC = () => {
       setSnackbar({ open: true, message: 'Category restored successfully', severity: 'success' });
       fetchCategories();
     } catch (error) {
-      console.error('Error restoring category:', error);
       setSnackbar({ open: true, message: 'Failed to restore category', severity: 'error' });
     }
   };
@@ -147,7 +143,6 @@ const EventCategories: React.FC = () => {
       }
       fetchCategories();
     } catch (error) {
-      console.error('Error toggling category status:', error);
       setSnackbar({ open: true, message: 'Failed to update category status', severity: 'error' });
     }
   };
@@ -170,7 +165,6 @@ const EventCategories: React.FC = () => {
       fetchCategories();
       setSelectedRows([]);
     } catch (error) {
-      console.error('Error performing bulk operation:', error);
       setSnackbar({ open: true, message: 'Error performing bulk operation', severity: 'error' });
     }
   };

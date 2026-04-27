@@ -13,7 +13,6 @@ const getBasePath = (): string => {
         return '/api/organizer';
       }
     } catch (e) {
-      console.error('Error parsing user role:', e);
     }
   }
   return '/api/admin';
@@ -53,10 +52,8 @@ export const VenueService = {
     const basePath = getBasePath();
     
     try {
-      console.log('Deleting venue at endpoint:', `${basePath}/venues/${id}`);
       await api.delete(`${basePath}/venues/${id}`);
     } catch (error: any) {
-      console.error('VenueService.deleteVenue error:', error);
       
       // Re-throw with more context
       if (error.response?.status === 500) {

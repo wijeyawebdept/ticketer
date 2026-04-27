@@ -20,7 +20,6 @@ const TermsAndConditions: React.FC = () => {
       setTitle(data.title);
       setContent(data.content);
     } catch (err) {
-      console.error('Error loading terms and conditions:', err);
       setContent(getDefaultContent());
     } finally {
       setLoading(false);

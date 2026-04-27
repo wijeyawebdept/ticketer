@@ -104,7 +104,6 @@ const UserLayout: React.FC = () => {
         const profile = await profileService.getProfile();
         setUserProfile(profile);
       } catch (error) {
-        console.error('Error fetching user profile:', error);
       } finally {
         setLoadingProfile(false);
       }

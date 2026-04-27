@@ -8,7 +8,6 @@ const isDev = process.env.NODE_ENV === 'development' && process.env.REACT_APP_DE
 // Dev-only logger - logs sensitive data only in development with DEBUG flag enabled
 const devLog = (message: string, data?: any) => {
   if (isDev) {
-    console.log(`[DEV] ${message}`, data);
   }
 };
 
@@ -16,7 +15,6 @@ const devLog = (message: string, data?: any) => {
 const errorLog = (message: string, error?: any) => {
   if (error?.response?.status && error?.response?.status !== 401 && error?.response?.status !== 403) {
     // Only log non-auth errors to avoid exposing auth details
-    console.error(`[ERROR] ${message}:`, error?.message || error);
   }
 };
 
@@ -83,14 +81,9 @@ class AuthService {
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
-      console.log('Registering user with endpoint: /api/auth/register');
       const response = await axios.post<RegisterResponse>('/api/auth/register', userData);
-      console.log('Registration successful:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Registration error:', error);
-      console.error('Response status:', error.response?.status);
-      console.error('Response data:', error.response?.data);
       throw error;
     }
   }
@@ -190,7 +183,6 @@ class AuthService {
             email = user.email || '';
           }
         } catch (e) {
-          console.error('Error parsing user data from storage:', e);
         }
 
         // Normalize the role by removing ROLE_ prefix if present
@@ -204,7 +196,6 @@ class AuthService {
       }
       return null;
     } catch (error) {
-      console.error('Authentication error:', error);
       this.logout();
       return null;
     }

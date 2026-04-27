@@ -125,7 +125,6 @@ const EventDetails: React.FC = () => {
   useEffect(() => {
     const fetchEvent = async () => {
       if (!id || id === 'undefined') {
-        console.error('Invalid event ID:', id);
         setError('Event ID is missing or invalid');
         setLoading(false);
         return;
@@ -153,14 +152,12 @@ const EventDetails: React.FC = () => {
             }
           }
         } catch (schedErr) {
-          console.error('Error fetching schedules:', schedErr);
           // Don't fail the whole page if schedules can't be loaded
           setSchedules([]);
         }
         
         setError(null);
       } catch (err: any) {
-        console.error('Error fetching event:', err);
         setError(err.response?.data?.message || 'Failed to load event details');
       } finally {
         setLoading(false);
@@ -200,7 +197,6 @@ const EventDetails: React.FC = () => {
           sessionStorage.removeItem('pendingBooking');
         }
       } catch (error) {
-        console.error('Error restoring booking state:', error);
         sessionStorage.removeItem('pendingBooking');
       }
     }

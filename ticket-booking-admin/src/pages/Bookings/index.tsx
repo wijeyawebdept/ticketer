@@ -42,7 +42,6 @@ const Bookings: React.FC = () => {
       if (statusFilter) params.status = statusFilter;
 
       const response = await BookingService.getAllBookings(params);
-      console.log('Fetched bookings:', response);
       
       // Handle both array (legacy) and Page object responses
       if (Array.isArray(response)) {
@@ -54,7 +53,6 @@ const Bookings: React.FC = () => {
         setTotalBookings(response.totalElements || 0);
       }
     } catch (error) {
-      console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
     }

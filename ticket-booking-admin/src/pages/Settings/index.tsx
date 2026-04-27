@@ -190,7 +190,6 @@ const Settings: React.FC = () => {
       const profileData = await profileService.getProfile();
       setProfile(profileData);
     } catch (error) {
-      console.error('Error loading profile:', error);
       showSnackbar('Failed to load profile', 'error');
     } finally {
       setLoadingProfile(false);
@@ -251,7 +250,6 @@ const Settings: React.FC = () => {
       setEditing(false);
       showSnackbar('Profile updated successfully', 'success');
     } catch (error) {
-      console.error('Error updating profile:', error);
       showSnackbar('Failed to update profile', 'error');
     }
   };
@@ -268,7 +266,6 @@ const Settings: React.FC = () => {
       await loadProfile();
       showSnackbar('Profile picture updated successfully', 'success');
     } catch (error) {
-      console.error('Error uploading profile picture:', error);
       showSnackbar('Failed to upload profile picture', 'error');
     } finally {
       setUploading(false);
@@ -418,7 +415,6 @@ const Settings: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      console.error('Error updating email:', err);
       const errorMessage = err.response?.data?.message || 'Failed to update email. Please check your password.';
       setError(errorMessage);
     } finally {
@@ -435,7 +431,6 @@ const Settings: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSuccess(t('settings.notifications.successMessage'));
     } catch (err: unknown) {
-      console.error('Error updating notification preferences:', err);
       setError(t('settings.notifications.errorMessage'));
     } finally {
       setSaving(false);
@@ -494,7 +489,6 @@ const Settings: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      console.error('Error updating password:', err);
       const errorMessage = err.response?.data?.message || 'Failed to update password. Please check your current password.';
       setError(errorMessage);
     } finally {
@@ -515,7 +509,6 @@ const Settings: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSuccess(t('settings.system.successMessage'));
     } catch (err: unknown) {
-      console.error('Error updating system settings:', err);
       setError(t('settings.system.errorMessage'));
     } finally {
       setSaving(false);

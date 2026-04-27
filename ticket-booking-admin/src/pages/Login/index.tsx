@@ -154,7 +154,6 @@ const Login: React.FC = () => {
         setError('Google login succeeded but no user returned from server.');
       }
     } catch (err: any) {
-      console.error('Google login error:', err);
       setError(err.response?.data?.message || err.message || 'Google sign-in failed. Please try again.');
     } finally {
       setIsGoogleLoading(false);
@@ -211,9 +210,6 @@ const Login: React.FC = () => {
         setError('Unable to determine user role. Please try again.');
       }
     } catch (err: any) {
-      console.error('Login error:', err);
-      console.error('Response status:', err.response?.status);
-      console.error('Response data:', err.response?.data);
 
       let errorMessage = 'Login failed. Please try again.';
 

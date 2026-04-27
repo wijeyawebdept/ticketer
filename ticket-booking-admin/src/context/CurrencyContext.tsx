@@ -40,7 +40,6 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
           setCurrencyState(settings.defaultCurrency);
         }
       } catch (error) {
-        console.error('Error loading currency:', error);
       }
     }
   }, []);
@@ -56,7 +55,6 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
             setCurrencyState(settings.defaultCurrency);
           }
         } catch (error) {
-          console.error('Error loading currency:', error);
         }
       }
     };

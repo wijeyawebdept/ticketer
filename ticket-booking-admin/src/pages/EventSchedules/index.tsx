@@ -69,12 +69,10 @@ const EventSchedules: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('EventSchedules - eventId from useParams:', eventId);
     if (eventId && eventId !== 'undefined') {
       fetchEvent();
       fetchSchedules();
     } else {
-      console.error('EventSchedules - Invalid or missing eventId:', eventId);
       navigate(getBackPath());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,7 +80,6 @@ const EventSchedules: React.FC = () => {
 
   const fetchEvent = async () => {
     if (!eventId || eventId === 'undefined') {
-      console.error('Cannot fetch event - eventId is:', eventId);
       return;
     }
     try {
@@ -90,13 +87,11 @@ const EventSchedules: React.FC = () => {
 
       setEvent(response);
     } catch (error) {
-      console.error('Error fetching event:', error);
     }
   };
 
   const fetchSchedules = async () => {
     if (!eventId || eventId === 'undefined') {
-      console.error('Cannot fetch schedules - eventId is:', eventId);
       return;
     }
     setLoading(true);
@@ -104,7 +99,6 @@ const EventSchedules: React.FC = () => {
       const response = await EventScheduleService.getSchedulesForEvent(eventId);
       setSchedules(response);
     } catch (error) {
-      console.error('Error fetching schedules:', error);
     } finally {
       setLoading(false);
     }
@@ -143,7 +137,6 @@ const EventSchedules: React.FC = () => {
       fetchSchedules();
       handleDeleteDialogClose();
     } catch (error: any) {
-      console.error('Error deleting schedule:', error);
       alert(error.response?.data?.message || 'Failed to delete schedule');
     }
   };
@@ -153,7 +146,6 @@ const EventSchedules: React.FC = () => {
       await EventScheduleService.changeScheduleStatus(eventId!, schedule.scheduleId, status);
       fetchSchedules();
     } catch (error) {
-      console.error('Error changing schedule status:', error);
     }
   };
 
@@ -566,7 +558,6 @@ const EventSchedules: React.FC = () => {
                 fetchSchedules();
                 handleDialogClose();
               } catch (error) {
-                console.error('Error saving schedule:', error);
               } finally {
                 setSubmitting(false);
               }

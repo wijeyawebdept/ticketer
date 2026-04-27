@@ -279,7 +279,6 @@ const SeatSelectionPage: React.FC = () => {
       const sharedAreasTotal = sharedAreaSelections.reduce((sum, s) => sum + (s.ticketCount * s.pricePerTicket), 0);
       setTotalPrice(seatsTotal + sharedAreasTotal);
     } catch (error) {
-      console.error('Failed to calculate price:', error);
     }
   };
 
@@ -403,7 +402,6 @@ const SeatSelectionPage: React.FC = () => {
       paymentService.startCheckout(sessionResponse);
 
     } catch (error: any) {
-      console.error('Payment initiation failed:', error);
       showMessage('error', error.response?.data?.message || 'Failed to initiate payment. Please try again.');
     } finally {
       setLoading(false);

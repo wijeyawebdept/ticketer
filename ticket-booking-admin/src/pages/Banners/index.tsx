@@ -85,7 +85,6 @@ export default function BannersPage() {
       setBanners(data.content || []);
     } catch (err) {
       setError('Failed to load banners');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -117,7 +116,6 @@ export default function BannersPage() {
           const result = await validateBannerImage(file);
           setValidationResult(result);
         } catch (err) {
-          console.error('Validation error:', err);
           setValidationError(err instanceof Error ? err.message : 'Failed to validate image');
         }
       };
@@ -167,7 +165,6 @@ export default function BannersPage() {
       const fullBanner = await BannerService.getBannerById(bannerId);
       setImagePreview(fullBanner.imageBase64);
     } catch (err) {
-      console.error('Failed to fetch banner details', err);
       setImagePreview(null);
     }
   };
@@ -236,7 +233,6 @@ export default function BannersPage() {
       loadBanners();
     } catch (err) {
       setError('Operation failed. Please try again.');
-      console.error(err);
     }
   };
 
@@ -249,7 +245,6 @@ export default function BannersPage() {
         loadBanners();
       } catch (err) {
         setError('Failed to delete banner');
-        console.error(err);
       }
     }
   };
@@ -262,7 +257,6 @@ export default function BannersPage() {
       loadBanners();
     } catch (err) {
       setError('Failed to update banner status');
-      console.error(err);
     }
   };
 

@@ -96,7 +96,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
     sharedAreaTotalCapacity: venue?.sharedAreaTotalCapacity || ''
   };
 
-  console.log('VenueForm - Editing venue:', venue);
 
   const getButtonText = (isSubmitting: boolean, isEditing: boolean): string => {
     if (isSubmitting) return 'Saving...';
@@ -134,7 +133,6 @@ const VenueForm: React.FC<VenueFormProps> = ({ venue, onClose, onSuccess }) => {
           onSuccess?.();
           onClose?.();
         } catch (error: any) {
-          console.error('Error saving venue:', error);
           if (error.response?.data?.errors) {
             setErrors(error.response.data.errors);
           } else {

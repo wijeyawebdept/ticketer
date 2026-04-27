@@ -99,7 +99,6 @@ axiosInstance.interceptors.response.use(
     }
     
     if (error.response?.status === 403) {
-      console.error('Authorization error: You do not have permission to access this resource.');
     }
 
     const data = error.response?.data;

@@ -122,17 +122,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
             }
             
             // Add debugging information
-            console.log('Password validation test:', PASSWORD_REGEX.test(userData.password));
-            console.log('Password length check:', userData.password.length >= 8);
-            console.log('Has uppercase:', /[A-Z]/.test(userData.password));
-            console.log('Has lowercase:', /[a-z]/.test(userData.password));
-            console.log('Has number:', /\d/.test(userData.password));
-            console.log('Has special char:', /[@$!%*?&#]/.test(userData.password));
             
             try {
               await UserService.createUser(userData as any); // Type assertion as any to resolve TS issue
             } catch (error: any) {
-              console.log('Detailed API error:', error?.response?.data);
               throw error;
             }
           }
@@ -142,10 +135,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) => {
           if (onSuccess) onSuccess();
         } catch (error) {
           // Error handling
-          console.error(`Error ${user ? 'updating' : 'creating'} user:`, error);
-          console.error('Full error details:', error);
           if ((error as any)?.response?.data) {
-            console.error('API error response:', (error as any).response.data);
           }
           handleApiError(error as ApiError, setErrors, user ? 'update' : 'create');
           alert(`Failed to ${user ? 'update' : 'create'} user. Check the browser console for details.`);

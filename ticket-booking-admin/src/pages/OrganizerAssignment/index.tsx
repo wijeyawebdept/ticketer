@@ -100,7 +100,6 @@ const OrganizerAssignment: React.FC = () => {
       setOrganizers(organizersContent.filter((org: Organizer) => org.active));
     } catch (error) {
       showErrorToast('Failed to load data');
-      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -133,7 +132,6 @@ const OrganizerAssignment: React.FC = () => {
       fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to assign organizer');
-      console.error('Error assigning organizer:', error);
     }
   };
 
@@ -151,7 +149,6 @@ const OrganizerAssignment: React.FC = () => {
       fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to remove organizer');
-      console.error('Error removing organizer:', error);
     } finally {
       setConfirmDialogOpen(false);
       setEventToRemove(null);

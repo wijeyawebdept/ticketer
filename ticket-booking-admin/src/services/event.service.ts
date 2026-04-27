@@ -39,7 +39,6 @@ class EventService {
           return '/api/organizer';
         }
       } catch (e) {
-        console.error('Error parsing user role:', e);
       }
     }
     return '/api/admin';

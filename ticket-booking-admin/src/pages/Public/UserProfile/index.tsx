@@ -384,7 +384,6 @@ const UserProfile: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      console.error('Error updating email:', err);
       const errorMessage = err.response?.data?.message || 'Failed to update email. Please check your password.';
       setSnackbar({
         open: true,
@@ -458,7 +457,6 @@ const UserProfile: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      console.error('Error updating password:', err);
       const errorMessage = err.response?.data?.message || 'Failed to update password. Please check your current password.';
       setSnackbar({
         open: true,

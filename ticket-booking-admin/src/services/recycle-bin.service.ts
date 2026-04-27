@@ -35,7 +35,6 @@ class RecycleBinService {
           return '/api/organizer';
         }
       } catch (e) {
-        console.error('Error parsing user data:', e);
       }
     }
     return '/api/admin';

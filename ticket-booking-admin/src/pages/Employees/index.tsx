@@ -82,7 +82,6 @@ const Employees: React.FC = () => {
           fetchOrganizers();
         }
       } catch (e) {
-        console.error('Error parsing user:', e);
       }
     }
     fetchEmployees();
@@ -101,7 +100,6 @@ const Employees: React.FC = () => {
         setIsAdmin(user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
                     user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN');
       } catch (e) {
-        console.error('Error parsing user:', e);
       }
     }
   };
@@ -111,7 +109,6 @@ const Employees: React.FC = () => {
       const response = await OrganizerService.getAllOrganizers(0, 100);
       setOrganizers(response.content);
     } catch (error) {
-      console.error('Error fetching organizers:', error);
     }
   };
 
@@ -128,7 +125,6 @@ const Employees: React.FC = () => {
       setEmployees(response.content);
       setTotalPages(response.totalPages);
     } catch (err: any) {
-      console.error('Error fetching employees:', err);
       setError(err.response?.data?.message || 'Failed to fetch employees');
     } finally {
       setLoading(false);
@@ -214,7 +210,6 @@ const Employees: React.FC = () => {
       fetchEmployees();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error saving employee:', err);
       setError(err.response?.data?.message || 'Failed to save employee');
     }
   };
@@ -239,7 +234,6 @@ const Employees: React.FC = () => {
       fetchEmployees();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error deleting employee:', err);
       setError(err.response?.data?.message || 'Failed to delete employee');
       setOpenDeleteDialog(false);
     }
@@ -253,7 +247,6 @@ const Employees: React.FC = () => {
       fetchEmployees();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error restoring employee:', err);
       setError(err.response?.data?.message || 'Failed to restore employee');
     }
   };
@@ -266,7 +259,6 @@ const Employees: React.FC = () => {
       fetchEmployees();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error activating employee:', err);
       setError(err.response?.data?.message || 'Failed to activate employee');
     }
   };
@@ -279,7 +271,6 @@ const Employees: React.FC = () => {
       fetchEmployees();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error deactivating employee:', err);
       setError(err.response?.data?.message || 'Failed to deactivate employee');
     }
   };

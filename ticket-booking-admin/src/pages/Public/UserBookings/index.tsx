@@ -27,7 +27,6 @@ const UserBookings: React.FC = () => {
       const data = await BookingService.getAllBookings();
       setBookings(data);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
     }

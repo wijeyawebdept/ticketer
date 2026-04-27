@@ -89,7 +89,6 @@ const Users: React.FC = () => {
       
       setUsers(filteredUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
       showSnackbar('Error fetching users', 'error');
     } finally {
       setLoading(false);
@@ -145,7 +144,6 @@ const Users: React.FC = () => {
       fetchUsers();
       showSnackbar('User activated successfully', 'success');
     } catch (error) {
-      console.error('Error activating user:', error);
       showSnackbar('Error activating user', 'error');
     }
   };
@@ -156,7 +154,6 @@ const Users: React.FC = () => {
       fetchUsers();
       showSnackbar('User deactivated successfully', 'success');
     } catch (error) {
-      console.error('Error deactivating user:', error);
       showSnackbar('Error deactivating user', 'error');
     }
   };
@@ -170,7 +167,6 @@ const Users: React.FC = () => {
       handleDeleteDialogClose();
       showSnackbar('User moved to recycle bin', 'success');
     } catch (error) {
-      console.error('Error deleting user:', error);
       showSnackbar('Error deleting user', 'error');
     }
   };
@@ -200,7 +196,6 @@ const Users: React.FC = () => {
       fetchUsers();
       setSelectedRows([]);
     } catch (error) {
-      console.error('Error performing bulk operation:', error);
       showSnackbar('Error performing bulk operation', 'error');
     }
     

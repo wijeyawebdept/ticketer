@@ -37,7 +37,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
 
   // Check if user is authenticated
   if (!isAuthenticated()) {
-    console.log('User is not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -45,16 +44,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
   if (requiredRole && user) {
     const userRole = user.role;
     
-    console.log('ProtectedRoute - Checking authorization:');
-    console.log('User Role:', userRole, typeof userRole);
-    console.log('Required Role:', requiredRole, typeof requiredRole);
     
     // Convert to strings and normalize (replace spaces with underscores)
     const userRoleStr = String(userRole).replace(/ /g, '_');
     const requiredRoleStr = String(requiredRole).replace(/ /g, '_');
     
-    console.log('  Normalized User Role:', userRoleStr);
-    console.log('  Normalized Required Role:', requiredRoleStr);
     
     // Special role handling
     const isSuperAdmin = userRoleStr === 'SUPER_ADMIN' || userRoleStr === 'ROLE_SUPER_ADMIN';
@@ -68,15 +62,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     const requiringOrganizerEmployee = requiredRoleStr === 'ORGANIZER_EMPLOYEE' || requiredRoleStr === 'ROLE_ORGANIZER_EMPLOYEE';
     const requiringUser = requiredRoleStr === 'USER' || requiredRoleStr === 'ROLE_USER';
     
-    console.log('  Is Super Admin:', isSuperAdmin);
-    console.log('  Is Admin:', isAdmin);
-    console.log('  Is Organizer:', isOrganizer);
-    console.log('  Is Organizer Employee:', isOrganizerEmployee);
-    console.log('  Is User:', isUser);
-    console.log('  Requiring Admin:', requiringAdmin);
-    console.log('  Requiring Organizer:', requiringOrganizer);
-    console.log('  Requiring Organizer Employee:', requiringOrganizerEmployee);
-    console.log('  Requiring User:', requiringUser);
     
     const isAuthorized = 
       userRoleStr === requiredRoleStr || 
@@ -88,11 +73,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
       (isOrganizerEmployee && requiringOrganizerEmployee) || // Allow ORGANIZER_EMPLOYEE to access ORGANIZER_EMPLOYEE routes
       (isUser && requiringUser); // Allow USER to access USER routes
     
-    console.log('  Is Authorized:', isAuthorized);
     
     if (!isAuthorized) {
-      console.log(`User role '${userRole}' does not have permission to access admin panel. Required role: '${requiredRole}'`);
-      console.log('Redirecting non-admin user back to login');
       
       // Schedule logout to happen in useEffect
       if (!shouldLogout) {
@@ -105,7 +87,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
       }} replace />;
     }
     
-    console.log(`User role '${userRole}' authorized for admin access`);
   }
   
   return <Outlet />;

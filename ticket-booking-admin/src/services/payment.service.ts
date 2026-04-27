@@ -140,7 +140,6 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
    */
   startCheckout(session: MPGSSessionResponse) {
     if (!(window as any).Checkout) {
-      console.error("MPGS Checkout not loaded");
       return;
     }
     

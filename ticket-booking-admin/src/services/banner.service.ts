@@ -35,7 +35,6 @@ class BannerService {
       );
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching active banners:', error);
       throw error;
     }
   }
@@ -48,7 +47,6 @@ class BannerService {
       );
       return response.data || { content: [], totalPages: 0, totalElements: 0, currentPage: 0, pageSize: 0 };
     } catch (error) {
-      console.error('Error fetching all banners:', error);
       throw error;
     }
   }
@@ -59,7 +57,6 @@ class BannerService {
       const response = await api.get<BannerResponse[]>(`${this.baseUrl}/status/${status}`);
       return response.data || [];
     } catch (error) {
-      console.error(`Error fetching banners with status ${status}:`, error);
       throw error;
     }
   }
@@ -70,7 +67,6 @@ class BannerService {
       const response = await api.get<BannerResponse>(`${this.baseUrl}/${bannerId}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching banner ${bannerId}:`, error);
       throw error;
     }
   }
@@ -96,7 +92,6 @@ class BannerService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error creating banner:', error);
       throw error;
     }
   }
@@ -123,7 +118,6 @@ class BannerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error updating banner ${bannerId}:`, error);
       throw error;
     }
   }
@@ -133,7 +127,6 @@ class BannerService {
     try {
       await api.delete(`${this.baseUrl}/${bannerId}`);
     } catch (error) {
-      console.error(`Error deleting banner ${bannerId}:`, error);
       throw error;
     }
   }
@@ -149,7 +142,6 @@ class BannerService {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error updating banner status:`, error);
       throw error;
     }
   }
@@ -159,7 +151,6 @@ class BannerService {
     try {
       await api.post(`${this.baseUrl}/reorder`, { bannerIds });
     } catch (error) {
-      console.error('Error reordering banners:', error);
       throw error;
     }
   }

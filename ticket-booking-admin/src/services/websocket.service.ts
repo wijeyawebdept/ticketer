@@ -39,7 +39,6 @@ class SeatWebSocketService {
 
       // Event handlers
       onConnect: (frame) => {
-        console.log('WebSocket Connected:', frame);
         this.isConnected = true;
         this.callbacks.onConnect?.();
         
@@ -50,23 +49,19 @@ class SeatWebSocketService {
       },
 
       onDisconnect: (frame) => {
-        console.log('WebSocket Disconnected:', frame);
         this.isConnected = false;
         this.callbacks.onDisconnect?.();
       },
 
       onStompError: (frame) => {
-        console.error('WebSocket Error:', frame);
         this.callbacks.onError?.(frame);
       },
 
       onWebSocketError: (error) => {
-        console.error('WebSocket Connection Error:', error);
         this.callbacks.onError?.(error);
       },
 
       debug: (str) => {
-        console.log('WebSocket Debug:', str);
       }
     });
   }
@@ -111,7 +106,6 @@ class SeatWebSocketService {
   // Subscribe to event-specific seat updates
   private subscribeToEvent(eventId: string): void {
     if (!this.client || !this.isConnected) {
-      console.warn('Cannot subscribe: WebSocket not connected');
       return;
     }
 
@@ -119,10 +113,8 @@ class SeatWebSocketService {
     this.client.subscribe(`/topic/events/${eventId}/seats`, (message: IMessage) => {
       try {
         const seatUpdate: SeatUpdateMessage = JSON.parse(message.body);
-        console.log('Received seat update:', seatUpdate);
         this.callbacks.onSeatUpdate?.(seatUpdate);
       } catch (error) {
-        console.error('Error parsing seat update message:', error);
       }
     });
 
@@ -130,10 +122,8 @@ class SeatWebSocketService {
     this.client.subscribe(`/topic/events/${eventId}/stats`, (message: IMessage) => {
       try {
         const stats: SeatAvailabilityStats = JSON.parse(message.body);
-        console.log('Received stats update:', stats);
         this.callbacks.onStatsUpdate?.(stats);
       } catch (error) {
-        console.error('Error parsing stats message:', error);
       }
     });
 
@@ -141,10 +131,8 @@ class SeatWebSocketService {
     this.client.subscribe('/user/queue/seat-holds', (message: IMessage) => {
       try {
         const notification: SeatHoldNotification = JSON.parse(message.body);
-        console.log('Received hold notification:', notification);
         this.callbacks.onHoldNotification?.(notification);
       } catch (error) {
-        console.error('Error parsing hold notification:', error);
       }
     });
   }
@@ -152,7 +140,6 @@ class SeatWebSocketService {
   // Send a message (for testing purposes)
   sendMessage(destination: string, body: any): void {
     if (!this.client || !this.isConnected) {
-      console.warn('Cannot send message: WebSocket not connected');
       return;
     }
 

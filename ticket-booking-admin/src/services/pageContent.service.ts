@@ -22,7 +22,6 @@ class PageContentService {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error fetching ${pageType} content:`, error);
       throw error;
     }
   }
@@ -40,7 +39,6 @@ class PageContentService {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error updating ${pageType} content:`, error);
       throw error;
     }
   }

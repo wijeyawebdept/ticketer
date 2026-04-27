@@ -45,7 +45,6 @@ const PrivacyPolicyManager: React.FC = () => {
       setContent(data);
       setFormData({ title: data.title, content: data.content });
     } catch (error) {
-      console.error('Error loading privacy policy:', error);
       setSnackbar({ open: true, message: 'Error loading privacy policy', severity: 'error' });
     } finally {
       setLoading(false);
@@ -73,7 +72,6 @@ const PrivacyPolicyManager: React.FC = () => {
       setEditDialogOpen(false);
       loadContent();
     } catch (error) {
-      console.error('Error saving privacy policy:', error);
       setSnackbar({ open: true, message: 'Error saving privacy policy', severity: 'error' });
     } finally {
       setSaving(false);

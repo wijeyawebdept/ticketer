@@ -78,12 +78,10 @@ const VenuesPage = () => {
     setLoading(true);
     try {
       const data = await VenueService.getAllVenues();
-      console.log('Fetched venues:', data);
       
       // Validate venue data
       const validatedVenues = data.map((venue: any) => {
         if (!venue.name || venue.name.trim() === '') {
-          console.warn('Invalid venue name found:', venue);
           return { ...venue, name: 'Unnamed Venue' };
         }
         return venue;
@@ -91,7 +89,6 @@ const VenuesPage = () => {
       
       setVenues(validatedVenues);
     } catch (error) {
-      console.error('Error fetching venues:', error);
       ToastService.error('Failed to load venues. Please try again later.');
     } finally {
       setLoading(false);
@@ -185,7 +182,6 @@ const VenuesPage = () => {
       setVenueToDelete(null);
       fetchVenues(); // Refresh the list
     } catch (error: any) {
-      console.error('Error deleting venue:', error);
       
       // Provide more specific error messages
       let errorMessage = `Failed to delete venue "${venueToDelete.name}". `;
@@ -231,7 +227,6 @@ const VenuesPage = () => {
       const newStatus = updatedVenue.status === 1 ? 'Active' : 'Inactive';
       ToastService.updateSuccess(toastId, `Venue status updated to ${newStatus}`);
     } catch (error) {
-      console.error('Error toggling venue status:', error);
       ToastService.updateError(toastId, `Failed to update venue status. Please try again.`);
     }
   };
@@ -264,7 +259,6 @@ const VenuesPage = () => {
             successCount++;
           }
         } catch (error) {
-          console.error(`Failed to process venue ${venueId}:`, error);
           failCount++;
         }
       }
@@ -278,7 +272,6 @@ const VenuesPage = () => {
         ToastService.updateError(toastId, `Completed: ${successCount} succeeded, ${failCount} failed`);
       }
     } catch (error) {
-      console.error('Error performing bulk operation:', error);
       ToastService.updateError(toastId, 'Failed to perform bulk operation. Please try again.');
     }
   };

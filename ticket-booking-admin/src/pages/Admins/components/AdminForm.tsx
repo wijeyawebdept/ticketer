@@ -117,7 +117,6 @@ const AdminForm: React.FC<AdminFormProps> = ({ admin, onClose, onSuccess }) => {
           resetForm();
           if (onSuccess) onSuccess();
         } catch (error: any) {
-          console.error(`Error ${admin ? 'updating' : 'creating'} admin:`, error);
           
           // Check if it's a 403 permission error
           if (error?.response?.status === 403) {

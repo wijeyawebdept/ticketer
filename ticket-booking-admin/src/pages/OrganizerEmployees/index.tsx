@@ -161,7 +161,6 @@ const OrganizerEmployees: React.FC = () => {
       });
       setOrganizers(response.data.content);
     } catch (err: any) {
-      console.error('Failed to fetch organizers:', err);
     }
   };
 

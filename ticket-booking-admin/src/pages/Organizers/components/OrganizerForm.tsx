@@ -110,7 +110,6 @@ const OrganizerForm: React.FC<OrganizerFormProps> = ({ organizer, onClose, onSuc
           resetForm();
           if (onSuccess) onSuccess();
         } catch (error: any) {
-          console.error(`Error ${organizer ? 'updating' : 'creating'} organizer:`, error);
           if (error?.response?.data?.message) {
             setErrors({ email: error.response.data.message });
           } else {

@@ -102,9 +102,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   // Debug: Log venue ID changes
   useEffect(() => {
-    console.log('VenueSeatMap received venueId:', venueId);
-    console.log('Has shared areas:', hasSharedAreas);
-    console.log('Shared areas:', sharedAreas);
   }, [venueId, hasSharedAreas, sharedAreas]);
 
   // Fetch seat availability from backend
@@ -125,9 +122,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       
       // Debug: Log the first seat to see the actual data structure
       if (data.seats && data.seats.length > 0) {
-        console.log('First seat data:', data.seats[0]);
-        console.log('xPosition type:', typeof data.seats[0].xPosition);
-        console.log('yPosition type:', typeof data.seats[0].yPosition);
       }
       
       // Store venue seats with coordinates
@@ -152,10 +146,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       // Filter out any seats with invalid coordinates
       const validSeats = seats.filter(s => !isNaN(s.xPosition) && !isNaN(s.yPosition));
       
-      console.log('Total seats from API:', data.seats.length);
-      console.log('Valid seats after filtering:', validSeats.length);
       if (validSeats.length === 0 && data.seats.length > 0) {
-        console.error('All seats filtered out! Sample seat:', seats[0]);
       }
       
       setVenueSeats(validSeats);
@@ -189,11 +180,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       
       // Store shared areas if available from API response
       if (data.sharedAreas && data.sharedAreas.length > 0) {
-        console.log('Shared areas from API:', data.sharedAreas);
         setSharedAreas(data.sharedAreas);
       }
     } catch (error) {
-      console.error('Failed to fetch seat availability:', error);
     } finally {
       setLoading(false);
     }
@@ -337,7 +326,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   }, []);
 
   const handleSharedAreaClick = (area: SharedAreaCategory) => {
-    console.log('Shared area clicked:', area);
     setSelectedSharedArea(area);
     setShowSharedAreaDialog(true);
   };
@@ -354,7 +342,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   const handleSharedAreaConfirm = () => {
     if (sharedAreaTicketCount && selectedSharedArea) {
-      console.log(`Selected ${sharedAreaTicketCount} tickets for ${selectedSharedArea.categoryName}`);
       onSharedAreaSelect?.(
         selectedSharedArea.sharedAreaNumber,
         sharedAreaTicketCount, 
@@ -381,7 +368,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             <button onClick={handleZoomOut} className="control-btn">-</button>
             <button onClick={handleResetView} className="control-btn">Reset</button>
             <span className="selected-count">
-              Selected: {totalOccupiedSeats + localSelectedSeats.size} / {customerFacingTotal || venueSeats.length}
+              Selected: {totalOccupiedSeats} / {customerFacingTotal || venueSeats.length}
             </span>
           </div>
 

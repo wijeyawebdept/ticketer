@@ -190,10 +190,6 @@ const SeatingArrangement: React.FC = () => {
         
         setSeats(availabilitySeats);
         
-        console.log('Loaded seats with availability:', availabilitySeats.length);
-        console.log('Booked seats:', availabilitySeats.filter((s: VenueSeat) => s.status === 'BOOKED').length);
-        console.log('Locked seats:', availabilitySeats.filter((s: VenueSeat) => s.status === 'LOCKED').length);
-        console.log('VIP Reserved seats:', availabilitySeats.filter((s: VenueSeat) => s.status === 'VIP_RESERVED').length);
         
         // Extract unique categories from availability response
         const uniqueCategories = Array.from(
@@ -212,8 +208,6 @@ const SeatingArrangement: React.FC = () => {
         const response = await api.get<VenueSeat[]>(`/api/venue-seats/layout/${id}`);
         setSeats(response.data);
         
-        console.log('Loaded seats for venue', id, ':', response.data.length);
-        console.log('Sample seats:', response.data.slice(0, 5));
         
         // Extract unique categories from layout response
         const uniqueCategories = Array.from(
@@ -230,7 +224,6 @@ const SeatingArrangement: React.FC = () => {
       }
       setError(null);
     } catch (err) {
-      console.error('Error fetching seats:', err);
       setError('Failed to load venue seating layout');
     } finally {
       setLoading(false);
@@ -319,7 +312,6 @@ const SeatingArrangement: React.FC = () => {
       await fetchHardcodedSeats();
       closeSeatActionDialog();
     } catch (err: any) {
-      console.error('Error locking seat:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Failed to lock seat. This feature requires backend API implementation.';
       setActionError(errorMsg);
     }
@@ -333,7 +325,6 @@ const SeatingArrangement: React.FC = () => {
       await fetchHardcodedSeats();
       closeSeatActionDialog();
     } catch (err: any) {
-      console.error('Error unlocking seat:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Failed to unlock seat. This feature requires backend API implementation.';
       setActionError(errorMsg);
     }
@@ -347,7 +338,6 @@ const SeatingArrangement: React.FC = () => {
       await fetchHardcodedSeats();
       closeSeatActionDialog();
     } catch (err: any) {
-      console.error('Error marking seat accessible:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Failed to mark seat as accessible. This feature requires backend API implementation.';
       setActionError(errorMsg);
     }
@@ -361,7 +351,6 @@ const SeatingArrangement: React.FC = () => {
       await fetchHardcodedSeats();
       closeSeatActionDialog();
     } catch (err: any) {
-      console.error('Error reserving seat:', err);
       const errorMsg = err.response?.data?.message || err.message || 'Failed to reserve seat for VIP. This feature requires backend API implementation.';
       setActionError(errorMsg);
     }
@@ -444,7 +433,6 @@ const SeatingArrangement: React.FC = () => {
     const yPositions = seats.map(s => Number(s.yposition) || 0).filter(y => y > 0);
     
     if (xPositions.length === 0 || yPositions.length === 0) {
-      console.error('No valid seat positions found!');
       return "0 0 1200 800";
     }
     
@@ -453,7 +441,6 @@ const SeatingArrangement: React.FC = () => {
     const minY = Math.min(...yPositions);
     const maxY = Math.max(...yPositions);
     
-    console.log('Seat position range:', { minX, maxX, minY, maxY });
     
     // Add padding for stage area at top and sides
     const padding = 50;
@@ -501,7 +488,6 @@ const SeatingArrangement: React.FC = () => {
 
   const handleSelectTickets = () => {
     if (balconyTicketCount) {
-      console.log(`Selected ${balconyTicketCount} tickets for Balcony area`);
       alert(`${balconyTicketCount} ticket(s) selected for Balcony (Standing Area)`);
       handleCloseBalconyDialog();
     }

@@ -20,7 +20,6 @@ const CookiePolicy: React.FC = () => {
       setTitle(data.title);
       setContent(data.content);
     } catch (err) {
-      console.error('Error loading cookie policy:', err);
       setContent(getDefaultContent());
     } finally {
       setLoading(false);

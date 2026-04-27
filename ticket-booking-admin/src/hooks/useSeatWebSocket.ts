@@ -101,11 +101,9 @@ export const useSeatWebSocket = (eventId: string) => {
       heartbeatOutgoing: 4000,
       debug: (str) => {
         if (process.env.NODE_ENV === 'development') {
-          console.log('STOMP Debug:', str);
         }
       },
       onConnect: () => {
-        console.log('WebSocket connected for event:', eventId);
         setIsConnected(true);
         setConnectionError(null);
 
@@ -137,7 +135,6 @@ export const useSeatWebSocket = (eventId: string) => {
               return newLog.slice(0, 50);
             });
           } catch (error) {
-            console.error('Error parsing seat update:', error);
           }
         });
 
@@ -147,21 +144,17 @@ export const useSeatWebSocket = (eventId: string) => {
             const statsUpdate: SeatStatsMessage = JSON.parse(message.body);
             setStats(statsUpdate);
           } catch (error) {
-            console.error('Error parsing stats update:', error);
           }
         });
       },
       onDisconnect: () => {
-        console.log('WebSocket disconnected');
         setIsConnected(false);
       },
       onStompError: (frame) => {
-        console.error('STOMP error:', frame);
         setConnectionError('Connection error occurred');
         setIsConnected(false);
       },
       onWebSocketError: (event) => {
-        console.error('WebSocket error:', event);
         setConnectionError('WebSocket connection failed');
         setIsConnected(false);
       }

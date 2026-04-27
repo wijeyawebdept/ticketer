@@ -106,7 +106,6 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
         const response = await eventService.getAllEvents();
         setEvents(response.content || response || []);
       } catch (err) {
-        console.error('Failed to load events:', err);
       }
     };
     loadEvents();

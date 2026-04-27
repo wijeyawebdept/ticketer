@@ -33,7 +33,6 @@ const AuthDebugPage: React.FC = () => {
           setTokenExpired(payload.exp < currentTime);
         }
       } catch (e) {
-        console.error('Failed to decode token:', e);
       }
     }
   };

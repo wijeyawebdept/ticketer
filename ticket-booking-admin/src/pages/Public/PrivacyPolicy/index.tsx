@@ -21,7 +21,6 @@ const PrivacyPolicy: React.FC = () => {
       setTitle(data.title);
       setContent(data.content);
     } catch (err) {
-      console.error('Error loading privacy policy:', err);
       setError(true);
       // Set default content if API fails
       setContent(getDefaultContent());

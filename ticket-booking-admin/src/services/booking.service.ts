@@ -16,7 +16,6 @@ class BookingService {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        console.log('BookingService - User role from', storageType, ':', user.role);
         
         // Check for organizer roles
         if (user.role === UserRole.ORGANIZER || user.role === 'ROLE_ORGANIZER' ||
@@ -36,12 +35,10 @@ class BookingService {
           return '/api';
         }
       } catch (e) {
-        console.error('Error parsing user role:', e);
       }
     }
     
     // Default fallback to /api (will be appended with /bookings for endpoint path)
-    console.warn('No user role found, defaulting to /api');
     return '/api';
   }
 
