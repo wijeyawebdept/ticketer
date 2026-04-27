@@ -156,7 +156,7 @@ const RoleManagement: React.FC = () => {
       fetchRoles();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to save role');
+      setError(err.message || 'Failed to save role');
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -175,7 +175,7 @@ const RoleManagement: React.FC = () => {
       fetchRoles();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to delete role');
+      setError(err.message || 'Failed to delete role');
       setTimeout(() => setError(null), 3000);
     } finally {
       setOpenDeleteDialog(false);
@@ -195,7 +195,7 @@ const RoleManagement: React.FC = () => {
       fetchRoles();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to toggle role status');
+      setError(err.message || 'Failed to toggle role status');
       setTimeout(() => setError(null), 3000);
     }
   };

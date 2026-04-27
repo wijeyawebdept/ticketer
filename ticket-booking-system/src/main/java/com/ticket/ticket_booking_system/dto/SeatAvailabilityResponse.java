@@ -42,5 +42,13 @@ public class SeatAvailabilityResponse {
         private Integer capacity;
         private Integer sharedAreaNumber;
         private Integer availableTickets;
+        
+        // Deal properties for checkout calculation
+        private Boolean dealActive;
+        private String dealType;
+        private BigDecimal dealDiscountPercentage;
+        private Integer dealBuyQuantity;
+        private Integer dealFreeQuantity;
+        private String dealLabel;
     }
 }

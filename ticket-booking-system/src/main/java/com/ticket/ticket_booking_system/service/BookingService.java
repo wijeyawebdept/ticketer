@@ -25,7 +25,9 @@ import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
+import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.TransactionRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
@@ -49,6 +51,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final SeatRepository seatRepository;
     private final VenueSeatRepository venueSeatRepository;
+    private final TransactionRepository transactionRepository;
     private final EmailService emailService;
 
     /**
@@ -84,21 +87,29 @@ public class BookingService {
                 .attended(false)
                 .build();
 
+        // Calculate average price per ticket based on total amount to include taxes and deals
+        int totalTickets = 0;
+        if (request.getSeatIds() != null) totalTickets += request.getSeatIds().size();
+        if (request.getSharedAreaTickets() != null) {
+            for (InitiatePaymentRequest.SharedAreaTicketRequest sa : request.getSharedAreaTickets()) {
+                totalTickets += sa.getTicketCount();
+            }
+        }
+        
+        BigDecimal pricePerTicket = totalTickets > 0 
+            ? request.getTotalAmount().divide(new BigDecimal(totalTickets), 2, java.math.RoundingMode.HALF_UP) 
+            : BigDecimal.ZERO;
+
         // Add seat bookings if any (using VenueSeat with String ID)
         if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
             for (String seatId : request.getSeatIds()) {
                 VenueSeat venueSeat = venueSeatRepository.findById(seatId)
                         .orElseThrow(() -> new RuntimeException("VenueSeat not found with ID: " + seatId));
 
-                // Get price from VenueSeat's category
-                BigDecimal price = venueSeat.getCategory() != null ?
-                        venueSeat.getCategory().getBasePrice() : BigDecimal.ZERO;
-
                 BookingSeat bookingSeat = BookingSeat.builder()
                         .event(event) // Set the event (required by database constraint)
-                        .seat(null) // VenueSeat doesn't link to Seat entity
                         .venueSeatId(seatId) // Store the VenueSeat ID
-                        .priceAtBooking(price)
+                        .priceAtBooking(pricePerTicket)
                         .ticketCode(generateTicketCode())
                         .isSharedAreaTicket(false)
                         .build();
@@ -113,8 +124,7 @@ public class BookingService {
                 for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
                     BookingSeat bookingSeat = BookingSeat.builder()
                             .event(event) // Set the event (required by database constraint)
-                            .seat(null)
-                            .priceAtBooking(sharedAreaTicket.getPricePerTicket())
+                            .priceAtBooking(pricePerTicket)
                             .ticketCode(generateTicketCode())
                             .isSharedAreaTicket(true)
                             .sharedAreaNumber(sharedAreaTicket.getSharedAreaNumber())
@@ -248,11 +258,6 @@ public class BookingService {
                 // Initialize booking seats collection
                 if (booking.getBookingSeats() != null) {
                     booking.getBookingSeats().size();
-                    booking.getBookingSeats().forEach(seat -> {
-                        if (seat.getSeat() != null) {
-                            seat.getSeat().getSeatId();
-                        }
-                    });
                 }
             });
             
@@ -336,7 +341,8 @@ public class BookingService {
                         .orElseThrow(() -> new RuntimeException("Seat not found with ID: " + seatId));
                 
                 BookingSeat bookingSeat = BookingSeat.builder()
-                        .seat(seat)
+                        .event(event)
+                        .venueSeatId(seatId.toString())
                         .priceAtBooking(seat.getPrice())
                         .ticketCode(generateTicketCode())
                         .isSharedAreaTicket(false)
@@ -352,7 +358,7 @@ public class BookingService {
                 // Create one BookingSeat entry per ticket
                 for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
                     BookingSeat bookingSeat = BookingSeat.builder()
-                            .seat(null) // No seat for shared area tickets
+                            .event(event) // No seat for shared area tickets
                             .priceAtBooking(sharedAreaTicket.getPricePerTicket())
                             .ticketCode(generateTicketCode())
                             .isSharedAreaTicket(true)
@@ -570,12 +576,9 @@ public class BookingService {
                         } else if (bookingSeat.getVenueSeatId() != null) {
                             // VenueSeat format (e.g., "L-A-01")
                             seatBuilder.seatNumber(bookingSeat.getVenueSeatId());
-                        } else if (bookingSeat.getSeat() != null) {
-                            Seat seat = bookingSeat.getSeat();
-                            seatBuilder.seatId(seat.getSeatId())
-                                      .seatNumber(seat.getSeatNumber())
-                                      .seatRow(seat.getRowNumber())
-                                      .section(seat.getSection());
+                        } else {
+                            // Fallback if neither is present
+                            seatBuilder.seatNumber("Unknown Seat");
                         }
                         
                         return seatBuilder.build();
@@ -668,9 +671,15 @@ public class BookingService {
      */
     public void deleteBooking(String bookingId) {
         UUID uuid = UUID.fromString(bookingId);
-        if (!bookingRepository.existsById(uuid)) {
-            throw new RuntimeException("Booking not found with ID: " + bookingId);
+        Booking booking = bookingRepository.findById(uuid)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+                
+        // Delete all transactions associated with this booking to avoid foreign key constraints
+        List<Transaction> transactions = transactionRepository.findByBooking(booking);
+        if (transactions != null && !transactions.isEmpty()) {
+            transactionRepository.deleteAll(transactions);
         }
+        
         bookingRepository.deleteById(uuid);
     }
 

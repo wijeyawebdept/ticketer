@@ -38,8 +38,9 @@ public class PublicEventController {
      */
     @GetMapping
     public ResponseEntity<Page<EventResponse>> getPublishedEvents(
+            @RequestParam(required = false) UUID categoryId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        Page<EventResponse> events = eventService.getPublishedEvents(pageable);
+        Page<EventResponse> events = eventService.getPublishedEvents(categoryId, pageable);
         return ResponseEntity.ok(events);
     }
     

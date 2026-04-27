@@ -58,6 +58,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
            "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
            "ORDER BY e.createdAt DESC")
     Page<Event> findUpcomingPublishedEvents(Pageable pageable);
+
+    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
+           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+           "AND e.category.id = :categoryId " +
+           "ORDER BY e.createdAt DESC")
+    Page<Event> findPublishedEventsByCategory(UUID categoryId, Pageable pageable);
     
     @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
            "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +

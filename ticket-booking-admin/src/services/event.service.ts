@@ -8,7 +8,6 @@ interface EventCreateRequest {
   startDateTime: string;
   endDateTime: string;
   venueId: string;
-  basePrice: number;
   totalCapacity: number;
   imageUrl?: string;
   ticketCategories?: TicketCategory[]; // Added ticket categories
@@ -20,7 +19,6 @@ interface EventUpdateRequest {
   startDateTime?: string;
   endDateTime?: string;
   venueId?: string;
-  basePrice?: number;
   totalCapacity?: number;
   status?: string;
   imageUrl?: string;
@@ -136,8 +134,9 @@ class EventService {
   }
 
   // Public event methods (no authentication required)
-  async getPublishedEvents(page: number = 0, size: number = 20): Promise<any> {
-    const response = await api.get<any>(`/api/public/events?page=${page}&size=${size}`);
+  async getPublishedEvents(page: number = 0, size: number = 20, categoryId?: string): Promise<any> {
+    const categoryParam = categoryId ? `&categoryId=${categoryId}` : '';
+    const response = await api.get<any>(`/api/public/events?page=${page}&size=${size}${categoryParam}`);
     return response.data;
   }
 

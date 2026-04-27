@@ -34,9 +34,10 @@ import {
 } from '@mui/icons-material';
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { Event, Venue, EventStatus, TicketCategory, EventCategory } from '../../../types';
+import { Event, Venue, EventStatus, TicketCategory, EventCategory, VenueSeatCategory } from '../../../types';
 import { EventService, EventScheduleService, EventCategoryService } from '../../../services';
 import { VenueService } from '../../../services';
+import { venueSeatService } from '../../../services/venueSeatService';
 import { useAuth } from '../../../context/AuthContext';
 
 // Define the form values type
@@ -45,7 +46,6 @@ interface FormValues {
   description: string;
   venueId: string;
   categoryId: string;
-  basePrice: number | '';
   totalCapacity: number | '';
   status: EventStatus;
   imageFile: File | null;
@@ -117,6 +117,9 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const [venueLoading, setVenueLoading] = useState(false);
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
+  /** Venue seat zones with seat counts — used to auto-populate Step 3 */
+  const [venueSeatCategories, setVenueSeatCategories] = useState<VenueSeatCategory[]>([]);
+  const [venueSeatCategoriesLoading, setVenueSeatCategoriesLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' | 'success' }>({ 
     open: false, 
@@ -135,12 +138,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       case 0: // Event Info
         if (touched.name && errors.name) stepErrorMessages.push(`Event Name: ${errors.name}`);
         if (touched.description && errors.description) stepErrorMessages.push(`Description: ${errors.description}`);
-        if (touched.basePrice && errors.basePrice) stepErrorMessages.push(`Base Price: ${errors.basePrice}`);
         if (touched.status && errors.status) stepErrorMessages.push(`Status: ${errors.status}`);
         // Check if required fields are empty
         if (!values.name) stepErrorMessages.push('Event Name is required');
         if (!values.description || values.description.length < 10) stepErrorMessages.push('Description is required (minimum 10 characters)');
-        if (values.basePrice === '' || values.basePrice === null) stepErrorMessages.push('Base Price is required');
         break;
         
       case 1: // Venue & Capacity
@@ -221,7 +222,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         case 0:
           touchedFields.name = true;
           touchedFields.description = true;
-          touchedFields.basePrice = true;
           touchedFields.status = true;
           break;
         case 1:
@@ -299,6 +299,16 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
     
     fetchCategories();
   }, []);
+
+  // When editing an existing event, pre-load the venue seat categories
+  // so Step 3 shows the zone color badges correctly on first open
+  useEffect(() => {
+    if (event?.venue?.id) {
+      venueSeatService.getVenueSeatCategories(event.venue.id)
+        .then(cats => setVenueSeatCategories(cats))
+        .catch(() => {}); // Silent fail; UI falls back gracefully
+    }
+  }, [event?.venue?.id]);
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
     const file = e.target.files?.[0];
@@ -355,7 +365,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         description: event?.description || '',
         venueId: event?.venue?.id || '',
         categoryId: event?.category?.id || '',
-        basePrice: event?.basePrice || '',
         totalCapacity: event?.totalCapacity || '',
         status: event?.status || EventStatus.DRAFT,
         imageFile: null,
@@ -390,15 +399,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             if (!value) return true; // Optional field
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             return uuidRegex.test(value);
-          }),
-        basePrice: Yup.number()
-          .required('Base price is required')
-          .typeError('Base price must be a valid number')
-          .min(0.01, 'Base price must be greater than LKR 0')
-          .max(1000000, 'Base price cannot exceed LKR 1,000,000')
-          .test('two-decimals', 'Base price can have at most 2 decimal places', (value) => {
-            if (value === undefined || value === null) return false;
-            return /^\d+(\.\d{1,2})?$/.test(value.toString());
           }),
         totalCapacity: Yup.number()
           .required('Total capacity is required')
@@ -549,26 +549,22 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           const eventData: any = { ...values };
           delete eventData.imageFile;
           
-          // Prepare data for API - explicitly include isSharedArea and sharedAreaNumber
+          // Prepare data for API - include venueSeatCategoryName for seat price mapping
           const eventDataForApi = {
             ...eventData,
-            availableSeats: Number(eventData.totalCapacity), // Event's configured capacity
-            totalCapacity: selectedVenue?.capacity || Number(eventData.totalCapacity), // Venue's total capacity
-            ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => {
-              const mapped = {
-                categoryName: category.categoryName.trim(),
-                description: category.description?.trim() || '',
-                price: Number(category.price),
-                capacity: Number(category.capacity),
-                isSharedArea: category.isSharedArea || false,
-                sharedAreaNumber: category.sharedAreaNumber || null
-              };
-              return mapped;
-            })
+            availableSeats: Number(eventData.totalCapacity),
+            totalCapacity: selectedVenue?.capacity || Number(eventData.totalCapacity),
+            ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
+              categoryName: category.categoryName.trim(),
+              description: category.description?.trim() || '',
+              price: Number(category.price),
+              capacity: Number(category.capacity),
+              isSharedArea: category.isSharedArea || false,
+              sharedAreaNumber: category.sharedAreaNumber || null,
+              // Links this ticket to a venue seat zone (e.g. "Platinum") for price mapping on the seat map
+              venueSeatCategoryName: category.venueSeatCategoryName?.trim() || null,
+            }))
           };
-          
-          eventDataForApi.ticketCategories.forEach((cat: any, idx: number) => {
-          });
           
           let savedEvent;
           
@@ -707,31 +703,6 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                   </Grid>
                   
                   <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      id="basePrice"
-                      name="basePrice"
-                      label="Base Price (LKR)"
-                      type="number"
-                      value={values.basePrice}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.basePrice && Boolean(errors.basePrice)}
-                      helperText={
-                        touched.basePrice && errors.basePrice 
-                          ? errors.basePrice as string 
-                          : 'Minimum ticket price (greater than LKR 0, max LKR 1,000,000)'
-                      }
-                      variant="outlined"
-                      margin="normal"
-                      InputProps={{
-                        startAdornment: <Typography variant="body2">LKR</Typography>,
-                      }}
-                      required
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
                     <FormControl 
                       fullWidth 
                       variant="outlined" 
@@ -805,7 +776,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                         id="venueId"
                         name="venueId"
                         value={values.venueId}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const selectedVenueId = e.target.value;
                           setFieldValue('venueId', selectedVenueId);
                           
@@ -813,18 +784,32 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                           const selectedVenue = venues.find(v => v.id === selectedVenueId);
                           if (selectedVenue) {
                             setFieldValue('totalCapacity', selectedVenue.capacity);
-                            
-                            // Handle shared areas - add shared area ticket categories if venue has them
-                            if (selectedVenue.hasSharedAreas && selectedVenue.sharedAreaCount && selectedVenue.sharedAreaCount > 0) {
-                              // Filter out old shared area categories and keep regular ones
-                              const regularCategories = values.ticketCategories.filter(cat => !cat.isSharedArea);
-                              
-                              // Create new shared area categories based on venue configuration
+                          }
+
+                          if (!selectedVenueId) return;
+
+                          // Fetch venue seat categories to auto-populate Step 3
+                          setVenueSeatCategoriesLoading(true);
+                          try {
+                            const seatCats = await venueSeatService.getVenueSeatCategories(selectedVenueId);
+                            setVenueSeatCategories(seatCats);
+
+                            // Build seated ticket categories from venue seat zones (no isSharedArea)
+                            const seatedCategories: TicketCategory[] = seatCats.map(sc => ({
+                              categoryName: sc.categoryName, // default label = venue category name, admin can change
+                              description: '',
+                              price: '' as any,
+                              capacity: sc.seatCount,
+                              isSharedArea: false,
+                              venueSeatCategoryName: sc.categoryName, // link to venue seat zone
+                            }));
+
+                            // Preserve any shared area categories from the current venue config
+                            if (selectedVenue?.hasSharedAreas && selectedVenue.sharedAreaCount && selectedVenue.sharedAreaCount > 0) {
                               const sharedAreaCategories: TicketCategory[] = [];
                               const capacityPerArea = selectedVenue.sharedAreaTotalCapacity 
                                 ? Math.floor(selectedVenue.sharedAreaTotalCapacity / selectedVenue.sharedAreaCount)
                                 : 0;
-                              
                               for (let i = 1; i <= selectedVenue.sharedAreaCount; i++) {
                                 sharedAreaCategories.push({
                                   categoryName: `Standing Area ${i}`,
@@ -835,18 +820,18 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                   sharedAreaNumber: i
                                 });
                               }
-                              
-                              // Combine regular categories with shared area categories
-                              setFieldValue('ticketCategories', [...regularCategories, ...sharedAreaCategories]);
+                              setFieldValue('ticketCategories', [...seatedCategories, ...sharedAreaCategories]);
                             } else {
-                              // No shared areas - remove any existing shared area categories
-                              const regularCategories = values.ticketCategories.filter(cat => !cat.isSharedArea);
-                              if (regularCategories.length !== values.ticketCategories.length) {
-                                setFieldValue('ticketCategories', regularCategories.length > 0 
-                                  ? regularCategories 
-                                  : [{ categoryName: '', price: '' as any, capacity: '' as any }]);
-                              }
+                              setFieldValue('ticketCategories', seatedCategories.length > 0
+                                ? seatedCategories
+                                : [{ categoryName: '', price: '' as any, capacity: '' as any }]
+                              );
                             }
+                          } catch (err) {
+                            // Fallback: keep manual entry
+                            setVenueSeatCategories([]);
+                          } finally {
+                            setVenueSeatCategoriesLoading(false);
                           }
                         }}
                         label="Venue"
@@ -1138,35 +1123,78 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     </>
                   )}
                   
-                  {/* Seated Ticket Categories Section */}
+                  {/* Seated Ticket Categories Section — auto-populated from venue seat zones */}
                   <Grid item xs={12}>
                     <Typography variant="h6" gutterBottom sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                        Seated Ticket Categories
                       {venueHasSharedAreas && (
                         <Chip label="For seats only" size="small" variant="outlined" />
                       )}
+                      {venueSeatCategoriesLoading && <CircularProgress size={16} />}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Define pricing tiers for seated sections (e.g., VIP, General Admission, Student).
-                      {venueHasSharedAreas && " Standing areas are configured separately above."}
-                    </Typography>
+                    {venueSeatCategories.length > 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Categories are auto-populated from the venue's seat zones. Set a <strong>custom label</strong> and <strong>price</strong> for each zone. Seat counts are fixed by the venue layout.
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {values.venueId
+                          ? 'No seat zones found for this venue. You can add categories manually.'
+                          : 'Select a venue in the previous step to auto-populate seat categories.'}
+                        {venueHasSharedAreas && ' Standing areas are configured separately above.'}
+                      </Typography>
+                    )}
                   </Grid>
-                  
+
                   {values.ticketCategories.map((category, index) => {
-                    // Skip shared area categories in this loop
                     if (category.isSharedArea) return null;
-                    
+
+                    const zoneColor = venueSeatCategories.find(
+                      sc => sc.categoryName === category.venueSeatCategoryName
+                    )?.colorCode || '#888';
+                    const isVenueDriven = Boolean(category.venueSeatCategoryName);
+
                     return (
                       <Grid item xs={12} key={index}>
-                        <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-                          <Grid container spacing={2}>
+                        <Paper sx={{ p: 2, mb: 2, borderRadius: 2, border: isVenueDriven ? '1px solid' : undefined, borderColor: isVenueDriven ? 'divider' : undefined }}>
+                          <Grid container spacing={2} alignItems="center">
+
+                            {/* Header: zone color dot + zone name badge + remove button */}
                             <Grid item xs={12}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="subtitle1" fontWeight="bold">
-                                  Seated Category {regularCategories.findIndex(c => c === category) + 1}
-                                </Typography>
-                                {regularCategories.length > 1 && (
-                                  <IconButton 
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  {isVenueDriven && (
+                                    <Box sx={{
+                                      width: 14, height: 14, borderRadius: '50%',
+                                      backgroundColor: zoneColor, flexShrink: 0
+                                    }} />
+                                  )}
+                                  <Typography variant="subtitle1" fontWeight="bold">
+                                    {isVenueDriven
+                                      ? `Ticket Category ${regularCategories.findIndex(c => c === category) + 1}`
+                                      : `Seated Category ${regularCategories.findIndex(c => c === category) + 1}`}
+                                  </Typography>
+                                  {isVenueDriven && (
+                                    <Chip
+                                      label={`Venue zone: ${category.venueSeatCategoryName}`}
+                                      size="small"
+                                      icon={<LockIcon sx={{ fontSize: 12 }} />}
+                                      sx={{ fontSize: '0.7rem', height: 20, bgcolor: `${zoneColor}22`, borderColor: zoneColor, color: 'text.primary' }}
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {isVenueDriven && (
+                                    <Chip
+                                      label={`${category.capacity} seats`}
+                                      size="small"
+                                      color="default"
+                                      sx={{ fontSize: '0.7rem', height: 20 }}
+                                    />
+                                  )}
+                                </Box>
+                                {/* Allow remove only if NOT venue-driven, or if there are extra manual categories */}
+                                {!isVenueDriven && regularCategories.length > 1 && (
+                                  <IconButton
                                     onClick={() => {
                                       const newCategories = [...values.ticketCategories];
                                       newCategories.splice(index, 1);
@@ -1180,32 +1208,36 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 )}
                               </Box>
                             </Grid>
-                            
-                            <Grid item xs={12} sm={6}>
+
+                            {/* Custom label (editable name shown to customers) */}
+                            <Grid item xs={12} sm={isVenueDriven ? 6 : 6}>
                               <TextField
                                 fullWidth
                                 name={`ticketCategories[${index}].categoryName`}
-                                label="Category Name"
-                                placeholder="e.g., VIP, General Admission, Student"
+                                label={isVenueDriven ? 'Ticket Label (shown to customers)' : 'Category Name'}
+                                placeholder={isVenueDriven
+                                  ? `e.g., Phase 1, VIP Gold, Early Bird...`
+                                  : 'e.g., VIP, General Admission, Student'}
                                 value={category.categoryName}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
                                 error={
-                                  getTouched(touched, `ticketCategories[${index}].categoryName`) && 
+                                  getTouched(touched, `ticketCategories[${index}].categoryName`) &&
                                   Boolean(getError(errors, `ticketCategories[${index}].categoryName`))
                                 }
                                 helperText={
-                                  getTouched(touched, `ticketCategories[${index}].categoryName`) && 
-                                  getError(errors, `ticketCategories[${index}].categoryName`) ? 
-                                  getError(errors, `ticketCategories[${index}].categoryName`) as string : 
-                                  undefined
+                                  getTouched(touched, `ticketCategories[${index}].categoryName`) &&
+                                  getError(errors, `ticketCategories[${index}].categoryName`)
+                                    ? getError(errors, `ticketCategories[${index}].categoryName`) as string
+                                    : isVenueDriven ? `Maps to "${category.venueSeatCategoryName}" zone` : undefined
                                 }
                                 variant="outlined"
                                 margin="normal"
                                 required
                               />
                             </Grid>
-                            
+
+                            {/* Price */}
                             <Grid item xs={12} sm={3}>
                               <TextField
                                 fullWidth
@@ -1217,14 +1249,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 onChange={handleChange}
                                 onBlur={handleBlur}
                                 error={
-                                  getTouched(touched, `ticketCategories[${index}].price`) && 
+                                  getTouched(touched, `ticketCategories[${index}].price`) &&
                                   Boolean(getError(errors, `ticketCategories[${index}].price`))
                                 }
                                 helperText={
-                                  getTouched(touched, `ticketCategories[${index}].price`) && 
-                                  getError(errors, `ticketCategories[${index}].price`) ? 
-                                  getError(errors, `ticketCategories[${index}].price`) as string : 
-                                  undefined
+                                  getTouched(touched, `ticketCategories[${index}].price`) &&
+                                  getError(errors, `ticketCategories[${index}].price`)
+                                    ? getError(errors, `ticketCategories[${index}].price`) as string
+                                    : undefined
                                 }
                                 variant="outlined"
                                 margin="normal"
@@ -1234,33 +1266,40 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 required
                               />
                             </Grid>
-                            
+
+                            {/* Capacity — read-only if venue-driven */}
                             <Grid item xs={12} sm={3}>
                               <TextField
                                 fullWidth
                                 name={`ticketCategories[${index}].capacity`}
-                                label="Capacity"
+                                label="Seat Count"
                                 type="number"
                                 placeholder="0"
                                 value={category.capacity}
-                                onChange={handleChange}
-                                onBlur={handleBlur}
+                                onChange={isVenueDriven ? undefined : handleChange}
+                                onBlur={isVenueDriven ? undefined : handleBlur}
+                                InputProps={{ readOnly: isVenueDriven }}
                                 error={
-                                  getTouched(touched, `ticketCategories[${index}].capacity`) && 
+                                  !isVenueDriven &&
+                                  getTouched(touched, `ticketCategories[${index}].capacity`) &&
                                   Boolean(getError(errors, `ticketCategories[${index}].capacity`))
                                 }
                                 helperText={
-                                  getTouched(touched, `ticketCategories[${index}].capacity`) && 
-                                  getError(errors, `ticketCategories[${index}].capacity`) ? 
-                                  getError(errors, `ticketCategories[${index}].capacity`) as string : 
-                                  undefined
+                                  isVenueDriven
+                                    ? 'Fixed by venue layout'
+                                    : getTouched(touched, `ticketCategories[${index}].capacity`) &&
+                                      getError(errors, `ticketCategories[${index}].capacity`)
+                                      ? getError(errors, `ticketCategories[${index}].capacity`) as string
+                                      : undefined
                                 }
                                 variant="outlined"
                                 margin="normal"
-                                required
+                                sx={isVenueDriven ? { '& .MuiInputBase-root': { bgcolor: 'action.hover' } } : {}}
+                                required={!isVenueDriven}
                               />
                             </Grid>
-                            
+
+                            {/* Optional description */}
                             <Grid item xs={12}>
                               <TextField
                                 fullWidth
@@ -1281,28 +1320,31 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                       </Grid>
                     );
                   })}
-                  
-                  <Grid item xs={12}>
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      startIcon={<AddIcon />}
-                      onClick={() => {
-                        // Find where to insert (before shared area categories)
-                        const regularCount = regularCategories.length;
-                        const newCategories = [...values.ticketCategories];
-                        newCategories.splice(regularCount, 0, { categoryName: '', price: '' as any, capacity: '' as any });
-                        setFieldValue('ticketCategories', newCategories);
-                      }}
-                      sx={{ mt: 1, mb: 3 }}
-                    >
-                      Add Another Seated Category
-                    </Button>
-                    
-                    {typeof errors.ticketCategories === 'string' && (
-                      <FormHelperText error sx={{ ml: 2 }}>{errors.ticketCategories}</FormHelperText>
-                    )}
-                  </Grid>
+
+                  {/* "Add Another" button only shown when there are no venue-driven categories */}
+                  {regularCategories.every(c => !c.venueSeatCategoryName) && (
+                    <Grid item xs={12}>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          const regularCount = regularCategories.length;
+                          const newCategories = [...values.ticketCategories];
+                          newCategories.splice(regularCount, 0, { categoryName: '', price: '' as any, capacity: '' as any });
+                          setFieldValue('ticketCategories', newCategories);
+                        }}
+                        sx={{ mt: 1, mb: 3 }}
+                      >
+                        Add Another Seated Category
+                      </Button>
+
+                      {typeof errors.ticketCategories === 'string' && (
+                        <FormHelperText error sx={{ ml: 2 }}>{errors.ticketCategories}</FormHelperText>
+                      )}
+                    </Grid>
+                  )}
+
                 </Grid>
               );
               

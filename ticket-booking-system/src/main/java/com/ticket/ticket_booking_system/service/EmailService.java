@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -22,6 +23,7 @@ import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
+import com.ticket.ticket_booking_system.entity.TicketCategory;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -84,9 +86,7 @@ public class EmailService {
                             return "Shared Area #" + bs.getSharedAreaNumber()
                                     + " - Ticket: " + bs.getTicketCode();
                         }
-                        String seatLabel = bs.getSeat() != null
-                                ? "Row " + bs.getSeat().getRow() + ", Seat " + bs.getSeat().getSeatNumber()
-                                : (bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat");
+                        String seatLabel = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat";
                         return seatLabel + " - Ticket: " + bs.getTicketCode();
                     })
                     .collect(Collectors.joining("\n"));
@@ -158,9 +158,7 @@ public class EmailService {
                             return "Shared Area #" + bs.getSharedAreaNumber()
                                     + " - Ticket: " + bs.getTicketCode();
                         }
-                        String seatLabel = bs.getSeat() != null
-                                ? "Row " + bs.getSeat().getRow() + ", Seat " + bs.getSeat().getSeatNumber()
-                                : (bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat");
+                        String seatLabel = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat";
                         return seatLabel + " - Ticket: " + bs.getTicketCode();
                     })
                     .collect(Collectors.joining("\n"));
@@ -435,6 +433,35 @@ public class EmailService {
             log.info("Organizer event assignment email sent to: {}", organizer.getEmail());
         } catch (Exception e) {
             log.error("Failed to send organizer event assignment email to {}: {}", organizer.getEmail(), e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendDealNotificationEmail(String customerEmail, String firstName, String eventName, TicketCategory tc) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("firstName", firstName);
+            ctx.setVariable("eventName", eventName);
+            ctx.setVariable("categoryName", tc.getCategoryName());
+            ctx.setVariable("dealLabel", tc.getDealLabel());
+            
+            String dealDetails;
+            if ("BUY_X_GET_Y_FREE".equals(tc.getDealType())) {
+                dealDetails = "Buy " + tc.getDealBuyQuantity() + " Get " + tc.getDealFreeQuantity() + " FREE!";
+            } else {
+                dealDetails = tc.getDealDiscountPercentage() + "% DISCOUNT!";
+            }
+            ctx.setVariable("dealDetails", dealDetails);
+            ctx.setVariable("price", tc.getPrice());
+            ctx.setVariable("browseUrl", frontendBaseUrl + "/events/" + tc.getEvent().getEventId());
+
+            String htmlBody = templateEngine.process("emails/deal-notification", ctx);
+            String subject = "Exclusive Deal: " + tc.getDealLabel() + " for " + eventName;
+
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("Deal notification email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send deal notification email to {}: {}", customerEmail, e.getMessage());
         }
     }
 

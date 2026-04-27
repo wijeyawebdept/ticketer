@@ -520,13 +520,13 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
         <DialogContent>
           {selectedSeatIds.size > 0 && (
             <Typography gutterBottom>
-              🎟️ Seats: {selectedSeatIds.size} seat(s)
+               Seats: {selectedSeatIds.size} seat(s)
             </Typography>
           )}
           {standingAreaSelections.size > 0 && (
             <Box sx={{ mb: 1 }}>
               <Typography gutterBottom>
-                🎭 Standing Tickets:
+                 Standing Tickets:
               </Typography>
               {Array.from(standingAreaSelections.values()).map((selection) => (
                 <Typography key={selection.sharedAreaNumber} variant="body2" sx={{ pl: 2 }}>

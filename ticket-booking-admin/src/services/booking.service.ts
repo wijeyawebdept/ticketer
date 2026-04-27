@@ -122,6 +122,11 @@ class BookingService {
     const response = await api.get<Booking[]>(`${basePath}/bookings/pending`);
     return response.data;
   }
+
+  async deleteBooking(id: string): Promise<void> {
+    const basePath = this.getBasePath();
+    await api.delete(`${basePath}/bookings/${id}`);
+  }
 }
 
 const bookingService = new BookingService();

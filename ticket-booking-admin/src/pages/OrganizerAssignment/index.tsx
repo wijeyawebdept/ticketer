@@ -128,8 +128,18 @@ const OrganizerAssignment: React.FC = () => {
         `/api/admin/events/${selectedEvent.id}/assign-organizer?organizerId=${selectedOrganizerId}`
       );
       showSuccessToast('Organizer assigned successfully');
+
+      // Optimistic update — find the selected organizer from the already-loaded list and patch the row in-place
+      const assignedOrg = organizers.find(o => o.organizerId === selectedOrganizerId);
+      if (assignedOrg) {
+        setEvents(prev => prev.map(e =>
+          e.id === selectedEvent.id
+            ? { ...e, organizer: { id: assignedOrg.organizerId, firstName: assignedOrg.firstName, lastName: assignedOrg.lastName, email: assignedOrg.email } }
+            : e
+        ));
+      }
+
       handleCloseAssignDialog();
-      fetchData();
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to assign organizer');
     }
@@ -146,7 +156,11 @@ const OrganizerAssignment: React.FC = () => {
     try {
       await api.delete(`/api/admin/events/${eventToRemove}/remove-organizer`);
       showSuccessToast('Organizer removed successfully');
-      fetchData();
+
+      // Optimistic update — clear the organizer from the row in-place, no refetch needed
+      setEvents(prev => prev.map(e =>
+        e.id === eventToRemove ? { ...e, organizer: undefined } : e
+      ));
     } catch (error: any) {
       showErrorToast(error.response?.data?.message || 'Failed to remove organizer');
     } finally {

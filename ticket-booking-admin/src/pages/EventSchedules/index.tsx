@@ -324,9 +324,13 @@ const EventSchedules: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="textSecondary">
-                    Base Price
+                    Starting From
                   </Typography>
-                  <Typography variant="h6">LKR {event.basePrice}</Typography>
+                  <Typography variant="h6">
+                    {event.ticketCategories && event.ticketCategories.length > 0
+                      ? `LKR ${Math.min(...event.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => Number(tc.price) || 0)).toLocaleString()}`
+                      : 'TBA'}
+                  </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="textSecondary">
@@ -686,7 +690,7 @@ const EventSchedules: React.FC = () => {
                         helperText={
                           touched.priceAdjustment && errors.priceAdjustment
                             ? (errors.priceAdjustment as string)
-                            : `Final Price: LKR ${(event?.basePrice || 0) + values.priceAdjustment}`
+                            : `Price adjustment applies to the per-category ticket price`
                         }
                       />
                     </Grid>

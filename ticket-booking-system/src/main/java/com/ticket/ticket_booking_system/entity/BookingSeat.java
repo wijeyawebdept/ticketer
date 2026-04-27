@@ -57,10 +57,7 @@ public class BookingSeat {
         }
     }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_id", nullable = true) // Allow NULL for shared area tickets
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings", "event"})
-    private Seat seat;
+    // Seat entity reference removed as seats table was dropped in favor of VenueSeat
 
     @Column(nullable = false)
     private BigDecimal priceAtBooking;

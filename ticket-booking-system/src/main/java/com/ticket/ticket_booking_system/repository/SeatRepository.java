@@ -16,75 +16,77 @@ import com.ticket.ticket_booking_system.entity.Seat;
 
 @Repository
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
-    
+
     // Legacy methods (keeping for backward compatibility)
     List<Seat> findByEventAndIsBlockedFalse(Event event);
-    
+
     @Query("SELECT s FROM Seat s WHERE s.event = :event AND s.section = :section")
     List<Seat> findByEventAndSection(Event event, String section);
-    
+
     @Query("SELECT s FROM Seat s WHERE s.event = :event AND s.price <= :maxPrice")
     List<Seat> findByEventAndMaxPrice(Event event, BigDecimal maxPrice);
-    
+
     // New methods for dynamic seat management
     List<Seat> findByEvent_EventId(UUID eventId);
-    
+
     List<Seat> findByVenue_VenueIdAndEventIsNull(UUID venueId);
-    
+
     List<Seat> findByVenue_VenueId(UUID venueId);
-    
+
     @Query("SELECT s FROM Seat s WHERE s.event.eventId = :eventId AND s.isAvailable = true AND s.isBlocked = false")
     List<Seat> findAvailableSeatsByEventId(@Param("eventId") UUID eventId);
-    
+
     @Query("SELECT s FROM Seat s WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now AND s.isPermanentHold = false AND s.isBlocked = false")
     List<Seat> findExpiredHolds(@Param("now") LocalDateTime now);
-    
+
     @Modifying
     @Query("UPDATE Seat s SET s.isAvailable = true, s.holdExpiresAt = null, s.heldByUser = null " +
-           "WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now " +
-           "AND (s.isPermanentHold = false OR s.isPermanentHold IS NULL) " +
-           "AND s.isBlocked = false")
+            "WHERE s.holdExpiresAt IS NOT NULL AND s.holdExpiresAt < :now " +
+            "AND (s.isPermanentHold = false OR s.isPermanentHold IS NULL) " +
+            "AND s.isBlocked = false")
     int releaseExpiredHolds(@Param("now") LocalDateTime now);
-    
+
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event.eventId = :eventId AND s.isAvailable = false")
     long countBookedSeatsByEventId(@Param("eventId") UUID eventId);
-    
+
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event.eventId = :eventId")
     long countTotalSeatsByEventId(@Param("eventId") UUID eventId);
-    
+
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event = :event AND s.isAvailable = true AND s.isBlocked = false")
     Long countAvailableSeats(Event event);
-    
+
     // Delete all seats for an event
     @Modifying
     @Query("DELETE FROM Seat s WHERE s.event.eventId = :eventId")
     void deleteByEventId(@Param("eventId") UUID eventId);
-    
+
     // Delete template seats for a venue (where event is null)
     @Modifying
     @Query("DELETE FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
     void deleteByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
-    
+
     // Find template seats for a venue (where event is null)
     @Query("SELECT s FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
     List<Seat> findByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
-    
+
     // Count template seats for a venue (where event is null)
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.venue = :venue AND s.event IS NULL")
     long countByVenueAndEventIsNull(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
-    
-    // Count all seats for a venue (including both template and event-specific seats)
+
+    // Count all seats for a venue (including both template and event-specific
+    // seats)
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.venue = :venue")
     long countByVenue(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
-    
-    // Delete all seats for a venue (including both template and event-specific seats)
+
+    // Delete all seats for a venue (including both template and event-specific
+    // seats)
     @Modifying
     @Query("DELETE FROM Seat s WHERE s.venue = :venue")
     void deleteByVenue(@Param("venue") com.ticket.ticket_booking_system.entity.Venue venue);
-    
-    // Delete all seats for a venue by venue ID (for permanent delete from recycle bin)
+
+    // Delete all seats for a venue by venue ID (for permanent delete from recycle
+    // bin)
     @Modifying
     @Query("DELETE FROM Seat s WHERE s.venue.venueId = :venueId")
     void deleteByVenueId(@Param("venueId") UUID venueId);
 }
- 

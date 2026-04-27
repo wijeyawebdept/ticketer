@@ -14,6 +14,10 @@ import {
   MenuItem,
   Button,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Refresh as RefreshIcon, Search as SearchIcon, FilterAlt as FilterIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from '@mui/x-data-grid';
@@ -30,6 +34,8 @@ const Bookings: React.FC = () => {
     pageSize: 25,
     page: 0,
   });
+  const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState<boolean>(false);
 
   const fetchBookings = useCallback(async (page: number, pageSize: number) => {
     setLoading(true);
@@ -80,6 +86,24 @@ const Bookings: React.FC = () => {
 
   const handleRefresh = () => {
     fetchBookings(paginationModel.page, paginationModel.pageSize);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedBookingIds.length === 0) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleteDialogOpen(false);
+    try {
+      await Promise.all(
+        selectedBookingIds.map(id => BookingService.deleteBooking(id))
+      );
+      setSelectedBookingIds([]);
+      fetchBookings(paginationModel.page, paginationModel.pageSize);
+    } catch (error) {
+      console.error('Failed to delete bookings:', error);
+    }
   };
 
   const getStatusChipColor = (status: BookingStatus) => {
@@ -208,6 +232,30 @@ const Bookings: React.FC = () => {
             </Grid>
           </Paper>
         </Grid>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedBookingIds.length > 0 && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="body1" fontWeight={500}>
+                  {selectedBookingIds.length} booking(s) selected
+                </Typography>
+                <Box>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="small"
+                    onClick={handleBulkDelete}
+                  >
+                    Delete Selected
+                  </Button>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+        )}
+
         <Grid item xs={12}>
           <Paper 
             sx={{ 
@@ -230,6 +278,11 @@ const Bookings: React.FC = () => {
                 onPaginationModelChange={handlePaginationChange}
                 pageSizeOptions={[10, 25, 50, 100]}
                 getRowId={(row) => row.bookingId}
+                checkboxSelection
+                rowSelectionModel={selectedBookingIds}
+                onRowSelectionModelChange={(newSelection) => {
+                  setSelectedBookingIds(newSelection as string[]);
+                }}
                 disableRowSelectionOnClick
                 autoHeight
                 sx={{
@@ -249,6 +302,42 @@ const Bookings: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ backgroundColor: '#f5f5f5', fontWeight: 600 }}>
+          Confirm Bulk Delete
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
+            Are you sure you want to delete {selectedBookingIds.length} booking(s)?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+          <Button 
+            onClick={() => setIsBulkDeleteDialogOpen(false)}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={confirmBulkDelete}
+            sx={{ fontWeight: 500 }}
+          >
+            Delete {selectedBookingIds.length} Booking(s)
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

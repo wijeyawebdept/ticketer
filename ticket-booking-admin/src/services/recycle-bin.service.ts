@@ -2,7 +2,7 @@ import api from './api';
 
 export interface RecycleBinItem {
   recycleId: string;
-  entityType: 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+  entityType: 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
   entityId: string;
   entityName: string;
   entityData: any;
@@ -13,7 +13,7 @@ export interface RecycleBinItem {
 }
 
 export interface SoftDeleteRequest {
-  entityType: 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+  entityType: 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
   entityId: string;
   entityName: string;
   entityData: any;
@@ -61,7 +61,7 @@ class RecycleBinService {
   /**
    * Get recycle bin items by entity type
    */
-  async getRecycleBinItemsByType(entityType: 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY'): Promise<RecycleBinItem[]> {
+  async getRecycleBinItemsByType(entityType: 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY'): Promise<RecycleBinItem[]> {
     const basePath = this.getBasePath();
     const response = await api.get<RecycleBinItem[]>(`${basePath}/recycle-bin/type/${entityType}`);
     return response.data;
@@ -112,7 +112,7 @@ class RecycleBinService {
    * For admins: requires SUPER_ADMIN role
    * For organizers: empties their own items of this type only
    */
-  async emptyRecycleBinByType(entityType: 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY'): Promise<void> {
+  async emptyRecycleBinByType(entityType: 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY'): Promise<void> {
     const basePath = this.getBasePath();
     await api.delete(`${basePath}/recycle-bin/empty/type/${entityType}`);
   }

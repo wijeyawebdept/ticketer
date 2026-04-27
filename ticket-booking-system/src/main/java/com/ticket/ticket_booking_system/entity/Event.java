@@ -59,8 +59,11 @@ public class Event {
     @Column(name = "venue_address", columnDefinition = "TEXT")
     private String venueAddress;
 
-    @Column(name = "base_price", nullable = false)
-    private BigDecimal basePrice;
+    /** Kept for backward compatibility but no longer set by the form.
+     * Auto-computed as the minimum ticket category price in responses. */
+    @Builder.Default
+    @Column(name = "base_price", nullable = true)
+    private BigDecimal basePrice = BigDecimal.ZERO;
 
     @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;

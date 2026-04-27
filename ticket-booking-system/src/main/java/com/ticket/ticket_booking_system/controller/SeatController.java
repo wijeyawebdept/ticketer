@@ -26,23 +26,23 @@ Provides endpoints for seat layout, availability, and booking operations
 @RestController
 @RequestMapping("/api/seats")
 public class SeatController {
-    
+
     private final SeatService seatService;
-    
+
     public SeatController(SeatService seatService) {
         this.seatService = seatService;
     }
-    
+
     /*
-    Get all seats for an event (public endpoint for seat map display)
-    GET /api/seats?eventId={eventId}
+     * Get all seats for an event (public endpoint for seat map display)
+     * GET /api/seats?eventId={eventId}
      */
     @GetMapping
     public ResponseEntity<List<SeatResponse>> getSeats(@RequestParam UUID eventId) {
         List<SeatResponse> seats = seatService.getSeatsByEventAsResponse(eventId);
         return ResponseEntity.ok(seats);
     }
-    
+
     /**
      * Get only available seats for an event
      * GET /api/seats/available?eventId={eventId}
@@ -52,7 +52,7 @@ public class SeatController {
         List<Seat> seats = seatService.getAvailableSeatsByEvent(eventId);
         return ResponseEntity.ok(seats);
     }
-    
+
     /**
      * Get seat availability statistics for an event
      * GET /api/seats/stats?eventId={eventId}
@@ -62,7 +62,7 @@ public class SeatController {
         SeatAvailabilityStats stats = seatService.getAvailabilityStats(eventId);
         return ResponseEntity.ok(stats);
     }
-    
+
     /**
      * Block or unblock a seat (Admin, Organizer only)
      * PUT /api/seats/{seatId}/block?block=true
@@ -73,7 +73,7 @@ public class SeatController {
         seatService.toggleBlock(seatId, block);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Hold seats temporarily for a user
      * POST /api/seats/hold
@@ -89,7 +89,7 @@ public class SeatController {
         seatService.holdSeats(request.getSeatIds(), userId, request.getHoldDurationMinutes());
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Reserve seats (mark as unavailable/booked)
      * POST /api/seats/reserve
@@ -99,7 +99,7 @@ public class SeatController {
         seatService.reserveSeats(seatIds);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Unreserve seats (mark as available again) - Admin only
      * POST /api/seats/unreserve
@@ -110,7 +110,7 @@ public class SeatController {
         seatService.unreserveSeats(seatIds);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Permanently hold seats until event ends (Admin only)
      * POST /api/seats/permanent-hold
@@ -121,7 +121,7 @@ public class SeatController {
         seatService.permanentHoldSeats(seatIds);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Release permanent hold (Admin only)
      * POST /api/seats/release-permanent-hold
@@ -132,7 +132,7 @@ public class SeatController {
         seatService.releasePermanentHold(seatIds);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Release seat holds for a user
      * POST /api/seats/release-holds
@@ -142,7 +142,7 @@ public class SeatController {
         seatService.releaseSeatHolds(userId);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Generate seats for an event from venue layout (Admin, Organizer only)
      * POST /api/seats/generate?venueId={venueId}&eventId={eventId}
@@ -153,7 +153,7 @@ public class SeatController {
         seatService.generateSeatsForEvent(venueId, eventId);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * Request DTO for seat hold operations
      */
@@ -161,24 +161,40 @@ public class SeatController {
         private List<UUID> seatIds;
         private UUID userId;
         private int holdDurationMinutes = 15; // Default 15 minutes
-        
+
         // Constructors
-        public SeatHoldRequest() {}
-        
+        public SeatHoldRequest() {
+        }
+
         public SeatHoldRequest(List<UUID> seatIds, UUID userId, int holdDurationMinutes) {
             this.seatIds = seatIds;
             this.userId = userId;
             this.holdDurationMinutes = holdDurationMinutes;
         }
-        
+
         // Getters and setters
-        public List<UUID> getSeatIds() { return seatIds; }
-        public void setSeatIds(List<UUID> seatIds) { this.seatIds = seatIds; }
-        
-        public UUID getUserId() { return userId; }
-        public void setUserId(UUID userId) { this.userId = userId; }
-        
-        public int getHoldDurationMinutes() { return holdDurationMinutes; }
-        public void setHoldDurationMinutes(int holdDurationMinutes) { this.holdDurationMinutes = holdDurationMinutes; }
+        public List<UUID> getSeatIds() {
+            return seatIds;
+        }
+
+        public void setSeatIds(List<UUID> seatIds) {
+            this.seatIds = seatIds;
+        }
+
+        public UUID getUserId() {
+            return userId;
+        }
+
+        public void setUserId(UUID userId) {
+            this.userId = userId;
+        }
+
+        public int getHoldDurationMinutes() {
+            return holdDurationMinutes;
+        }
+
+        public void setHoldDurationMinutes(int holdDurationMinutes) {
+            this.holdDurationMinutes = holdDurationMinutes;
+        }
     }
 }

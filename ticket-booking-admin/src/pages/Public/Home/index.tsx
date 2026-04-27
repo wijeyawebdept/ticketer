@@ -359,7 +359,7 @@ const Home: React.FC = () => {
 
   const formatPrice = (price: number | null | undefined) => {
     if (!price || price === 0) return 'Free';
-    return `${price.toLocaleString()} LKR`;
+    return `LKR ${price.toLocaleString()}`;
   };
 
   const handleDealScroll = (direction: 'left' | 'right') => {
@@ -511,7 +511,28 @@ const Home: React.FC = () => {
                   transform: `translateX(${dealScrollPosition}px)`,
                 }}
               >
-                {dealEvents.map((event) => (
+                {dealEvents.map((event) => {
+                  // Compute the true lowest current price across all categories (with and without deals)
+                  const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
+                    const originalPrice = Number(tc.price) || 0;
+                    const discount = Number(tc.dealDiscountPercentage) || 0;
+                    const currentPrice = (tc.dealActive && discount > 0)
+                      ? originalPrice * (1 - discount / 100)
+                      : originalPrice;
+                    return { originalPrice, currentPrice };
+                  });
+
+                  const lowestOriginalPrice = allCategoryPrices.length > 0
+                    ? Math.min(...allCategoryPrices.map(p => p.originalPrice))
+                    : Number(event.basePrice) || 0;
+
+                  const lowestCurrentPrice = allCategoryPrices.length > 0
+                    ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
+                    : Number(event.basePrice) || 0;
+
+                  const showDiscountedPrice = lowestCurrentPrice < lowestOriginalPrice;
+
+                  return (
                   <Card
                     key={event.id || event.eventId}
                     sx={{
@@ -609,18 +630,42 @@ const Home: React.FC = () => {
                         <Typography variant="body2" sx={{ color: '#999', fontSize: '0.75rem', mb: 0.5 }}>
                           Starting from
                         </Typography>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontFamily: 'Raleway, sans-serif',
-                            fontWeight: 700,
-                            color: '#ff1955',
-                            fontSize: '1.1rem',
-                            mb: 2,
-                          }}
-                        >
-                          {formatPrice(event.basePrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
-                        </Typography>
+                        {showDiscountedPrice ? (
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{ fontFamily: 'Raleway, sans-serif', color: '#aaa', textDecoration: 'line-through', display: 'block', fontSize: '0.8rem' }}
+                            >
+                              {formatPrice(lowestOriginalPrice)} upwards
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontFamily: 'Raleway, sans-serif',
+                                fontWeight: 700,
+                                color: '#ff1955',
+                                fontSize: '1.1rem',
+                                mb: 2,
+                              }}
+                            >
+                              {formatPrice(lowestCurrentPrice)}{' '}
+                              <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontFamily: 'Raleway, sans-serif',
+                              fontWeight: 700,
+                              color: '#ff1955',
+                              fontSize: '1.1rem',
+                              mb: 2,
+                            }}
+                          >
+                            {formatPrice(lowestCurrentPrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                          </Typography>
+                        )}
 
                         <Button
                           fullWidth
@@ -644,7 +689,8 @@ const Home: React.FC = () => {
                       </Box>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </Box>
             </Box>
 
@@ -780,20 +826,35 @@ const Home: React.FC = () => {
           </Box>
         ) : (
           <Grid container spacing={3}>
-            {events.map((event) => (
-              <Grid item xs={12} key={event.id || event.eventId}>
-                <EventCard
-                  title={event.name}
-                  artists={event.description?.substring(0, 100) || ''}
-                  venue={event.venue?.name || 'TBA'}
-                  tickets={`From LKR ${event.basePrice || 'TBA'}`}
-                  date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : 'TBA'}
-                  day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
-                  backgroundImage={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
-                  eventId={event.id || event.eventId}
-                />
-              </Grid>
-            ))}
+              {events.map((event) => {
+                // Compute the true lowest current price across all categories
+                const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
+                  const originalPrice = Number(tc.price) || 0;
+                  const currentPrice = (tc.dealActive && tc.dealDiscountPercentage > 0)
+                    ? originalPrice * (1 - tc.dealDiscountPercentage / 100)
+                    : originalPrice;
+                  return { originalPrice, currentPrice };
+                });
+
+                const lowestCurrentPrice = allCategoryPrices.length > 0
+                  ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
+                  : Number(event.basePrice) || 0;
+
+                return (
+                <Grid item xs={12} key={event.id || event.eventId}>
+                  <EventCard
+                    title={event.name}
+                    artists={event.description?.substring(0, 100) || ''}
+                    venue={event.venue?.name || 'TBA'}
+                    tickets={`From ${formatPrice(lowestCurrentPrice)}`}
+                    date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : 'TBA'}
+                    day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
+                    backgroundImage={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
+                    eventId={event.id || event.eventId}
+                  />
+                </Grid>
+                );
+              })}
           </Grid>
         )}
 

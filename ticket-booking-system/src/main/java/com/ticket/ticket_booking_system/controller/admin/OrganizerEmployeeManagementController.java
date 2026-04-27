@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -129,7 +130,7 @@ public class OrganizerEmployeeManagementController {
         return ResponseEntity.ok(count);
     }
     
-    @PostMapping("/{employeeId}/activate")
+    @PatchMapping("/{employeeId}/activate")
     public ResponseEntity<?> activateEmployee(@PathVariable UUID employeeId) {
         try {
             OrganizerEmployeeDTO employee = employeeService.activateEmployee(employeeId);
@@ -139,7 +140,7 @@ public class OrganizerEmployeeManagementController {
         }
     }
     
-    @PostMapping("/{employeeId}/deactivate")
+    @PatchMapping("/{employeeId}/deactivate")
     public ResponseEntity<?> deactivateEmployee(@PathVariable UUID employeeId) {
         try {
             OrganizerEmployeeDTO employee = employeeService.deactivateEmployee(employeeId);

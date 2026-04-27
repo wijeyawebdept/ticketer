@@ -70,6 +70,8 @@ export interface TicketCategory {
   capacity: number;
   isSharedArea?: boolean;
   sharedAreaNumber?: number;
+  /** The venue's SeatCategory name this ticket covers (e.g. "Platinum"). Used for seat price lookup. */
+  venueSeatCategoryName?: string;
   // Deal fields
   dealActive?: boolean;
   dealType?: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE';
@@ -78,6 +80,13 @@ export interface TicketCategory {
   dealFreeQuantity?: number;
   dealLabel?: string;
   discountedPrice?: number;
+}
+
+/** Venue seat zone summary returned by GET /api/venue-seats/layout/{venueId}/categories */
+export interface VenueSeatCategory {
+  categoryName: string;   // e.g. "Platinum", "Gold"
+  colorCode: string;      // e.g. "#FFD700"
+  seatCount: number;      // number of seats in this zone
 }
 
 export interface TicketCategoryDeal {
@@ -128,7 +137,7 @@ export interface Event {
   createdAt: string;
   updatedAt: string | null;
   imageUrl?: string;
-  basePrice: number;
+  basePrice?: number; // Auto-computed from min ticket category price; no longer set by form
   ticketsAvailable: number;
   totalCapacity: number; // Event's configured capacity
   availableSeats: number; // Current available seats for the event

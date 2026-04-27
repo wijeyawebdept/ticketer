@@ -38,8 +38,8 @@ import jakarta.persistence.criteria.Predicate;
 public class OrganizerManagementServiceImpl implements OrganizerManagementService {
 
     private final OrganizerRepository organizerRepository;
-    private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
+    private final UserRepository userRepository;     // Used by findAuthenticatedUser for soft-delete audit
+    private final AdminRepository adminRepository;   // Used by findAuthenticatedUser for soft-delete audit
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
     private final EventRepository eventRepository;
     private final EventScheduleRepository eventScheduleRepository;
@@ -68,11 +68,11 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
     @Override
     @Transactional
     public OrganizerResponse createOrganizer(OrganizerCreateRequest request) {
-        // Check if email already exists in any table
-        if (userRepository.existsByEmail(request.getEmail()) ||
-            adminRepository.existsByEmail(request.getEmail()) ||
-            organizerRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+        // Only check email uniqueness within the organizer authentication domain.
+        // Regular users (users table) can also register as organizers — the tables are completely separate.
+        if (organizerRepository.existsByEmail(request.getEmail()) ||
+            organizerEmployeeRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered as an organizer or organizer employee: " + request.getEmail());
         }
 
         // Create organizer entity
@@ -159,12 +159,11 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
             organizer.setLastName(request.getLastName());
         }
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
-            // Check if new email is already in use by another organizer
+            // Only check uniqueness within the organizer domain
             if (!organizer.getEmail().equals(request.getEmail()) &&
-                (userRepository.existsByEmail(request.getEmail()) ||
-                 adminRepository.existsByEmail(request.getEmail()) ||
-                 organizerRepository.existsByEmail(request.getEmail()))) {
-                throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+                (organizerRepository.existsByEmail(request.getEmail()) ||
+                 organizerEmployeeRepository.existsByEmail(request.getEmail()))) {
+                throw new IllegalArgumentException("Email is already registered as an organizer or organizer employee: " + request.getEmail());
             }
             organizer.setEmail(request.getEmail());
         }

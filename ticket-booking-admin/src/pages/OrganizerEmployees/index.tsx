@@ -132,7 +132,7 @@ const OrganizerEmployees: React.FC = () => {
       );
       setEmployees(response.data.content || []);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to fetch organizer employees');
+      setError(err.message || 'Failed to fetch organizer employees');
     } finally {
       setLoading(false);
     }
@@ -243,7 +243,7 @@ const OrganizerEmployees: React.FC = () => {
       handleCloseDialog();
       fetchEmployees();
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to save organizer employee');
+      setError(err.message || 'Failed to save organizer employee');
     }
   };
 
@@ -260,7 +260,7 @@ const OrganizerEmployees: React.FC = () => {
       setSuccess('Organizer employee deleted successfully');
       fetchEmployees();
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to delete organizer employee');
+      setError(err.message || 'Failed to delete organizer employee');
     } finally {
       setOpenDeleteDialog(false);
       setEmployeeToDelete(null);
@@ -278,7 +278,7 @@ const OrganizerEmployees: React.FC = () => {
       setSuccess('Employee activated successfully');
       fetchEmployees();
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to activate employee');
+      setError(err.message || 'Failed to activate employee');
     }
   };
 
@@ -288,7 +288,7 @@ const OrganizerEmployees: React.FC = () => {
       setSuccess('Employee deactivated successfully');
       fetchEmployees();
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to deactivate employee');
+      setError(err.message || 'Failed to deactivate employee');
     }
   };
 
@@ -309,7 +309,7 @@ const OrganizerEmployees: React.FC = () => {
       setSuccess(`Bulk operation completed for ${selectedEmployeeIds.length} employee(s)`);
       fetchEmployees();
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to perform bulk operation');
+      setError(err.message || 'Failed to perform bulk operation');
     }
   };
 

@@ -41,12 +41,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class BookingFlowController {
-    
+
     private final SeatService seatService;
     private final VenueSeatingService venueSeatingService;
     private final BookingService bookingService;
     private final UserRepository userRepository;
-    
+
     /**
      * Get all seats for an event with their availability status
      * GET /api/bookings/seats?eventId={eventId}
@@ -57,7 +57,7 @@ public class BookingFlowController {
         List<SeatResponse> seats = seatService.getSeatsByEventAsResponse(eventId);
         return ResponseEntity.ok(seats);
     }
-    
+
     /**
      * Get venue template seats (for admins/organizers to preview)
      * GET /api/bookings/venue/{venueId}/seats
@@ -69,7 +69,7 @@ public class BookingFlowController {
         List<SeatResponse> seats = venueSeatingService.getVenueSeatingTemplateAsResponse(venueId);
         return ResponseEntity.ok(seats);
     }
-    
+
     /**
      * Hold/Lock seats temporarily for a user
      * POST /api/bookings/hold-seats
@@ -82,28 +82,28 @@ public class BookingFlowController {
     public ResponseEntity<Map<String, Object>> holdSeats(
             @Valid @RequestBody HoldSeatsRequest request,
             Authentication authentication) {
-        
-        log.info("User {} requesting to hold {} seats for event {}", 
+
+        log.info("User {} requesting to hold {} seats for event {}",
                 authentication.getName(), request.getSeatIds().size(), request.getEventId());
-        
+
         try {
             // Extract user ID from authentication
             UUID userId = extractUserIdFromAuth(authentication);
-            
+
             // Release any existing holds for this user first
             seatService.releaseSeatHolds(userId);
-            
+
             // Hold the selected seats
             seatService.holdSeats(request.getSeatIds(), userId, request.getHoldDurationMinutes());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Seats held successfully");
             response.put("heldSeats", request.getSeatIds().size());
             response.put("holdDurationMinutes", request.getHoldDurationMinutes());
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (IllegalStateException e) {
             log.error("Failed to hold seats: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
@@ -112,7 +112,7 @@ public class BookingFlowController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
         }
     }
-    
+
     /**
      * Confirm booking after successful payment
      * POST /api/bookings/confirm
@@ -124,27 +124,26 @@ public class BookingFlowController {
     public ResponseEntity<Map<String, Object>> confirmBooking(
             @Valid @RequestBody ConfirmBookingRequest request,
             Authentication authentication) {
-        
-        log.info("User {} confirming booking for event {} schedule {} with payment {}", 
+
+        log.info("User {} confirming booking for event {} schedule {} with payment {}",
                 authentication.getName(), request.getEventId(), request.getScheduleId(), request.getPaymentId());
-        
+
         try {
             // Extract user ID from authentication
             UUID userId = extractUserIdFromAuth(authentication);
-            
+
             // Verify payment (this should integrate with your payment service)
             // For now, we'll assume payment is valid if paymentId is provided
-            
+
             // Reserve the seats (mark as booked) if any seat IDs provided
             if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
                 seatService.reserveSeats(request.getSeatIds());
             }
-            
+
             // Create booking record with seats and shared area tickets
             Booking booking = bookingService.createBookingWithSeatsAndSharedAreas(
-                userId, request, request.getPaymentId()
-            );
-            
+                    userId, request, request.getPaymentId());
+
             int seatCount = request.getSeatIds() != null ? request.getSeatIds().size() : 0;
             int sharedAreaTicketCount = 0;
             if (request.getSharedAreaTickets() != null) {
@@ -152,7 +151,7 @@ public class BookingFlowController {
                         .mapToInt(ConfirmBookingRequest.SharedAreaTicketRequest::getTicketCount)
                         .sum();
             }
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Booking confirmed successfully");
@@ -162,9 +161,9 @@ public class BookingFlowController {
             response.put("paymentId", request.getPaymentId());
             response.put("bookingReference", booking.getBookingReference());
             response.put("bookingId", booking.getBookingId());
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (IllegalStateException e) {
             log.error("Failed to confirm booking: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
@@ -173,7 +172,7 @@ public class BookingFlowController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
         }
     }
-    
+
     /**
      * Release seat holds for current user
      * POST /api/bookings/release-holds
@@ -182,17 +181,17 @@ public class BookingFlowController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> releaseHolds(Authentication authentication) {
         UUID userId = extractUserIdFromAuth(authentication);
-        
+
         log.info("Releasing seat holds for user: {}", userId);
         seatService.releaseSeatHolds(userId);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Holds released successfully");
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Get seat availability statistics for an event
      * GET /api/bookings/stats?eventId={eventId}
@@ -200,12 +199,12 @@ public class BookingFlowController {
     @GetMapping("/stats")
     public ResponseEntity<SeatService.SeatAvailabilityStats> getAvailabilityStats(
             @RequestParam UUID eventId) {
-        
+
         log.info("Fetching availability stats for event: {}", eventId);
         SeatService.SeatAvailabilityStats stats = seatService.getAvailabilityStats(eventId);
         return ResponseEntity.ok(stats);
     }
-    
+
     /**
      * Get current user's bookings
      * GET /api/bookings
@@ -214,12 +213,12 @@ public class BookingFlowController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<List<BookingResponse>> getMyBookings(Authentication authentication) {
         UUID userId = extractUserIdFromAuth(authentication);
-        
+
         log.info("Fetching bookings for user: {}", userId);
         List<BookingResponse> bookings = bookingService.getBookingsByUserId(userId);
         return ResponseEntity.ok(bookings);
     }
-    
+
     /**
      * Extract user ID from authentication context
      * Fetches user by email from authentication principal
@@ -227,10 +226,10 @@ public class BookingFlowController {
     private UUID extractUserIdFromAuth(Authentication authentication) {
         String email = authentication.getName();
         log.info("Extracting user ID for email: {}", email);
-        
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("User not found with email: " + email));
-        
+
         return user.getUserId();
     }
 }

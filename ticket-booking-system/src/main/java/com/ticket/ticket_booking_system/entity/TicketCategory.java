@@ -59,6 +59,14 @@ public class TicketCategory {
     @Column(name = "shared_area_number")
     private Integer sharedAreaNumber;
 
+    /**
+     * Links this ticket category to the venue's SeatCategory by name.
+     * e.g. ticketCategoryName="Phase 1", venueSeatCategoryName="Platinum"
+     * Used by the seat availability endpoint to show the correct event price per seat.
+     */
+    @Column(name = "venue_seat_category_name", length = 100)
+    private String venueSeatCategoryName;
+
     // Deal fields – original price is never changed; discounted price is computed dynamically
     @Builder.Default
     @Column(name = "deal_active")

@@ -44,7 +44,7 @@ public class VenueSeatService {
     private final SeatHoldRepository seatHoldRepository;
 
     /** Default hold duration in minutes */
-    @Value("${seat.hold.duration.minutes:10}")
+    @Value("${seat.hold.duration.minutes:5}")
     private int defaultHoldDurationMinutes;
 
     /**
@@ -66,13 +66,28 @@ public class VenueSeatService {
     /**
      * Get all venue seats for a specific venue.
      * Seats are ordered by section, row label, and seat number.
-     * 
-     * @param venueId the UUID of the venue
-     * @return list of venue seats belonging to the specified venue
      */
     @Transactional(readOnly = true)
     public List<VenueSeat> getSeatsByVenue(UUID venueId) {
         return venueSeatRepository.findByVenueOrderedByLayout(venueId);
+    }
+
+    /**
+     * Get distinct seat categories for a venue with seat counts.
+     * Used by the event creation wizard to auto-populate ticket category rows.
+     */
+    @Transactional(readOnly = true)
+    public List<com.ticket.ticket_booking_system.dto.VenueSeatCategoryDTO> getVenueSeatCategories(UUID venueId) {
+        List<Object[]> rows = venueSeatRepository.findCategoryCountsByVenueId(venueId);
+        List<com.ticket.ticket_booking_system.dto.VenueSeatCategoryDTO> result = new java.util.ArrayList<>();
+        for (Object[] row : rows) {
+            result.add(com.ticket.ticket_booking_system.dto.VenueSeatCategoryDTO.builder()
+                    .categoryName((String) row[0])
+                    .colorCode((String) row[1])
+                    .seatCount(((Long) row[2]).intValue())
+                    .build());
+        }
+        return result;
     }
 
     /**
@@ -83,35 +98,52 @@ public class VenueSeatService {
     public SeatAvailabilityResponse getSeatAvailabilityByUUID(UUID eventScheduleUuid) {
         // Get the event schedule to find the venue
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleUuid)
-            .orElseThrow(() -> new RuntimeException("Event schedule not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Event schedule not found"));
+
         // Get the venue from the event
         UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
         UUID eventId = eventSchedule.getEvent().getEventId();
-        
+
         // Get only seats for this specific venue
         List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
-        
+
         // Get booked and held seat IDs for this schedule
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleUuid);
-        List<SeatHold> activeHolds = seatHoldRepository.findActiveHoldsByScheduleId(eventScheduleUuid, LocalDateTime.now());
+        List<SeatHold> activeHolds = seatHoldRepository.findActiveHoldsByScheduleId(eventScheduleUuid,
+                LocalDateTime.now());
         Long bookedCount = bookingSeatRepository.countBookedSeatsForSchedule(eventScheduleUuid);
         Long heldCount = seatHoldRepository.countActiveHoldsByScheduleId(eventScheduleUuid, LocalDateTime.now());
-        
+
         // Build a map of seat IDs to their hold info for quick lookup
         java.util.Map<String, SeatHold> seatHoldMap = new java.util.HashMap<>();
         for (SeatHold hold : activeHolds) {
             seatHoldMap.put(hold.getVenueSeatId(), hold);
             // Note: User lookup skipped due to userId type mismatch (Long vs UUID)
         }
-        
+
+        // Build price map: venueSeatCategoryName -> event ticket price
+        // This allows custom-named ticket categories (e.g. "Phase 1") to map to venue
+        // seat zones (e.g. "Platinum")
+        List<TicketCategory> eventTicketCategories = ticketCategoryRepository.findByEventId(eventId);
+        java.util.Map<String, TicketCategory> categoryMap = new java.util.HashMap<>();
+        for (TicketCategory tc : eventTicketCategories) {
+            if (!Boolean.TRUE.equals(tc.getIsSharedArea())) {
+                // Primary key: venueSeatCategoryName (explicit mapping)
+                if (tc.getVenueSeatCategoryName() != null && !tc.getVenueSeatCategoryName().isBlank()) {
+                    categoryMap.put(tc.getVenueSeatCategoryName(), tc);
+                }
+                // Fallback: categoryName itself (legacy events where names matched directly)
+                categoryMap.putIfAbsent(tc.getCategoryName(), tc);
+            }
+        }
+
         List<SeatDTO> seatDTOs = new ArrayList<>();
-        
+
         for (VenueSeat seat : venueSeats) {
             // Determine seat status based on bookings, holds, and notes
             String seatStatus;
             String notes = seat.getNotes() != null ? seat.getNotes().toLowerCase() : "";
-            
+
             if (bookedSeatIds.contains(seat.getSeatId())) {
                 seatStatus = SeatStatus.BOOKED.name();
             } else if (seatHoldMap.containsKey(seat.getSeatId())) {
@@ -123,85 +155,103 @@ public class VenueSeatService {
             } else {
                 seatStatus = SeatStatus.AVAILABLE.name();
             }
-            
+
+            TicketCategory eventCategory = categoryMap.get(seat.getCategory().getCategoryName());
+            java.math.BigDecimal currentPrice = eventCategory != null ? eventCategory.getPrice()
+                    : seat.getCategory().getBasePrice();
+
             // Build SeatDTO with hold information
             SeatDTO.SeatDTOBuilder builder = SeatDTO.builder()
-                .seatId(seat.getSeatId())
-                .section(seat.getSection())
-                .rowLabel(seat.getRowLabel())
-                .seatNumber(seat.getSeatNumber())
-                .categoryName(seat.getCategory().getCategoryName())
-                .colorCode(seat.getCategory().getColorCode())
-                .xPosition(seat.getXPosition())
-                .yPosition(seat.getYPosition())
-                .isAisleSeat(seat.getIsAisleSeat())
-                .isAccessible(seat.getIsAccessible())
-                .status(seatStatus)
-                .currentPrice(seat.getCategory().getBasePrice())
-                .notes(seat.getNotes());
-            
+                    .seatId(seat.getSeatId())
+                    .section(seat.getSection())
+                    .rowLabel(seat.getRowLabel())
+                    .seatNumber(seat.getSeatNumber())
+                    .categoryName(seat.getCategory().getCategoryName())
+                    .colorCode(seat.getCategory().getColorCode())
+                    .xPosition(seat.getXPosition())
+                    .yPosition(seat.getYPosition())
+                    .isAisleSeat(seat.getIsAisleSeat())
+                    .isAccessible(seat.getIsAccessible())
+                    .status(seatStatus)
+                    .currentPrice(currentPrice)
+                    .notes(seat.getNotes());
+
+            if (eventCategory != null) {
+                builder.dealActive(eventCategory.getDealActive())
+                        .dealType(eventCategory.getDealType())
+                        .dealDiscountPercentage(eventCategory.getDealDiscountPercentage())
+                        .dealBuyQuantity(eventCategory.getDealBuyQuantity())
+                        .dealFreeQuantity(eventCategory.getDealFreeQuantity())
+                        .dealLabel(eventCategory.getDealLabel());
+            }
+
             // Add hold information if seat is held
             SeatHold hold = seatHoldMap.get(seat.getSeatId());
             if (hold != null) {
                 builder.heldByUserId(hold.getUserId())
-                       .holdExpiresAt(hold.getExpiresAt())
-                       .holdCreatedAt(hold.getCreatedAt())
-                       .isPermanentHold(hold.getIsPermanent());
+                        .holdExpiresAt(hold.getExpiresAt())
+                        .holdCreatedAt(hold.getCreatedAt())
+                        .isPermanentHold(hold.getIsPermanent());
                 // Note: User name/email not populated due to userId type mismatch
             }
-            
+
             seatDTOs.add(builder.build());
         }
-        
+
         // Fetch shared area categories for the event
         System.out.println("DEBUG: Looking for shared areas for eventId: " + eventId);
         List<TicketCategory> sharedAreaCategories = ticketCategoryRepository.findSharedAreaCategoriesByEventId(eventId);
         System.out.println("DEBUG: Found " + sharedAreaCategories.size() + " shared area categories");
         List<SeatAvailabilityResponse.SharedAreaDTO> sharedAreas = new ArrayList<>();
-        
+
         for (TicketCategory category : sharedAreaCategories) {
-            System.out.println("DEBUG: Processing shared area: " + category.getCategoryName() + 
-                ", isSharedArea=" + category.getIsSharedArea() + 
-                ", sharedAreaNumber=" + category.getSharedAreaNumber());
+            System.out.println("DEBUG: Processing shared area: " + category.getCategoryName() +
+                    ", isSharedArea=" + category.getIsSharedArea() +
+                    ", sharedAreaNumber=" + category.getSharedAreaNumber());
             // Count booked tickets for this shared area
             Long bookedTickets = bookingRepository.countBookedSharedAreaTickets(
-                eventScheduleUuid, 
-                category.getSharedAreaNumber()
-            );
+                    eventScheduleUuid,
+                    category.getSharedAreaNumber());
             if (bookedTickets == null) {
                 bookedTickets = 0L;
             }
-            
+
             int availableTickets = category.getCapacity() - bookedTickets.intValue();
             if (availableTickets < 0) {
                 availableTickets = 0;
             }
-            
+
             sharedAreas.add(SeatAvailabilityResponse.SharedAreaDTO.builder()
-                .categoryId(category.getCategoryId())
-                .categoryName(category.getCategoryName())
-                .price(category.getPrice())
-                .capacity(category.getCapacity())
-                .sharedAreaNumber(category.getSharedAreaNumber())
-                .availableTickets(availableTickets)
-                .build());
+                    .categoryId(category.getCategoryId())
+                    .categoryName(category.getCategoryName())
+                    .price(category.getPrice())
+                    .capacity(category.getCapacity())
+                    .sharedAreaNumber(category.getSharedAreaNumber())
+                    .availableTickets(availableTickets)
+                    .dealActive(category.getDealActive())
+                    .dealType(category.getDealType())
+                    .dealDiscountPercentage(category.getDealDiscountPercentage())
+                    .dealBuyQuantity(category.getDealBuyQuantity())
+                    .dealFreeQuantity(category.getDealFreeQuantity())
+                    .dealLabel(category.getDealLabel())
+                    .build());
         }
-        
+
         // Calculate available seats (total - booked - held)
         long totalSeats = (long) venueSeats.size();
         long confirmedBooked = bookedCount != null ? bookedCount : 0L;
         long heldSeats = heldCount != null ? heldCount : 0L;
         long availableSeats = totalSeats - confirmedBooked - heldSeats;
-        
+
         SeatAvailabilityResponse response = new SeatAvailabilityResponse(
-            seatDTOs,
-            totalSeats,
-            availableSeats,
-            confirmedBooked - heldSeats, // Confirmed bookings (excluding pending/held)
-            heldSeats  // Pending/held seats
+                seatDTOs,
+                totalSeats,
+                availableSeats,
+                confirmedBooked - heldSeats, // Confirmed bookings (excluding pending/held)
+                heldSeats // Pending/held seats
         );
         response.setSharedAreas(sharedAreas);
-        
+
         return response;
     }
 
@@ -219,49 +269,50 @@ public class VenueSeatService {
      * Creates temporary holds that expire after the configured duration.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param seatIds list of venue seat IDs to hold
-     * @param userId the user requesting the hold
-     * @return true if all seats were successfully held, false if any seat was unavailable
+     * @param seatIds         list of venue seat IDs to hold
+     * @param userId          the user requesting the hold
+     * @return true if all seats were successfully held, false if any seat was
+     *         unavailable
      */
     @Transactional
     public boolean holdSeats(UUID eventScheduleId, List<String> seatIds, Long userId) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
-            .orElseThrow(() -> new RuntimeException("Event schedule not found"));
-        
+                .orElseThrow(() -> new RuntimeException("Event schedule not found"));
+
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = now.plusMinutes(defaultHoldDurationMinutes);
-        
+
         // Get currently booked and held seats
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleId);
-        
+
         // Verify all seats are available
         for (String seatId : seatIds) {
             // Check if seat is already booked
             if (bookedSeatIds.contains(seatId)) {
                 return false;
             }
-            
+
             // Check if seat is held by another user
             if (seatHoldRepository.isSeatHeldByOther(seatId, eventScheduleId, userId, now)) {
                 return false;
             }
         }
-        
+
         // Release any existing holds by this user for this schedule first
         seatHoldRepository.deleteByUserAndScheduleId(userId, eventScheduleId);
-        
+
         // Create new holds for the requested seats
         for (String seatId : seatIds) {
             SeatHold hold = SeatHold.builder()
-                .venueSeatId(seatId)
-                .eventSchedule(eventSchedule)
-                .userId(userId)
-                .expiresAt(expiresAt)
-                .isPermanent(false)
-                .build();
+                    .venueSeatId(seatId)
+                    .eventSchedule(eventSchedule)
+                    .userId(userId)
+                    .expiresAt(expiresAt)
+                    .isPermanent(false)
+                    .build();
             seatHoldRepository.save(hold);
         }
-        
+
         return true;
     }
 
@@ -269,7 +320,7 @@ public class VenueSeatService {
      * Release seat holds for specific seats.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param seatIds list of venue seat IDs to release
+     * @param seatIds         list of venue seat IDs to release
      */
     @Transactional
     public void releaseHolds(UUID eventScheduleId, List<String> seatIds) {
@@ -280,7 +331,7 @@ public class VenueSeatService {
      * Release all holds for a user on a specific schedule.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param userId the user whose holds should be released
+     * @param userId          the user whose holds should be released
      */
     @Transactional
     public void releaseUserHolds(UUID eventScheduleId, Long userId) {
@@ -292,9 +343,9 @@ public class VenueSeatService {
      * This releases the holds after the booking is confirmed.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param seatIds list of venue seat IDs being booked
-     * @param userId the user making the booking
-     * @param bookingRefId the booking reference ID
+     * @param seatIds         list of venue seat IDs being booked
+     * @param userId          the user making the booking
+     * @param bookingRefId    the booking reference ID
      * @return true if the booking was confirmed successfully
      */
     @Transactional
@@ -302,22 +353,22 @@ public class VenueSeatService {
         // Verify the user has holds on these seats or seats are available
         LocalDateTime now = LocalDateTime.now();
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleId);
-        
+
         for (String seatId : seatIds) {
             // Check if seat is already booked by someone else
             if (bookedSeatIds.contains(seatId)) {
                 return false;
             }
-            
+
             // Check if seat is held by another user
             if (seatHoldRepository.isSeatHeldByOther(seatId, eventScheduleId, userId, now)) {
                 return false;
             }
         }
-        
+
         // Release the holds (the actual booking creation is handled by BookingService)
         seatHoldRepository.deleteByVenueSeatIdsAndScheduleId(seatIds, eventScheduleId);
-        
+
         return true;
     }
 
@@ -326,70 +377,74 @@ public class VenueSeatService {
      * Validates the venue has seats configured and clears any stale holds.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @throws RuntimeException if the event schedule or venue is not found, or venue has no seats
+     * @throws RuntimeException if the event schedule or venue is not found, or
+     *                          venue has no seats
      */
     @Transactional
     public void initializeEventSeats(UUID eventScheduleId) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
-            .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
-        
+                .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
+
         UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
-        
+
         // Verify venue has seats configured
         List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
         if (venueSeats.isEmpty()) {
             throw new RuntimeException("No seats configured for venue: " + venueId);
         }
-        
+
         // Clear any expired holds for this schedule
         seatHoldRepository.deleteExpiredHolds(LocalDateTime.now());
-        
+
         System.out.println("Initialized " + venueSeats.size() + " seats for event schedule: " + eventScheduleId);
     }
 
     /**
      * Initialize seats with custom pricing for a new event.
-     * Creates TicketCategory entries for the event with custom prices per seat category.
+     * Creates TicketCategory entries for the event with custom prices per seat
+     * category.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param categoryPrices map of seat category names to custom prices
+     * @param categoryPrices  map of seat category names to custom prices
      */
     @Transactional
-    public void initializeEventSeatsWithPricing(UUID eventScheduleId, java.util.Map<String, java.math.BigDecimal> categoryPrices) {
+    public void initializeEventSeatsWithPricing(UUID eventScheduleId,
+            java.util.Map<String, java.math.BigDecimal> categoryPrices) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
-            .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
-        
+                .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
+
         // First initialize the basic seat setup
         initializeEventSeats(eventScheduleId);
-        
+
         UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
         List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
-        
-        // Create TicketCategory entries for each unique seat category with custom pricing
+
+        // Create TicketCategory entries for each unique seat category with custom
+        // pricing
         java.util.Map<String, Integer> categoryCounts = new java.util.HashMap<>();
         for (VenueSeat seat : venueSeats) {
             String categoryName = seat.getCategory().getCategoryName();
             categoryCounts.merge(categoryName, 1, Integer::sum);
         }
-        
+
         for (java.util.Map.Entry<String, java.math.BigDecimal> entry : categoryPrices.entrySet()) {
             String categoryName = entry.getKey();
             java.math.BigDecimal customPrice = entry.getValue();
             Integer capacity = categoryCounts.getOrDefault(categoryName, 0);
-            
+
             if (capacity > 0) {
                 TicketCategory ticketCategory = TicketCategory.builder()
-                    .categoryName(categoryName)
-                    .price(customPrice)
-                    .capacity(capacity)
-                    .description("Custom pricing for " + categoryName + " seats")
-                    .event(eventSchedule.getEvent())
-                    .isSharedArea(false)
-                    .build();
+                        .categoryName(categoryName)
+                        .price(customPrice)
+                        .capacity(capacity)
+                        .description("Custom pricing for " + categoryName + " seats")
+                        .event(eventSchedule.getEvent())
+                        .isSharedArea(false)
+                        .build();
                 ticketCategoryRepository.save(ticketCategory);
             }
         }
-        
+
         System.out.println("Initialized event pricing with " + categoryPrices.size() + " custom category prices");
     }
 
@@ -398,23 +453,23 @@ public class VenueSeatService {
      * Updates or creates a TicketCategory entry for the specified category.
      * 
      * @param eventScheduleId the event schedule UUID
-     * @param categoryName the seat category name to update
-     * @param newPrice the new price for this category
+     * @param categoryName    the seat category name to update
+     * @param newPrice        the new price for this category
      */
     @Transactional
     public void updateEventPricing(UUID eventScheduleId, String categoryName, java.math.BigDecimal newPrice) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
-            .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
-        
+                .orElseThrow(() -> new RuntimeException("Event schedule not found: " + eventScheduleId));
+
         UUID eventId = eventSchedule.getEvent().getEventId();
-        
+
         // Find existing TicketCategory for this event and category name
         List<TicketCategory> existingCategories = ticketCategoryRepository.findByEventId(eventId);
         TicketCategory targetCategory = existingCategories.stream()
-            .filter(tc -> tc.getCategoryName().equals(categoryName) && !Boolean.TRUE.equals(tc.getIsSharedArea()))
-            .findFirst()
-            .orElse(null);
-        
+                .filter(tc -> tc.getCategoryName().equals(categoryName) && !Boolean.TRUE.equals(tc.getIsSharedArea()))
+                .findFirst()
+                .orElse(null);
+
         if (targetCategory != null) {
             // Update existing category
             targetCategory.setPrice(newPrice);
@@ -424,23 +479,23 @@ public class VenueSeatService {
             // Create new category with the specified price
             UUID venueId = eventSchedule.getEvent().getVenue().getVenueId();
             List<VenueSeat> venueSeats = venueSeatRepository.findByVenueOrderedByLayout(venueId);
-            
+
             int capacity = (int) venueSeats.stream()
-                .filter(seat -> seat.getCategory().getCategoryName().equals(categoryName))
-                .count();
-            
+                    .filter(seat -> seat.getCategory().getCategoryName().equals(categoryName))
+                    .count();
+
             if (capacity == 0) {
                 throw new RuntimeException("No seats found with category: " + categoryName);
             }
-            
+
             TicketCategory newCategory = TicketCategory.builder()
-                .categoryName(categoryName)
-                .price(newPrice)
-                .capacity(capacity)
-                .description("Custom pricing for " + categoryName + " seats")
-                .event(eventSchedule.getEvent())
-                .isSharedArea(false)
-                .build();
+                    .categoryName(categoryName)
+                    .price(newPrice)
+                    .capacity(capacity)
+                    .description("Custom pricing for " + categoryName + " seats")
+                    .event(eventSchedule.getEvent())
+                    .isSharedArea(false)
+                    .build();
             ticketCategoryRepository.save(newCategory);
             System.out.println("Created new pricing category '" + categoryName + "' with price " + newPrice);
         }
@@ -452,8 +507,8 @@ public class VenueSeatService {
     @Transactional
     public void lockSeat(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         // Add a note indicating the seat is locked
         String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
         if (!currentNotes.contains("[LOCKED]")) {
@@ -468,8 +523,8 @@ public class VenueSeatService {
     @Transactional
     public void unlockSeat(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         // Remove the locked flag from notes
         String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
         if (currentNotes.contains("[LOCKED]")) {
@@ -484,8 +539,8 @@ public class VenueSeatService {
     @Transactional
     public void markAccessible(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         seat.setIsAccessible(true);
         venueSeatRepository.save(seat);
     }
@@ -496,8 +551,8 @@ public class VenueSeatService {
     @Transactional
     public void reserveForVIP(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         // Add a note indicating VIP reservation
         String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
         if (!currentNotes.contains("[VIP]")) {
@@ -512,8 +567,8 @@ public class VenueSeatService {
     @Transactional
     public void removeAccessible(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         seat.setIsAccessible(false);
         venueSeatRepository.save(seat);
     }
@@ -524,8 +579,8 @@ public class VenueSeatService {
     @Transactional
     public void removeVIPReservation(String seatId) {
         VenueSeat seat = venueSeatRepository.findById(seatId)
-            .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
-        
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatId));
+
         String currentNotes = seat.getNotes() != null ? seat.getNotes() : "";
         if (currentNotes.contains("[VIP]")) {
             seat.setNotes(currentNotes.replace("[VIP] ", "").replace("[VIP]", "").trim());
@@ -535,7 +590,8 @@ public class VenueSeatService {
 
     /**
      * Scheduled task to clean up expired seat holds.
-     * Runs every minute (with fixedDelay to prevent overlap) to release seats whose hold has expired.
+     * Runs every minute (with fixedDelay to prevent overlap) to release seats whose
+     * hold has expired.
      * Uses an atomic flag to prevent concurrent execution across threads.
      */
     private static final Logger log = LoggerFactory.getLogger(VenueSeatService.class);
@@ -554,11 +610,11 @@ public class VenueSeatService {
             // Use UTC time for consistency
             LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
             String jobId = "cleanup-" + Thread.currentThread().getName() + "-" + Instant.now().toEpochMilli();
-            
+
             log.info("[{}] Starting expired holds cleanup at {}", jobId, nowUtc);
-            
+
             int deleted = seatHoldRepository.deleteExpiredHolds(nowUtc);
-            
+
             if (deleted > 0) {
                 log.info("[{}] Cleaned up {} expired seat holds", jobId, deleted);
             } else {
@@ -571,4 +627,3 @@ public class VenueSeatService {
         }
     }
 }
-

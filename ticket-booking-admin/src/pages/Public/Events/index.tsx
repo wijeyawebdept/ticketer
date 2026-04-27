@@ -16,7 +16,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { Search as SearchIcon, CalendarToday, LocationOn, LocalOffer } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
@@ -24,6 +24,9 @@ import { Event } from '../../../types';
 
 const Events: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get('category');
+  
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
@@ -32,13 +35,31 @@ const Events: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategoryName = async () => {
+      if (categoryId) {
+        try {
+          const { EventCategoryService } = await import('../../../services');
+          const category = await EventCategoryService.getPublicCategoryById(categoryId);
+          setCategoryName(category.categoryName);
+        } catch (error) {
+          setCategoryName(null);
+        }
+      } else {
+        setCategoryName(null);
+      }
+    };
+    fetchCategoryName();
+  }, [categoryId]);
 
   const loadEvents = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = searchQuery 
         ? await EventService.searchPublishedEvents(searchQuery, page, 12)
-        : await EventService.getPublishedEvents(page, 12);
+        : await EventService.getPublishedEvents(page, 12, categoryId || undefined);
       
       // Sort events to show deals first
       const sortedEvents = (response.content || []).sort((a: Event, b: Event) => {
@@ -53,7 +74,7 @@ const Events: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, page]);
+  }, [searchQuery, page, categoryId]);
 
   useEffect(() => {
     loadEvents();
@@ -117,7 +138,7 @@ const Events: React.FC = () => {
               mb: 2,
             }}
           >
-            All Events
+            {categoryName ? `${categoryName} Events` : 'All Events'}
           </Typography>
           <Typography
             variant="h6"
@@ -127,7 +148,9 @@ const Events: React.FC = () => {
               mb: 4,
             }}
           >
-            Discover and book tickets for exciting events
+            {categoryName 
+              ? `Browse the best ${categoryName.toLowerCase()} events and book your tickets` 
+              : 'Discover and book tickets for exciting events'}
           </Typography>
 
           <Box sx={{ maxWidth: '600px', mx: 'auto' }}>
@@ -193,15 +216,25 @@ const Events: React.FC = () => {
           <>
             <Grid container spacing={3}>
               {events.map((event) => {
-                  // Compute lowest discounted price from ticket categories with deals
-                  const dealCategories = (event.ticketCategories || []).filter(
-                    (tc: any) => tc.dealActive && tc.dealDiscountPercentage > 0
-                  );
-                  const lowestDealPrice = dealCategories.length > 0
-                    ? Math.min(...dealCategories.map((tc: any) =>
-                        tc.price * (1 - tc.dealDiscountPercentage / 100)
-                      ))
-                    : null;
+                  // Compute the true lowest current price across all categories (with and without deals)
+                  const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
+                    const originalPrice = Number(tc.price) || 0;
+                    const discount = Number(tc.dealDiscountPercentage) || 0;
+                    const currentPrice = (tc.dealActive && discount > 0)
+                      ? originalPrice * (1 - discount / 100)
+                      : originalPrice;
+                    return { originalPrice, currentPrice };
+                  });
+
+                  const lowestOriginalPrice = allCategoryPrices.length > 0
+                    ? Math.min(...allCategoryPrices.map(p => p.originalPrice))
+                    : Number(event.basePrice) || 0;
+
+                  const lowestCurrentPrice = allCategoryPrices.length > 0
+                    ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
+                    : Number(event.basePrice) || 0;
+
+                  const showDiscountedPrice = lowestCurrentPrice < lowestOriginalPrice;
 
                   return (
                   <Grid item xs={12} sm={6} md={4} key={event.id || event.eventId}>
@@ -314,19 +347,19 @@ const Events: React.FC = () => {
                           >
                             Starting from
                           </Typography>
-                          {lowestDealPrice !== null ? (
+                          {showDiscountedPrice ? (
                             <Box>
                               <Typography
                                 variant="caption"
                                 sx={{ fontFamily: 'Raleway, sans-serif', color: '#aaa', textDecoration: 'line-through', display: 'block', fontSize: '0.8rem' }}
                               >
-                                {formatPrice(event.basePrice)} upwards
+                                {formatPrice(lowestOriginalPrice)} upwards
                               </Typography>
                               <Typography
                                 variant="h6"
                                 sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#ff1955', fontSize: '1.2rem' }}
                               >
-                                {formatPrice(lowestDealPrice)}{' '}
+                                {formatPrice(lowestCurrentPrice)}{' '}
                                 <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
                               </Typography>
                             </Box>
@@ -335,7 +368,7 @@ const Events: React.FC = () => {
                               variant="h6"
                               sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#ff1955', fontSize: '1.25rem' }}
                             >
-                              {formatPrice(event.basePrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                              {formatPrice(lowestCurrentPrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
                             </Typography>
                           )}
                         </Box>

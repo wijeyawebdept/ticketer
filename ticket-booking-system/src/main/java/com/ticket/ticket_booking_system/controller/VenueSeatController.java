@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.dto.SeatHoldRequest;
+import com.ticket.ticket_booking_system.dto.VenueSeatCategoryDTO;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.service.VenueSeatService;
 
@@ -44,6 +45,17 @@ public class VenueSeatController {
     @GetMapping("/layout/{venueId}")
     public ResponseEntity<List<VenueSeat>> getVenueLayoutByVenue(@PathVariable UUID venueId) {
         return ResponseEntity.ok(venueSeatService.getSeatsByVenue(venueId));
+    }
+
+    /**
+     * Get distinct seat categories for a venue with seat counts.
+     * Used by the event creation wizard to auto-populate ticket category rows.
+     * GET /api/venue-seats/layout/{venueId}/categories
+     */
+    @GetMapping("/layout/{venueId}/categories")
+    public ResponseEntity<List<VenueSeatCategoryDTO>> getVenueSeatCategories(@PathVariable UUID venueId) {
+        List<VenueSeatCategoryDTO> categories = venueSeatService.getVenueSeatCategories(venueId);
+        return ResponseEntity.ok(categories);
     }
 
     /**

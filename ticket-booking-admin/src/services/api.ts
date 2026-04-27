@@ -103,10 +103,10 @@ axiosInstance.interceptors.response.use(
 
     const data = error.response?.data;
     const normalizedMessage =
-    (typeof data === 'string' && data) ||
-    data?.message ||
-    error.message ||
-    'Request failed';
+      (typeof data === 'string' && data) ||
+      (typeof data?.message === 'string' && data.message) ||
+      (typeof error.message === 'string' && error.message) ||
+      'Request failed';
 
     // Ensure error.message is always a string
     error.message = normalizedMessage;

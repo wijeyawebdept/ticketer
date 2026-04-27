@@ -63,7 +63,7 @@ const PaymentSuccess: React.FC = () => {
     window.print();
   };
 
-  const handleViewBookings = () => navigate('/my-bookings');
+  const handleViewBookings = () => navigate('/bookings');
   const handleGoHome = () => navigate('/');
 
   if (loading) {

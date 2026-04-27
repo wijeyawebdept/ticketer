@@ -38,6 +38,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     
     Page<User> findByRole(User.Role role, Pageable pageable);
     
+    java.util.List<User> findByRoleAndActive(User.Role role, int active);
+    
     // Update last login timestamp
     @Modifying
     @Transactional

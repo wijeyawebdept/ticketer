@@ -26,4 +26,7 @@ public class TicketCategoryRequest {
     // Shared area support
     private Boolean isSharedArea = false;
     private Integer sharedAreaNumber;
+
+    /** The venue's SeatCategory name this ticket covers (e.g. "Platinum"). Used for seat price mapping. */
+    private String venueSeatCategoryName;
 }

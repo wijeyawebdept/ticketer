@@ -88,7 +88,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
            "LEFT JOIN FETCH e.venue " +
            "LEFT JOIN FETCH b.eventSchedule " +
            "LEFT JOIN FETCH b.bookingSeats bs " +
-           "LEFT JOIN FETCH bs.seat " +
            "WHERE b.bookingId = :bookingId")
     Optional<Booking> findByIdWithDetails(UUID bookingId);
 }

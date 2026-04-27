@@ -60,7 +60,8 @@ public class PaymentController {
             booking = bookingService.createPendingBooking(userId, request);
 
             // Embed bookingId in returnUrl so MPGS sends it back in the redirect URL.
-            // This avoids any localStorage/sessionStorage unreliability after external redirects.
+            // This avoids any localStorage/sessionStorage unreliability after external
+            // redirects.
             String returnUrl = request.getReturnUrl()
                     + (request.getReturnUrl().contains("?") ? "&" : "?")
                     + "bookingId=" + booking.getBookingId().toString();
@@ -70,31 +71,28 @@ public class PaymentController {
                     request.getTotalAmount(),
                     request.getCurrency(),
                     returnUrl,
-                    request.getCancelUrl()
-            );
+                    request.getCancelUrl());
 
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     sessionResponse.getSessionId(),
-                    sessionResponse.getSuccessIndicator()
-            );
+                    sessionResponse.getSuccessIndicator());
 
             return ResponseEntity.ok(sessionResponse);
 
         } catch (org.springframework.web.client.RestClientResponseException e) {
             log.error("MPGS error: status={}, body={}", e.getRawStatusCode(), e.getResponseBodyAsString());
-            
+
             // cleanup so you don't keep PENDING junk
             if (booking != null) {
                 bookingService.cancelBooking(booking.getBookingId().toString());
             }
-            
+
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
-                "message", "MPGS rejected the request",
-                "status", e.getRawStatusCode(),
-                "body", e.getResponseBodyAsString()
-            ));
+                    "message", "MPGS rejected the request",
+                    "status", e.getRawStatusCode(),
+                    "body", e.getResponseBodyAsString()));
         } catch (Exception e) {
             log.error("Payment initiation failed: {}", e.getMessage(), e);
 
@@ -105,8 +103,7 @@ public class PaymentController {
 
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
                     "message", "Payment initiation failed",
-                    "details", e.getMessage()
-            ));
+                    "details", e.getMessage()));
         }
     }
 
@@ -131,7 +128,8 @@ public class PaymentController {
 
             Booking booking = transaction.getBooking();
 
-            // Idempotency: if booking is already confirmed (e.g. page refresh), return success immediately
+            // Idempotency: if booking is already confirmed (e.g. page refresh), return
+            // success immediately
             if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
                 log.info("Booking {} already confirmed, returning cached success", booking.getBookingId());
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
@@ -145,7 +143,8 @@ public class PaymentController {
                         .build());
             }
 
-            // Verify against MPGS using the ORDER endpoint (orderId = bookingId = MPGS order.id set during session creation)
+            // Verify against MPGS using the ORDER endpoint (orderId = bookingId = MPGS
+            // order.id set during session creation)
             String orderId = booking.getBookingId().toString();
             MPGSPaymentResult result = mpgsPaymentService.verifyPaymentByOrder(orderId);
 
@@ -163,8 +162,7 @@ public class PaymentController {
                         confirmedBooking,
                         customerEmail,
                         transaction.getTransactionId().toString(),
-                        result.getCardType()
-                );
+                        result.getCardType());
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)
@@ -179,8 +177,7 @@ public class PaymentController {
             } else {
                 bookingService.cancelBookingAfterPaymentFailure(
                         booking.getBookingId(),
-                        "Payment failed: " + (result.getErrorMessage() != null ? result.getErrorMessage() : "Unknown")
-                );
+                        "Payment failed: " + (result.getErrorMessage() != null ? result.getErrorMessage() : "Unknown"));
 
                 try {
                     seatService.releaseSeatHolds(booking.getUser().getUserId());
@@ -193,8 +190,7 @@ public class PaymentController {
                         customerEmail,
                         booking.getEvent().getName(),
                         booking.getTotalAmount(),
-                        result.getErrorMessage()
-                );
+                        result.getErrorMessage());
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
@@ -216,8 +212,10 @@ public class PaymentController {
     }
 
     /**
-     * Verify payment using the booking ID that MPGS echoes back in the returnUrl redirect.
-     * Uses the successIndicator/resultIndicator comparison — the official MPGS Hosted Checkout
+     * Verify payment using the booking ID that MPGS echoes back in the returnUrl
+     * redirect.
+     * Uses the successIndicator/resultIndicator comparison — the official MPGS
+     * Hosted Checkout
      * verification approach, requires no additional MPGS API call.
      */
     @GetMapping("/verify-by-booking")
@@ -275,8 +273,8 @@ public class PaymentController {
             try {
                 String gatewayResponse = transaction.getPaymentGatewayResponse();
                 if (gatewayResponse != null) {
-                    com.fasterxml.jackson.databind.JsonNode node =
-                            new com.fasterxml.jackson.databind.ObjectMapper().readTree(gatewayResponse);
+                    com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readTree(gatewayResponse);
                     if (node.has("successIndicator")) {
                         storedSuccessIndicator = node.get("successIndicator").asText();
                     }
@@ -286,7 +284,8 @@ public class PaymentController {
             }
 
             if (resultIndicator != null && storedSuccessIndicator != null) {
-                // Official MPGS approach: compare resultIndicator from redirect URL vs stored successIndicator
+                // Official MPGS approach: compare resultIndicator from redirect URL vs stored
+                // successIndicator
                 isSuccess = resultIndicator.equals(storedSuccessIndicator);
                 log.info("MPGS indicator comparison: result={}, stored={}, match={}",
                         resultIndicator, storedSuccessIndicator, isSuccess);
@@ -330,20 +329,23 @@ public class PaymentController {
                     venueName = confirmedBooking.getEvent().getVenueName() != null
                             ? confirmedBooking.getEvent().getVenueName()
                             : (confirmedBooking.getEvent().getVenue() != null
-                                    ? confirmedBooking.getEvent().getVenue().getName() : "N/A");
+                                    ? confirmedBooking.getEvent().getVenue().getName()
+                                    : "N/A");
                 }
                 String seatDetails = confirmedBooking.getBookingSeats().stream()
                         .sorted((a, b) -> {
-                            if (Boolean.TRUE.equals(a.getIsSharedAreaTicket()) && !Boolean.TRUE.equals(b.getIsSharedAreaTicket())) return 1;
-                            if (!Boolean.TRUE.equals(a.getIsSharedAreaTicket()) && Boolean.TRUE.equals(b.getIsSharedAreaTicket())) return -1;
+                            if (Boolean.TRUE.equals(a.getIsSharedAreaTicket())
+                                    && !Boolean.TRUE.equals(b.getIsSharedAreaTicket()))
+                                return 1;
+                            if (!Boolean.TRUE.equals(a.getIsSharedAreaTicket())
+                                    && Boolean.TRUE.equals(b.getIsSharedAreaTicket()))
+                                return -1;
                             return 0;
                         })
                         .map(bs -> {
                             if (Boolean.TRUE.equals(bs.getIsSharedAreaTicket()))
                                 return "Shared Area #" + bs.getSharedAreaNumber() + " - " + bs.getTicketCode();
-                            String seatLabel = bs.getSeat() != null
-                                    ? "Row " + bs.getSeat().getRow() + ", Seat " + bs.getSeat().getSeatNumber()
-                                    : (bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat");
+                            String seatLabel = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat";
                             return seatLabel + " - " + bs.getTicketCode();
                         })
                         .collect(java.util.stream.Collectors.joining("\n"));
@@ -355,8 +357,7 @@ public class PaymentController {
                         confirmedBooking,
                         customerEmail,
                         transaction.getTransactionId().toString(),
-                        null
-                );
+                        null);
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)
@@ -377,8 +378,7 @@ public class PaymentController {
             } else {
                 bookingService.cancelBookingAfterPaymentFailure(
                         bookingId,
-                        "Payment indicators did not match"
-                );
+                        "Payment indicators did not match");
 
                 try {
                     seatService.releaseSeatHolds(booking.getUser().getUserId());
@@ -391,8 +391,7 @@ public class PaymentController {
                         customerEmail,
                         booking.getEvent().getName(),
                         booking.getTotalAmount(),
-                        "Payment verification failed"
-                );
+                        "Payment verification failed");
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)

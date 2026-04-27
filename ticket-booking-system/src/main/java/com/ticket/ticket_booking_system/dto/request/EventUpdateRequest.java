@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.dto.request;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,9 +12,7 @@ public class EventUpdateRequest {
     
     private UUID venueId;
     
-    @Positive(message = "Base price must be greater than zero")
-    private BigDecimal basePrice;
-    
+
     @Positive(message = "Total capacity must be greater than zero")
     private Integer totalCapacity;
     
@@ -51,14 +48,7 @@ public class EventUpdateRequest {
         this.venueId = venueId;
     }
     
-    public BigDecimal getBasePrice() {
-        return basePrice;
-    }
-    
-    public void setBasePrice(BigDecimal basePrice) {
-        this.basePrice = basePrice;
-    }
-    
+
     public Integer getTotalCapacity() {
         return totalCapacity;
     }

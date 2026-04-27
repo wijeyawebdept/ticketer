@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
+  Card,
+  CardContent,
   Button,
   Chip,
   Container,
@@ -87,41 +88,97 @@ const UserBookings: React.FC = () => {
   return (
     <Box
       sx={{
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#242a33',
         minHeight: '100vh',
       }}
     >
       <PublicNavbar />
-      <Container maxWidth="lg" sx={{ pt: 12, pb: 4 }}>
-        <Paper sx={{ p: 3 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-            <Typography variant="h5" component="h2">
-              My Bookings
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              onClick={fetchBookings}
-              sx={{ backgroundColor: '#ff1955' }}
-            >
-              Refresh
-            </Button>
-          </Box>
+      <Container maxWidth="xl" sx={{ pt: 12, pb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 3, fontWeight: 600, color: '#fff' }}>
+          My Bookings
+        </Typography>
 
-          <Box sx={{ height: 500, width: '100%' }}>
-            <DataGrid
-              rows={bookings}
-              columns={columns}
-              loading={loading}
-              getRowId={(row) => row.bookingId}
-              pageSizeOptions={[5, 10, 25]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              disableRowSelectionOnClick
-            />
-          </Box>
-        </Paper>
+        <Card sx={{ 
+          backgroundColor: '#1a1f28', 
+          border: '1px solid rgba(255, 25, 85, 0.2)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)',
+          borderRadius: 2
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6" sx={{ color: '#fcd0a5', fontWeight: 600 }}>
+                Recent Bookings
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={fetchBookings}
+                sx={{ 
+                  backgroundColor: '#ff1955',
+                  '&:hover': {
+                    backgroundColor: '#e01545'
+                  },
+                  fontWeight: 600
+                }}
+              >
+                Refresh
+              </Button>
+            </Box>
+
+            <Box sx={{ 
+              height: 600, 
+              width: '100%',
+              '& .MuiDataGrid-root': {
+                border: 'none',
+                color: '#fff',
+                backgroundColor: 'transparent',
+              },
+              '& .MuiDataGrid-cell': {
+                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                color: 'rgba(255, 255, 255, 0.8)',
+              },
+              '& .MuiDataGrid-columnHeaders': {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+              },
+              '& .MuiDataGrid-columnHeaderTitle': {
+                fontWeight: 600,
+                color: '#fcd0a5',
+              },
+              '& .MuiDataGrid-footerContainer': {
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+              },
+              '& .MuiTablePagination-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                backgroundColor: 'transparent',
+              },
+              '& .MuiIconButton-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+              }
+            }}>
+              <DataGrid
+                rows={bookings}
+                columns={columns}
+                loading={loading}
+                getRowId={(row) => row.bookingId}
+                pageSizeOptions={[5, 10, 25]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                }}
+                disableRowSelectionOnClick
+                sx={{
+                  '& .MuiDataGrid-row:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  },
+                }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
       </Container>
     </Box>
   );

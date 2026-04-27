@@ -99,9 +99,10 @@ public class OrganizerEmployeeManagementService {
 
     @Transactional
     public OrganizerEmployeeDTO createEmployee(CreateOrganizerEmployeeRequest request) {
-        // Check if email already exists
+        // Each role table is an independent authentication domain.
+        // Only block if the email already exists in the organizer_employees table itself.
         if (employeeRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists: " + request.getEmail());
+            throw new RuntimeException("Email is already registered as an organizer employee: " + request.getEmail());
         }
 
         // Verify organizer exists
@@ -142,8 +143,9 @@ public class OrganizerEmployeeManagementService {
             employee.setLastName(request.getLastName());
         }
         if (request.getEmail() != null && !request.getEmail().equals(employee.getEmail())) {
+            // Only check uniqueness within the organizer_employees table
             if (employeeRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email already exists: " + request.getEmail());
+                throw new RuntimeException("Email is already registered as an organizer employee: " + request.getEmail());
             }
             employee.setEmail(request.getEmail());
         }

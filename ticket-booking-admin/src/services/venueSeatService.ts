@@ -25,6 +25,12 @@ export interface SeatDTO {
   isPermanentHold?: boolean;
   bookingReference?: string;
   bookedAt?: string;
+  dealActive?: boolean;
+  dealType?: string;
+  dealDiscountPercentage?: number;
+  dealBuyQuantity?: number;
+  dealFreeQuantity?: number;
+  dealLabel?: string;
 }
 
 export interface SeatAvailabilityResponse {
@@ -40,6 +46,12 @@ export interface SeatAvailabilityResponse {
     capacity: number;
     sharedAreaNumber: number;
     availableTickets: number;
+    dealActive?: boolean;
+    dealType?: string;
+    dealDiscountPercentage?: number;
+    dealBuyQuantity?: number;
+    dealFreeQuantity?: number;
+    dealLabel?: string;
   }>;
 }
 
@@ -75,6 +87,13 @@ export interface VenueSeat {
   notes?: string;
 }
 
+/** Returned by GET /api/venue-seats/layout/{venueId}/categories */
+export interface VenueSeatCategoryDTO {
+  categoryName: string;
+  colorCode: string;
+  seatCount: number;
+}
+
 export const venueSeatService = {
   /**
    * Get venue layout (all seats with positions)
@@ -89,6 +108,15 @@ export const venueSeatService = {
    */
   getVenueLayoutByVenueId: async (venueId: string): Promise<VenueSeat[]> => {
     const response = await axiosInstance.get<VenueSeat[]>(`/api/venue-seats/layout/${venueId}`);
+    return response.data;
+  },
+
+  /**
+   * Get distinct seat categories for a venue with seat counts.
+   * Used by the event wizard (Step 3) to auto-populate ticket category rows.
+   */
+  getVenueSeatCategories: async (venueId: string): Promise<VenueSeatCategoryDTO[]> => {
+    const response = await axiosInstance.get<VenueSeatCategoryDTO[]>(`/api/venue-seats/layout/${venueId}/categories`);
     return response.data;
   },
 

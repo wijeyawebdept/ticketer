@@ -51,7 +51,7 @@ public interface EventService {
     EventResponse deactivateEvent(UUID eventId);
     
     // Public event methods (no authentication required)
-    Page<EventResponse> getPublishedEvents(Pageable pageable);
+    Page<EventResponse> getPublishedEvents(UUID categoryId, Pageable pageable);
     
     Page<EventResponse> getUpcomingPublishedEvents(Pageable pageable);
     

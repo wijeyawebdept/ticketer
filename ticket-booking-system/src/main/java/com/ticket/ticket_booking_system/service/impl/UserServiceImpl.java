@@ -78,8 +78,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
+        // Each role table is an independent authentication domain.
+        // Only block if the email already exists in the users table itself.
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+            throw new IllegalArgumentException("Email is already registered as a user: " + request.getEmail());
         }
 
         // Determine role - use provided role or default to USER
@@ -212,8 +214,9 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
+            // Only check uniqueness within the users table
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+                throw new IllegalArgumentException("Email is already registered as a user: " + request.getEmail());
             }
             user.setEmail(request.getEmail());
             user.setEmailVerified(false); // Reset email verification status

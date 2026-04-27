@@ -45,4 +45,12 @@ public class SeatDTO {
     // Booking information
     private String bookingReference;
     private LocalDateTime bookedAt;
+    
+    // Deal properties for checkout calculation
+    private Boolean dealActive;
+    private String dealType;
+    private BigDecimal dealDiscountPercentage;
+    private Integer dealBuyQuantity;
+    private Integer dealFreeQuantity;
+    private String dealLabel;
 }

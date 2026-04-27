@@ -119,7 +119,8 @@ public class Seat {
         }
 
         // Sync status field
-        // If status is not set, derive it from isAvailable, isBlocked, and isPermanentHold
+        // If status is not set, derive it from isAvailable, isBlocked, and
+        // isPermanentHold
         if (this.status == null || this.status.isEmpty()) {
             if (Boolean.TRUE.equals(this.isPermanentHold)) {
                 this.status = "RESERVED"; // Permanent hold uses RESERVED status

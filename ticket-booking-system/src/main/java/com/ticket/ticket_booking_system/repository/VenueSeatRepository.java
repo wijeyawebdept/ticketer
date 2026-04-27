@@ -24,4 +24,16 @@ public interface VenueSeatRepository extends JpaRepository<VenueSeat, String> {
 
     @Query("SELECT vs FROM VenueSeat vs WHERE vs.venue.venueId = ?1 ORDER BY vs.section, vs.rowLabel, vs.seatNumber")
     List<VenueSeat> findByVenueOrderedByLayout(UUID venueId);
+
+    /**
+     * Returns one row per distinct seat category for a venue.
+     * Each row: [categoryName (String), colorCode (String), count (Long)]
+     * Ordered by SeatCategory.displayOrder so they appear consistently.
+     */
+    @Query("SELECT vs.category.categoryName, vs.category.colorCode, COUNT(vs) " +
+           "FROM VenueSeat vs " +
+           "WHERE vs.venue.venueId = :venueId " +
+           "GROUP BY vs.category.categoryName, vs.category.colorCode, vs.category.displayOrder " +
+           "ORDER BY vs.category.displayOrder")
+    List<Object[]> findCategoryCountsByVenueId(@org.springframework.data.repository.query.Param("venueId") UUID venueId);
 }

@@ -261,7 +261,20 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <PriceIcon fontSize="small" color="action" />
                     <Typography variant="body2" color="text.secondary">
-                      {formatPrice(option.basePrice)}
+                      {option.ticketCategories && option.ticketCategories.length > 0
+                        ? (() => {
+                            const currentPrices = option.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => {
+                              const originalPrice = Number(tc.price) || 0;
+                              const discount = Number(tc.dealDiscountPercentage) || 0;
+                              return (tc.dealActive && discount > 0)
+                                ? originalPrice * (1 - discount / 100)
+                                : originalPrice;
+                            });
+                            return currentPrices.length > 0 
+                              ? `From ${formatPrice(Math.min(...currentPrices))}`
+                              : option.basePrice !== undefined ? formatPrice(option.basePrice) : 'Price TBA';
+                          })()
+                        : option.basePrice !== undefined ? formatPrice(option.basePrice) : 'Price TBA'}
                     </Typography>
                   </Box>
                 </Box>

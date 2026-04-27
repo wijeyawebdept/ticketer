@@ -80,7 +80,7 @@ const RecycleBin: React.FC = () => {
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
   const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === UserRole.ROLE_ORGANIZER;
-  const entityTypes = ['USER', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY'];
+  const entityTypes = ['USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY'];
 
   useEffect(() => {
     fetchRecycleBinItems();
@@ -94,7 +94,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
         data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
       setItems(data);
@@ -168,7 +168,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         await RecycleBinService.emptyRecycleBin();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
         await RecycleBinService.emptyRecycleBinByType(entityType);
       }
       setSuccess('Recycle bin emptied successfully');
@@ -185,6 +185,12 @@ const RecycleBin: React.FC = () => {
     switch (type) {
       case 'USER':
         return 'primary';
+      case 'ADMIN':
+        return 'error';
+      case 'ORGANIZER':
+        return 'info';
+      case 'ORGANIZER_EMPLOYEE':
+        return 'secondary';
       case 'EVENT':
         return 'secondary';
       case 'VENUE':
@@ -270,6 +276,9 @@ const RecycleBin: React.FC = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="recycle bin tabs">
           <Tab label="All Items" />
           <Tab label="Users" />
+          <Tab label="Admins" />
+          <Tab label="Organizers" />
+          <Tab label="Organizer Employees" />
           <Tab label="Events" />
           <Tab label="Venues" />
           <Tab label="Schedules" />

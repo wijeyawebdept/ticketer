@@ -64,6 +64,14 @@ const SeatSelectionPage: React.FC = () => {
     categoryName: string;
     ticketCount: number;
     pricePerTicket: number;
+    dealProperties?: {
+      dealActive?: boolean;
+      dealType?: string;
+      dealDiscountPercentage?: number;
+      dealBuyQuantity?: number;
+      dealFreeQuantity?: number;
+      dealLabel?: string;
+    };
   }
   const [sharedAreaSelections, setSharedAreaSelections] = useState<SharedAreaSelection[]>([]);
 
@@ -183,9 +191,9 @@ const SeatSelectionPage: React.FC = () => {
 
   const loadEventDetails = async (scheduleId: string) => {
     try {
-      const response = await axiosInstance.get<{ 
-        venueId?: string; 
-        venueName?: string; 
+      const response = await axiosInstance.get<{
+        venueId?: string;
+        venueName?: string;
         venueAddress?: string;
         eventName?: string;
         scheduleDate?: string;
@@ -193,7 +201,7 @@ const SeatSelectionPage: React.FC = () => {
         endTime?: string;
         eventId?: string;
       }>(`/api/public/events/schedules/${scheduleId}`);
-      
+
       if (response.data) {
         setVenueId(response.data.venueId);
         // Use API response data, fallback to navigation state
@@ -203,7 +211,7 @@ const SeatSelectionPage: React.FC = () => {
           venue: response.data.venueName || eventDetailsFromState?.venueName || 'Venue',
           venueAddress: response.data.venueAddress || eventDetailsFromState?.venueAddress || '',
           date: response.data.scheduleDate || eventDetailsFromState?.eventDate || '',
-          time: response.data.startTime 
+          time: response.data.startTime
             ? `${response.data.startTime}${response.data.endTime ? ` - ${response.data.endTime}` : ''}`
             : eventDetailsFromState?.eventTime || '',
           eventId: response.data.eventId || eventDetailsFromState?.eventId,
@@ -242,13 +250,19 @@ const SeatSelectionPage: React.FC = () => {
     await calculateTotalPrice(seats);
   };
 
-  const handleSharedAreaSelect = (areaNumber: number, count: number, pricePerTicket: number, categoryName: string) => {
+  const handleSharedAreaSelect = (
+    areaNumber: number,
+    count: number,
+    pricePerTicket: number,
+    categoryName: string,
+    dealProperties?: any
+  ) => {
     setSharedAreaSelections(prev => {
       const existingIndex = prev.findIndex(s => s.areaNumber === areaNumber);
 
       if (count === 0) return prev.filter(s => s.areaNumber !== areaNumber);
 
-      const newSelection: SharedAreaSelection = { areaNumber, categoryName, ticketCount: count, pricePerTicket };
+      const newSelection: SharedAreaSelection = { areaNumber, categoryName, ticketCount: count, pricePerTicket, dealProperties };
 
       if (existingIndex >= 0) {
         const newSelections = [...prev];
@@ -260,9 +274,66 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const seatsTotal = selectedSeatDetails.reduce((sum, seat) => sum + (seat?.currentPrice || 0), 0);
-    const sharedAreasTotal = sharedAreaSelections.reduce((sum, s) => sum + (s.ticketCount * s.pricePerTicket), 0);
-    setTotalPrice(seatsTotal + sharedAreasTotal);
+    let newTotal = 0;
+
+    // Group selected seats by category
+    const seatsByCategory: Record<string, any[]> = {};
+    selectedSeatDetails.forEach(seat => {
+      if (!seat) return;
+      if (!seatsByCategory[seat.categoryName]) {
+        seatsByCategory[seat.categoryName] = [];
+      }
+      seatsByCategory[seat.categoryName].push(seat);
+    });
+
+    // Calculate seats
+    Object.values(seatsByCategory).forEach(categorySeats => {
+      const count = categorySeats.length;
+      if (count === 0) return;
+      const sample = categorySeats[0];
+      const basePrice = sample.currentPrice || 0;
+
+      if (sample.dealActive) {
+        if (sample.dealType === 'PERCENTAGE_DISCOUNT' && sample.dealDiscountPercentage) {
+          const discount = basePrice * (sample.dealDiscountPercentage / 100);
+          newTotal += (basePrice - discount) * count;
+        } else if (sample.dealType === 'BUY_X_GET_Y_FREE' && sample.dealBuyQuantity && sample.dealFreeQuantity) {
+          const groupSize = sample.dealBuyQuantity + sample.dealFreeQuantity;
+          const freeItems = Math.floor(count / groupSize) * sample.dealFreeQuantity;
+          const payableItems = count - freeItems;
+          newTotal += basePrice * payableItems;
+        } else {
+          newTotal += basePrice * count;
+        }
+      } else {
+        newTotal += basePrice * count;
+      }
+    });
+
+    // Calculate shared areas
+    sharedAreaSelections.forEach(selection => {
+      const count = selection.ticketCount;
+      const basePrice = selection.pricePerTicket;
+      const deal = selection.dealProperties;
+
+      if (deal?.dealActive) {
+        if (deal.dealType === 'PERCENTAGE_DISCOUNT' && deal.dealDiscountPercentage) {
+          const discount = basePrice * (deal.dealDiscountPercentage / 100);
+          newTotal += (basePrice - discount) * count;
+        } else if (deal.dealType === 'BUY_X_GET_Y_FREE' && deal.dealBuyQuantity && deal.dealFreeQuantity) {
+          const groupSize = deal.dealBuyQuantity + deal.dealFreeQuantity;
+          const freeItems = Math.floor(count / groupSize) * deal.dealFreeQuantity;
+          const payableItems = count - freeItems;
+          newTotal += basePrice * payableItems;
+        } else {
+          newTotal += basePrice * count;
+        }
+      } else {
+        newTotal += basePrice * count;
+      }
+    });
+
+    setTotalPrice(newTotal);
   }, [sharedAreaSelections, selectedSeatDetails]);
 
   const calculateTotalPrice = async (seatIds: string[]) => {
@@ -270,14 +341,6 @@ const SeatSelectionPage: React.FC = () => {
       const response = await venueSeatService.getSeatAvailability(eventScheduleId!);
       const selectedDetails = seatIds.map(seatId => response.seats.find(s => s.seatId === seatId)).filter(Boolean);
       setSelectedSeatDetails(selectedDetails);
-
-      const seatsTotal = seatIds.reduce((sum, seatId) => {
-        const seat = response.seats.find(s => s.seatId === seatId);
-        return sum + (seat?.currentPrice || 0);
-      }, 0);
-
-      const sharedAreasTotal = sharedAreaSelections.reduce((sum, s) => sum + (s.ticketCount * s.pricePerTicket), 0);
-      setTotalPrice(seatsTotal + sharedAreasTotal);
     } catch (error) {
     }
   };
@@ -381,8 +444,8 @@ const SeatSelectionPage: React.FC = () => {
           phone: customerInfo.phone,
           nic: customerInfo.nic,
         },
-          returnUrl,
-          cancelUrl,
+        returnUrl,
+        cancelUrl,
       };
 
       const sessionResponse = await paymentService.initiatePayment(paymentRequest);
@@ -465,11 +528,6 @@ const SeatSelectionPage: React.FC = () => {
               <button className="collapse-btn" onClick={() => setIsCollapsed(!isCollapsed)}>
                 {isCollapsed ? '▲' : '▼'}
               </button>
-              {isHolding && !isCollapsed && (
-                <div className="hold-timer">
-                  Time remaining: <strong>{formatTime(holdTimer)}</strong>
-                </div>
-              )}
             </div>
 
             {!isCollapsed && (
@@ -689,20 +747,20 @@ const SeatSelectionPage: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
                   Selected Tickets
                 </Typography>
-                
+
                 {/* Seated Tickets */}
                 {selectedSeatDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Seats ({selectedSeatDetails.length})</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
                       {selectedSeatDetails.map((seat, index) => (
-                        <Box 
-                          key={seat?.seatId || index} 
-                          sx={{ 
-                            px: 1, 
-                            py: 0.5, 
-                            backgroundColor: '#fff', 
-                            border: '1px solid #ddd', 
+                        <Box
+                          key={seat?.seatId || index}
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            backgroundColor: '#fff',
+                            border: '1px solid #ddd',
                             borderRadius: 1,
                             fontSize: '0.75rem',
                             fontWeight: 500

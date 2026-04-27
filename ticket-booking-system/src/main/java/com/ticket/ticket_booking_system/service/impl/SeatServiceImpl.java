@@ -329,14 +329,14 @@ public class SeatServiceImpl implements SeatService {
             logger.debug("SeatServiceImpl cleanup already running, skipping");
             return;
         }
-        
+
         try {
             // Use UTC time for consistency
             LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
             String jobId = "seat-cleanup-" + Thread.currentThread().getName() + "-" + Instant.now().toEpochMilli();
-            
+
             logger.debug("[{}] Starting expired seat holds release at {}", jobId, nowUtc);
-            
+
             // Find expired holds before releasing them to notify users
             List<Seat> expiredSeats = seatRepository.findExpiredHolds(nowUtc);
 
@@ -364,10 +364,12 @@ public class SeatServiceImpl implements SeatService {
                                 "Your seat hold has expired",
                                 "HOLD_EXPIRED",
                                 0);
-                        webSocketService.notifyUserSeatHold(seat.getHeldByUser(), seat.getEvent().getEventId(), notification);
+                        webSocketService.notifyUserSeatHold(seat.getHeldByUser(), seat.getEvent().getEventId(),
+                                notification);
                     }
                 } catch (Exception e) {
-                    logger.warn("[{}] Failed to notify WebSocket for seat {}: {}", jobId, seat.getSeatId(), e.getMessage());
+                    logger.warn("[{}] Failed to notify WebSocket for seat {}: {}", jobId, seat.getSeatId(),
+                            e.getMessage());
                 }
             }
         } catch (Exception e) {
@@ -419,13 +421,14 @@ public class SeatServiceImpl implements SeatService {
         }
 
         // If no default event exists, create one
-        // Try to get an admin to be the creator (organizer is null for admin-created events)
+        // Try to get an admin to be the creator (organizer is null for admin-created
+        // events)
         Admin admin = adminRepository.findByEmail("admin@ticketbooking.com")
                 .orElseGet(() -> adminRepository.findByActiveTrue().stream().findFirst().orElse(null));
-        
+
         UUID createdByUserId = null;
         String createdByType = null;
-        
+
         if (admin != null) {
             createdByUserId = admin.getAdminId();
             createdByType = admin.getRole().name();

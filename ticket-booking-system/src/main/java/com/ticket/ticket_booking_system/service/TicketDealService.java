@@ -11,15 +11,23 @@ import com.ticket.ticket_booking_system.dto.request.TicketDealRequest;
 import com.ticket.ticket_booking_system.dto.response.TicketCategoryDealResponse;
 import com.ticket.ticket_booking_system.entity.TicketCategory;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.entity.User;
 
 @Service
 @Transactional
 public class TicketDealService {
 
     private final TicketCategoryRepository ticketCategoryRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
-    public TicketDealService(TicketCategoryRepository ticketCategoryRepository) {
+    public TicketDealService(TicketCategoryRepository ticketCategoryRepository, 
+                           UserRepository userRepository,
+                           EmailService emailService) {
         this.ticketCategoryRepository = ticketCategoryRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     /** Apply or update a deal on a ticket category */
@@ -27,6 +35,7 @@ public class TicketDealService {
         TicketCategory tc = ticketCategoryRepository.findById(request.getCategoryId())
             .orElseThrow(() -> new RuntimeException("Ticket category not found: " + request.getCategoryId()));
 
+        boolean wasActive = tc.getDealActive() != null && tc.getDealActive();
         tc.setDealActive(request.isDealActive());
 
         if (request.isDealActive()) {
@@ -67,7 +76,27 @@ public class TicketDealService {
         }
 
         TicketCategory saved = ticketCategoryRepository.save(tc);
+
+        // Send email notifications to all active customers when a new deal is activated
+        if (saved.getDealActive() && !wasActive) {
+            notifyCustomersAboutDeal(saved);
+        }
+
         return TicketCategoryDealResponse.fromEntity(saved);
+    }
+
+    private void notifyCustomersAboutDeal(TicketCategory tc) {
+        String eventName = tc.getEvent() != null ? tc.getEvent().getName() : "Upcoming Event";
+        List<User> customers = userRepository.findByRoleAndActive(User.Role.USER, 1);
+        
+        for (User customer : customers) {
+            emailService.sendDealNotificationEmail(
+                customer.getEmail(),
+                customer.getFirstName(),
+                eventName,
+                tc
+            );
+        }
     }
 
     /** Remove deal from a ticket category (permanently clears all deal data) */

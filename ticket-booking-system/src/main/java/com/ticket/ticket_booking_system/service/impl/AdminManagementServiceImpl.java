@@ -54,11 +54,11 @@ public class AdminManagementServiceImpl implements AdminManagementService {
     @Override
     @Transactional
     public AdminResponse createAdmin(AdminCreateRequest request) {
-        // Check if email already exists in any table
-        if (userRepository.existsByEmail(request.getEmail()) ||
-            adminRepository.existsByEmail(request.getEmail()) ||
-            organizerRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+        // Each role table is an independent authentication domain.
+        // The same email is allowed across users/admins/organizers/organizer_employees.
+        // Only block if the email already exists in the admins table itself.
+        if (adminRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered as an admin: " + request.getEmail());
         }
 
         // Parse role enum
@@ -170,12 +170,10 @@ public class AdminManagementServiceImpl implements AdminManagementService {
             admin.setLastName(request.getLastName());
         }
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
-            // Check if new email is already in use by another admin
+            // Only check uniqueness within the admins table
             if (!admin.getEmail().equals(request.getEmail()) &&
-                (userRepository.existsByEmail(request.getEmail()) ||
-                 adminRepository.existsByEmail(request.getEmail()) ||
-                 organizerRepository.existsByEmail(request.getEmail()))) {
-                throw new IllegalArgumentException("Email is already in use: " + request.getEmail());
+                adminRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email is already registered as an admin: " + request.getEmail());
             }
             admin.setEmail(request.getEmail());
         }

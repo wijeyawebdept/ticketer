@@ -142,7 +142,7 @@ public class EventServiceImpl implements EventService {
                 .venue(venue)
                 .venueName(venue.getName()) // Auto-populate from selected venue
                 .venueAddress(venue.getAddress()) // Auto-populate from selected venue
-                .basePrice(request.getBasePrice())
+                // basePrice no longer set from form - auto-computed from min ticket category price
                 .totalCapacity(request.getTotalCapacity())
                 .availableSeats(request.getTotalCapacity()) // Initially all seats are available
                 .status(Event.EventStatus.DRAFT) // Default status is DRAFT
@@ -184,6 +184,7 @@ public class EventServiceImpl implements EventService {
                                 .description(ticketCategoryRequest.getDescription())
                                 .isSharedArea(ticketCategoryRequest.getIsSharedArea() != null ? ticketCategoryRequest.getIsSharedArea() : false)
                                 .sharedAreaNumber(ticketCategoryRequest.getSharedAreaNumber())
+                                .venueSeatCategoryName(ticketCategoryRequest.getVenueSeatCategoryName())
                                 .event(finalSavedEvent)
                                 .build())
                         .collect(Collectors.toList());
@@ -259,9 +260,7 @@ public class EventServiceImpl implements EventService {
             event.setVenueAddress(venue.getAddress());
         }
 
-        if (request.getBasePrice() != null) {
-            event.setBasePrice(request.getBasePrice());
-        }
+        // basePrice is auto-computed from min ticket price, not directly updated
 
         if (request.getTotalCapacity() != null) {
             // Calculate capacity difference BEFORE updating
@@ -622,6 +621,15 @@ public class EventServiceImpl implements EventService {
         boolean hasDeal = ticketCategoryResponses.stream()
                 .anyMatch(tc -> Boolean.TRUE.equals(tc.getDealActive()));
 
+        // Auto-compute basePrice as the minimum price across non-shared-area ticket categories
+        // This is used by public pages to show "From LKR X" without requiring admin input
+        java.math.BigDecimal computedBasePrice = ticketCategoryResponses.stream()
+                .filter(tc -> !Boolean.TRUE.equals(tc.getIsSharedArea()))
+                .map(TicketCategoryResponse::getPrice)
+                .filter(p -> p != null)
+                .min(java.math.BigDecimal::compareTo)
+                .orElse(event.getBasePrice() != null ? event.getBasePrice() : java.math.BigDecimal.ZERO);
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -631,7 +639,7 @@ public class EventServiceImpl implements EventService {
                 .startDateTime(startDateTime) // Earliest/next schedule date-time
                 .endDateTime(endDateTime)     // Earliest/next schedule end time
                 .nextSchedule(nextScheduleResponse) // Full next schedule info
-                .basePrice(event.getBasePrice())
+                .basePrice(computedBasePrice) // Auto-computed min price
                 .totalCapacity(event.getTotalCapacity())
                 .availableSeats(event.getAvailableSeats())
                 .status(event.getStatus().name())
@@ -779,8 +787,13 @@ public class EventServiceImpl implements EventService {
     
     // Public event methods (no authentication required)
     @Override
-    public Page<EventResponse> getPublishedEvents(Pageable pageable) {
-        Page<Event> events = eventRepository.findAllPublishedEvents(pageable);
+    public Page<EventResponse> getPublishedEvents(UUID categoryId, Pageable pageable) {
+        Page<Event> events;
+        if (categoryId != null) {
+            events = eventRepository.findPublishedEventsByCategory(categoryId, pageable);
+        } else {
+            events = eventRepository.findAllPublishedEvents(pageable);
+        }
         return events.map(this::mapEventToResponse);
     }
     

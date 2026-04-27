@@ -83,16 +83,22 @@ public class BookingMapper {
      * Convert BookingSeat to BookingSeatInfo DTO
      */
     private BookingResponse.BookingSeatInfo toSeatInfo(BookingSeat bookingSeat) {
-        if (bookingSeat == null || bookingSeat.getSeat() == null) {
+        if (bookingSeat == null) {
             return null;
         }
         
-        return BookingResponse.BookingSeatInfo.builder()
-            .seatId(bookingSeat.getSeat().getSeatId())
-            .seatNumber(bookingSeat.getSeat().getSeatNumber())
-            .seatRow(bookingSeat.getSeat().getRowNumber())
-            .section(bookingSeat.getSeat().getSection())
-            .price(bookingSeat.getPriceAtBooking())
-            .build();
+        BookingResponse.BookingSeatInfo.BookingSeatInfoBuilder builder = BookingResponse.BookingSeatInfo.builder()
+            .price(bookingSeat.getPriceAtBooking());
+            
+        if (Boolean.TRUE.equals(bookingSeat.getIsSharedAreaTicket())) {
+            builder.seatNumber("Shared Area " + bookingSeat.getSharedAreaNumber())
+                   .section("Shared Area");
+        } else if (bookingSeat.getVenueSeatId() != null) {
+            builder.seatNumber(bookingSeat.getVenueSeatId());
+        } else {
+            builder.seatNumber("Unknown Seat");
+        }
+        
+        return builder.build();
     }
 }

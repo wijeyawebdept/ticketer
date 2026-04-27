@@ -106,10 +106,7 @@
 }
 
 .event-countdown .countdown-text strong {
-  background: linear-gradient(135deg, #ff1955 0%, #ff4080 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ff1955;
   font-weight: 800;
   display: block;
   margin-bottom: 10px;
@@ -121,32 +118,26 @@
 
 /* Status-based styling */
 .event-countdown.countdown-normal .countdown-text strong {
-  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #4caf50;
 }
 
 .event-countdown.countdown-warning .countdown-text strong {
-  background: linear-gradient(135deg, #ffc107 0%, #ffca28 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffc107;
 }
 
 .event-countdown.countdown-urgent .countdown-text strong {
-  background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f44336;
 }
 
 
 
 @keyframes glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -155,19 +146,25 @@
 
 
 @keyframes countdownPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.9;
   }
 }
 
 @keyframes countdownPulseUrgent {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 8px 32px rgba(244, 67, 54, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
+
   50% {
     opacity: 0.95;
     box-shadow: 0 12px 48px rgba(244, 67, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -198,6 +195,7 @@
   from {
     transform: translateY(100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -281,9 +279,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
