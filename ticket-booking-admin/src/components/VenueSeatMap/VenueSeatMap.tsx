@@ -90,6 +90,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [selectedSharedArea, setSelectedSharedArea] = useState<SharedAreaCategory | null>(null);
   const [sharedAreaTicketCount, setSharedAreaTicketCount] = useState<number | null>(null);
   const [sharedAreas, setSharedAreas] = useState<SharedAreaCategory[]>([]);
+  const [totalOccupiedSeats, setTotalOccupiedSeats] = useState(0);
+  const [customerFacingTotal, setCustomerFacingTotal] = useState(0);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
@@ -170,6 +172,20 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       });
       
       setSeatStatuses(statusMap);
+
+      // Permanently excluded seats (admin-locked / not-for-sale) — never counted in totals
+      const permanentlyExcludedStatuses = ['LOCKED', 'NOT_FOR_SALE'];
+
+      // Total seats available to customers (excludes permanently locked/not-for-sale)
+      const customerFacing = data.seats.filter(
+        (seat: any) => !permanentlyExcludedStatuses.includes(seat.status)
+      ).length;
+      setCustomerFacingTotal(customerFacing);
+
+      // Occupied = truly reserved seats only (booked, temporarily held, VIP reserved)
+      const occupiedStatuses = ['BOOKED', 'TEMPORARY_HOLD', 'VIP_RESERVED'];
+      const occupied = data.seats.filter((seat: any) => occupiedStatuses.includes(seat.status)).length;
+      setTotalOccupiedSeats(occupied);
       
       // Store shared areas if available from API response
       if (data.sharedAreas && data.sharedAreas.length > 0) {
@@ -365,7 +381,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             <button onClick={handleZoomOut} className="control-btn">-</button>
             <button onClick={handleResetView} className="control-btn">Reset</button>
             <span className="selected-count">
-              Selected: {localSelectedSeats.size} / {venueSeats.length}
+              Selected: {totalOccupiedSeats + localSelectedSeats.size} / {customerFacingTotal || venueSeats.length}
             </span>
           </div>
 
