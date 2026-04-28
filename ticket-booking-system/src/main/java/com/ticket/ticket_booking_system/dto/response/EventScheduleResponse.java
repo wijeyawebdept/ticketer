@@ -29,7 +29,7 @@ public class EventScheduleResponse {
     private LocalTime endTime;
     private Integer capacity;
     private Integer availableSeats;
-    private Integer bookedSeats;
+
     private BigDecimal priceAdjustment;
     private BigDecimal finalPrice; // base price + adjustment
     private ScheduleStatus status;

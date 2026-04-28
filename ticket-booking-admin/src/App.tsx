@@ -223,41 +223,25 @@ function App() {
                 <Route element={<AdminLayout />}>
                   <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                   <Route path="/admin/dashboard" element={<Dashboard />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin/events" element={<Events />} />
                   <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
-                  <Route path="/event-categories" element={<EventCategories />} />
                   <Route path="/admin/event-categories" element={<EventCategories />} />
                   <Route path="/admin/banners" element={<Banners />} />
-                  <Route path="/banners" element={<Banners />} />
                   <Route path="/admin/page-content" element={<PageContentManager />} />
-                  <Route path="/page-content" element={<PageContentManager />} />
                   <Route path="/admin/users" element={<Users />} />
-                  <Route path="/users" element={<Users />} />
                   <Route path="/admin/admins" element={<Admins />} />
-                  <Route path="/admins" element={<Admins />} />
                   <Route path="/admin/organizers" element={<Organizers />} />
-                  <Route path="/organizers" element={<Organizers />} />
                   <Route path="/admin/organizer-employees" element={<OrganizerEmployees />} />
-                  <Route path="/organizer-employees" element={<OrganizerEmployees />} />
                   <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
-                  <Route path="/event-assignments" element={<AdminEventAssignments />} />
                   <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
-                  <Route path="/organizer-assignment" element={<OrganizerAssignment />} />
                   <Route path="/admin/deals" element={<AdminDeals role="admin" />} />
-                <Route path="/venues" element={<Venues />} />
                 <Route path="/admin/venues" element={<Venues />} />
-                <Route path="/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/bookings" element={<Bookings />} />
-                <Route path="/transactions" element={<Transactions />} />
                 <Route path="/admin/transactions" element={<Transactions />} />
-                <Route path="/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/admin/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/admin/profile" element={<Profile />} />
-                <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/settings" element={<Settings />} />
-                <Route path="/recycle-bin" element={<RecycleBin />} />
                 <Route path="/admin/recycle-bin" element={<RecycleBin />} />
               </Route>
             </Route>

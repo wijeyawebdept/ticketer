@@ -53,7 +53,7 @@ const AuthDebugPage: React.FC = () => {
   };
   
   const handleGoToDashboard = () => {
-    navigate('/dashboard');
+    navigate('/admin/dashboard');
   };
   
   const handleGoToLogin = () => {

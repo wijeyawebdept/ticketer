@@ -756,7 +756,7 @@ public class VenueServiceImpl implements VenueService {
                 .name("Default Template Event")
                 .description("Template event for venue-level seat management")
                 .venue(venue)
-                .basePrice(BigDecimal.ZERO)
+
                 .totalCapacity(venue.getCapacity())
                 .availableSeats(venue.getCapacity())
                 .status(Event.EventStatus.DRAFT)

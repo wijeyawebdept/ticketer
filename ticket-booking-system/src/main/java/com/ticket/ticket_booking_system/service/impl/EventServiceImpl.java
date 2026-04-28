@@ -344,12 +344,7 @@ public class EventServiceImpl implements EventService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String authenticatedEmail = authentication.getName();
         
-        // Initialize owner IDs
-        UUID adminId = null;
-        UUID organizerId = null;
-        UUID organizerEmployeeId = null;
-        UUID userId = null;
-        
+
         // Try to find authenticated user in any of the tables
         User deletedBy = userRepository.findByEmail(authenticatedEmail).orElse(null);
         
@@ -364,7 +359,7 @@ public class EventServiceImpl implements EventService {
                 deletedBy.setEmail(admin.getEmail());
                 deletedBy.setFirstName(admin.getFirstName());
                 deletedBy.setLastName(admin.getLastName());
-                adminId = admin.getAdminId();
+
             } else {
                 // Check if it's an organizer
                 Organizer organizer = organizerRepository.findByEmail(authenticatedEmail).orElse(null);
@@ -375,7 +370,7 @@ public class EventServiceImpl implements EventService {
                     deletedBy.setEmail(organizer.getEmail());
                     deletedBy.setFirstName(organizer.getFirstName());
                     deletedBy.setLastName(organizer.getLastName());
-                    organizerId = organizer.getOrganizerId();
+
                 } else {
                     // Check if it's an organizer employee
                     OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(authenticatedEmail).orElse(null);
@@ -385,16 +380,14 @@ public class EventServiceImpl implements EventService {
                         deletedBy.setEmail(employee.getEmail());
                         deletedBy.setFirstName(employee.getFirstName());
                         deletedBy.setLastName(employee.getLastName());
-                        organizerEmployeeId = employee.getEmployeeId();
+
                     } else {
                         throw new IllegalStateException("Current authenticated user not found in any table");
                     }
                 }
             }
-        } else {
-            userId = deletedBy.getId();
         }
-        
+
         // First, move all event schedules to recycle bin
         List<EventSchedule> schedules = eventScheduleRepository.findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(event.getEventId());
         System.out.println("Found " + schedules.size() + " schedules to move to recycle bin for event: " + event.getName());
@@ -628,7 +621,7 @@ public class EventServiceImpl implements EventService {
                 .map(TicketCategoryResponse::getPrice)
                 .filter(p -> p != null)
                 .min(java.math.BigDecimal::compareTo)
-                .orElse(event.getBasePrice() != null ? event.getBasePrice() : java.math.BigDecimal.ZERO);
+                .orElse(java.math.BigDecimal.ZERO);
 
         return EventResponse.builder()
                 .id(event.getId())
@@ -787,6 +780,7 @@ public class EventServiceImpl implements EventService {
     
     // Public event methods (no authentication required)
     @Override
+    @Transactional(readOnly = true)
     public Page<EventResponse> getPublishedEvents(UUID categoryId, Pageable pageable) {
         Page<Event> events;
         if (categoryId != null) {
@@ -798,6 +792,7 @@ public class EventServiceImpl implements EventService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<EventResponse> getUpcomingPublishedEvents(Pageable pageable) {
         Page<Event> events = eventRepository.findUpcomingPublishedEvents(pageable);
         return events.map(this::mapEventToResponse);
@@ -825,6 +820,7 @@ public class EventServiceImpl implements EventService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<EventResponse> searchPublishedEvents(String query, Pageable pageable) {
         Page<Event> events = eventRepository.searchPublishedEvents(query, pageable);
         return events.map(this::mapEventToResponse);

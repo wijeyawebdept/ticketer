@@ -326,7 +326,7 @@ public class EventScheduleServiceImpl implements EventScheduleService {
     // Helper method to convert entity to response DTO
     private EventScheduleResponse convertToResponse(EventSchedule schedule) {
         Event event = schedule.getEvent();
-        BigDecimal basePrice = event.getBasePrice();
+        BigDecimal basePrice = BigDecimal.ZERO;
         BigDecimal finalPrice = schedule.calculateFinalPrice(basePrice);
 
         return EventScheduleResponse.builder()
@@ -341,7 +341,7 @@ public class EventScheduleServiceImpl implements EventScheduleService {
             .endTime(schedule.getEndTime())
             .capacity(schedule.getCapacity())
             .availableSeats(schedule.getAvailableSeats())
-            .bookedSeats(schedule.getCapacity() - schedule.getAvailableSeats())
+
             .priceAdjustment(schedule.getPriceAdjustment())
             .finalPrice(finalPrice)
             .status(schedule.getStatus())

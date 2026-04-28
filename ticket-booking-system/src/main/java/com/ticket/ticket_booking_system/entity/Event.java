@@ -1,14 +1,11 @@
 package com.ticket.ticket_booking_system.entity;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 import java.util.List;
-
 import org.hibernate.annotations.UuidGenerator;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,11 +56,7 @@ public class Event {
     @Column(name = "venue_address", columnDefinition = "TEXT")
     private String venueAddress;
 
-    /** Kept for backward compatibility but no longer set by the form.
-     * Auto-computed as the minimum ticket category price in responses. */
-    @Builder.Default
-    @Column(name = "base_price", nullable = true)
-    private BigDecimal basePrice = BigDecimal.ZERO;
+
 
     @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;
@@ -131,6 +124,10 @@ public class Event {
     public enum EventStatus {
         DRAFT, PUBLISHED, CANCELLED, COMPLETED
     }
+
+    @Builder.Default
+    @Column(name = "notification_sent", nullable = false, columnDefinition = "boolean default false")
+    private Boolean notificationSent = false;
 
     // Add compatibility methods to support existing code
     public java.util.UUID getId() {

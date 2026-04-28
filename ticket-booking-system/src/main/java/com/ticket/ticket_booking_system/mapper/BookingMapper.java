@@ -58,7 +58,7 @@ public class BookingMapper {
         EventSchedule schedule = booking.getEventSchedule();
         if (schedule != null) {
             BigDecimal finalPrice = booking.getEvent() != null ? 
-                schedule.calculateFinalPrice(booking.getEvent().getBasePrice()) : 
+                schedule.calculateFinalPrice(BigDecimal.ZERO) : 
                 BigDecimal.ZERO;
             
             builder.scheduleId(schedule.getScheduleId())

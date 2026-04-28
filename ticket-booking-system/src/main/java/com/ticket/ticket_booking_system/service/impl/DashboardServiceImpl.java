@@ -53,7 +53,7 @@ public class DashboardServiceImpl implements DashboardService {
     public Map<String, Object> getDashboardOverview() {
         Map<String, Object> overview = new HashMap<>();
 
-        LocalDateTime now = LocalDateTime.now();
+
         LocalDateTime today = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = today.plusDays(1); // End of today (tomorrow at midnight)
         LocalDateTime weekStart = today.minusDays(7);

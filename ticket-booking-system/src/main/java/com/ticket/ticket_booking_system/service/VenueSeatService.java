@@ -424,7 +424,7 @@ public class VenueSeatService {
         java.util.Map<String, Integer> categoryCounts = new java.util.HashMap<>();
         for (VenueSeat seat : venueSeats) {
             String categoryName = seat.getCategory().getCategoryName();
-            categoryCounts.merge(categoryName, 1, Integer::sum);
+            categoryCounts.put(categoryName, categoryCounts.getOrDefault(categoryName, 0) + 1);
         }
 
         for (java.util.Map.Entry<String, java.math.BigDecimal> entry : categoryPrices.entrySet()) {

@@ -165,7 +165,7 @@ const Deals: React.FC = () => {
             {eventIds.map((eventId) => {
               const categoryDeals = eventGroups[eventId];
               const firstDeal = categoryDeals[0];
-              const lowestDiscounted = Math.min(...categoryDeals.map((d) => d.discountedPrice));
+              const lowestOriginal = firstDeal.eventMinPrice ?? Math.min(...categoryDeals.map((d) => d.originalPrice));
 
               return (
                 <Grid item xs={12} sm={6} md={4} key={eventId}>
@@ -340,31 +340,58 @@ const Deals: React.FC = () => {
                             >
                               {d.categoryName}
                             </Typography>
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontFamily: 'Raleway, sans-serif',
-                                  color: '#999',
-                                  textDecoration: 'line-through',
-                                  display: 'block',
-                                  fontSize: '0.7rem',
-                                }}
-                              >
-                                {formatPrice(d.originalPrice)}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontFamily: 'Raleway, sans-serif',
-                                  color: '#ff1955',
-                                  fontWeight: 800,
-                                  fontSize: '0.9rem',
-                                }}
-                              >
-                                {formatPrice(d.discountedPrice)}
-                              </Typography>
-                            </Box>
+                            {d.dealType === 'BUY_X_GET_Y_FREE' ? (
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontFamily: 'Raleway, sans-serif',
+                                    color: '#ff1955',
+                                    fontWeight: 800,
+                                    fontSize: '0.8rem',
+                                  }}
+                                >
+                                  Buy {d.dealBuyQuantity} Get {d.dealFreeQuantity} Free
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontFamily: 'Raleway, sans-serif',
+                                    color: '#999',
+                                    display: 'block',
+                                    fontSize: '0.7rem',
+                                  }}
+                                >
+                                  {formatPrice(d.originalPrice)} each
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontFamily: 'Raleway, sans-serif',
+                                    color: '#999',
+                                    textDecoration: 'line-through',
+                                    display: 'block',
+                                    fontSize: '0.7rem',
+                                  }}
+                                >
+                                  {formatPrice(d.originalPrice)}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontFamily: 'Raleway, sans-serif',
+                                    color: '#ff1955',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                  }}
+                                >
+                                  {formatPrice(d.discountedPrice)}
+                                </Typography>
+                              </Box>
+                            )}
                           </Box>
                         ))}
                       </Box>
@@ -387,7 +414,7 @@ const Deals: React.FC = () => {
                             mb: 1.5,
                           }}
                         >
-                          {formatPrice(lowestDiscounted)}{' '}
+                          {formatPrice(lowestOriginal)}{' '}
                           <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#999' }}>upwards</span>
                         </Typography>
 

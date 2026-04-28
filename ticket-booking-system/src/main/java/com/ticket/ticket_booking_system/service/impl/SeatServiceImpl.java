@@ -14,15 +14,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.response.SeatResponse;
-import com.ticket.ticket_booking_system.entity.Admin;
+
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
-import com.ticket.ticket_booking_system.repository.AdminRepository;
+
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.SeatRepository;
-import com.ticket.ticket_booking_system.repository.UserRepository;
+
 import com.ticket.ticket_booking_system.repository.VenueRepository;
 import com.ticket.ticket_booking_system.service.SeatService;
 import com.ticket.ticket_booking_system.service.SeatWebSocketService;
@@ -36,18 +36,15 @@ public class SeatServiceImpl implements SeatService {
     private final SeatRepository seatRepository;
     private final EventRepository eventRepository;
     private final SeatWebSocketService webSocketService;
-    private final UserRepository userRepository;
-    private final AdminRepository adminRepository;
+
     private final VenueRepository venueRepository;
 
     public SeatServiceImpl(SeatRepository seatRepository, EventRepository eventRepository,
-            SeatWebSocketService webSocketService, UserRepository userRepository,
-            AdminRepository adminRepository, VenueRepository venueRepository) {
+            SeatWebSocketService webSocketService, VenueRepository venueRepository) {
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
         this.webSocketService = webSocketService;
-        this.userRepository = userRepository;
-        this.adminRepository = adminRepository;
+
         this.venueRepository = venueRepository;
     }
 
@@ -406,48 +403,4 @@ public class SeatServiceImpl implements SeatService {
         return new SeatAvailabilityStats(totalSeats, availableSeats, bookedSeats, heldSeats, blockedSeats);
     }
 
-    /**
-     * Get or create a default event for venue-level seats
-     */
-    private Event getOrCreateDefaultEvent(Venue venue) {
-        // Try to find an existing default event for this venue
-        org.springframework.data.domain.Page<Event> defaultEventsPage = eventRepository.findByVenue(venue,
-                org.springframework.data.domain.PageRequest.of(0, 100));
-        List<Event> defaultEvents = defaultEventsPage.getContent();
-        for (Event event : defaultEvents) {
-            if ("Default Template Event".equals(event.getName())) {
-                return event;
-            }
-        }
-
-        // If no default event exists, create one
-        // Try to get an admin to be the creator (organizer is null for admin-created
-        // events)
-        Admin admin = adminRepository.findByEmail("admin@ticketbooking.com")
-                .orElseGet(() -> adminRepository.findByActiveTrue().stream().findFirst().orElse(null));
-
-        UUID createdByUserId = null;
-        String createdByType = null;
-
-        if (admin != null) {
-            createdByUserId = admin.getAdminId();
-            createdByType = admin.getRole().name();
-        }
-
-        // Create the default event
-        Event defaultEvent = Event.builder()
-                .name("Default Template Event")
-                .description("Template event for venue-level seat management")
-                .venue(venue)
-                .basePrice(java.math.BigDecimal.ZERO)
-                .totalCapacity(venue.getCapacity())
-                .availableSeats(venue.getCapacity())
-                .status(Event.EventStatus.DRAFT)
-                .organizer(null) // Admin-created events don't have an organizer
-                .createdByUserId(createdByUserId) // Track creator ID
-                .createdByType(createdByType) // Track creator type
-                .build();
-
-        return eventRepository.save(defaultEvent);
-    }
 }

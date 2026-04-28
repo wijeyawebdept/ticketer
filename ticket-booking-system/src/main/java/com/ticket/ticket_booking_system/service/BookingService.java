@@ -24,7 +24,6 @@ import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat;
 import com.ticket.ticket_booking_system.entity.User;
-import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.TransactionRepository;
@@ -103,7 +102,7 @@ public class BookingService {
         // Add seat bookings if any (using VenueSeat with String ID)
         if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
             for (String seatId : request.getSeatIds()) {
-                VenueSeat venueSeat = venueSeatRepository.findById(seatId)
+                venueSeatRepository.findById(seatId)
                         .orElseThrow(() -> new RuntimeException("VenueSeat not found with ID: " + seatId));
 
                 BookingSeat bookingSeat = BookingSeat.builder()
@@ -475,7 +474,7 @@ public class BookingService {
      */
     public Page<Booking> getBookingsByScheduleId(String scheduleId, Pageable pageable) {
         UUID uuid = UUID.fromString(scheduleId);
-        EventSchedule schedule = eventScheduleRepository.findById(uuid)
+        eventScheduleRepository.findById(uuid)
                 .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + scheduleId));
         
         return bookingRepository.findByEventSchedule_ScheduleId(uuid, pageable);

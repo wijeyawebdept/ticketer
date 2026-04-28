@@ -109,6 +109,7 @@ export interface TicketCategoryDeal {
   eventImageUrl?: string;
   eventStartDateTime?: string;
   venueName?: string;
+  eventMinPrice?: number;
 }
 
 export interface TicketDealRequest {

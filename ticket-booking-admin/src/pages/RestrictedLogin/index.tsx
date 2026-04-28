@@ -138,7 +138,7 @@ const RestrictedLogin: React.FC = () => {
         } else if (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN' || 
                    user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
           // Admin and Super Admin
-          navigate('/dashboard');
+          navigate('/admin/dashboard');
         } else {
           // If user is a regular USER, deny access
           sessionStorage.removeItem('auth_token');
@@ -149,7 +149,7 @@ const RestrictedLogin: React.FC = () => {
         }
       } else {
         // Fallback to dashboard if user data not found
-        navigate('/dashboard');
+        navigate('/admin/dashboard');
       }
     } catch (err: any) {
       let errorMessage = 'Login failed. Please try again.';

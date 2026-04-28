@@ -156,23 +156,23 @@ const AdminLayout: React.FC = () => {
   };
 
   const menuItems = [
-    { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/dashboard' },
-    { text: t('navigation.users'), icon: <PersonIcon />, path: '/users' },
-    { text: t('navigation.admins'), icon: <PersonIcon />, path: '/admins' },
-    { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/organizers' },
-    { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/organizer-employees' },
+    { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/admin/dashboard' },
+    { text: t('navigation.users'), icon: <PersonIcon />, path: '/admin/users' },
+    { text: t('navigation.admins'), icon: <PersonIcon />, path: '/admin/admins' },
+    { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/admin/organizers' },
+    { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/admin/organizer-employees' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/admin/events' },
     { text: 'Deals', icon: <LocalOfferIcon />, path: '/admin/deals' },
-    { text: 'Event Categories', icon: <EventIcon />, path: '/event-categories' },
-    { text: 'Banners', icon: <CollectionsIcon />, path: '/banners' },
-    { text: 'Page Content Manager', icon: <DescriptionIcon />, path: '/page-content' },
-    { text: 'Employee Assignment', icon: <AssignmentIcon />, path: '/event-assignments' },
-    { text: 'Organizer Assignment', icon: <PersonAddIcon />, path: '/organizer-assignment' },
-    { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/venues' },
-    { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/seats' },
+    { text: 'Event Categories', icon: <EventIcon />, path: '/admin/event-categories' },
+    { text: 'Banners', icon: <CollectionsIcon />, path: '/admin/banners' },
+    { text: 'Page Content Manager', icon: <DescriptionIcon />, path: '/admin/page-content' },
+    { text: 'Employee Assignment', icon: <AssignmentIcon />, path: '/admin/event-assignments' },
+    { text: 'Organizer Assignment', icon: <PersonAddIcon />, path: '/admin/organizer-assignment' },
+    { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/admin/venues' },
+    { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/admin/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/admin/bookings' },
-    { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/recycle-bin' },
-    { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/settings' },
+    { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/admin/recycle-bin' },
+    { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/admin/settings' },
   ];
 
   return (
@@ -224,7 +224,7 @@ const AdminLayout: React.FC = () => {
               onClose={handleClose}
               sx={{ mt: 1 }}
             >
-              <MenuItem onClick={() => { handleClose(); navigate('/settings'); }}>
+              <MenuItem onClick={() => { handleClose(); navigate('/admin/settings'); }}>
                 <ListItemIcon>
                   <AccountCircleIcon fontSize="small" />
                 </ListItemIcon>

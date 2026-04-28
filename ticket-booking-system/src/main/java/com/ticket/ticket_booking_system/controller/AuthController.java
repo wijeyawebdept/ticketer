@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,7 +41,7 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final UserService userService;
-    private final AuthenticationManager authenticationManager;
+
     private final JwtService jwtService;
     private final GoogleOAuthService googleOAuthService;
     private final UserRepository userRepository;
@@ -54,7 +54,6 @@ public class AuthController {
     
     public AuthController(
             UserService userService, 
-            AuthenticationManager authenticationManager, 
             JwtService jwtService,
             GoogleOAuthService googleOAuthService,
             UserRepository userRepository,
@@ -65,7 +64,7 @@ public class AuthController {
             LoginSuccessHandler loginSuccessHandler,
             EmailService emailService) {
         this.userService = userService;
-        this.authenticationManager = authenticationManager;
+
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.userRepository = userRepository;

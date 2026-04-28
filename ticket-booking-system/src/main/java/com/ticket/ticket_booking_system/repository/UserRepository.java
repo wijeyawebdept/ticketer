@@ -40,6 +40,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     
     java.util.List<User> findByRoleAndActive(User.Role role, int active);
     
+    java.util.List<User> findByEmailNotificationsEnabledTrueAndActive(int active);
+    
     // Update last login timestamp
     @Modifying
     @Transactional

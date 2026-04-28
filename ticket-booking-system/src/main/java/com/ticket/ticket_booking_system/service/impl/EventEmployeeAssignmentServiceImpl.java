@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.AssignEmployeesToEventRequest;
 import com.ticket.ticket_booking_system.dto.EventEmployeeAssignmentDTO;
-import com.ticket.ticket_booking_system.entity.Admin;
+
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventEmployeeAssignment;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -63,7 +63,7 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     @Transactional
     public List<EventEmployeeAssignmentDTO> assignEmployeesToEventByAdmin(UUID adminId, AssignEmployeesToEventRequest request) {
         // Verify admin exists
-        Admin admin = adminRepository.findById(adminId)
+        adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
 
         // Verify event exists
@@ -147,11 +147,11 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     @Transactional
     public void removeEmployeeFromEventByAdmin(UUID adminId, UUID eventId, UUID employeeId) {
         // Verify admin exists
-        Admin admin = adminRepository.findById(adminId)
+        adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
 
         // Verify event exists
-        Event event = eventRepository.findById(eventId)
+        eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
 
         removeEmployeeFromEventInternal(eventId, employeeId);
@@ -227,7 +227,7 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     public EventEmployeeAssignmentDTO updateAssignmentByAdmin(UUID adminId, UUID assignmentId, 
                                                               String roleDescription, String notes) {
         // Verify admin exists
-        Admin admin = adminRepository.findById(adminId)
+        adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin", "id", adminId.toString()));
 
         EventEmployeeAssignment assignment = assignmentRepository.findById(assignmentId)

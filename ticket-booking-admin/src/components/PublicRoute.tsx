@@ -44,7 +44,7 @@ const PublicRoute: React.FC = () => {
 
   // Redirect admins to admin dashboard
   if (isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   // Redirect organizers to organizer dashboard

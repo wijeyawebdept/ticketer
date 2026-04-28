@@ -29,7 +29,7 @@ const RoleBasedRedirect: React.FC = () => {
   
   if (userRole === UserRole.ADMIN || userRole === UserRole.ROLE_ADMIN || 
       userRole === UserRole.SUPER_ADMIN || userRole === UserRole.ROLE_SUPER_ADMIN) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   } else if (userRole === UserRole.ORGANIZER || userRole === UserRole.ROLE_ORGANIZER) {
     return <Navigate to="/organizer/dashboard" replace />;
   } else if (userRole === UserRole.ORGANIZER_EMPLOYEE || userRole === UserRole.ROLE_ORGANIZER_EMPLOYEE) {

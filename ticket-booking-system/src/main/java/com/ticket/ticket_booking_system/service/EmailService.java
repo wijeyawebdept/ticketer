@@ -48,6 +48,9 @@ public class EmailService {
     @Value("${app.frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
+    @Value("${app.backend.base-url:http://localhost:8081}")
+    private String backendBaseUrl;
+
     public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
@@ -462,6 +465,25 @@ public class EmailService {
             log.info("Deal notification email sent to: {}", customerEmail);
         } catch (Exception e) {
             log.error("Failed to send deal notification email to {}: {}", customerEmail, e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendNewEventsSummaryEmail(String customerEmail, String firstName, java.util.List<Event> newEvents) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("firstName", firstName);
+            ctx.setVariable("events", newEvents);
+            ctx.setVariable("browseUrl", frontendBaseUrl + "/events");
+            ctx.setVariable("backendBaseUrl", backendBaseUrl);
+
+            String htmlBody = templateEngine.process("emails/new-events-summary", ctx);
+            String subject = "New Events on Ticketer - Don't Miss Out!";
+
+            sendHtml(customerEmail, subject, htmlBody);
+            log.info("New events summary email sent to: {}", customerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send new events summary email to {}: {}", customerEmail, e.getMessage());
         }
     }
 

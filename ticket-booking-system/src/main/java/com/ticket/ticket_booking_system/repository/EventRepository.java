@@ -18,6 +18,8 @@ import com.ticket.ticket_booking_system.entity.Venue;
 public interface EventRepository extends JpaRepository<Event, UUID> {
 
     Page<Event> findByStatus(Event.EventStatus status, Pageable pageable);
+    
+    List<Event> findByStatusAndNotificationSentFalse(Event.EventStatus status);
 
     Page<Event> findByOrganizer(User organizer, Pageable pageable);
 

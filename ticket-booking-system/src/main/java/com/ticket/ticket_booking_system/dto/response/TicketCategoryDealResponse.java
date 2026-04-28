@@ -42,6 +42,7 @@ public class TicketCategoryDealResponse {
     private String eventImageUrl;
     private String eventStartDateTime;
     private String venueName;
+    private BigDecimal eventMinPrice;
 
     public static TicketCategoryDealResponse fromEntity(TicketCategory tc) {
         String type = tc.getDealType() != null ? tc.getDealType() : "PERCENTAGE_DISCOUNT";
@@ -66,6 +67,14 @@ public class TicketCategoryDealResponse {
             }
         }
 
+        BigDecimal minPrice = tc.getPrice();
+        if (tc.getEvent() != null && tc.getEvent().getTicketCategories() != null && !tc.getEvent().getTicketCategories().isEmpty()) {
+            minPrice = tc.getEvent().getTicketCategories().stream()
+                .map(TicketCategory::getPrice)
+                .min(BigDecimal::compareTo)
+                .orElse(tc.getPrice());
+        }
+
         return TicketCategoryDealResponse.builder()
             .categoryId(tc.getCategoryId())
             .categoryName(tc.getCategoryName())
@@ -85,6 +94,7 @@ public class TicketCategoryDealResponse {
             .eventName(tc.getEvent() != null ? tc.getEvent().getName() : null)
             .eventImageUrl(tc.getEvent() != null ? tc.getEvent().getImageUrl() : null)
             .venueName(tc.getEvent() != null ? tc.getEvent().getVenueName() : null)
+            .eventMinPrice(minPrice)
             .build();
     }
 }

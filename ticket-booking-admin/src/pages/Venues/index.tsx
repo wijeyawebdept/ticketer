@@ -204,7 +204,7 @@ const VenuesPage = () => {
   const handleSeatingArrangement = (venue: Venue) => {
     // Use different paths based on user role
     if (isAdmin) {
-      navigate(`/venues/${venue.id}/seating`);
+      navigate(`/admin/venues/${venue.id}/seating`);
     } else if (isOrganizer) {
       navigate(`/organizer/venues/${venue.id}/seating`);
     } else if (isOrganizerEmployee) {

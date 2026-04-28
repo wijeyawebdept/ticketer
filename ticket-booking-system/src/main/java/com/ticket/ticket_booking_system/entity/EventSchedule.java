@@ -46,9 +46,11 @@ public class EventSchedule {
     @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
 
+    @Builder.Default
     @Column(name = "price_adjustment", precision = 10, scale = 2)
     private BigDecimal priceAdjustment = BigDecimal.ZERO;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private ScheduleStatus status = ScheduleStatus.ACTIVE;
@@ -64,6 +66,7 @@ public class EventSchedule {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 

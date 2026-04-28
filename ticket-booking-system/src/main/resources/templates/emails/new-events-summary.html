@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Events on Ticketer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background: #242a33; padding: 30px; text-align: center; color: #fcd0a5; }
+        .header h1 { margin: 0; font-size: 28px; letter-spacing: 2px; text-transform: uppercase; }
+        .content { padding: 30px; }
+        .welcome { font-size: 18px; margin-bottom: 20px; font-weight: bold; }
+        .event-card { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
+        .event-image { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; margin-bottom: 15px; }
+        .event-name { font-size: 20px; font-weight: 900; color: #ff1955; margin: 0 0 10px 0; }
+        .event-venue { font-size: 14px; color: #666; margin-bottom: 10px; display: flex; align-items: center; }
+        .event-desc { font-size: 14px; color: #444; line-height: 1.5; margin-bottom: 15px; }
+        .button { display: inline-block; padding: 12px 25px; background: #ff1955; color: #ffffff; text-decoration: none; border-radius: 25px; font-weight: bold; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+        .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; }
+        .accent { color: #ff1955; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>New Events Update</h1>
+        </div>
+        <div class="content">
+            <p class="welcome" th:text="'Hi ' + ${firstName} + ','">Hi there,</p>
+            <p>Exciting news! We've just published some <span class="accent">new events</span> that we think you'll love. Take a look at what's coming up next on Ticketer:</p>
+            
+            <div th:each="event : ${events}" class="event-card">
+                <img th:if="${event.imageUrl}" th:src="${#strings.startsWith(event.imageUrl, 'http') ? event.imageUrl : backendBaseUrl + (#strings.startsWith(event.imageUrl, '/') ? '' : '/') + event.imageUrl}" class="event-image" alt="Event Image" />
+                <h2 class="event-name" th:text="${event.name}">Event Name</h2>
+                <div class="event-venue">
+                    <span th:text="${event.venueName ?: (event.venue != null ? event.venue.name : 'Location TBA')}">Venue Name</span>
+                </div>
+                <p class="event-desc" th:text="${#strings.abbreviate(event.description, 150)}">Short description of the event goes here...</p>
+                <a th:href="${browseUrl + '/' + event.eventId}" class="button">View Details</a>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <p>Can't wait to see more?</p>
+                <a th:href="${browseUrl}" class="button" style="background: #242a33; border: 1px solid #fcd0a5; color: #fcd0a5;">Browse All Events</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Ticketer.lk. All rights reserved.</p>
+            <p>You are receiving this because you opted into event notifications. <br/>
+            To change your preferences, visit your profile settings.</p>
+        </div>
+    </div>
+</body>
+</html>
