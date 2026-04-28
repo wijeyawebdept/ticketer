@@ -364,7 +364,7 @@ const EventSchedules: React.FC = () => {
               <TableContainer>
                 <Box sx={{ px: 2, py: 1, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
                   <Typography variant="caption" color="textSecondary">
-                    📍 All times shown in Asia/Colombo (GMT+5:30)
+                     All times shown in Asia/Colombo (GMT+5:30)
                   </Typography>
                 </Box>
                 <Table>

@@ -302,7 +302,7 @@ const Home: React.FC = () => {
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         
-        let filteredEvents = eventsWithoutDeals;
+        let filteredEvents = allEvents;
         
         if (timeFilter === 'this-month') {
           filteredEvents = filteredEvents.filter((event: Event) => {
