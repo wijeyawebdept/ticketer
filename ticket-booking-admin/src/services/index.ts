@@ -13,6 +13,7 @@ import RecycleBinService from './recycle-bin.service';
 import EmployeeService from './employee.service';
 import OrganizerService from './organizer.service';
 import BannerService from './banner.service';
+import GalleryService from './GalleryService';
 
 export {
   AuthService,
@@ -29,5 +30,6 @@ export {
   RoleService,
   RecycleBinService,
   EmployeeService,
-  BannerService
+  BannerService,
+  GalleryService
 };

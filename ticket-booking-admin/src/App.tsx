@@ -41,6 +41,7 @@ import AdminEventAssignments from './pages/AdminEventAssignments';
 import OrganizerAssignment from './pages/OrganizerAssignment';
 import EventCategories from './pages/EventCategories';
 import Banners from './pages/Banners';
+import GalleryManagement from './pages/GalleryManagement';
 import PageContentManager from './pages/PageContentManager';
 import { UserRole } from './types';
 
@@ -226,6 +227,7 @@ function App() {
                   <Route path="/admin/events" element={<Events />} />
                   <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
                   <Route path="/admin/event-categories" element={<EventCategories />} />
+                  <Route path="/admin/gallery" element={<GalleryManagement />} />
                   <Route path="/admin/banners" element={<Banners />} />
                   <Route path="/admin/page-content" element={<PageContentManager />} />
                   <Route path="/admin/users" element={<Users />} />
