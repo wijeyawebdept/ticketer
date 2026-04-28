@@ -33,7 +33,6 @@ import { ProfileDTO, EventCategory } from '../../types';
 const PublicNavbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [eventsAnchor, setEventsAnchor] = useState<null | HTMLElement>(null);
-  const [blogAnchor, setBlogAnchor] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [categories, setCategories] = useState<EventCategory[]>([]);
@@ -89,11 +88,6 @@ const PublicNavbar: React.FC = () => {
     { label: 'Contact', path: '/contact' },
   ];
 
-  const blogItems = [
-    { label: 'Blog Home 1', path: '/blog-home-1' },
-    { label: 'Blog Home 2', path: '/blog-home-2' },
-    { label: 'Blog Post', path: '/blog-post' },
-  ];
 
   const drawer = (
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center', pt: 2 }}>
@@ -302,49 +296,26 @@ const PublicNavbar: React.FC = () => {
                 Gallery
               </Button>
 
-              {/* Blog Dropdown */}
-              <Box>
-                <Button
-                  onClick={(e) => setBlogAnchor(e.currentTarget)}
-                  endIcon={<ArrowDropDownIcon />}
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.55)',
-                    fontFamily: 'Raleway, sans-serif',
-                    fontWeight: 400,
-                    fontSize: '1rem',
-                    lineHeight: 1.5,
-                    textTransform: 'none',
-                    padding: '0.5rem 1rem',
-                    minWidth: 'auto',
-                    '&:hover': {
-                      color: '#fff',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  Blog
-                </Button>
-                <Menu
-                  anchorEl={blogAnchor}
-                  open={Boolean(blogAnchor)}
-                  onClose={() => setBlogAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                  {blogItems.map((item) => (
-                    <MenuItem 
-                      key={item.label} 
-                      onClick={() => {
-                        navigate(item.path);
-                        setBlogAnchor(null);
-                      }}
-                      sx={{ fontFamily: 'Raleway, sans-serif' }}
-                    >
-                      {item.label}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </Box>
+              {/* Blog Button */}
+              <Button
+                onClick={() => navigate('/blog')}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.55)',
+                  fontFamily: 'Raleway, sans-serif',
+                  fontWeight: 400,
+                  fontSize: '1rem',
+                  lineHeight: 1.5,
+                  textTransform: 'none',
+                  padding: '0.5rem 1rem',
+                  minWidth: 'auto',
+                  '&:hover': {
+                    color: '#fff',
+                    backgroundColor: 'transparent',
+                  },
+                }}
+              >
+                Blog
+              </Button>
 
 
               {/* User Menu or Register/Sign In Buttons */}

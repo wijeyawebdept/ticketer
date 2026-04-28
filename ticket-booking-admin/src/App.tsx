@@ -42,6 +42,7 @@ import OrganizerAssignment from './pages/OrganizerAssignment';
 import EventCategories from './pages/EventCategories';
 import Banners from './pages/Banners';
 import GalleryManagement from './pages/GalleryManagement';
+import BlogManagement from './pages/BlogManagement';
 import PageContentManager from './pages/PageContentManager';
 import { UserRole } from './types';
 
@@ -52,6 +53,8 @@ import Services from './pages/Public/Services';
 import Contact from './pages/Public/Contact';
 import EventDetails from './pages/Public/EventDetails';
 import Gallery from './pages/Public/Gallery';
+import Blog from './pages/Public/Blog';
+import PostDetail from './pages/Public/Blog/PostDetail';
 import PublicEvents from './pages/Public/Events';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import CookiePolicy from './pages/Public/CookiePolicy';
@@ -228,6 +231,7 @@ function App() {
                   <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
                   <Route path="/admin/event-categories" element={<EventCategories />} />
                   <Route path="/admin/gallery" element={<GalleryManagement />} />
+                  <Route path="/admin/blog" element={<BlogManagement />} />
                   <Route path="/admin/banners" element={<Banners />} />
                   <Route path="/admin/page-content" element={<PageContentManager />} />
                   <Route path="/admin/users" element={<Users />} />
@@ -316,18 +320,22 @@ function App() {
               <Route path="/events" element={<PublicEvents />} />
               <Route path="/event/:id" element={<EventDetails />} />
               <Route path="/seat-selection/:eventScheduleId" element={<SeatSelectionPage />} />
-              <Route path="/gallery" element={<Gallery />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/faq" element={<FAQ />} />
-              <Route path="/deals" element={<PublicDeals />} />
               {/* Payment Result Pages */}
               <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />
               <Route path="/booking/payment-cancel" element={<PaymentCancel />} />
               <Route path="/booking/payment-error" element={<PaymentError />} />
             </Route>
+
+            {/* Open public content routes - accessible by ALL roles including admin/organizer */}
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<PostDetail />} />
+            <Route path="/deals" element={<PublicDeals />} />
 
             {/* Default redirect - use role-based routing */}
             <Route path="/admin-portal" element={<RoleBasedRedirect />} />
