@@ -455,7 +455,7 @@ const Home: React.FC = () => {
                 fontSize: isMobile ? '24px' : '32px',
               }}
             >
-              My Tickets Deals
+              Ticketer Deals
             </Typography>
             <Button
               onClick={() => navigate('/events')}
