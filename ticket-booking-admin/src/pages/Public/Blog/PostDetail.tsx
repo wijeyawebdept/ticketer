@@ -136,8 +136,6 @@ const PostDetail: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', md: 'row' } }}>
           {/* Main Content */}
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Chip label={post.category}
-              sx={{ bgcolor: 'rgba(255,25,85,0.15)', color: '#ff1955', fontFamily: 'Raleway, sans-serif', fontWeight: 700, mb: 2 }} />
             <Typography variant="h3" sx={{ color: '#fff', fontFamily: 'Raleway, sans-serif', fontWeight: 900, fontSize: { xs: '1.8rem', md: '2.5rem' }, mb: 2, lineHeight: 1.2 }}>
               {post.title}
             </Typography>

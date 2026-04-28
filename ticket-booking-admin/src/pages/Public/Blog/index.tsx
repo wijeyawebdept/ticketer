@@ -12,8 +12,6 @@ import BlogService, { BlogPostSummary } from '../../../services/BlogService';
 const Blog: React.FC = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,7 +21,7 @@ const Blog: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await BlogService.getPublishedPosts(selectedCategory || undefined, page, 9);
+      const data = await BlogService.getPublishedPosts(page, 9);
       setPosts(data.content);
       setTotalPages(data.totalPages);
     } catch (e) {
@@ -31,15 +29,11 @@ const Blog: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, page]);
+  }, [page]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
-
-  useEffect(() => {
-    BlogService.getCategories().then(setCategories).catch(() => {});
-  }, []);
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -69,31 +63,6 @@ const Blog: React.FC = () => {
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 6, flexGrow: 1 }}>
-        {/* Category Filters */}
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center', mb: 5 }}>
-          {['', ...categories].map((cat) => (
-            <Button
-              key={cat || 'all'}
-              onClick={() => { setSelectedCategory(cat); setPage(0); }}
-              sx={{
-                fontFamily: 'Raleway, sans-serif',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                px: 2.5, py: 0.8,
-                border: '1px solid',
-                borderColor: selectedCategory === cat ? '#ff1955' : 'rgba(255,255,255,0.2)',
-                borderRadius: '20px',
-                color: selectedCategory === cat ? '#fff' : 'rgba(255,255,255,0.6)',
-                bgcolor: selectedCategory === cat ? '#ff1955' : 'transparent',
-                '&:hover': { borderColor: '#ff1955', color: '#fff', bgcolor: selectedCategory === cat ? '#e01545' : 'rgba(255,25,85,0.1)' },
-              }}
-            >
-              {cat || 'All'}
-            </Button>
-          ))}
-        </Box>
-
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
         {loading ? (
@@ -143,11 +112,6 @@ const Blog: React.FC = () => {
                     </Box>
                   )}
                   <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                    <Chip
-                      label={post.category}
-                      size="small"
-                      sx={{ bgcolor: 'rgba(255,25,85,0.15)', color: '#ff1955', fontFamily: 'Raleway, sans-serif', fontWeight: 700, fontSize: '0.72rem', mb: 1.5, width: 'fit-content' }}
-                    />
                     <Typography sx={{ color: '#fff', fontFamily: 'Raleway, sans-serif', fontWeight: 800, fontSize: '1rem', mb: 1, lineHeight: 1.4, flexGrow: 1 }}>
                       {post.title}
                     </Typography>

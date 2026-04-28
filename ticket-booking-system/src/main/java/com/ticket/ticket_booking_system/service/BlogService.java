@@ -27,9 +27,8 @@ public interface BlogService {
     Page<BlogPostSummaryResponse> getAllPostsForAdmin(Pageable pageable);
 
     // Public operations
-    Page<BlogPostSummaryResponse> getPublishedPosts(String category, Pageable pageable);
+    Page<BlogPostSummaryResponse> getPublishedPosts(Pageable pageable);
     BlogPostDetailResponse getPostDetail(UUID postId, UUID currentUserId);
-    List<String> getPublishedCategories();
     BlogCommentResponse addComment(UUID postId, UUID userId, String userName, BlogCommentRequest request);
     boolean toggleLike(UUID postId, UUID userId);
 

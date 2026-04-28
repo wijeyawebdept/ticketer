@@ -8,8 +8,7 @@ public class BlogDTOs {
     public record BlogPostCreateRequest(
         String title,
         String summary,
-        String content,
-        String category
+        String content
     ) {}
 
     public record BlogCommentRequest(
@@ -35,7 +34,6 @@ public class BlogDTOs {
         String postId,
         String title,
         String summary,
-        String category,
         boolean published,
         int likeCount,
         int commentCount,
@@ -50,7 +48,6 @@ public class BlogDTOs {
         String title,
         String summary,
         String content,
-        String category,
         boolean published,
         int likeCount,
         int commentCount,

@@ -19,7 +19,6 @@ export interface BlogPostSummary {
   postId: string;
   title: string;
   summary?: string;
-  category: string;
   published: boolean;
   likeCount: number;
   commentCount: number;
@@ -93,9 +92,8 @@ const BlogService = {
   },
 
   // Public
-  getPublishedPosts: async (category?: string, page = 0, size = 9): Promise<BlogPage> => {
+  getPublishedPosts: async (page = 0, size = 9): Promise<BlogPage> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
-    if (category) params.append('category', category);
     const res = await api.get<BlogPage>(`/api/public/blog/posts?${params}`);
     return res.data;
   },
@@ -106,8 +104,7 @@ const BlogService = {
   },
 
   getCategories: async (): Promise<string[]> => {
-    const res = await api.get<string[]>('/api/public/blog/categories');
-    return res.data;
+    return [];
   },
 
   toggleLike: async (postId: string): Promise<boolean> => {

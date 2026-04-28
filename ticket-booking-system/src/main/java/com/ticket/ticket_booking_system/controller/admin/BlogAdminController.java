@@ -54,10 +54,9 @@ public class BlogAdminController {
             @RequestPart("title") String title,
             @RequestPart(value = "summary", required = false) String summary,
             @RequestPart(value = "content", required = false) String content,
-            @RequestPart("category") String category,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 
-        BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content, category);
+        BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content);
         return ResponseEntity.ok(blogService.createPost(req, images));
     }
 
@@ -67,10 +66,9 @@ public class BlogAdminController {
             @RequestPart("title") String title,
             @RequestPart(value = "summary", required = false) String summary,
             @RequestPart(value = "content", required = false) String content,
-            @RequestPart("category") String category,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 
-        BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content, category);
+        BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content);
         return ResponseEntity.ok(blogService.updatePost(postId, req, images));
     }
 

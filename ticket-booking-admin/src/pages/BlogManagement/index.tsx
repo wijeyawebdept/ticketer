@@ -166,7 +166,6 @@ const BlogManagement: React.FC = () => {
               <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                 <TableCell>Cover</TableCell>
                 <TableCell>Title</TableCell>
-                <TableCell>Category</TableCell>
                 <TableCell align="center">Status</TableCell>
                 <TableCell align="center">Likes</TableCell>
                 <TableCell align="center">Comments</TableCell>
@@ -190,9 +189,6 @@ const BlogManagement: React.FC = () => {
                     <TableCell sx={{ fontWeight: 600, maxWidth: 220 }}>
                       <Typography noWrap>{post.title}</Typography>
                       {post.summary && <Typography variant="caption" sx={{ color: '#888' }} noWrap>{post.summary}</Typography>}
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={post.category} size="small" color="primary" variant="outlined" />
                     </TableCell>
                     <TableCell align="center">
                       <Chip label={post.published ? 'Published' : 'Draft'}
@@ -235,14 +231,6 @@ const BlogManagement: React.FC = () => {
           <Grid container spacing={3} sx={{ mt: 0 }}>
             <Grid item xs={12} md={6}>
               <TextField fullWidth label="Title *" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel>Category</InputLabel>
-                <Select value={category} label="Category" onChange={(e) => setCategory(e.target.value)}>
-                  {categories.map((c) => (
-                    <MenuItem key={c.id} value={c.categoryName}>{c.categoryName}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
               <TextField fullWidth label="Summary (teaser text)" value={summary} onChange={(e) => setSummary(e.target.value)} margin="normal" multiline rows={2} />
               <TextField fullWidth label="Full Content" value={content} onChange={(e) => setContent(e.target.value)} margin="normal" multiline rows={6} placeholder="Write the full article content here..." />
             </Grid>
@@ -268,7 +256,7 @@ const BlogManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={loading || !title.trim() || !category.trim()}
+          <Button onClick={handleSubmit} variant="contained" disabled={loading || !title.trim()}
             sx={{ bgcolor: '#ff1955', '&:hover': { bgcolor: '#e01545' } }}>
             {loading ? 'Creating...' : 'Create Post'}
           </Button>

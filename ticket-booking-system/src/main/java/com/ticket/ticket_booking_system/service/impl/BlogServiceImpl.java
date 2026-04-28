@@ -54,7 +54,6 @@ public class BlogServiceImpl implements BlogService {
                 .title(request.title())
                 .summary(request.summary())
                 .content(request.content())
-                .category(request.category())
                 .published(false)
                 .build();
         post = postRepo.save(post);
@@ -91,7 +90,6 @@ public class BlogServiceImpl implements BlogService {
         post.setTitle(request.title());
         post.setSummary(request.summary());
         post.setContent(request.content());
-        post.setCategory(request.category());
         postRepo.save(post);
 
         if (newImages != null) {
@@ -159,14 +157,8 @@ public class BlogServiceImpl implements BlogService {
     // ---- Public Operations ----
 
     @Override
-    public Page<BlogPostSummaryResponse> getPublishedPosts(String category, Pageable pageable) {
-        Page<BlogPost> page;
-        if (category != null && !category.isBlank()) {
-            page = postRepo.findByPublishedTrueAndCategory(category, pageable);
-        } else {
-            page = postRepo.findByPublishedTrue(pageable);
-        }
-        return page.map(this::toSummary);
+    public Page<BlogPostSummaryResponse> getPublishedPosts(Pageable pageable) {
+        return postRepo.findByPublishedTrue(pageable).map(this::toSummary);
     }
 
     @Override
@@ -188,7 +180,6 @@ public class BlogServiceImpl implements BlogService {
                 post.getTitle(),
                 post.getSummary(),
                 post.getContent(),
-                post.getCategory(),
                 post.isPublished(),
                 post.getLikeCount(),
                 post.getCommentCount(),
@@ -200,10 +191,6 @@ public class BlogServiceImpl implements BlogService {
         );
     }
 
-    @Override
-    public List<String> getPublishedCategories() {
-        return postRepo.findDistinctPublishedCategories();
-    }
 
     @Override
     @Transactional
@@ -293,7 +280,6 @@ public class BlogServiceImpl implements BlogService {
                 post.getPostId().toString(),
                 post.getTitle(),
                 post.getSummary(),
-                post.getCategory(),
                 post.isPublished(),
                 post.getLikeCount(),
                 post.getCommentCount(),
@@ -338,7 +324,6 @@ public class BlogServiceImpl implements BlogService {
         sb.append("<hr style='border-color:#333;margin:16px 0;'/>");
         for (BlogPost post : posts) {
             sb.append("<div style='background:#1a1a1a;border-radius:8px;padding:16px;margin-bottom:16px;border-left:3px solid #ff1955;'>");
-            sb.append("<span style='color:#ff1955;font-size:12px;font-weight:700;text-transform:uppercase;'>").append(post.getCategory()).append("</span>");
             sb.append("<h2 style='margin:8px 0;color:#fff;font-size:18px;'>").append(post.getTitle()).append("</h2>");
             if (post.getSummary() != null) {
                 sb.append("<p style='color:#bbb;font-size:14px;margin:0 0 12px;'>").append(post.getSummary()).append("</p>");

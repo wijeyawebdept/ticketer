@@ -1,6 +1,6 @@
 package com.ticket.ticket_booking_system.controller.publics;
 
-import java.util.List;
+
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -37,10 +37,9 @@ public class BlogPublicController {
 
     @GetMapping("/posts")
     public ResponseEntity<Page<BlogPostSummaryResponse>> getPosts(
-            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "9") int size) {
-        return ResponseEntity.ok(blogService.getPublishedPosts(category,
+        return ResponseEntity.ok(blogService.getPublishedPosts(
                 PageRequest.of(page, size, Sort.by("createdAt").descending())));
     }
 
@@ -50,10 +49,6 @@ public class BlogPublicController {
         return ResponseEntity.ok(blogService.getPostDetail(postId, userId));
     }
 
-    @GetMapping("/categories")
-    public ResponseEntity<List<String>> getCategories() {
-        return ResponseEntity.ok(blogService.getPublishedCategories());
-    }
 
     @PostMapping("/posts/{postId}/like")
     public ResponseEntity<Boolean> toggleLike(@PathVariable UUID postId) {

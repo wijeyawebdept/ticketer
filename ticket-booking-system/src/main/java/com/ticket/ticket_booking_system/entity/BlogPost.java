@@ -4,9 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.hibernate.annotations.UuidGenerator;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,8 +43,6 @@ public class BlogPost {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false, length = 100)
-    private String category;
 
     @Column(nullable = false)
     @Builder.Default
