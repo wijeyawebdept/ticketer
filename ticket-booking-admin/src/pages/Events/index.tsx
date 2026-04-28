@@ -306,22 +306,13 @@ const Events: React.FC = () => {
       headerName: 'Seats', 
       flex: 1,
       valueGetter: (params) => {
-        // totalCapacity = seats configured during event creation
-        // venue.capacity = venue's total capacity
-        const available = params.row.totalCapacity || 0;
-        const total = params.row.venue?.capacity || 0;
-        return `${available} / ${total}`;
+        const total = params.row.totalCapacity || 0;
+        const available = params.row.availableSeats ?? total;
+        const booked = Math.max(0, total - available);
+        return `${booked} / ${total} Booked`;
       }
     },
-    { 
-      field: 'basePrice', 
-      headerName: 'Price (LKR)', 
-      flex: 1, 
-      valueFormatter: (params) => {
-        const price = params.value || 0;
-        return `LKR ${price.toLocaleString('en-US')}`;
-      }
-    },
+
     {
       field: 'status',
       headerName: 'Event Status',

@@ -63,8 +63,8 @@ public class OrganizerBookingController {
                     .body("Unable to identify organizer");
         }
 
-        // Filter bookings by organizer's events
-        Page<Booking> bookings = bookingRepository.findByEvent_Organizer_OrganizerId(organizerId, pageable);
+        // Filter bookings by organizer's events with proper eager loading
+        Page<Booking> bookings = bookingService.getAllBookingsForOrganizer(organizerId, pageable);
         return ResponseEntity.ok(bookings);
     }
 

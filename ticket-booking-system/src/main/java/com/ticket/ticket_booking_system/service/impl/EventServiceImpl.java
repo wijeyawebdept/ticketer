@@ -623,6 +623,15 @@ public class EventServiceImpl implements EventService {
                 .min(java.math.BigDecimal::compareTo)
                 .orElse(java.math.BigDecimal.ZERO);
 
+        // Calculate true total capacity and available seats from schedules
+        int trueTotalCapacity = schedules.isEmpty() ? event.getTotalCapacity() : 
+            schedules.stream().mapToInt(com.ticket.ticket_booking_system.entity.EventSchedule::getCapacity).sum();
+            
+        int trueAvailableSeats = schedules.isEmpty() ? event.getAvailableSeats() : 
+            schedules.stream()
+                .filter(s -> s.getStatus() == com.ticket.ticket_booking_system.entity.EventSchedule.ScheduleStatus.ACTIVE)
+                .mapToInt(com.ticket.ticket_booking_system.entity.EventSchedule::getAvailableSeats).sum();
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -633,8 +642,8 @@ public class EventServiceImpl implements EventService {
                 .endDateTime(endDateTime)     // Earliest/next schedule end time
                 .nextSchedule(nextScheduleResponse) // Full next schedule info
                 .basePrice(computedBasePrice) // Auto-computed min price
-                .totalCapacity(event.getTotalCapacity())
-                .availableSeats(event.getAvailableSeats())
+                .totalCapacity(trueTotalCapacity)
+                .availableSeats(trueAvailableSeats)
                 .status(event.getStatus().name())
                 .imageUrl(event.getImageUrl())
                 .createdAt(event.getCreatedAt())

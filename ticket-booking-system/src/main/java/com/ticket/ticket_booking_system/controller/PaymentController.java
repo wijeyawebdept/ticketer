@@ -82,7 +82,7 @@ public class PaymentController {
             return ResponseEntity.ok(sessionResponse);
 
         } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("MPGS error: status={}, body={}", e.getRawStatusCode(), e.getResponseBodyAsString());
+            log.error("MPGS error: status={}, body={}", e.getStatusCode().value(), e.getResponseBodyAsString());
 
             // cleanup so you don't keep PENDING junk
             if (booking != null) {
@@ -91,7 +91,7 @@ public class PaymentController {
 
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
                     "message", "MPGS rejected the request",
-                    "status", e.getRawStatusCode(),
+                    "status", e.getStatusCode().value(),
                     "body", e.getResponseBodyAsString()));
         } catch (Exception e) {
             log.error("Payment initiation failed: {}", e.getMessage(), e);

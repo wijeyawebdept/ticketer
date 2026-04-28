@@ -141,13 +141,12 @@ const Bookings: React.FC = () => {
         return user ? `${user.firstName} ${user.lastName}` : 'N/A';
       }
     },
-    { field: 'ticketCount', headerName: 'Tickets', width: 100 },
     { 
-      field: 'totalAmount', 
-      headerName: 'Amount', 
-      width: 120, 
-      valueFormatter: (params: any) => {
-        return `LKR ${params.value}`;
+      field: 'ticketCount', 
+      headerName: 'Tickets', 
+      width: 100,
+      valueGetter: (params) => {
+        return params.row.numberOfTickets || params.row.ticketCount || 0;
       }
     },
     { 

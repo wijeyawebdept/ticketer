@@ -302,6 +302,39 @@ public class BookingService {
     }
     
     /**
+     * Get all bookings for organizer with proper eager loading
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public Page<Booking> getAllBookingsForOrganizer(java.util.UUID organizerId, Pageable pageable) {
+        Page<Booking> page = bookingRepository.findByEvent_Organizer_OrganizerId(organizerId, pageable);
+        
+        // Eagerly load all relationships while still in transaction
+        page.getContent().forEach(booking -> {
+            if (booking.getUser() != null) {
+                booking.getUser().getFirstName();
+                booking.getUser().getLastName();
+                booking.getUser().getEmail();
+            }
+            if (booking.getEvent() != null) {
+                booking.getEvent().getName();
+                booking.getEvent().getDescription();
+                if (booking.getEvent().getVenue() != null) {
+                    booking.getEvent().getVenue().getName();
+                }
+            }
+            if (booking.getEventSchedule() != null) {
+                booking.getEventSchedule().getStartTime();
+                booking.getEventSchedule().getEndTime();
+            }
+            if (booking.getBookingSeats() != null) {
+                booking.getBookingSeats().size();
+            }
+        });
+        
+        return page;
+    }
+    
+    /**
      * Create a booking with seats and/or shared area tickets
      */
     public Booking createBookingWithSeatsAndSharedAreas(

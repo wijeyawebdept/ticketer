@@ -297,6 +297,13 @@ public class EventScheduleServiceImpl implements EventScheduleService {
         boolean reserved = schedule.reserveSeats(numberOfSeats);
         if (reserved) {
             eventScheduleRepository.save(schedule);
+            
+            // Update the Event's total available seats
+            Event event = schedule.getEvent();
+            if (event != null && event.getAvailableSeats() != null) {
+                event.setAvailableSeats(Math.max(0, event.getAvailableSeats() - numberOfSeats));
+                eventRepository.save(event);
+            }
         }
         return reserved;
     }
@@ -309,6 +316,13 @@ public class EventScheduleServiceImpl implements EventScheduleService {
 
         schedule.releaseSeats(numberOfSeats);
         eventScheduleRepository.save(schedule);
+        
+        // Update the Event's total available seats
+        Event event = schedule.getEvent();
+        if (event != null && event.getAvailableSeats() != null) {
+            event.setAvailableSeats(Math.min(event.getTotalCapacity(), event.getAvailableSeats() + numberOfSeats));
+            eventRepository.save(event);
+        }
     }
 
     @Override

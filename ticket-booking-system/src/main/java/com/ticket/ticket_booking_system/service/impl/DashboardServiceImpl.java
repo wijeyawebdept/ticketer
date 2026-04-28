@@ -339,7 +339,7 @@ public Map<String, Object> getRecentTransactions(int count) {
 
         double revenueTrend = previousMonthRevenue != null && previousMonthRevenue.compareTo(BigDecimal.ZERO) > 0
                 ? ((currentMonthRevenue.subtract(previousMonthRevenue))
-                        .divide(previousMonthRevenue, 4, BigDecimal.ROUND_HALF_UP))
+                        .divide(previousMonthRevenue, 4, java.math.RoundingMode.HALF_UP))
                         .multiply(BigDecimal.valueOf(100)).doubleValue()
                 : 0;
 
