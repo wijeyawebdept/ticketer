@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,9 +43,9 @@ public class ProfileServiceImpl implements ProfileService {
     private final EmailService emailService;
 
     public ProfileServiceImpl(UserRepository userRepository, AdminRepository adminRepository,
-                             OrganizerRepository organizerRepository, OrganizerEmployeeRepository employeeRepository,
-                             FileUploadService fileUploadService, PasswordEncoder passwordEncoder,
-                             EmailService emailService) {
+            OrganizerRepository organizerRepository, OrganizerEmployeeRepository employeeRepository,
+            FileUploadService fileUploadService, PasswordEncoder passwordEncoder,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
@@ -52,38 +54,82 @@ public class ProfileServiceImpl implements ProfileService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
-    
+
     @Override
     public ProfileDTO getProfileByEmail(String email) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        boolean isOrganizer = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        boolean isEmployee = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER_EMPLOYEE"));
+
+        if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null)
+                return convertAdminToProfileDTO(admin);
+        }
+        if (isOrganizer) {
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null)
+                return convertOrganizerToProfileDTO(organizer);
+        }
+        if (isEmployee) {
+            OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+            if (employee != null)
+                return convertEmployeeToProfileDTO(employee);
+        }
+
         // Check users table first
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             return convertUserToProfileDTO(user);
         }
-        
+
         // Check admins table
         Admin admin = adminRepository.findByEmail(email).orElse(null);
         if (admin != null) {
             return convertAdminToProfileDTO(admin);
         }
-        
+
         // Check organizers table
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
             return convertOrganizerToProfileDTO(organizer);
         }
-        
+
         // Check organizer employees table
         OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
         if (employee != null) {
             return convertEmployeeToProfileDTO(employee);
         }
-        
+
         throw new ResourceNotFoundException("User", "email", email);
     }
-    
+
     @Override
     public ProfileDTO updateProfile(String email, ProfileUpdateDTO profileUpdateDTO) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null) {
+                admin.setFirstName(profileUpdateDTO.getFirstName());
+                admin.setLastName(profileUpdateDTO.getLastName());
+                admin.setEmail(profileUpdateDTO.getEmail());
+                admin.setPhoneNumber(profileUpdateDTO.getPhoneNumber());
+                admin.setDateOfBirth(profileUpdateDTO.getDateOfBirth());
+                if (profileUpdateDTO.getProfilePicture() != null) {
+                    admin.setProfilePicture(profileUpdateDTO.getProfilePicture());
+                }
+                Admin updatedAdmin = adminRepository.save(admin);
+                return convertAdminToProfileDTO(updatedAdmin);
+            }
+        }
+
         // Check users table first
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
@@ -98,7 +144,7 @@ public class ProfileServiceImpl implements ProfileService {
             User updatedUser = userRepository.save(user);
             return convertUserToProfileDTO(updatedUser);
         }
-        
+
         // Check admins table
         Admin admin = adminRepository.findByEmail(email).orElse(null);
         if (admin != null) {
@@ -113,7 +159,7 @@ public class ProfileServiceImpl implements ProfileService {
             Admin updatedAdmin = adminRepository.save(admin);
             return convertAdminToProfileDTO(updatedAdmin);
         }
-        
+
         // Check organizers table
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
@@ -146,7 +192,7 @@ public class ProfileServiceImpl implements ProfileService {
             Organizer updatedOrganizer = organizerRepository.save(organizer);
             return convertOrganizerToProfileDTO(updatedOrganizer);
         }
-        
+
         // Check organizer employees table
         OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
         if (employee != null) {
@@ -161,10 +207,10 @@ public class ProfileServiceImpl implements ProfileService {
             OrganizerEmployee updatedEmployee = employeeRepository.save(employee);
             return convertEmployeeToProfileDTO(updatedEmployee);
         }
-        
+
         throw new ResourceNotFoundException("User", "email", email);
     }
-    
+
     @Override
     public String uploadProfilePicture(String email, MultipartFile file) throws IOException {
         // Check users table first
@@ -172,7 +218,7 @@ public class ProfileServiceImpl implements ProfileService {
         if (user != null) {
             String old = user.getProfilePicture();
             if (old != null && !old.isBlank() &&
-                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                    !(old.startsWith("http://") || old.startsWith("https://"))) {
                 fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
@@ -180,13 +226,13 @@ public class ProfileServiceImpl implements ProfileService {
             userRepository.save(user);
             return profilePicturePath;
         }
-        
+
         // Check admins table
         Admin admin = adminRepository.findByEmail(email).orElse(null);
         if (admin != null) {
             String old = admin.getProfilePicture();
             if (old != null && !old.isBlank() &&
-                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                    !(old.startsWith("http://") || old.startsWith("https://"))) {
                 fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
@@ -194,13 +240,13 @@ public class ProfileServiceImpl implements ProfileService {
             adminRepository.save(admin);
             return profilePicturePath;
         }
-        
+
         // Check organizers table
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
             String old = organizer.getProfilePicture();
             if (old != null && !old.isBlank() &&
-                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                    !(old.startsWith("http://") || old.startsWith("https://"))) {
                 fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
@@ -208,13 +254,13 @@ public class ProfileServiceImpl implements ProfileService {
             organizerRepository.save(organizer);
             return profilePicturePath;
         }
-        
+
         // Check organizer employees table
         OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
         if (employee != null) {
             String old = employee.getProfilePicture();
             if (old != null && !old.isBlank() &&
-                !(old.startsWith("http://") || old.startsWith("https://"))) {
+                    !(old.startsWith("http://") || old.startsWith("https://"))) {
                 fileUploadService.deleteProfilePicture(old);
             }
             String profilePicturePath = fileUploadService.uploadProfilePicture(file);
@@ -222,10 +268,10 @@ public class ProfileServiceImpl implements ProfileService {
             employeeRepository.save(employee);
             return profilePicturePath;
         }
-        
+
         throw new ResourceNotFoundException("User", "email", email);
     }
-    
+
     private ProfileDTO convertUserToProfileDTO(User user) {
         return ProfileDTO.builder()
                 .userId(user.getId())
@@ -247,7 +293,7 @@ public class ProfileServiceImpl implements ProfileService {
                 .marketingEmailsEnabled(user.isMarketingEmailsEnabled())
                 .build();
     }
-    
+
     private ProfileDTO convertAdminToProfileDTO(Admin admin) {
         return ProfileDTO.builder()
                 .userId(admin.getAdminId())
@@ -265,7 +311,7 @@ public class ProfileServiceImpl implements ProfileService {
                 .updatedAt(admin.getUpdatedAt())
                 .build();
     }
-    
+
     private ProfileDTO convertOrganizerToProfileDTO(Organizer organizer) {
         return ProfileDTO.builder()
                 .userId(organizer.getOrganizerId())
@@ -293,7 +339,7 @@ public class ProfileServiceImpl implements ProfileService {
                 .bankRoutingNumber(organizer.getBankRoutingNumber())
                 .build();
     }
-    
+
     private ProfileDTO convertEmployeeToProfileDTO(OrganizerEmployee employee) {
         return ProfileDTO.builder()
                 .userId(employee.getEmployeeId())
@@ -311,9 +357,53 @@ public class ProfileServiceImpl implements ProfileService {
                 .updatedAt(employee.getUpdatedAt())
                 .build();
     }
-    
+
     @Override
     public void changePassword(String email, String currentPassword, String newPassword) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        boolean isOrganizer = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        boolean isEmployee = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER_EMPLOYEE"));
+
+        if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null) {
+                if (!passwordEncoder.matches(currentPassword, admin.getPassword())) {
+                    throw new RuntimeException("Current password is incorrect");
+                }
+                admin.setPassword(passwordEncoder.encode(newPassword));
+                adminRepository.save(admin);
+                return;
+            }
+        }
+
+        if (isOrganizer) {
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null) {
+                if (!passwordEncoder.matches(currentPassword, organizer.getPassword())) {
+                    throw new RuntimeException("Current password is incorrect");
+                }
+                organizer.setPassword(passwordEncoder.encode(newPassword));
+                organizerRepository.save(organizer);
+                return;
+            }
+        }
+
+        if (isEmployee) {
+            OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+            if (employee != null) {
+                if (!passwordEncoder.matches(currentPassword, employee.getPassword())) {
+                    throw new RuntimeException("Current password is incorrect");
+                }
+                employee.setPassword(passwordEncoder.encode(newPassword));
+                employeeRepository.save(employee);
+                return;
+            }
+        }
+
         // Check users table first
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
@@ -324,7 +414,7 @@ public class ProfileServiceImpl implements ProfileService {
             userRepository.save(user);
             return;
         }
-        
+
         // Check admins table
         Admin admin = adminRepository.findByEmail(email).orElse(null);
         if (admin != null) {
@@ -335,7 +425,7 @@ public class ProfileServiceImpl implements ProfileService {
             adminRepository.save(admin);
             return;
         }
-        
+
         // Check organizers table
         Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
         if (organizer != null) {
@@ -346,7 +436,7 @@ public class ProfileServiceImpl implements ProfileService {
             organizerRepository.save(organizer);
             return;
         }
-        
+
         // Check organizer employees table
         OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
         if (employee != null) {
@@ -357,21 +447,69 @@ public class ProfileServiceImpl implements ProfileService {
             employeeRepository.save(employee);
             return;
         }
-        
+
         throw new ResourceNotFoundException("User", "email", email);
     }
-    
+
     @Override
     public void changeEmail(String currentEmail, String newEmail, String password) {
         // Check if new email is already in use
         if (userRepository.findByEmail(newEmail).isPresent() ||
-            adminRepository.findByEmail(newEmail).isPresent() ||
-            organizerRepository.findByEmail(newEmail).isPresent() ||
-            employeeRepository.findByEmail(newEmail).isPresent()) {
+                adminRepository.findByEmail(newEmail).isPresent() ||
+                organizerRepository.findByEmail(newEmail).isPresent() ||
+                employeeRepository.findByEmail(newEmail).isPresent()) {
             throw new RuntimeException("Email address is already in use");
         }
-        
-        // Check users table first
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        boolean isOrganizer = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        boolean isEmployee = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER_EMPLOYEE"));
+
+        // Prioritize update by role
+        if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(currentEmail).orElse(null);
+            if (admin != null) {
+                if (!passwordEncoder.matches(password, admin.getPassword())) {
+                    throw new RuntimeException("Password is incorrect");
+                }
+                admin.setEmail(newEmail);
+                admin.setEmailVerified(false); // Require re-verification
+                adminRepository.save(admin);
+                return;
+            }
+        }
+
+        if (isOrganizer) {
+            Organizer organizer = organizerRepository.findByEmail(currentEmail).orElse(null);
+            if (organizer != null) {
+                if (!passwordEncoder.matches(password, organizer.getPassword())) {
+                    throw new RuntimeException("Password is incorrect");
+                }
+                organizer.setEmail(newEmail);
+                organizer.setEmailVerified(false); // Require re-verification
+                organizerRepository.save(organizer);
+                return;
+            }
+        }
+
+        if (isEmployee) {
+            OrganizerEmployee employee = employeeRepository.findByEmail(currentEmail).orElse(null);
+            if (employee != null) {
+                if (!passwordEncoder.matches(password, employee.getPassword())) {
+                    throw new RuntimeException("Password is incorrect");
+                }
+                employee.setEmail(newEmail);
+                employee.setEmailVerified(false); // Require re-verification
+                employeeRepository.save(employee);
+                return;
+            }
+        }
+
+        // Check users table (default)
         User user = userRepository.findByEmail(currentEmail).orElse(null);
         if (user != null) {
             if (!passwordEncoder.matches(password, user.getPassword())) {
@@ -382,8 +520,8 @@ public class ProfileServiceImpl implements ProfileService {
             userRepository.save(user);
             return;
         }
-        
-        // Check admins table
+
+        // Final fallbacks
         Admin admin = adminRepository.findByEmail(currentEmail).orElse(null);
         if (admin != null) {
             if (!passwordEncoder.matches(password, admin.getPassword())) {
@@ -394,8 +532,7 @@ public class ProfileServiceImpl implements ProfileService {
             adminRepository.save(admin);
             return;
         }
-        
-        // Check organizers table
+
         Organizer organizer = organizerRepository.findByEmail(currentEmail).orElse(null);
         if (organizer != null) {
             if (!passwordEncoder.matches(password, organizer.getPassword())) {
@@ -406,19 +543,7 @@ public class ProfileServiceImpl implements ProfileService {
             organizerRepository.save(organizer);
             return;
         }
-        
-        // Check organizer employees table
-        OrganizerEmployee employee = employeeRepository.findByEmail(currentEmail).orElse(null);
-        if (employee != null) {
-            if (!passwordEncoder.matches(password, employee.getPassword())) {
-                throw new RuntimeException("Password is incorrect");
-            }
-            employee.setEmail(newEmail);
-            employee.setEmailVerified(false); // Require re-verification
-            employeeRepository.save(employee);
-            return;
-        }
-        
+
         throw new ResourceNotFoundException("User", "email", currentEmail);
     }
 
@@ -432,7 +557,8 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
-    public void updateNotificationPreferences(String email, boolean emailNotifications, boolean smsNotifications, boolean marketingEmails) {
+    public void updateNotificationPreferences(String email, boolean emailNotifications, boolean smsNotifications,
+            boolean marketingEmails) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
         user.setEmailNotificationsEnabled(emailNotifications);
@@ -447,26 +573,50 @@ public class ProfileServiceImpl implements ProfileService {
         String firstName;
         String recipientEmail;
 
-        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
-        if (organizer != null) {
-            firstName = organizer.getFirstName();
-            recipientEmail = organizer.getEmail();
-        } else {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        boolean isOrganizer = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        boolean isEmployee = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER_EMPLOYEE"));
+
+        // Prioritize by role
+        if (isOrganizer) {
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null) {
+                firstName = organizer.getFirstName();
+                recipientEmail = organizer.getEmail();
+            } else {
+                throw new ResourceNotFoundException("Organizer", "email", email);
+            }
+        } else if (isEmployee) {
             OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
             if (employee != null) {
                 firstName = employee.getFirstName();
                 recipientEmail = employee.getEmail();
             } else {
-                Admin admin = adminRepository.findByEmail(email)
-                        .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+                throw new ResourceNotFoundException("Employee", "email", email);
+            }
+        } else if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null) {
                 firstName = admin.getFirstName();
                 recipientEmail = admin.getEmail();
+            } else {
+                throw new ResourceNotFoundException("Admin", "email", email);
             }
+        } else {
+            // Default to User
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+            firstName = user.getFirstName();
+            recipientEmail = user.getEmail();
         }
 
         String otp = String.format("%06d", secureRandom.nextInt(1_000_000));
         String expiry = LocalDateTime.now().plusMinutes(10).toString();
-        otpStore.put(email, new String[]{otp, expiry});
+        otpStore.put(email, new String[] { otp, expiry });
 
         emailService.sendEmailVerificationCode(recipientEmail, firstName, otp);
     }
@@ -474,7 +624,8 @@ public class ProfileServiceImpl implements ProfileService {
     @Override
     public boolean verifyEmailOtp(String email, String otp) {
         String[] stored = otpStore.get(email);
-        if (stored == null) return false;
+        if (stored == null)
+            return false;
 
         String storedOtp = stored[0];
         LocalDateTime expiry = LocalDateTime.parse(stored[1]);
@@ -483,29 +634,87 @@ public class ProfileServiceImpl implements ProfileService {
             otpStore.remove(email);
             return false;
         }
-        if (!storedOtp.equals(otp)) return false;
+        if (!storedOtp.equals(otp))
+            return false;
 
-        // Try updating Organizer first
-        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
-        if (organizer != null) {
-            organizer.setEmailVerified(true);
-            organizerRepository.save(organizer);
-        } else {
-            // Try updating OrganizerEmployee
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        boolean isOrganizer = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER"));
+        boolean isEmployee = auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ORGANIZER_EMPLOYEE"));
+
+        boolean updated = false;
+
+        // Prioritize update by role
+        if (isOrganizer) {
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null) {
+                organizer.setEmailVerified(true);
+                organizerRepository.save(organizer);
+                updated = true;
+            }
+        } else if (isEmployee) {
             OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
             if (employee != null) {
                 employee.setEmailVerified(true);
                 employeeRepository.save(employee);
-            } else {
-                // Try updating Admin
+                updated = true;
+            }
+        } else if (isAdmin) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null) {
+                admin.setEmailVerified(true);
+                adminRepository.save(admin);
+                updated = true;
+            }
+        } else {
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                user.setEmailVerified(true);
+                userRepository.save(user);
+                updated = true;
+            }
+        }
+
+        // Fallback if role-based update didn't find the record
+        if (!updated) {
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                user.setEmailVerified(true);
+                userRepository.save(user);
+                updated = true;
+            }
+
+            if (!updated) {
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) {
+                    organizer.setEmailVerified(true);
+                    organizerRepository.save(organizer);
+                    updated = true;
+                }
+            }
+
+            if (!updated) {
+                OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+                if (employee != null) {
+                    employee.setEmailVerified(true);
+                    employeeRepository.save(employee);
+                    updated = true;
+                }
+            }
+
+            if (!updated) {
                 Admin admin = adminRepository.findByEmail(email).orElse(null);
                 if (admin != null) {
                     admin.setEmailVerified(true);
                     adminRepository.save(admin);
+                    updated = true;
                 }
             }
         }
-        
+
         otpStore.remove(email);
         return true;
     }

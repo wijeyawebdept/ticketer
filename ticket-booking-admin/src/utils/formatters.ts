@@ -78,3 +78,42 @@ export const formatCurrency = (amount: number | null | undefined, currency: stri
     currency: currency
   }).format(amount);
 };
+
+/**
+ * Get the full URL for a profile picture
+ */
+export const getProfilePictureUrl = (path: string | null | undefined): string | undefined => {
+  if (!path) return undefined;
+  
+  // If it's already a full URL (google avatar etc.), return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  
+  // Prepend backend URL for local development if it's a relative path
+  // This ensures images load even if the proxy has issues
+  const backendUrl = 'http://localhost:8081';
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  if (process.env.NODE_ENV === 'development') {
+    return `${backendUrl}${normalizedPath}`;
+  }
+  
+  return normalizedPath;
+};
+
+/**
+ * Normalizes an asset URL (e.g., event images).
+ */
+export const getAssetUrl = (path?: string | null): string | undefined => {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const backendUrl = 'http://localhost:8081';
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  if (process.env.NODE_ENV === 'development') {
+    return `${backendUrl}${normalizedPath}`;
+  }
+  
+  return normalizedPath;
+};

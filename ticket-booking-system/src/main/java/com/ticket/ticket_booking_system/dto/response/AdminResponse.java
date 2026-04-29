@@ -25,9 +25,6 @@ public class AdminResponse {
     private Boolean emailVerified;
     private LocalDate dateOfBirth;
     private String profilePicture;
-    private String employeeId;
-    private String department;
-    private String position;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;

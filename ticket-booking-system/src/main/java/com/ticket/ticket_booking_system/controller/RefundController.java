@@ -40,7 +40,6 @@ public class RefundController {
 
         private final MPGSPaymentService mpgsPaymentService;
         private final TransactionService transactionService;
-        @SuppressWarnings("unused")
         private final BookingService bookingService;
         private final BookingRepository bookingRepository;
         private final EmailService emailService;
@@ -51,17 +50,44 @@ public class RefundController {
       * POST /api/refunds/initiate
       */
         @PostMapping("/initiate")
-        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
+        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE')")
         public ResponseEntity<PaymentVerificationResponse> initiateRefund(
-                @Valid @RequestBody RefundRequest request) {
+                @Valid @RequestBody RefundRequest request,
+                org.springframework.security.core.Authentication authentication) {
 
-        log.info("Initiating refund for booking: {}, amount: {}",
-                request.getBookingId(), request.getAmount());
+        log.info("Initiating refund for booking: {}, amount: {}, by: {}",
+                request.getBookingId(), request.getAmount(), authentication.getName());
 
         try {
             // Validate booking exists and is eligible for refund
-                Booking booking = bookingRepository.findById(request.getBookingId())
+            // Use findByIdWithDetails to ensure all relationships are loaded before possible deletion
+                Booking booking = bookingRepository.findByIdWithDetails(request.getBookingId())
                         .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+                // Security Check: Organizers and Employees can only refund their own events
+                boolean isAdmin = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+                
+                if (!isAdmin) {
+                    String currentEmail = authentication.getName();
+                    boolean isOrganizerOfEvent = booking.getEvent().getOrganizer() != null && 
+                                               booking.getEvent().getOrganizer().getEmail().equals(currentEmail);
+                    
+                    if (!isOrganizerOfEvent) {
+                        // Check if Employee assigned to event
+                        boolean isEmployeeAssigned = booking.getEvent().getEmployeeAssignments() != null &&
+                            booking.getEvent().getEmployeeAssignments().stream()
+                                .anyMatch(asgn -> asgn.getEmployee() != null && asgn.getEmployee().getEmail().equals(currentEmail));
+                        
+                        if (!isEmployeeAssigned) {
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
+                                .success(false)
+                                .status("FORBIDDEN")
+                                .message("You do not have permission to refund bookings for this event")
+                                .build());
+                        }
+                    }
+                }
 
                 if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
                 return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
@@ -88,39 +114,54 @@ public class RefundController {
                 );
 
                 if (refundTransaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
-                // Update booking status to REFUNDED
-                booking.setStatus(Booking.BookingStatus.REFUNDED);
-                booking.setCancellationReason(request.getReason());
-                bookingRepository.save(booking);
+                // Determine refund amount
+                BigDecimal refundAmount = request.getAmount() != null ?
+                        request.getAmount() : booking.getTotalAmount();
+
+                // Send refund confirmation email before deleting the record
+                try {
+                    String customerEmail = booking.getCustomerEmail();
+                    if (customerEmail == null && booking.getUser() != null) {
+                        customerEmail = booking.getUser().getEmail();
+                    }
+
+                    if (customerEmail != null) {
+                        emailService.sendRefundConfirmationEmail(
+                                booking,
+                                customerEmail,
+                                refundAmount,
+                                request.getReason()
+                        );
+                    } else {
+                        log.warn("No email address found for booking {}, skipped refund email", booking.getBookingId());
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not send refund confirmation email, but proceeding with deletion: {}", e.getMessage());
+                }
 
                 // Release seats back to inventory
                 int seatsToRelease = booking.getBookingSeats().size();
                 eventScheduleService.releaseSeats(booking.getEventSchedule().getScheduleId(), seatsToRelease);
 
-                // Determine refund amount
-                BigDecimal refundAmount = request.getAmount() != null ?
-                        request.getAmount() : booking.getTotalAmount();
+                // Store reference and ID for the response before deletion
+                UUID bookingId = booking.getBookingId();
+                String bookingRef = booking.getBookingReference();
 
-                // Send refund confirmation email
-                String customerEmail = booking.getUser().getEmail();
-                emailService.sendRefundConfirmationEmail(
-                        booking,
-                        customerEmail,
-                        refundAmount,
-                        request.getReason()
-                );
+                // Delete the booking as per user requirement (user is no longer a customer)
+                log.info("Deleting booking {} after successful refund", bookingId);
+                bookingService.deleteBooking(bookingId.toString());
 
-                log.info("Refund processed successfully. BookingRef: {}, Amount: {}",
-                        booking.getBookingReference(), refundAmount);
+                log.info("Refund processed and booking removed successfully. BookingRef: {}, Amount: {}",
+                        bookingRef, refundAmount);
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)
                         .status("SUCCESS")
                         .transactionId(refundTransaction.getTransactionId().toString())
-                        .bookingId(booking.getBookingId())
-                        .bookingReference(booking.getBookingReference())
+                        .bookingId(bookingId)
+                        .bookingReference(bookingRef)
                         .amount(refundAmount)
-                        .message("Refund processed successfully")
+                        .message("Refund processed and booking removed successfully")
                         .build());
                 } else {
                 log.error("Refund failed for booking: {}", request.getBookingId());
@@ -130,7 +171,6 @@ public class RefundController {
                         .message("Refund processing failed. Please try again or contact MPGS support.")
                         .build());
                 }
-
         } catch (Exception e) {
                 log.error("Refund initiation failed", e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

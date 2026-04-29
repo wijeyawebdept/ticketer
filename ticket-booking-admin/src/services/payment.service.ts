@@ -149,6 +149,22 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
 
     (window as any).Checkout.showPaymentPage();
   }
+
+  /**
+   * Initiates a refund for a booking
+   */
+  async initiateRefund(request: RefundRequest): Promise<PaymentVerificationResponse> {
+    const response = await api.post<PaymentVerificationResponse>('/api/refunds/initiate', request);
+    return response.data;
+  }
+
+  /**
+   * Gets the refund status for a booking
+   */
+  async getRefundStatus(bookingId: string): Promise<PaymentVerificationResponse> {
+    const response = await api.get<PaymentVerificationResponse>(`/api/refunds/booking/${bookingId}`);
+    return response.data;
+  }
 }
 
 const paymentService = new PaymentService();

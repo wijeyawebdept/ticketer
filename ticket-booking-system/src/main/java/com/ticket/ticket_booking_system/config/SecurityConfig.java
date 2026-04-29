@@ -25,60 +25,61 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-    
+
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
-    
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
     }
-    
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/auth/**",
-                    "/h2-console/**",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/uploads/**",
-                    "/uploads/profile-pictures/**",
-                    "/api/public/**",
-                    "/api/venues/**",
-                    "/api/venue-seats/layout",
-                    "/api/venue-seats/availability/**",
-                    "/api/payments/webhook",
-                    "/api/contact",
-                    "/contact",
-                    "/ws/**",
-                    "/error"
-                ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/public/blog/**").permitAll()
-                .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
-                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder()))
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-            
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/auth/**",
+                                "/h2-console/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/uploads/**",
+                                "/uploads/profile-pictures/**",
+                                "/api/public/**",
+                                "/api/venues/**",
+                                "/api/venue-seats/layout",
+                                "/api/venue-seats/availability/**",
+                                "/api/payments/webhook",
+                                "/api/contact",
+                                "/contact",
+                                "/ws/**",
+                                "/error")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/blog/**").permitAll()
+                        .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE",
+                                "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
+                        .requestMatchers("/api/admin/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder()))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         // For H2 Console (development only)
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
-        
+
         return http.build();
     }
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
-                                                        PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
@@ -93,7 +94,7 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -102,7 +103,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

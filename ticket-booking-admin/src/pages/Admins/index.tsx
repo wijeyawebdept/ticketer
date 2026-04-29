@@ -38,7 +38,7 @@ import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import AdminForm from './components/AdminForm';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import { formatPhoneNumber } from '../../utils/formatters';
+import { formatPhoneNumber, getProfilePictureUrl } from '../../utils/formatters';
 import { Avatar, Divider, Grid } from '@mui/material';
 
 interface Admin {
@@ -52,9 +52,6 @@ interface Admin {
   emailVerified: boolean;
   dateOfBirth?: string;
   profilePicture?: string;
-  employeeId?: string;
-  department?: string;
-  position?: string;
   notes?: string;
   createdAt: string;
   updatedAt?: string;
@@ -274,6 +271,21 @@ const Admins: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
+    {
+      field: 'profilePicture',
+      headerName: '',
+      width: 60,
+      sortable: false,
+      filterable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <Avatar 
+          src={getProfilePictureUrl(params.value)} 
+          sx={{ width: 35, height: 35, bgcolor: getRoleChipColor(params.row.role) === 'error' ? '#d32f2f' : '#9c27b0' }}
+        >
+          {params.row.firstName[0]}{params.row.lastName[0]}
+        </Avatar>
+      )
+    },
     { 
       field: 'firstName', 
       headerName: 'First Name', 
@@ -293,7 +305,25 @@ const Admins: React.FC = () => {
       )
     },
     { field: 'lastName', headerName: 'Last Name', flex: 1 },
-    { field: 'email', headerName: 'Email', flex: 1.5 },
+    { 
+      field: 'email', 
+      headerName: 'Email', 
+      flex: 1.5,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">{params.value}</Typography>
+          {params.row.emailVerified ? (
+            <Tooltip title="Email Verified">
+              <VerifiedIcon color="success" sx={{ fontSize: 16 }} />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Email Not Verified">
+              <UnverifiedIcon color="warning" sx={{ fontSize: 16 }} />
+            </Tooltip>
+          )}
+        </Box>
+      )
+    },
     { 
       field: 'phoneNumber', 
       headerName: 'Phone', 
@@ -657,7 +687,7 @@ const Admins: React.FC = () => {
             <Box>
               <Box display="flex" alignItems="center" gap={2.5} mb={3}>
                 <Avatar 
-                  src={viewAdmin.profilePicture} 
+                  src={getProfilePictureUrl(viewAdmin.profilePicture)} 
                   sx={{ width: 80, height: 80, bgcolor: '#d32f2f', fontSize: '2rem', fontWeight: 600, boxShadow: '0 4px 10px rgba(211, 47, 47, 0.2)' }}
                 >
                   {viewAdmin.firstName[0]}{viewAdmin.lastName[0]}
@@ -667,7 +697,7 @@ const Admins: React.FC = () => {
                     {viewAdmin.firstName} {viewAdmin.lastName}
                   </Typography>
                   <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>
-                    {viewAdmin.role} • {viewAdmin.department || 'No Department'}
+                    {viewAdmin.role}
                   </Typography>
                   <Box display="flex" gap={1}>
                     <Chip label={viewAdmin.active ? 'Active' : 'Inactive'} color={viewAdmin.active ? 'success' : 'default'} size="small" />
@@ -692,9 +722,6 @@ const Admins: React.FC = () => {
 
               <SectionTitle icon={<WorkIcon />} title="Work Information" color="#1976d2" />
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}><DetailRow label="Employee ID" value={viewAdmin.employeeId} /></Grid>
-                <Grid item xs={12} sm={6}><DetailRow label="Position" value={viewAdmin.position} /></Grid>
-                <Grid item xs={12} sm={6}><DetailRow label="Department" value={viewAdmin.department} /></Grid>
                 <Grid item xs={12} sm={6}><DetailRow label="Last Login" value={formatDateTime(viewAdmin.lastLoginAt)} /></Grid>
                 <Grid item xs={12}><DetailRow label="Admin Notes" value={viewAdmin.notes} /></Grid>
               </Grid>

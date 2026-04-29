@@ -179,7 +179,8 @@ const Login: React.FC = () => {
       await login(values.email, values.password);
 
       // Redirect based on user role
-      const userData = localStorage.getItem('user');
+      // Note: AuthService uses sessionStorage for tab isolation
+      const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
 
@@ -200,6 +201,9 @@ const Login: React.FC = () => {
           }
         } else {
           // If user is admin, organizer, or organizer employee, deny access
+          sessionStorage.removeItem('auth_token');
+          sessionStorage.removeItem('user');
+          sessionStorage.removeItem('user_data');
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
           localStorage.removeItem('user_data');
@@ -592,6 +596,7 @@ const Login: React.FC = () => {
                             setError('Google sign-in failed. Please try again.');
                             setIsGoogleLoading(false);
                           }}
+                          use_fedcm_for_prompt={true}
                         />
                       </Box>
 

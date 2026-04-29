@@ -25,6 +25,7 @@ import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import BannerService, { BannerResponse } from '../../../services/banner.service';
 import { Event } from '../../../types';
+import { getAssetUrl } from '../../../utils/formatters';
 
 const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
@@ -596,7 +597,7 @@ const Home: React.FC = () => {
                     <CardMedia
                       component="img"
                       height="200"
-                      image={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
+                      image={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
                       alt={event.name}
                       sx={{ objectFit: 'cover' }}
                     />
@@ -866,7 +867,7 @@ const Home: React.FC = () => {
                     tickets={`From ${formatPrice(lowestCurrentPrice)}`}
                     date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : 'TBA'}
                     day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
-                    backgroundImage={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
+                    backgroundImage={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
                     eventId={event.id || event.eventId}
                   />
                 </Grid>

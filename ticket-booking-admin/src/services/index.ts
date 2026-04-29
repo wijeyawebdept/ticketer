@@ -14,6 +14,7 @@ import EmployeeService from './employee.service';
 import OrganizerService from './organizer.service';
 import BannerService from './banner.service';
 import GalleryService from './GalleryService';
+import paymentService from './payment.service';
 
 export {
   AuthService,
@@ -31,5 +32,6 @@ export {
   RecycleBinService,
   EmployeeService,
   BannerService,
-  GalleryService
+  GalleryService,
+  paymentService
 };

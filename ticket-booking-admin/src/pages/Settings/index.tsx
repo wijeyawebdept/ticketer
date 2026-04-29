@@ -41,6 +41,7 @@ import {
   Email as EmailIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getProfilePictureUrl } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -630,7 +631,7 @@ const Settings: React.FC = () => {
                   <CardContent sx={{ textAlign: 'center', p: 4 }}>
                     <Box position="relative" display="inline-block">
                       <Avatar
-                        src={profile.profilePicture ? `http://localhost:8081/${profile.profilePicture}` : undefined}
+                        src={getProfilePictureUrl(profile.profilePicture)}
                         sx={{ 
                           width: 150, 
                           height: 150, 

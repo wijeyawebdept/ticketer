@@ -108,6 +108,10 @@ public class Event {
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     private List<TicketCategory> ticketCategories;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    private List<EventEmployeeAssignment> employeeAssignments;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

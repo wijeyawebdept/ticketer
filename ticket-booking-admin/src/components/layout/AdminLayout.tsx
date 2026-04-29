@@ -45,6 +45,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import ConfirmDialog from '../ConfirmDialog';
+import { getProfilePictureUrl } from '../../utils/formatters';
 
 const drawerWidth = 240;
 
@@ -208,7 +209,7 @@ const AdminLayout: React.FC = () => {
                   <CircularProgress size={32} color="inherit" />
                 ) : userProfile?.profilePicture ? (
                   <Avatar 
-                    src={`http://localhost:8081/${userProfile.profilePicture}`} 
+                    src={getProfilePictureUrl(userProfile.profilePicture)} 
                     sx={{ width: 40, height: 40, border: '2px solid rgba(255,255,255,0.3)' }}
                   />
                 ) : (

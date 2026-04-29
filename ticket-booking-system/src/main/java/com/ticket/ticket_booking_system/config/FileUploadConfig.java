@@ -6,13 +6,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class FileUploadConfig implements WebMvcConfigurer {
-    
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve uploaded files statically
-        // The stored path in DB will be: uploads/profile-pictures/filename.jpg
-        // This maps /uploads/ to the current directory so /uploads/profile-pictures/filename.jpg works
+        // Maps /uploads/** to the uploads directory in the project root
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + System.getProperty("user.dir") + "/uploads/");
+                .addResourceLocations("file:uploads/");
+    }
+
+    @Override
+    public void addCorsMappings(org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
+        registry.addMapping("/uploads/**")
+                .allowedOrigins("http://localhost:3000", "http://localhost:8081")
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*");
     }
 }

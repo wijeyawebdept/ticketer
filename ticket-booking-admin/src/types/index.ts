@@ -274,7 +274,8 @@ export enum BookingStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED'
+  COMPLETED = 'COMPLETED',
+  REFUNDED = 'REFUNDED'
 }
 
 // Transaction related types

@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import { EventCategoryService } from '../../services';
+import { getProfilePictureUrl } from '../../utils/formatters';
 import { ProfileDTO, EventCategory } from '../../types';
 
 const PublicNavbar: React.FC = () => {
@@ -327,7 +328,7 @@ const PublicNavbar: React.FC = () => {
                     startIcon={
                       profile?.profilePicture ? (
                         <Avatar 
-                          src={`http://localhost:8081${profile.profilePicture.startsWith('/') ? profile.profilePicture : '/' + profile.profilePicture}`}
+                          src={getProfilePictureUrl(profile.profilePicture)}
                           alt={profile.firstName}
                           sx={{ 
                             width: 32, 

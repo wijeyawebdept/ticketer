@@ -19,10 +19,11 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Refresh as RefreshIcon, Search as SearchIcon, FilterAlt as FilterIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon, Search as SearchIcon, FilterAlt as FilterIcon, Undo as RefundIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from '@mui/x-data-grid';
-import { BookingService } from '../../services';
+import { BookingService, paymentService } from '../../services';
 import { Booking, BookingStatus } from '../../types';
+import { toast } from 'react-toastify';
 
 const Bookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -36,6 +37,12 @@ const Bookings: React.FC = () => {
   });
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState<boolean>(false);
+  
+  // Refund states
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState<boolean>(false);
+  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState<Booking | null>(null);
+  const [refundReason, setRefundReason] = useState<string>('');
+  const [isRefundProcessing, setIsRefundProcessing] = useState<boolean>(false);
 
   const fetchBookings = useCallback(async (page: number, pageSize: number) => {
     setLoading(true);
@@ -59,6 +66,7 @@ const Bookings: React.FC = () => {
         setTotalBookings(response.totalElements || 0);
       }
     } catch (error) {
+      console.error('Failed to fetch bookings:', error);
     } finally {
       setLoading(false);
     }
@@ -100,9 +108,52 @@ const Bookings: React.FC = () => {
         selectedBookingIds.map(id => BookingService.deleteBooking(id))
       );
       setSelectedBookingIds([]);
+      toast.success('Bookings deleted successfully');
       fetchBookings(paginationModel.page, paginationModel.pageSize);
     } catch (error) {
       console.error('Failed to delete bookings:', error);
+      toast.error('Failed to delete bookings');
+    }
+  };
+
+  const handleOpenRefundDialog = (booking: Booking) => {
+    setSelectedBookingForRefund(booking);
+    setRefundReason('');
+    setIsRefundDialogOpen(true);
+  };
+
+  const handleCloseRefundDialog = () => {
+    setIsRefundDialogOpen(false);
+    setSelectedBookingForRefund(null);
+    setRefundReason('');
+  };
+
+  const processRefund = async () => {
+    if (!selectedBookingForRefund || !refundReason.trim()) {
+      toast.warning('Please provide a reason for the refund');
+      return;
+    }
+
+    setIsRefundProcessing(true);
+    try {
+      const response = await paymentService.initiateRefund({
+        bookingId: selectedBookingForRefund.bookingId,
+        reason: refundReason,
+        amount: selectedBookingForRefund.totalAmount // Full refund by default
+      });
+
+      if (response.success) {
+        toast.success(`Refund processed successfully for booking ${selectedBookingForRefund.bookingReference}`);
+        handleCloseRefundDialog();
+        fetchBookings(paginationModel.page, paginationModel.pageSize);
+      } else {
+        toast.error(response.message || 'Refund failed');
+      }
+    } catch (error: any) {
+      console.error('Refund error:', error);
+      toast.error(error.response?.data?.message || 'Failed to process refund. Please try again.');
+    } finally {
+      setIsRefundProcessing(false);
     }
   };
 
@@ -116,13 +167,15 @@ const Bookings: React.FC = () => {
         return 'error';
       case BookingStatus.COMPLETED:
         return 'info';
+      case BookingStatus.REFUNDED:
+        return 'secondary';
       default:
         return 'default';
     }
   };
 
   const columns: GridColDef[] = [
-    { field: 'bookingId', headerName: 'Booking ID', width: 150 },
+    { field: 'bookingReference', headerName: 'Booking Ref', width: 130 },
     { 
       field: 'eventName', 
       headerName: 'Event', 
@@ -144,23 +197,31 @@ const Bookings: React.FC = () => {
     { 
       field: 'ticketCount', 
       headerName: 'Tickets', 
-      width: 100,
+      width: 80,
       valueGetter: (params) => {
         return params.row.numberOfTickets || params.row.ticketCount || 0;
       }
     },
     { 
+      field: 'totalAmount', 
+      headerName: 'Amount', 
+      width: 100,
+      valueFormatter: (params) => {
+        return params.value ? `Rs. ${params.value.toLocaleString()}` : 'N/A';
+      }
+    },
+    { 
       field: 'bookingTime', 
-      headerName: 'Booking Date', 
-      width: 150, 
+      headerName: 'Date', 
+      width: 110, 
       valueFormatter: (params: any) => {
-        return new Date(params.value).toLocaleDateString();
+        return params.value ? new Date(params.value).toLocaleDateString() : 'N/A';
       }
     },
     { 
       field: 'status', 
       headerName: 'Status', 
-      width: 130,
+      width: 110,
       renderCell: (params: GridRenderCellParams) => (
         <Chip 
           label={params.value} 
@@ -171,6 +232,30 @@ const Bookings: React.FC = () => {
         />
       )
     },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => {
+        const booking = params.row as Booking;
+        const canRefund = booking.status === BookingStatus.CONFIRMED;
+        
+        return (
+          <Box>
+            <IconButton 
+              size="small" 
+              color="secondary" 
+              onClick={() => handleOpenRefundDialog(booking)}
+              disabled={!canRefund}
+              title={canRefund ? "Process Refund" : "Only confirmed bookings can be refunded"}
+            >
+              <RefundIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        );
+      }
+    }
   ];
 
   return (
@@ -334,6 +419,58 @@ const Bookings: React.FC = () => {
             sx={{ fontWeight: 500 }}
           >
             Delete {selectedBookingIds.length} Booking(s)
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Refund Confirmation Dialog */}
+      <Dialog
+        open={isRefundDialogOpen}
+        onClose={handleCloseRefundDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ backgroundColor: '#f5f5f5', fontWeight: 600 }}>
+          Process Refund
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to refund booking <strong>{selectedBookingForRefund?.bookingReference}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            This will refund the full amount of <strong>Rs. {selectedBookingForRefund?.totalAmount?.toLocaleString()}</strong> to the customer.
+          </Typography>
+          
+          <TextField
+            fullWidth
+            label="Refund Reason"
+            placeholder="Enter the reason for this refund (e.g., Event cancelled, Customer request)"
+            multiline
+            rows={3}
+            value={refundReason}
+            onChange={(e) => setRefundReason(e.target.value)}
+            required
+            autoFocus
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+          <Button 
+            onClick={handleCloseRefundDialog}
+            disabled={isRefundProcessing}
+            sx={{ fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="secondary" 
+            onClick={processRefund}
+            disabled={isRefundProcessing || !refundReason.trim()}
+            startIcon={isRefundProcessing ? <CircularProgress size={20} color="inherit" /> : <RefundIcon />}
+            sx={{ fontWeight: 500 }}
+          >
+            {isRefundProcessing ? 'Processing...' : 'Confirm Refund'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -389,6 +389,7 @@ public class MPGSPaymentService {
     /**
      * Process refund for a successful payment
      */
+    @org.springframework.transaction.annotation.Transactional
     public Transaction processRefund(UUID bookingId, BigDecimal amount, String reason) {
         log.info("Processing refund for booking: {}, amount: {}, reason: {}",
                 bookingId, amount, reason);
@@ -405,16 +406,26 @@ public class MPGSPaymentService {
                     )
                     .stream()
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No successful payment found for booking"));
+                    .orElseThrow(() -> new RuntimeException("No successful payment found for booking " + bookingId));
 
             BigDecimal refundAmount = amount != null ? amount : originalTransaction.getAmount();
 
-            JsonNode originalResponse = objectMapper.readTree(originalTransaction.getPaymentGatewayResponse());
-            String orderId = originalResponse.has("orderId")
-                    ? originalResponse.get("orderId").asText()
-                    : "ORD-" + bookingId.toString().substring(0, 13).toUpperCase();
+            // Determine the correct orderId used in the initial payment
+            String orderId = bookingId.toString(); // Default fallback for our system
+            try {
+                if (originalTransaction.getPaymentGatewayResponse() != null) {
+                    JsonNode originalResponse = objectMapper.readTree(originalTransaction.getPaymentGatewayResponse());
+                    if (originalResponse.has("id")) {
+                        orderId = originalResponse.get("id").asText();
+                    } else if (originalResponse.has("order") && originalResponse.get("order").has("id")) {
+                        orderId = originalResponse.get("order").get("id").asText();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse original gateway response, using bookingId as orderId: {}", e.getMessage());
+            }
 
-            String transactionId = UUID.randomUUID().toString();
+            String transactionId = UUID.randomUUID().toString().substring(0, 10).toUpperCase();
 
             Map<String, Object> refundRequest = new HashMap<>();
             refundRequest.put("apiOperation", "REFUND");
@@ -426,20 +437,29 @@ public class MPGSPaymentService {
 
             String endpoint = mpgsConfig.getApiEndpoint("/order/" + orderId + "/transaction/" + transactionId);
 
+            log.info("Sending refund request to MPGS: endpoint={}, orderId={}, amount={}", 
+                    endpoint, orderId, refundAmount);
+
             WebClient webClient = webClientBuilder
                     .defaultHeader(HttpHeaders.AUTHORIZATION, mpgsConfig.getBasicAuthHeader())
                     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .build();
 
-            String responseBody = webClient.put()
-                    .uri(endpoint)
-                    .bodyValue(refundRequest)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                            .maxBackoff(Duration.ofSeconds(10))
-                            .filter(this::isRetryableException))
-                    .block();
+            String responseBody;
+            try {
+                responseBody = webClient.put()
+                        .uri(endpoint)
+                        .bodyValue(refundRequest)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
+                                .filter(this::isRetryableException))
+                        .block();
+            } catch (WebClientResponseException e) {
+                String errorBody = e.getResponseBodyAsString();
+                log.error("MPGS Refund API error: Status={}, Body={}", e.getStatusCode(), errorBody);
+                throw new RuntimeException("MPGS Refund Error: " + errorBody, e);
+            }
 
             JsonNode responseJson = objectMapper.readTree(responseBody);
             String result = responseJson.has("result") ? responseJson.get("result").asText() : "UNKNOWN";
@@ -456,14 +476,22 @@ public class MPGSPaymentService {
 
             refundTransaction = transactionRepository.save(refundTransaction);
 
-            log.info("Refund processed: TransactionID={}, Success={}",
-                    refundTransaction.getTransactionId(), refundSuccess);
+            log.info("Refund processed: TransactionReference={}, Success={}",
+                    refundTransaction.getTransactionReference(), refundSuccess);
+
+            if (!refundSuccess) {
+                String msg = responseJson.path("response").path("explanation").asText("Unknown gateway error");
+                throw new RuntimeException("Refund rejected by gateway: " + msg);
+            }
 
             return refundTransaction;
 
+        } catch (RuntimeException e) {
+            log.error("Refund processing failed: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error processing refund", e);
-            throw new RuntimeException("Failed to process refund", e);
+            throw new RuntimeException("Unexpected refund error: " + e.getMessage(), e);
         }
     }
 

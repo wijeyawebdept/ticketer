@@ -56,8 +56,6 @@ public class AdminSeeder implements CommandLineRunner {
                 .accessLevel(Admin.AccessLevel.STANDARD)
                 .canDeleteUsers(false)
                 .canModifySystemSettings(false)
-                .position("Administrator")
-                .department("Administration")
                 .build();
 
         adminRepository.save(admin);

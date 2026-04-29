@@ -30,6 +30,16 @@ module.exports = function(app) {
     })
   );
 
+  // Proxy for static uploads
+  app.use(
+    '/uploads',
+    createProxyMiddleware({
+      target: 'http://localhost:8081',
+      changeOrigin: true,
+      logLevel: 'debug',
+    })
+  );
+
   // Proxy WebSocket connections so they work through tunnels (ngrok, etc.)
   app.use(
     '/ws',

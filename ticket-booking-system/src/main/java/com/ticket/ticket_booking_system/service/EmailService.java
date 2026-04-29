@@ -276,6 +276,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendRefundConfirmationEmail(Booking booking, String customerEmail, BigDecimal refundAmount, String reason) {
         try {
             String eventName = booking.getEvent() != null ? booking.getEvent().getName() : "N/A";

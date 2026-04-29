@@ -14,6 +14,7 @@ import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { ProfileDTO, ProfileUpdateDTO } from '../../types';
 import { profileService } from '../../services/profile.service';
+import { getProfilePictureUrl } from '../../utils/formatters';
 import './Profile.css';
 
 const isOrganizer = (role?: string) => role === 'ORGANIZER' || role === 'ROLE_ORGANIZER';
@@ -174,7 +175,7 @@ const Profile: React.FC = () => {
                 <Card sx={{ ...cardSx, textAlign: 'center' }}>
                   <CardContent sx={{ p: 4 }}>
                     <Box position="relative" display="inline-block">
-                      <Avatar src={profile.profilePicture ? `http://localhost:8081/${profile.profilePicture}` : undefined}
+                      <Avatar src={getProfilePictureUrl(profile.profilePicture)}
                         sx={{ width: 130, height: 130, margin: 'auto', fontSize: '3rem', border: '4px solid rgba(25,118,210,0.2)', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
                         {profile.firstName?.[0]}{profile.lastName?.[0]}
                       </Avatar>

@@ -78,15 +78,6 @@ public class Admin implements UserDetails {
 
     // Admin-specific fields
 
-    @Column(name = "employee_id", length = 50, unique = true)
-    private String employeeId;
-
-    @Column(name = "department", length = 100)
-    private String department;
-
-    @Column(name = "position", length = 100)
-    private String position;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "access_level", length = 20)
     @Builder.Default
