@@ -19,7 +19,6 @@ import com.ticket.ticket_booking_system.dto.response.PaymentVerificationResponse
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
-import com.ticket.ticket_booking_system.service.BookingService;
 import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.EventScheduleService;
 import com.ticket.ticket_booking_system.service.MPGSPaymentService;
@@ -40,227 +39,279 @@ public class RefundController {
 
         private final MPGSPaymentService mpgsPaymentService;
         private final TransactionService transactionService;
-        private final BookingService bookingService;
         private final BookingRepository bookingRepository;
         private final EmailService emailService;
         private final EventScheduleService eventScheduleService;
 
         /**
-      * Initiate a refund
-      * POST /api/refunds/initiate
-      */
+         * Initiate a refund
+         * POST /api/refunds/initiate
+         */
         @PostMapping("/initiate")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE')")
         public ResponseEntity<PaymentVerificationResponse> initiateRefund(
-                @Valid @RequestBody RefundRequest request,
-                org.springframework.security.core.Authentication authentication) {
+                        @Valid @RequestBody RefundRequest request,
+                        org.springframework.security.core.Authentication authentication) {
 
-        log.info("Initiating refund for booking: {}, amount: {}, by: {}",
-                request.getBookingId(), request.getAmount(), authentication.getName());
+                log.info("Initiating refund for booking: {}, amount: {}, by: {}",
+                                request.getBookingId(), request.getAmount(), authentication.getName());
 
-        try {
-            // Validate booking exists and is eligible for refund
-            // Use findByIdWithDetails to ensure all relationships are loaded before possible deletion
-                Booking booking = bookingRepository.findByIdWithDetails(request.getBookingId())
-                        .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-                // Security Check: Organizers and Employees can only refund their own events
-                boolean isAdmin = authentication.getAuthorities().stream()
-                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
-                
-                if (!isAdmin) {
-                    String currentEmail = authentication.getName();
-                    boolean isOrganizerOfEvent = booking.getEvent().getOrganizer() != null && 
-                                               booking.getEvent().getOrganizer().getEmail().equals(currentEmail);
-                    
-                    if (!isOrganizerOfEvent) {
-                        // Check if Employee assigned to event
-                        boolean isEmployeeAssigned = booking.getEvent().getEmployeeAssignments() != null &&
-                            booking.getEvent().getEmployeeAssignments().stream()
-                                .anyMatch(asgn -> asgn.getEmployee() != null && asgn.getEmployee().getEmail().equals(currentEmail));
-                        
-                        if (!isEmployeeAssigned) {
-                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
-                                .success(false)
-                                .status("FORBIDDEN")
-                                .message("You do not have permission to refund bookings for this event")
-                                .build());
-                        }
-                    }
-                }
-
-                if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
-                return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
-                        .success(false)
-                        .status("INVALID")
-                        .message("Only confirmed bookings can be refunded. Current status: " + booking.getStatus())
-                        .build());
-                }
-
-            // Check if there's a successful payment
-                if (!transactionService.hasSuccessfulPayment(request.getBookingId())) {
-                return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
-                        .success(false)
-                        .status("INVALID")
-                        .message("No successful payment found for this booking")
-                        .build());
-                }
-
-            // Process refund through MPGS
-                Transaction refundTransaction = mpgsPaymentService.processRefund(
-                        request.getBookingId(),
-                        request.getAmount(),
-                        request.getReason()
-                );
-
-                if (refundTransaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
-                // Determine refund amount
-                BigDecimal refundAmount = request.getAmount() != null ?
-                        request.getAmount() : booking.getTotalAmount();
-
-                // Send refund confirmation email before deleting the record
                 try {
-                    String customerEmail = booking.getCustomerEmail();
-                    if (customerEmail == null && booking.getUser() != null) {
-                        customerEmail = booking.getUser().getEmail();
-                    }
+                        // Validate booking exists and is eligible for refund
+                        // Use findByIdWithDetails to ensure all relationships are loaded before
+                        // possible deletion
+                        Booking booking = bookingRepository.findByIdWithDetails(request.getBookingId())
+                                        .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-                    if (customerEmail != null) {
-                        emailService.sendRefundConfirmationEmail(
-                                booking,
-                                customerEmail,
-                                refundAmount,
-                                request.getReason()
-                        );
-                    } else {
-                        log.warn("No email address found for booking {}, skipped refund email", booking.getBookingId());
-                    }
+                        // Security Check: Organizers and Employees can only refund their own events
+                        boolean isAdmin = authentication.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                        || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+                        if (!isAdmin) {
+                                String currentEmail = authentication.getName();
+                                boolean isOrganizerOfEvent = booking.getEvent().getOrganizer() != null &&
+                                                booking.getEvent().getOrganizer().getEmail().equals(currentEmail);
+
+                                if (!isOrganizerOfEvent) {
+                                        // Check if Employee assigned to event
+                                        boolean isEmployeeAssigned = booking.getEvent().getEmployeeAssignments() != null
+                                                        &&
+                                                        booking.getEvent().getEmployeeAssignments().stream()
+                                                                        .anyMatch(asgn -> asgn.getEmployee() != null
+                                                                                        && asgn.getEmployee().getEmail()
+                                                                                                        .equals(currentEmail));
+
+                                        if (!isEmployeeAssigned) {
+                                                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                                                .body(PaymentVerificationResponse.builder()
+                                                                                .success(false)
+                                                                                .status("FORBIDDEN")
+                                                                                .message("You do not have permission to refund bookings for this event")
+                                                                                .build());
+                                        }
+                                }
+                        }
+
+                        if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
+                                return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
+                                                .success(false)
+                                                .status("INVALID")
+                                                .message("Only confirmed bookings can be refunded. Current status: "
+                                                                + booking.getStatus())
+                                                .build());
+                        }
+
+                        // Check if there's a successful payment
+                        if (!transactionService.hasSuccessfulPayment(request.getBookingId())) {
+                                return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
+                                                .success(false)
+                                                .status("INVALID")
+                                                .message("No successful payment found for this booking")
+                                                .build());
+                        }
+
+                        // Check if it's already been refunded
+                        List<Transaction> existingTransactions = transactionService
+                                        .getTransactionsByBookingId(request.getBookingId());
+                        boolean alreadyRefunded = existingTransactions.stream()
+                                        .anyMatch(t -> t.getType() == Transaction.TransactionType.REFUND
+                                                        && t.getStatus() == Transaction.TransactionStatus.SUCCESS);
+
+                        if (alreadyRefunded) {
+                                return ResponseEntity.badRequest().body(PaymentVerificationResponse.builder()
+                                                .success(false)
+                                                .status("ALREADY_REFUNDED")
+                                                .message("This booking has already been successfully refunded.")
+                                                .build());
+                        }
+
+                        // Process refund through MPGS
+                        Transaction refundTransaction = mpgsPaymentService.processRefund(
+                                        request.getBookingId(),
+                                        request.getAmount(),
+                                        request.getReason());
+
+                        if (refundTransaction.getStatus() == Transaction.TransactionStatus.SUCCESS) {
+                                // Determine refund amount
+                                BigDecimal refundAmount = request.getAmount() != null ? request.getAmount()
+                                                : booking.getTotalAmount();
+
+                                // Send refund confirmation email before deleting the record
+                                try {
+                                        String customerEmail = booking.getCustomerEmail();
+                                        if (customerEmail == null && booking.getUser() != null) {
+                                                customerEmail = booking.getUser().getEmail();
+                                        }
+
+                                        if (customerEmail != null) {
+                                                emailService.sendRefundConfirmationEmail(
+                                                                booking,
+                                                                customerEmail,
+                                                                refundAmount,
+                                                                request.getReason());
+                                        } else {
+                                                log.warn("No email address found for booking {}, skipped refund email",
+                                                                booking.getBookingId());
+                                        }
+                                } catch (Exception e) {
+                                        log.warn("Could not send refund confirmation email, but proceeding with deletion: {}",
+                                                        e.getMessage());
+                                }
+
+                                // Release seats back to inventory
+                                int seatsToRelease = booking.getBookingSeats().size();
+                                eventScheduleService.releaseSeats(booking.getEventSchedule().getScheduleId(),
+                                                seatsToRelease);
+
+                                // Update status to REFUNDED (Booking STAYS in list for history)
+                                booking.setStatus(Booking.BookingStatus.REFUNDED);
+                                bookingRepository.save(booking);
+
+                                log.info("Refund processed successfully. Booking status updated to REFUNDED. BookingRef: {}, Amount: {}",
+                                                booking.getBookingReference(), refundAmount);
+
+                                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                                                .success(true)
+                                                .status("SUCCESS")
+                                                .transactionId(refundTransaction.getTransactionId().toString())
+                                                .bookingId(booking.getBookingId())
+                                                .bookingReference(booking.getBookingReference())
+                                                .amount(refundAmount)
+                                                .message("Refund processed successfully. Booking status updated to REFUNDED.")
+                                                .build());
+                        } else {
+                                log.error("Refund failed for booking: {}", request.getBookingId());
+                                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                                                .success(false)
+                                                .status("FAILED")
+                                                .message("Refund processing failed. Please try again or contact MPGS support.")
+                                                .build());
+                        }
+                } catch (RuntimeException e) {
+                        log.error("Refund rejected or failed: {}", e.getMessage());
+
+                        // Extract a cleaner message if it's from the gateway
+                        String userMessage = e.getMessage();
+                        if (userMessage != null && userMessage.contains("MPGS Refund Error:")) {
+                                userMessage = "Payment Gateway Error: "
+                                                + userMessage.substring(userMessage.indexOf("MPGS Refund Error:") + 18);
+                                // Try to extract explanation if it's JSON
+                                try {
+                                        if (userMessage.contains("{")) {
+                                                String jsonPart = userMessage.substring(userMessage.indexOf("{"));
+                                                com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                                                                .readTree(jsonPart);
+                                                if (node.has("error") && node.get("error").has("explanation")) {
+                                                        userMessage = "Refund Failed: "
+                                                                        + node.get("error").get("explanation").asText();
+                                                } else if (node.has("response")
+                                                                && node.get("response").has("explanation")) {
+                                                        userMessage = "Refund Failed: " + node.get("response")
+                                                                        .get("explanation").asText();
+                                                }
+                                        }
+                                } catch (Exception ignore) {
+                                }
+                        }
+
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                        .body(PaymentVerificationResponse.builder()
+                                                        .success(false)
+                                                        .status("ERROR")
+                                                        .message(userMessage)
+                                                        .build());
                 } catch (Exception e) {
-                    log.warn("Could not send refund confirmation email, but proceeding with deletion: {}", e.getMessage());
+                        log.error("Unexpected refund initiation failure", e);
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body(PaymentVerificationResponse.builder()
+                                                        .success(false)
+                                                        .status("ERROR")
+                                                        .message("An unexpected error occurred during refund processing: "
+                                                                        + e.getMessage())
+                                                        .build());
                 }
-
-                // Release seats back to inventory
-                int seatsToRelease = booking.getBookingSeats().size();
-                eventScheduleService.releaseSeats(booking.getEventSchedule().getScheduleId(), seatsToRelease);
-
-                // Store reference and ID for the response before deletion
-                UUID bookingId = booking.getBookingId();
-                String bookingRef = booking.getBookingReference();
-
-                // Delete the booking as per user requirement (user is no longer a customer)
-                log.info("Deleting booking {} after successful refund", bookingId);
-                bookingService.deleteBooking(bookingId.toString());
-
-                log.info("Refund processed and booking removed successfully. BookingRef: {}, Amount: {}",
-                        bookingRef, refundAmount);
-
-                return ResponseEntity.ok(PaymentVerificationResponse.builder()
-                        .success(true)
-                        .status("SUCCESS")
-                        .transactionId(refundTransaction.getTransactionId().toString())
-                        .bookingId(bookingId)
-                        .bookingReference(bookingRef)
-                        .amount(refundAmount)
-                        .message("Refund processed and booking removed successfully")
-                        .build());
-                } else {
-                log.error("Refund failed for booking: {}", request.getBookingId());
-                return ResponseEntity.ok(PaymentVerificationResponse.builder()
-                        .success(false)
-                        .status("FAILED")
-                        .message("Refund processing failed. Please try again or contact MPGS support.")
-                        .build());
-                }
-        } catch (Exception e) {
-                log.error("Refund initiation failed", e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(PaymentVerificationResponse.builder()
-                                .success(false)
-                                .status("ERROR")
-                                .message("Refund failed: " + e.getMessage())
-                                .build());
-        }
         }
 
         /**
-     * Get refund status for a booking
-     * GET /api/refunds/booking/{bookingId}
-     */
+         * Get refund status for a booking
+         * GET /api/refunds/booking/{bookingId}
+         */
         @GetMapping("/booking/{bookingId}")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'USER')")
         public ResponseEntity<?> getRefundStatus(@PathVariable UUID bookingId) {
 
-        log.info("Getting refund status for booking: {}", bookingId);
+                log.info("Getting refund status for booking: {}", bookingId);
 
-        try {
-            // Get booking
-                Booking booking = bookingRepository.findById(bookingId)
-                        .orElseThrow(() -> new RuntimeException("Booking not found"));
+                try {
+                        // Get booking
+                        Booking booking = bookingRepository.findById(bookingId)
+                                        .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-            // Get all transactions for this booking
-                List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
+                        // Get all transactions for this booking
+                        List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
 
-            // Find refund transactions
-                List<Transaction> refundTransactions = transactions.stream()
-                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
-                        .toList();
+                        // Find refund transactions
+                        List<Transaction> refundTransactions = transactions.stream()
+                                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
+                                        .toList();
 
-                if (refundTransactions.isEmpty()) {
-                return ResponseEntity.ok(PaymentVerificationResponse.builder()
-                        .success(false)
-                        .status("NO_REFUND")
-                        .bookingId(bookingId)
-                        .bookingReference(booking.getBookingReference())
-                        .message("No refund found for this booking")
-                        .build());
+                        if (refundTransactions.isEmpty()) {
+                                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                                                .success(false)
+                                                .status("NO_REFUND")
+                                                .bookingId(bookingId)
+                                                .bookingReference(booking.getBookingReference())
+                                                .message("No refund found for this booking")
+                                                .build());
+                        }
+
+                        // Get the most recent refund
+                        Transaction latestRefund = refundTransactions.get(0);
+
+                        return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                                        .success(latestRefund.getStatus() == Transaction.TransactionStatus.SUCCESS)
+                                        .status(latestRefund.getStatus().name())
+                                        .transactionId(latestRefund.getTransactionId().toString())
+                                        .bookingId(bookingId)
+                                        .bookingReference(booking.getBookingReference())
+                                        .amount(latestRefund.getAmount())
+                                        .message("Refund status: " + latestRefund.getStatus())
+                                        .build());
+
+                } catch (Exception e) {
+                        log.error("Error getting refund status", e);
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body(PaymentVerificationResponse.builder()
+                                                        .success(false)
+                                                        .status("ERROR")
+                                                        .message("Error checking refund status: " + e.getMessage())
+                                                        .build());
                 }
-
-            // Get the most recent refund
-                Transaction latestRefund = refundTransactions.get(0);
-
-                return ResponseEntity.ok(PaymentVerificationResponse.builder()
-                        .success(latestRefund.getStatus() == Transaction.TransactionStatus.SUCCESS)
-                        .status(latestRefund.getStatus().name())
-                        .transactionId(latestRefund.getTransactionId().toString())
-                        .bookingId(bookingId)
-                        .bookingReference(booking.getBookingReference())
-                        .amount(latestRefund.getAmount())
-                        .message("Refund status: " + latestRefund.getStatus())
-                        .build());
-
-        } catch (Exception e) {
-                log.error("Error getting refund status", e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(PaymentVerificationResponse.builder()
-                                .success(false)
-                                .status("ERROR")
-                                .message("Error checking refund status: " + e.getMessage())
-                                .build());
-        }
         }
 
         /**
-     * Get all refund transactions for a booking
-     * GET /api/refunds/booking/{bookingId}/transactions
-     */
+         * Get all refund transactions for a booking
+         * GET /api/refunds/booking/{bookingId}/transactions
+         */
         @GetMapping("/booking/{bookingId}/transactions")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
         public ResponseEntity<List<Transaction>> getRefundTransactions(@PathVariable UUID bookingId) {
 
-        log.info("Getting refund transactions for booking: {}", bookingId);
+                log.info("Getting refund transactions for booking: {}", bookingId);
 
-        try {
-                List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
+                try {
+                        List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
 
-                List<Transaction> refundTransactions = transactions.stream()
-                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
-                        .toList();
+                        List<Transaction> refundTransactions = transactions.stream()
+                                        .filter(t -> t.getType() == Transaction.TransactionType.REFUND)
+                                        .toList();
 
-                return ResponseEntity.ok(refundTransactions);
+                        return ResponseEntity.ok(refundTransactions);
 
-        } catch (Exception e) {
-                log.error("Error getting refund transactions", e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+                } catch (Exception e) {
+                        log.error("Error getting refund transactions", e);
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+                }
         }
 }

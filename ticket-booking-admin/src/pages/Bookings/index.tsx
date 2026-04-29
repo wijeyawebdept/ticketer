@@ -24,6 +24,8 @@ import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from 
 import { BookingService, paymentService } from '../../services';
 import { Booking, BookingStatus } from '../../types';
 import { toast } from 'react-toastify';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 const Bookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -157,6 +159,31 @@ const Bookings: React.FC = () => {
     }
   };
 
+  const prepareExportData = () => {
+    return bookings.map(b => ({
+      'Booking Reference': b.bookingReference,
+      'Event Name': b.eventName || b.event?.name || 'N/A',
+      'Customer Name': b.userFirstName && b.userLastName ? `${b.userFirstName} ${b.userLastName}` : (b.user ? `${b.user.firstName} ${b.user.lastName}` : 'N/A'),
+      'Tickets': b.ticketCount || 0,
+      'Total Amount (Rs.)': b.totalAmount || 0,
+      'Booking Date': b.bookingTime ? new Date(b.bookingTime).toLocaleDateString() : 'N/A',
+      'Booking Time': b.bookingTime ? new Date(b.bookingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      'Status': b.status
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    exportToExcel(data, `Bookings_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to Excel...');
+  };
+
+  const handleExportCSV = () => {
+    const data = prepareExportData();
+    exportToCSV(data, `Bookings_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to CSV...');
+  };
+
   const getStatusChipColor = (status: BookingStatus) => {
     switch (status) {
       case BookingStatus.CONFIRMED:
@@ -219,6 +246,15 @@ const Bookings: React.FC = () => {
       }
     },
     { 
+      field: 'bookingTime_time', 
+      headerName: 'Time', 
+      width: 100, 
+      valueGetter: (params) => params.row.bookingTime,
+      valueFormatter: (params: any) => {
+        return params.value ? new Date(params.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+      }
+    },
+    { 
       field: 'status', 
       headerName: 'Status', 
       width: 110,
@@ -263,9 +299,29 @@ const Bookings: React.FC = () => {
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Booking Management</Typography>
-          <IconButton onClick={handleRefresh} sx={{ mr: 1 }}>
-            <RefreshIcon />
-          </IconButton>
+          <Box display="flex" alignItems="center">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportExcel}
+              sx={{ mr: 1 }}
+            >
+              Excel
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportCSV}
+              sx={{ mr: 2 }}
+            >
+              CSV
+            </Button>
+            <IconButton onClick={handleRefresh}>
+              <RefreshIcon />
+            </IconButton>
+          </Box>
         </Grid>
         {/* Search and Filter Section */}
         <Grid item xs={12}>
@@ -300,6 +356,7 @@ const Bookings: React.FC = () => {
                     <MenuItem value="CONFIRMED">Confirmed</MenuItem>
                     <MenuItem value="CANCELLED">Cancelled</MenuItem>
                     <MenuItem value="COMPLETED">Completed</MenuItem>
+                    <MenuItem value="REFUNDED">Refunded</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

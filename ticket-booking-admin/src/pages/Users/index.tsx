@@ -17,12 +17,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Checkbox,
-  Menu,
-  ListItemIcon,
-  ListItemText,
   Alert,
   Snackbar,
+  Avatar,
   Grid
 } from '@mui/material';
 import { 
@@ -34,9 +31,8 @@ import {
   CheckCircle as ActivateIcon,
   Block as DeactivateIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon,
   Visibility as ViewIcon,
-  MoreVert as MoreVertIcon
+  FilterAlt as FilterIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridRowSelectionModel } from '@mui/x-data-grid';
 import { UserService } from '../../services';
@@ -45,6 +41,8 @@ import UserForm from './components/UserForm';
 import UserDetailsDialog from './components/UserDetailsDialog';
 import { useAuth } from '../../context/AuthContext';
 import { formatPhoneNumber } from '../../utils/formatters';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -62,7 +60,6 @@ const Users: React.FC = () => {
 
   // Bulk operations
   const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
-  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
@@ -171,12 +168,7 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleBulkMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setBulkMenuAnchor(event.currentTarget);
-  };
-
   const handleBulkMenuClose = () => {
-    setBulkMenuAnchor(null);
   };
 
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
@@ -211,6 +203,27 @@ const Users: React.FC = () => {
   const handleClearFilters = () => {
     setSearchTerm('');
     setStatusFilter('');
+  };
+
+  const prepareExportData = () => {
+    return users.map(u => ({
+      'First Name': u.firstName,
+      'Last Name': u.lastName,
+      'Email': u.email,
+      'Phone Number': formatPhoneNumber(u.phoneNumber),
+      'Role': u.role,
+      'Status': u.active ? 'Active' : 'Inactive'
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    exportToExcel(data, `Users_Export_${new Date().toLocaleDateString()}`);
+  };
+
+  const handleExportCSV = () => {
+    const data = prepareExportData();
+    exportToCSV(data, `Users_Export_${new Date().toLocaleDateString()}`);
   };
 
   const getRoleChipColor = (role: UserRole) => {
@@ -370,7 +383,25 @@ const Users: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
           User Management
         </Typography>
-        <Box>
+        <Box display="flex" alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportExcel}
+            sx={{ mr: 1 }}
+          >
+            Excel
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportCSV}
+            sx={{ mr: 2 }}
+          >
+            CSV
+          </Button>
           <IconButton onClick={fetchUsers} sx={{ mr: 1 }} title="Refresh">
             <RefreshIcon />
           </IconButton>

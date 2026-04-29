@@ -92,6 +92,9 @@ public class Booking {
     @Column(name = "final_amount")
     private BigDecimal finalAmount;
 
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount;
+
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default

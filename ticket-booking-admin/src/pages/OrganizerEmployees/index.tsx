@@ -44,6 +44,8 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 interface OrganizerEmployee {
   employeeId: string;
@@ -326,6 +328,32 @@ const OrganizerEmployees: React.FC = () => {
     }
   };
 
+  const prepareExportData = () => {
+    return employees.map(e => ({
+      'First Name': e.firstName,
+      'Last Name': e.lastName,
+      'Email': e.email,
+      'Phone Number': formatPhoneNumber(e.phoneNumber),
+      'Organization': e.organizationName,
+      'Organizer': e.organizerName,
+      'Position': e.employeePosition || 'N/A',
+      'Department': e.department || 'N/A',
+      'Hire Date': e.hireDate ? new Date(e.hireDate).toLocaleDateString() : 'N/A',
+      'Status': e.active === 1 ? 'Active' : 'Inactive',
+      'Created At': new Date(e.createdAt).toLocaleString()
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    exportToExcel(data, `Organizer_Employees_Export_${new Date().toLocaleDateString()}`);
+  };
+
+  const handleExportCSV = () => {
+    const data = prepareExportData();
+    exportToCSV(data, `Organizer_Employees_Export_${new Date().toLocaleDateString()}`);
+  };
+
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
     if (selectedEmployeeIds.length === 0) return;
 
@@ -490,8 +518,26 @@ const OrganizerEmployees: React.FC = () => {
               isOptionEqualToValue={(option, value) => option.organizerId === value.organizerId}
             />
           )}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportExcel}
+            sx={{ ml: 1 }}
+          >
+            Excel
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportCSV}
+            sx={{ ml: 1 }}
+          >
+            CSV
+          </Button>
           <Tooltip title="Refresh" arrow>
-            <IconButton onClick={fetchEmployees} sx={{ mr: 1 }}>
+            <IconButton onClick={fetchEmployees} sx={{ mx: 1 }}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>

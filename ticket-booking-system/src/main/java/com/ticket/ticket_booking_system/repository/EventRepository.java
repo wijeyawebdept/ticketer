@@ -43,6 +43,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     long countByOrganizer_OrganizerId(UUID organizerId);
     
     long countByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status);
+
+    Page<Event> findByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status, Pageable pageable);
     
     // Find all events by organizer ID
     List<Event> findByOrganizer_OrganizerId(UUID organizerId);

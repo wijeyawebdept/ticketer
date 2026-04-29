@@ -39,7 +39,9 @@ import AdminForm from './components/AdminForm';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatPhoneNumber, getProfilePictureUrl } from '../../utils/formatters';
-import { Avatar, Divider, Grid } from '@mui/material';
+import { Avatar, Grid } from '@mui/material';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 interface Admin {
   adminId: string;
@@ -200,6 +202,30 @@ const Admins: React.FC = () => {
       fetchAdmins();
     } catch (error) {
     }
+  };
+
+  const prepareExportData = () => {
+    return admins.map(a => ({
+      'First Name': a.firstName,
+      'Last Name': a.lastName,
+      'Email': a.email,
+      'Email Verified': a.emailVerified ? 'Yes' : 'No',
+      'Phone Number': formatPhoneNumber(a.phoneNumber),
+      'Role': a.role,
+      'Status': a.active ? 'Active' : 'Inactive',
+      'Last Login': a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString() : 'Never',
+      'Created At': new Date(a.createdAt).toLocaleString()
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    exportToExcel(data, `Admins_Export_${new Date().toLocaleDateString()}`);
+  };
+
+  const handleExportCSV = () => {
+    const data = prepareExportData();
+    exportToCSV(data, `Admins_Export_${new Date().toLocaleDateString()}`);
   };
 
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
@@ -506,7 +532,27 @@ const Admins: React.FC = () => {
         mb: 3 
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#d32f2f' }}>Admin Management</Typography>
-        <Box>
+        <Box display="flex" alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            color="error"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportExcel}
+            sx={{ mr: 1 }}
+          >
+            Excel
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            color="error"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportCSV}
+            sx={{ mr: 2 }}
+          >
+            CSV
+          </Button>
           <IconButton onClick={fetchAdmins} sx={{ mr: 1 }}>
             <RefreshIcon />
           </IconButton>

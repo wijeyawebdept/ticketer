@@ -41,7 +41,7 @@ public class Transaction {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id", nullable = false)
+    @JoinColumn(name = "booking_id", nullable = true)
     private Booking booking;
 
     @Column(nullable = false, unique = true, length = 50)
@@ -66,6 +66,15 @@ public class Transaction {
     @Column(length = 5000)
     @Lob
     private String paymentGatewayResponse;
+
+    @Column(name = "user_id")
+    private UUID userId;
+
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
+
+    @Column(name = "error_message", columnDefinition = "TEXT")
+    private String errorMessage;
 
     @PrePersist
     protected void onCreate() {

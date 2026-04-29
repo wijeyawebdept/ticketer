@@ -50,6 +50,8 @@ public class TransactionService {
 
         Transaction transaction = Transaction.builder()
                 .booking(booking)
+                .userId(booking.getUser() != null ? booking.getUser().getUserId() : null)
+                .paymentMethod("MPGS") // Default for this flow
                 .transactionReference(gatewaySessionId)
                 .amount(amount)
                 .type(Transaction.TransactionType.PAYMENT)
@@ -86,6 +88,21 @@ public class TransactionService {
 
         transaction.setStatus(status);
         transaction.setPaymentGatewayResponse(gatewayResponse);
+        
+        // Try to extract error message if failed
+        if (status == Transaction.TransactionStatus.FAILED && gatewayResponse != null) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readTree(gatewayResponse);
+                if (node.has("errorMessage")) {
+                    transaction.setErrorMessage(node.get("errorMessage").asText());
+                } else if (node.has("response") && node.get("response").has("explanation")) {
+                    transaction.setErrorMessage(node.get("response").get("explanation").asText());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse gateway response for error message: {}", e.getMessage());
+            }
+        }
 
         transaction = transactionRepository.save(transaction);
 

@@ -16,6 +16,8 @@ public interface DashboardService {
 
     Map<String, Object> getDraftEvents(int count);
 
+    Map<String, Object> getDraftEventsByOrganizer(java.util.UUID organizerId, int count);
+
     Map<String, Object> getTopSellingEvents(int count);
 
     // New method for trend data

@@ -38,6 +38,8 @@ public class ConfirmBookingRequest {
     
     @NotNull(message = "Total amount is required")
     private BigDecimal totalAmount;
+
+    private BigDecimal discountAmount;
     
     /**
      * Request for shared area tickets

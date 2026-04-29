@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Dialog,
@@ -88,12 +88,73 @@ const SeatSelectionPage: React.FC = () => {
     email: '',
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleHoldExpired = useCallback(() => {
+    setIsHolding(false);
+    setSelectedSeats([]);
+    showMessage('error', 'Your seat hold has expired. Please select seats again.');
+  }, []);
+
+  const fetchEventDetails = useCallback(async (scheduleId: string) => {
+    try {
+      const response = await axiosInstance.get<{
+        venueId?: string;
+        venueName?: string;
+        venueAddress?: string;
+        eventName?: string;
+        scheduleDate?: string;
+        startTime?: string;
+        endTime?: string;
+        eventId?: string;
+      }>(`/api/public/events/schedules/${scheduleId}`);
+
+      if (response.data) {
+        setVenueId(response.data.venueId);
+        // Use API response data, fallback to navigation state
+        setEventDetails({
+          id: 0,
+          title: response.data.eventName || eventDetailsFromState?.eventTitle || 'Event',
+          venue: response.data.venueName || eventDetailsFromState?.venueName || 'Venue',
+          venueAddress: response.data.venueAddress || eventDetailsFromState?.venueAddress || '',
+          date: response.data.scheduleDate || eventDetailsFromState?.eventDate || '',
+          time: response.data.startTime
+            ? `${response.data.startTime}${response.data.endTime ? ` - ${response.data.endTime}` : ''}`
+            : eventDetailsFromState?.eventTime || '',
+          eventId: response.data.eventId || eventDetailsFromState?.eventId,
+        });
+        return;
+      }
+    } catch (error) {
+      // Event schedule fetch failed silently
+    }
+
+    // Fallback to navigation state if API fails
+    if (eventDetailsFromState) {
+      setEventDetails({
+        id: 0,
+        title: eventDetailsFromState.eventTitle || 'Event',
+        venue: eventDetailsFromState.venueName || 'Venue',
+        venueAddress: eventDetailsFromState.venueAddress || '',
+        date: eventDetailsFromState.eventDate || '',
+        time: eventDetailsFromState.eventTime || '',
+        eventId: eventDetailsFromState.eventId,
+      });
+    } else {
+      setEventDetails({
+        id: 0,
+        title: 'Event',
+        venue: 'Venue',
+        venueAddress: '',
+        date: '',
+        time: '',
+      });
+    }
+  }, [eventDetailsFromState]);
+
   useEffect(() => {
     if (eventScheduleId) {
-      loadEventDetails(eventScheduleId);
+      fetchEventDetails(eventScheduleId);
     }
-  }, [eventScheduleId]);
+  }, [eventScheduleId, fetchEventDetails]);
 
   useEffect(() => {
     const hasSharedAreaTickets = sharedAreaSelections.reduce((sum, s) => sum + s.ticketCount, 0) > 0;
@@ -132,7 +193,7 @@ const SeatSelectionPage: React.FC = () => {
 
       return () => clearInterval(interval);
     }
-  }, [holdTimer]);
+  }, [holdTimer, handleHoldExpired]);
 
   // Countdown timer effect - Initialize countdown when event details change
   useEffect(() => {
@@ -189,62 +250,6 @@ const SeatSelectionPage: React.FC = () => {
     };
   }, [eventDetails, showCountdown]);
 
-  const loadEventDetails = async (scheduleId: string) => {
-    try {
-      const response = await axiosInstance.get<{
-        venueId?: string;
-        venueName?: string;
-        venueAddress?: string;
-        eventName?: string;
-        scheduleDate?: string;
-        startTime?: string;
-        endTime?: string;
-        eventId?: string;
-      }>(`/api/public/events/schedules/${scheduleId}`);
-
-      if (response.data) {
-        setVenueId(response.data.venueId);
-        // Use API response data, fallback to navigation state
-        setEventDetails({
-          id: 0,
-          title: response.data.eventName || eventDetailsFromState?.eventTitle || 'Event',
-          venue: response.data.venueName || eventDetailsFromState?.venueName || 'Venue',
-          venueAddress: response.data.venueAddress || eventDetailsFromState?.venueAddress || '',
-          date: response.data.scheduleDate || eventDetailsFromState?.eventDate || '',
-          time: response.data.startTime
-            ? `${response.data.startTime}${response.data.endTime ? ` - ${response.data.endTime}` : ''}`
-            : eventDetailsFromState?.eventTime || '',
-          eventId: response.data.eventId || eventDetailsFromState?.eventId,
-        });
-        return;
-      }
-    } catch (error) {
-      // Event schedule fetch failed silently
-    }
-
-    // Fallback to navigation state if API fails
-    if (eventDetailsFromState) {
-      setEventDetails({
-        id: 0,
-        title: eventDetailsFromState.eventTitle || 'Event',
-        venue: eventDetailsFromState.venueName || 'Venue',
-        venueAddress: eventDetailsFromState.venueAddress || '',
-        date: eventDetailsFromState.eventDate || '',
-        time: eventDetailsFromState.eventTime || '',
-        eventId: eventDetailsFromState.eventId,
-      });
-    } else {
-      setEventDetails({
-        id: 0,
-        title: 'Event',
-        venue: 'Venue',
-        venueAddress: '',
-        date: '',
-        time: '',
-      });
-    }
-  };
-
   const handleSeatSelect = async (seats: string[]) => {
     setSelectedSeats(seats);
     await calculateTotalPrice(seats);
@@ -273,8 +278,11 @@ const SeatSelectionPage: React.FC = () => {
     });
   };
 
+  const [totalDiscount, setTotalDiscount] = useState(0);
+
   useEffect(() => {
     let newTotal = 0;
+    let newTotalDiscount = 0;
 
     // Group selected seats by category
     const seatsByCategory: Record<string, any[]> = {};
@@ -295,11 +303,13 @@ const SeatSelectionPage: React.FC = () => {
 
       if (sample.dealActive) {
         if (sample.dealType === 'PERCENTAGE_DISCOUNT' && sample.dealDiscountPercentage) {
-          const discount = basePrice * (sample.dealDiscountPercentage / 100);
-          newTotal += (basePrice - discount) * count;
+          const discountPerTicket = basePrice * (sample.dealDiscountPercentage / 100);
+          newTotalDiscount += discountPerTicket * count;
+          newTotal += (basePrice - discountPerTicket) * count;
         } else if (sample.dealType === 'BUY_X_GET_Y_FREE' && sample.dealBuyQuantity && sample.dealFreeQuantity) {
           const groupSize = sample.dealBuyQuantity + sample.dealFreeQuantity;
           const freeItems = Math.floor(count / groupSize) * sample.dealFreeQuantity;
+          newTotalDiscount += basePrice * freeItems;
           const payableItems = count - freeItems;
           newTotal += basePrice * payableItems;
         } else {
@@ -318,11 +328,13 @@ const SeatSelectionPage: React.FC = () => {
 
       if (deal?.dealActive) {
         if (deal.dealType === 'PERCENTAGE_DISCOUNT' && deal.dealDiscountPercentage) {
-          const discount = basePrice * (deal.dealDiscountPercentage / 100);
-          newTotal += (basePrice - discount) * count;
+          const discountPerTicket = basePrice * (deal.dealDiscountPercentage / 100);
+          newTotalDiscount += discountPerTicket * count;
+          newTotal += (basePrice - discountPerTicket) * count;
         } else if (deal.dealType === 'BUY_X_GET_Y_FREE' && deal.dealBuyQuantity && deal.dealFreeQuantity) {
           const groupSize = deal.dealBuyQuantity + deal.dealFreeQuantity;
           const freeItems = Math.floor(count / groupSize) * deal.dealFreeQuantity;
+          newTotalDiscount += basePrice * freeItems;
           const payableItems = count - freeItems;
           newTotal += basePrice * payableItems;
         } else {
@@ -334,6 +346,7 @@ const SeatSelectionPage: React.FC = () => {
     });
 
     setTotalPrice(newTotal);
+    setTotalDiscount(newTotalDiscount);
   }, [sharedAreaSelections, selectedSeatDetails]);
 
   const calculateTotalPrice = async (seatIds: string[]) => {
@@ -386,12 +399,6 @@ const SeatSelectionPage: React.FC = () => {
     }
   };
 
-  const handleHoldExpired = () => {
-    setIsHolding(false);
-    setSelectedSeats([]);
-    showMessage('error', 'Your seat hold has expired. Please select seats again.');
-  };
-
   const handleProceedToPayment = () => {
     if (!isAuthenticated()) {
       // Redirect to login page and return here after login
@@ -436,6 +443,7 @@ const SeatSelectionPage: React.FC = () => {
           pricePerTicket: selection.pricePerTicket,
         })),
         totalAmount: totalPrice + 200,
+        discountAmount: totalDiscount,
         currency: 'LKR',
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -474,12 +482,6 @@ const SeatSelectionPage: React.FC = () => {
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 5000);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (!eventDetails) {

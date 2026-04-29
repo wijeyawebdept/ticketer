@@ -108,6 +108,22 @@ public class OrganizerDashboardController {
     }
 
     /**
+     * Get draft events for organizer
+     */
+    @GetMapping("/draft-events")
+    public ResponseEntity<Map<String, Object>> getDraftEvents(
+            @RequestParam(defaultValue = "10") int count,
+            Authentication authentication) {
+        
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ResponseEntity.ok(dashboardService.getDraftEventsByOrganizer(organizerId, count));
+    }
+
+    /**
      * Get trend data for organizer
      */
     @GetMapping("/trends")

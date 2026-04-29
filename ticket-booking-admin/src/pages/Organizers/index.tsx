@@ -42,6 +42,8 @@ import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import OrganizerForm from './components/OrganizerForm';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 interface Organizer {
   organizerId: string;
@@ -150,6 +152,35 @@ const Organizers: React.FC = () => {
 
   const handleDeactivateOrganizer = async (organizerId: string) => {
     try { await api.patch(`/api/admin/organizers/${organizerId}/deactivate`); fetchOrganizers(); } catch {}
+  };
+
+  const prepareExportData = () => {
+    return organizers.map(o => ({
+      'First Name': o.firstName,
+      'Last Name': o.lastName,
+      'Email': o.email,
+      'Phone Number': formatPhoneNumber(o.phoneNumber),
+      'Organization Name': o.organizationName || 'N/A',
+      'Business Reg. No.': o.businessRegistrationNumber || 'N/A',
+      'Tax ID': o.taxId || 'N/A',
+      'Business Address': o.businessAddress || 'N/A',
+      'Business Phone': o.businessPhone || 'N/A',
+      'Bank Name': o.bankName || 'N/A',
+      'Account Number': o.bankAccountNumber || 'N/A',
+      'Status': o.active ? 'Active' : 'Inactive',
+      'Last Login': o.lastLoginAt ? new Date(o.lastLoginAt).toLocaleString() : 'Never',
+      'Created At': new Date(o.createdAt).toLocaleString()
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    exportToExcel(data, `Organizers_Export_${new Date().toLocaleDateString()}`);
+  };
+
+  const handleExportCSV = () => {
+    const data = prepareExportData();
+    exportToCSV(data, `Organizers_Export_${new Date().toLocaleDateString()}`);
   };
 
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
@@ -275,7 +306,27 @@ const Organizers: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: '#ed6c02' }}>Organizer Management</Typography>
-        <Box>
+        <Box display="flex" alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            color="warning"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportExcel}
+            sx={{ mr: 1 }}
+          >
+            Excel
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            color="warning"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportCSV}
+            sx={{ mr: 2 }}
+          >
+            CSV
+          </Button>
           <IconButton onClick={fetchOrganizers} sx={{ mr: 1 }}><RefreshIcon /></IconButton>
           <Button variant="contained" color="warning" startIcon={<AddIcon />} onClick={handleCreateClick}
             sx={{ borderRadius: 2, padding: '8px 16px', fontWeight: 600, boxShadow: '0 4px 6px rgba(237,108,2,0.2)', '&:hover': { boxShadow: '0 6px 8px rgba(237,108,2,0.3)' } }}>

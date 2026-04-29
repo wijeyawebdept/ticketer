@@ -439,6 +439,7 @@ public class MPGSPaymentService {
 
             log.info("Sending refund request to MPGS: endpoint={}, orderId={}, amount={}", 
                     endpoint, orderId, refundAmount);
+            log.debug("Refund Request Body: {}", refundRequest);
 
             WebClient webClient = webClientBuilder
                     .defaultHeader(HttpHeaders.AUTHORIZATION, mpgsConfig.getBasicAuthHeader())
@@ -452,21 +453,26 @@ public class MPGSPaymentService {
                         .bodyValue(refundRequest)
                         .retrieve()
                         .bodyToMono(String.class)
-                        .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
-                                .filter(this::isRetryableException))
                         .block();
+                log.info("MPGS Refund Response: {}", responseBody);
             } catch (WebClientResponseException e) {
-                String errorBody = e.getResponseBodyAsString();
-                log.error("MPGS Refund API error: Status={}, Body={}", e.getStatusCode(), errorBody);
-                throw new RuntimeException("MPGS Refund Error: " + errorBody, e);
+                responseBody = e.getResponseBodyAsString();
+                log.error("MPGS Refund API error: Status={}, Body={}", e.getStatusCode(), responseBody);
+                throw new RuntimeException("MPGS Refund Error: " + responseBody, e);
             }
 
             JsonNode responseJson = objectMapper.readTree(responseBody);
-            String result = responseJson.has("result") ? responseJson.get("result").asText() : "UNKNOWN";
-            boolean refundSuccess = "SUCCESS".equalsIgnoreCase(result);
+            
+            // Check for success in multiple ways (gateway responses vary)
+            String result = responseJson.path("result").asText("UNKNOWN");
+            String responseStatus = responseJson.path("response").path("gatewayCode").asText("");
+            
+            boolean refundSuccess = "SUCCESS".equalsIgnoreCase(result) || "APPROVED".equalsIgnoreCase(responseStatus);
 
             Transaction refundTransaction = Transaction.builder()
                     .booking(booking)
+                    .userId(booking.getUser() != null ? booking.getUser().getUserId() : null)
+                    .paymentMethod("MPGS")
                     .transactionReference("REFUND-" + transactionId)
                     .amount(refundAmount)
                     .type(Transaction.TransactionType.REFUND)
@@ -476,12 +482,12 @@ public class MPGSPaymentService {
 
             refundTransaction = transactionRepository.save(refundTransaction);
 
-            log.info("Refund processed: TransactionReference={}, Success={}",
-                    refundTransaction.getTransactionReference(), refundSuccess);
-
             if (!refundSuccess) {
-                String msg = responseJson.path("response").path("explanation").asText("Unknown gateway error");
-                throw new RuntimeException("Refund rejected by gateway: " + msg);
+                String explanation = responseJson.path("response").path("explanation").asText("");
+                if (explanation.isEmpty()) {
+                    explanation = responseJson.path("error").path("explanation").asText("Unknown gateway error");
+                }
+                throw new RuntimeException("Refund rejected by gateway: " + explanation);
             }
 
             return refundTransaction;

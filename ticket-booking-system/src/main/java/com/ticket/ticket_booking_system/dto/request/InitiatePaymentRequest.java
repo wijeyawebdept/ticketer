@@ -38,6 +38,8 @@ public class InitiatePaymentRequest {
     @NotNull(message = "Total amount is required")
     private BigDecimal totalAmount;
 
+    private BigDecimal discountAmount;
+
     @Builder.Default
     private String currency = "LKR";
 

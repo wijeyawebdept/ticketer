@@ -146,6 +146,7 @@ public class BookingService {
         booking.setCustomerPhone(user.getPhoneNumber());
         booking.setNumberOfTickets(booking.getBookingSeats().size());
         booking.setFinalAmount(request.getTotalAmount());
+        booking.setDiscountAmount(request.getDiscountAmount());
 
         Booking savedBooking = bookingRepository.save(booking);
         log.info("PENDING booking created with reference: {} for customer: {}", 
@@ -364,6 +365,7 @@ public class BookingService {
                 .status(Booking.BookingStatus.CONFIRMED)
                 .bookingReference(generateBookingReference())
                 .attended(false)
+                .discountAmount(request.getDiscountAmount())
                 .build();
         
         // Add seat bookings if any
@@ -701,18 +703,29 @@ public class BookingService {
     /**
      * Delete a booking (admin only)
      */
+    /**
+     * Delete a booking and all its associated data (transactions, seats, etc.)
+     * Performs a 'Hard Delete' for a clean database.
+     */
+    @org.springframework.transaction.annotation.Transactional
     public void deleteBooking(String bookingId) {
         UUID uuid = UUID.fromString(bookingId);
         Booking booking = bookingRepository.findById(uuid)
                 .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
                 
-        // Delete all transactions associated with this booking to avoid foreign key constraints
+        // 1. Delete all transactions associated with this booking
         List<Transaction> transactions = transactionRepository.findByBooking(booking);
         if (transactions != null && !transactions.isEmpty()) {
             transactionRepository.deleteAll(transactions);
         }
+
+        // 2. Clear and delete booking seats
+        booking.getBookingSeats().clear();
+        bookingRepository.save(booking);
         
+        // 3. Final deletion of the booking
         bookingRepository.deleteById(uuid);
+        log.info("Hard delete performed on booking: {} and all its related data", bookingId);
     }
 
     /**
