@@ -65,11 +65,12 @@ public class SecurityConfig {
                                 "/api/venue-seats/availability/**",
                                 "/api/payments/webhook",
                                 "/api/contact",
+                                "/api/admin/banners/**",
                                 "/contact",
                                 "/ws/**",
                                 "/error")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/blog/**").permitAll()
                         .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE",
