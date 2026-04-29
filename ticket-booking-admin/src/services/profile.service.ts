@@ -18,30 +18,21 @@ export const profileService = {
   uploadProfilePicture: async (file: File): Promise<{ message: string; profilePictureUrl: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-
     const response = await api.post('/api/profile/upload-picture', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data as { message: string; profilePictureUrl: string };
   },
 
   // Change password
   changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
-    const response = await api.post('/api/profile/change-password', {
-      currentPassword,
-      newPassword,
-    });
+    const response = await api.post('/api/profile/change-password', { currentPassword, newPassword });
     return response.data as { message: string };
   },
 
   // Change email
   changeEmail: async (newEmail: string, password: string): Promise<{ message: string }> => {
-    const response = await api.post('/api/profile/change-email', {
-      newEmail,
-      password,
-    });
+    const response = await api.post('/api/profile/change-email', { newEmail, password });
     return response.data as { message: string };
   },
 
@@ -63,5 +54,17 @@ export const profileService = {
       marketingEmails,
     });
     return response.data as { message: string };
+  },
+
+  // Send OTP to organizer email for verification
+  sendEmailOtp: async (): Promise<{ message: string }> => {
+    const response = await api.post('/api/profile/send-email-otp');
+    return response.data as { message: string };
+  },
+
+  // Verify the OTP entered by the organizer
+  verifyEmailOtp: async (otp: string): Promise<{ verified: boolean; message: string }> => {
+    const response = await api.post('/api/profile/verify-email-otp', { otp });
+    return response.data as { verified: boolean; message: string };
   },
 };

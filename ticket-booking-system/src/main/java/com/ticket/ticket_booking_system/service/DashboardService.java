@@ -14,6 +14,8 @@ public interface DashboardService {
 
     Map<String, Object> getUpcomingEvents(int count);
 
+    Map<String, Object> getDraftEvents(int count);
+
     Map<String, Object> getTopSellingEvents(int count);
 
     // New method for trend data

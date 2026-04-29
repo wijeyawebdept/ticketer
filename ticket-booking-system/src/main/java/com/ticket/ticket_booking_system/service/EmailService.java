@@ -36,10 +36,10 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    @Value("${app.mail.fromEmail:noreply@tickets.lk}")
+    @Value("${app.mail.fromEmail:noreply@ticketer.lk}")
     private String fromEmail;
 
-    @Value("${app.mail.fromName:Tickets.lk}")
+    @Value("${app.mail.fromName:Ticketer.lk}")
     private String fromName;
 
     @Value("${app.mail.toEmail:ishanf@wijeya.lk}")

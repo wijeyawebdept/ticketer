@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.dto.response;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -22,6 +23,12 @@ public class AdminResponse {
     private String role;
     private Boolean active;
     private Boolean emailVerified;
+    private LocalDate dateOfBirth;
+    private String profilePicture;
+    private String employeeId;
+    private String department;
+    private String position;
+    private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
 }

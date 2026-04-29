@@ -16,25 +16,37 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileUpdateDTO {
-    
+
     @NotBlank(message = "First name is required")
     @Size(max = 100, message = "First name must not exceed 100 characters")
     private String firstName;
-    
+
     @NotBlank(message = "Last name is required")
     @Size(max = 100, message = "Last name must not exceed 100 characters")
     private String lastName;
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
-    
+
     @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid phone number format")
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
     private String phoneNumber;
-    
+
     private LocalDate dateOfBirth;
-    
+
     private String profilePicture;
+
+    // Organizer-specific fields
+    private String organizationName;
+    private String businessRegistrationNumber;
+    private String taxId;
+    private String businessAddress;
+    private String businessPhone;
+
+    // Banking / payout details
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankRoutingNumber;
 }

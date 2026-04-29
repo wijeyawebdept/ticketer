@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -8,8 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,11 +17,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -34,7 +28,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "parentOrganizer"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "organizers")
 @Data
 @Builder
@@ -49,7 +43,7 @@ public class Organizer implements UserDetails {
     @Column(name = "organizer_id", columnDefinition = "UUID")
     private UUID organizerId;
 
-    // Authentication fields from User table
+    // Authentication fields
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
@@ -64,7 +58,7 @@ public class Organizer implements UserDetails {
 
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
-    
+
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
@@ -88,16 +82,8 @@ public class Organizer implements UserDetails {
     private LocalDateTime lastLoginAt;
 
     // Organizer-specific fields
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_organizer_id")
-    private Organizer parentOrganizer;
-
     @Column(name = "organization_name", nullable = false, length = 255)
     private String organizationName;
-
-    @Column(name = "organization_type", length = 100)
-    private String organizationType;
 
     @Column(name = "business_registration_number", length = 100)
     private String businessRegistrationNumber;
@@ -114,24 +100,15 @@ public class Organizer implements UserDetails {
     @Column(name = "business_email", length = 255)
     private String businessEmail;
 
-    @Column(name = "website_url", length = 500)
-    private String websiteUrl;
-
     @Column(name = "is_verified")
     @Builder.Default
     private Boolean isVerified = false;
-
-    @Column(name = "is_employee")
-    @Builder.Default
-    private Boolean isEmployee = false;
-
-    @Column(name = "employee_position", length = 100)
-    private String employeePosition;
 
     @Column(name = "can_create_employees")
     @Builder.Default
     private Boolean canCreateEmployees = true;
 
+    // Banking / payout details
     @Column(name = "bank_account_number", length = 100)
     private String bankAccountNumber;
 
@@ -141,29 +118,6 @@ public class Organizer implements UserDetails {
     @Column(name = "bank_routing_number", length = 50)
     private String bankRoutingNumber;
 
-    @Column(name = "commission_rate", precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal commissionRate = BigDecimal.ZERO;
-
-    @Column(name = "total_events_created")
-    @Builder.Default
-    private Integer totalEventsCreated = 0;
-
-    @Column(name = "total_revenue", precision = 15, scale = 2)
-    @Builder.Default
-    private BigDecimal totalRevenue = BigDecimal.ZERO;
-
-    @Column(name = "rating", precision = 3, scale = 2)
-    @Builder.Default
-    private BigDecimal rating = BigDecimal.ZERO;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "verification_documents", columnDefinition = "jsonb")
-    private String verificationDocuments;
-
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
-
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -172,12 +126,8 @@ public class Organizer implements UserDetails {
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (updatedAt == null) {
-            updatedAt = LocalDateTime.now();
-        }
+        if (createdAt == null) createdAt = LocalDateTime.now();
+        if (updatedAt == null) updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
@@ -192,34 +142,21 @@ public class Organizer implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return email;
-    }
+    public String getUsername() { return email; }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return active == 1; // Only active organizers (status = 1)
-    }
+    public boolean isAccountNonExpired() { return active == 1; }
 
     @Override
-    public boolean isAccountNonLocked() {
-        return active == 1; // Only active organizers (status = 1)
-    }
+    public boolean isAccountNonLocked() { return active == 1; }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return active == 1; // Only active organizers (status = 1)
-    }
+    public boolean isCredentialsNonExpired() { return active == 1; }
 
     @Override
-    public boolean isEnabled() {
-        return active == 1;
-    }
-    
-    // Helper method for backward compatibility
-    public boolean isActive() {
-        return active == 1;
-    }
+    public boolean isEnabled() { return active == 1; }
+
+    public boolean isActive() { return active == 1; }
 
     public enum Role {
         ORGANIZER

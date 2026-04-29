@@ -21,4 +21,8 @@ public interface ProfileService {
 
     boolean toggleLoginEmailPreference(String email, boolean enabled);
     void updateNotificationPreferences(String email, boolean emailNotifications, boolean smsNotifications, boolean marketingEmails);
+
+    // Email OTP verification
+    void sendEmailVerificationOtp(String email);
+    boolean verifyEmailOtp(String email, String otp);
 }

@@ -76,9 +76,9 @@
     "settings": "Settings"
   },
   "header": {
-    "title": "Ticket Booking Admin Panel",
-    "organizerTitle": "Ticket Booking Organizer Panel",
-    "employeeTitle": "Organizer Employee Panel"
+    "title": "Ticketer Admin Panel",
+    "organizerTitle": "Ticketer Organizer Panel",
+    "employeeTitle": "Ticketer Organizer Employee Panel"
   },
   "dashboard": {
     "title": "Dashboard",

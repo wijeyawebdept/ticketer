@@ -292,6 +292,28 @@ public Map<String, Object> getRecentTransactions(int count) {
     }
 
     @Override
+    public Map<String, Object> getDraftEvents(int count) {
+        Map<String, Object> result = new HashMap<>();
+
+        List<Event> draftEvents = eventRepository.findByStatus(
+                Event.EventStatus.DRAFT,
+                PageRequest.of(0, count)
+        ).getContent();
+
+        List<Map<String, Object>> dtoList = draftEvents.stream().map(event -> {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("eventId", event.getEventId());
+            dto.put("name", event.getName());
+            dto.put("status", event.getStatus());
+            dto.put("createdAt", event.getCreatedAt());
+            return dto;
+        }).collect(Collectors.toList());
+
+        result.put("draftEvents", dtoList);
+        return result;
+    }
+
+    @Override
     public Map<String, Object> getTopSellingEvents(int count) {
         Map<String, Object> result = new HashMap<>();
 

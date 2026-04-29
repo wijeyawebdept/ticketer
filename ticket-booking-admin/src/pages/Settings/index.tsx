@@ -19,7 +19,11 @@ import {
   Card,
   CardContent,
   Chip,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -112,6 +116,13 @@ const Settings: React.FC = () => {
     message: '',
     severity: 'success'
   });
+
+  // OTP states
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
 
   // Load system settings from localStorage
   const loadSystemSettings = () => {
@@ -270,6 +281,50 @@ const Settings: React.FC = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  // OTP handlers
+  const handleSendOtp = async () => {
+    setOtpSending(true);
+    try {
+      await profileService.sendEmailOtp();
+      setOtpSent(true);
+      showSnackbar('OTP sent to your email. Valid for 10 minutes.', 'info');
+    } catch { 
+      showSnackbar('Failed to send OTP', 'error'); 
+    } finally { 
+      setOtpSending(false); 
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpValue || otpValue.length !== 6) { 
+      showSnackbar('Enter the 6-digit OTP', 'warning'); 
+      return; 
+    }
+    setOtpVerifying(true);
+    try {
+      const result = await profileService.verifyEmailOtp(otpValue);
+      if (result.verified) {
+        showSnackbar(result.message, 'success');
+        setOtpOpen(false); 
+        setOtpSent(false); 
+        setOtpValue('');
+        await loadProfile(); // refresh to show verified badge
+      } else { 
+        showSnackbar(result.message, 'error'); 
+      }
+    } catch { 
+      showSnackbar('Verification failed', 'error'); 
+    } finally { 
+      setOtpVerifying(false); 
+    }
+  };
+
+  const handleCloseOtpDialog = () => { 
+    setOtpOpen(false); 
+    setOtpSent(false); 
+    setOtpValue(''); 
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -858,6 +913,56 @@ const Settings: React.FC = () => {
                         </Grid>
                       </Grid>
                     )}
+                  </CardContent>
+                </Card>
+
+                {/* Email Verification Card */}
+                <Card 
+                  sx={{ 
+                    mt: 3,
+                    borderRadius: 3,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    border: profile.emailVerified ? '1px solid rgba(46,125,50,0.3)' : '1px solid rgba(237,108,2,0.3)',
+                    backgroundColor: profile.emailVerified ? 'rgba(46,125,50,0.03)' : 'rgba(255,244,229,0.5)'
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Box display="flex" alignItems="center" gap={1.5}>
+                        {profile.emailVerified 
+                          ? <CheckCircleIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                          : <EmailIcon sx={{ color: 'warning.main', fontSize: 28 }} />
+                        }
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Email Verification
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {profile.emailVerified 
+                              ? 'Your email address is verified. This adds an extra layer of security to your account.'
+                              : 'Your email address is not yet verified. Please verify it to ensure account security and access all features.'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      {!profile.emailVerified && (
+                        <Button 
+                          variant="contained" 
+                          color="warning"
+                          onClick={() => setOtpOpen(true)}
+                          sx={{ borderRadius: 2, fontWeight: 600 }}
+                        >
+                          Verify Now
+                        </Button>
+                      )}
+                      {profile.emailVerified && (
+                        <Chip 
+                          label="Verified" 
+                          color="success" 
+                          size="small" 
+                          sx={{ fontWeight: 600 }} 
+                        />
+                      )}
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -1544,6 +1649,61 @@ const Settings: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* OTP Verification Dialog */}
+      <Dialog open={otpOpen} onClose={handleCloseOtpDialog} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700, textAlign: 'center', pb: 1 }}>Email Verification</DialogTitle>
+        <DialogContent sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            We'll send a 6-digit verification code to <br />
+            <strong>{profile?.email}</strong>
+          </Typography>
+          
+          {otpSent ? (
+            <Box>
+              <TextField
+                fullWidth
+                label="Enter 6-digit OTP"
+                variant="outlined"
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputProps={{ style: { textAlign: 'center', letterSpacing: 8, fontSize: 24, fontWeight: 700 } }}
+                autoFocus
+              />
+              <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary' }}>
+                Didn't receive code? <Button size="small" onClick={handleSendOtp} disabled={otpSending}>Resend</Button>
+              </Typography>
+            </Box>
+          ) : (
+            <Box py={2}>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                fullWidth 
+                onClick={handleSendOtp} 
+                disabled={otpSending}
+                sx={{ py: 1.5, borderRadius: 2, fontWeight: 600 }}
+              >
+                {otpSending ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Send Verification Code'}
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, justifyContent: 'center', gap: 2 }}>
+          <Button onClick={handleCloseOtpDialog} variant="outlined" sx={{ borderRadius: 2, px: 3 }}>Cancel</Button>
+          {otpSent && (
+            <Button 
+              onClick={handleVerifyOtp} 
+              variant="contained" 
+              color="success" 
+              disabled={otpVerifying || otpValue.length !== 6}
+              sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
+            >
+              {otpVerifying ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Verify OTP'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

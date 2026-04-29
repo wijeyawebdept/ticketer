@@ -142,8 +142,9 @@ const Login: React.FC = () => {
           const pendingBooking = sessionStorage.getItem('pendingBooking');
           const from = (location.state as any)?.from;
 
-          if (pendingBooking || from) navigate(from || '/events');
-          else navigate('/events');
+          const welcomeState = { googleWelcome: true, firstName: response.user.firstName };
+          if (pendingBooking || from) navigate(from || '/events', { state: welcomeState });
+          else navigate('/events', { state: welcomeState });
         } else {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');

@@ -14,16 +14,23 @@ import {
   Chip,
   useTheme,
   useMediaQuery,
+  Snackbar,
+  Alert,
+  Slide,
+  SlideProps,
 } from '@mui/material';
 import { Search as SearchIcon, CalendarToday, LocationOn, LocalOffer } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import { Event } from '../../../types';
 
+const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
+
 const Events: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
   
@@ -36,6 +43,19 @@ const Events: React.FC = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [categoryName, setCategoryName] = useState<string | null>(null);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [welcomeName, setWelcomeName] = useState('');
+
+  // Show welcome toast when arriving from Google login
+  useEffect(() => {
+    const state = location.state as { googleWelcome?: boolean; firstName?: string } | undefined;
+    if (state?.googleWelcome) {
+      setWelcomeName(state.firstName || '');
+      setWelcomeOpen(true);
+      // Clear the state so refreshing doesn't re-show the toast
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchCategoryName = async () => {
@@ -414,6 +434,32 @@ const Events: React.FC = () => {
         )}
       </Container>
       <PublicFooter />
+
+      {/* Google Sign-In Welcome Toast */}
+      <Snackbar
+        open={welcomeOpen}
+        autoHideDuration={5000}
+        onClose={() => setWelcomeOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        TransitionComponent={SlideTransition}
+      >
+        <Alert
+          onClose={() => setWelcomeOpen(false)}
+          severity="success"
+          variant="filled"
+          elevation={6}
+          sx={{
+            fontFamily: 'Raleway, sans-serif',
+            fontWeight: 600,
+            fontSize: '1rem',
+            minWidth: 320,
+          }}
+        >
+          {welcomeName
+            ? `Welcome back, ${welcomeName}! You're signed in with Google.`
+            : `Welcome! You're signed in with Google.`}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

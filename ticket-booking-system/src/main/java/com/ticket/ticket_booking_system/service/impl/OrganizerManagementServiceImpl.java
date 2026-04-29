@@ -383,11 +383,22 @@ public class OrganizerManagementServiceImpl implements OrganizerManagementServic
                 .lastName(organizer.getLastName())
                 .email(organizer.getEmail())
                 .phoneNumber(organizer.getPhoneNumber())
-                .organizationName(organizer.getOrganizationName())
+                .dateOfBirth(organizer.getDateOfBirth())
                 .active(organizer.isActive())
                 .emailVerified(organizer.isEmailVerified())
                 .createdAt(organizer.getCreatedAt())
                 .lastLoginAt(organizer.getLastLoginAt())
+                .updatedAt(organizer.getUpdatedAt())
+                // Business info
+                .organizationName(organizer.getOrganizationName())
+                .businessRegistrationNumber(organizer.getBusinessRegistrationNumber())
+                .taxId(organizer.getTaxId())
+                .businessAddress(organizer.getBusinessAddress())
+                .businessPhone(organizer.getBusinessPhone())
+                // Banking
+                .bankName(organizer.getBankName())
+                .bankAccountNumber(organizer.getBankAccountNumber())
+                .bankRoutingNumber(organizer.getBankRoutingNumber())
                 .build();
     }
 }

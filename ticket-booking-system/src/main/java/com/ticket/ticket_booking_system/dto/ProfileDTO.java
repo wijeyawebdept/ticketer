@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileDTO {
-    
+
     private UUID userId;
     private String firstName;
     private String lastName;
@@ -32,4 +32,16 @@ public class ProfileDTO {
     private boolean emailNotificationsEnabled;
     private boolean smsNotificationsEnabled;
     private boolean marketingEmailsEnabled;
+
+    // Organizer-specific fields
+    private String organizationName;
+    private String businessRegistrationNumber;
+    private String taxId;
+    private String businessAddress;
+    private String businessPhone;
+
+    // Banking / payout details
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankRoutingNumber;
 }

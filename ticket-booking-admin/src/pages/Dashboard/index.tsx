@@ -9,13 +9,6 @@ import {
   Divider,
   CircularProgress,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ListItemSecondaryAction,
-  LinearProgress,
   Alert,
   AlertTitle
 } from '@mui/material';
@@ -118,9 +111,10 @@ interface DashboardTransaction {
 interface DashboardEvent {
   eventId: string;
   name: string;
-  startDateTime: string; // Changed from eventDate to match backend
-  endDateTime: string;   // Added to match backend
+  startDateTime: string;
+  endDateTime: string;
   status: string;
+  createdAt?: string;
 }
 
 // Interface for trend data
@@ -137,6 +131,7 @@ const Dashboard: React.FC = () => {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
+  const [draftEvents, setDraftEvents] = useState<DashboardEvent[]>([]);
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { isSuperAdmin, user } = useAuth();
@@ -153,13 +148,13 @@ const Dashboard: React.FC = () => {
         const dashboardOverview = await DashboardService.getDashboardOverview();
         setOverview(dashboardOverview);
         
-        // Fetch recent transactions
-        const transactions = await DashboardService.getRecentTransactions(5);
+        // Fetch recent transactions (10)
+        const transactions = await DashboardService.getRecentTransactions(10);
         setRecentTransactions(transactions.transactions || []);
         
-        // Fetch upcoming events
-        const events = await DashboardService.getUpcomingEvents(5);
-        setUpcomingEvents(events.events || []);
+        // Fetch draft events (10)
+        const drafts = await DashboardService.getDraftEvents(10);
+        setDraftEvents(drafts.draftEvents || []);
         
         // Fetch trend data
         const trends = await DashboardService.getTrendData();
@@ -296,10 +291,10 @@ const Dashboard: React.FC = () => {
       <Grid container spacing={3}>
         {/* Recent Transactions */}
         <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
               height: '100%',
               borderRadius: 3,
               background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
@@ -311,74 +306,93 @@ const Dashboard: React.FC = () => {
               </Typography>
               <Chip label="Live" color="success" size="small" />
             </Box>
-            <Divider sx={{ mb: 2 }} />
+            <Divider sx={{ mb: 0 }} />
             {recentTransactions.length > 0 ? (
-              <List>
+              <Box sx={{ overflowY: 'auto', maxHeight: 440 }}>
+                {/* Table header */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr auto auto',
+                    gap: 1,
+                    px: 1.5,
+                    py: 1,
+                    backgroundColor: 'rgba(25, 118, 210, 0.06)',
+                    borderBottom: '1px solid rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem' }}>Event</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem' }}>Date</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', textAlign: 'center' }}>Status</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', textAlign: 'right' }}>Amount</Typography>
+                </Box>
                 {recentTransactions.map((transaction, index) => (
-                  <ListItem 
-                    key={transaction.transactionId || index} 
-                    sx={{ 
-                      py: 2, 
-                      borderRadius: 2,
-                      mb: 1,
-                      backgroundColor: 'white',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                      '&:hover': {
-                        backgroundColor: '#f8f9fa',
-                      }
+                  <Box
+                    key={transaction.transactionId || index}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr auto auto',
+                      gap: 1,
+                      alignItems: 'center',
+                      px: 1.5,
+                      py: 1.2,
+                      borderBottom: '1px solid rgba(0,0,0,0.05)',
+                      '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.03)' },
+                      '&:last-child': { borderBottom: 'none' },
                     }}
                   >
-                    <ListItemAvatar>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: transaction.status === 'SUCCESS' ? 'success.light' : 'warning.light',
-                          width: 48,
-                          height: 48
-                        }}
-                      >
-                        {transaction.status === 'SUCCESS' ? <CheckCircleIcon /> : <AccessTimeIcon />}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                          {transaction.eventName || "Unknown Event"}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(transaction.createdAt).toLocaleDateString()}
-                        </Typography>
-                      }
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: 150,
+                      }}
+                      title={transaction.eventName || 'Unknown Event'}
+                    >
+                      {transaction.eventName || 'Unknown Event'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                      {new Date(transaction.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </Typography>
+                    <Chip
+                      label={transaction.status}
+                      size="small"
+                      color={transaction.status === 'SUCCESS' ? 'success' : transaction.status === 'FAILED' ? 'error' : 'warning'}
+                      variant="outlined"
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', height: 22 }}
                     />
-                    <ListItemSecondaryAction>
-                      <Typography
-                        variant="h6"
-                        color={transaction.status === 'SUCCESS  ' ? 'success.main' : 'warning.main'}
-                        sx={{ fontWeight: 700 }}
-                      >
-                        {formatCurrency(transaction.amount || 0)}
-                      </Typography>
-                    </ListItemSecondaryAction>
-                  </ListItem>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 700,
+                        textAlign: 'right',
+                        color: transaction.status === 'SUCCESS' ? 'success.main' : 'text.secondary',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {formatCurrency(transaction.amount || 0)}
+                    </Typography>
+                  </Box>
                 ))}
-              </List>
+              </Box>
             ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  No recent transactions
-                </Typography>
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <AccountBalanceWalletIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" color="text.secondary">No recent transactions</Typography>
               </Box>
             )}
           </Paper>
         </Grid>
-        
-        {/* Upcoming Events */}
+
+        {/* Draft Events */}
         <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
               height: '100%',
               borderRadius: 3,
               background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
@@ -386,67 +400,76 @@ const Dashboard: React.FC = () => {
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                Upcoming Events
+                Draft Events
               </Typography>
-              <Chip label="Soon" color="primary" size="small" />
+              <Chip label="Unpublished" color="warning" size="small" />
             </Box>
-            <Divider sx={{ mb: 2 }} />
-            {upcomingEvents.length > 0 ? (
-              <List>
-                {upcomingEvents.map((event, index) => (
-                  <ListItem 
-                    key={event.eventId || index} 
-                    sx={{ 
-                      py: 2, 
-                      borderRadius: 2,
-                      mb: 1,
-                      backgroundColor: 'white',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                      '&:hover': {
-                        backgroundColor: '#f8f9fa',
-                      }
+            <Divider sx={{ mb: 0 }} />
+            {draftEvents.length > 0 ? (
+              <Box sx={{ overflowY: 'auto', maxHeight: 440 }}>
+                {/* Table header */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto auto',
+                    gap: 1,
+                    px: 1.5,
+                    py: 1,
+                    backgroundColor: 'rgba(25, 118, 210, 0.06)',
+                    borderBottom: '1px solid rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem' }}>Event Name</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem' }}>Created</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', textAlign: 'center' }}>Status</Typography>
+                </Box>
+                {draftEvents.map((event, index) => (
+                  <Box
+                    key={event.eventId || index}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto auto',
+                      gap: 1,
+                      alignItems: 'center',
+                      px: 1.5,
+                      py: 1.2,
+                      borderBottom: '1px solid rgba(0,0,0,0.05)',
+                      '&:hover': { backgroundColor: 'rgba(255, 152, 0, 0.03)' },
+                      '&:last-child': { borderBottom: 'none' },
                     }}
                   >
-                    <ListItemAvatar>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: event.status === 'PUBLISHED' ? 'success.light' : 'warning.light',
-                          width: 48,
-                          height: 48
-                        }}
-                      >
-                        {event.status === 'PUBLISHED' ? <EventAvailableIcon /> : <AccessTimeIcon />}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                          {event.name}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(event.startDateTime).toLocaleDateString()}
-                        </Typography>
-                      }
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: 180,
+                      }}
+                      title={event.name}
+                    >
+                      {event.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                      {event.createdAt
+                        ? new Date(event.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'N/A'}
+                    </Typography>
+                    <Chip
+                      label="DRAFT"
+                      size="small"
+                      color="warning"
+                      variant="outlined"
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', height: 22 }}
                     />
-                    <ListItemSecondaryAction>
-                      <Chip
-                        label={event.status}
-                        size="small"
-                        color={event.status === 'PUBLISHED' ? 'success' : 'warning'}
-                        variant="outlined"
-                        sx={{ fontWeight: 600 }}
-                      />
-                    </ListItemSecondaryAction>
-                  </ListItem>
+                  </Box>
                 ))}
-              </List>
+              </Box>
             ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  No upcoming events
-                </Typography>
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <ConfirmationNumberIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="body2" color="text.secondary">No draft events</Typography>
               </Box>
             )}
           </Paper>

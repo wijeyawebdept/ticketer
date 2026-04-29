@@ -397,6 +397,12 @@ public class AdminManagementServiceImpl implements AdminManagementService {
                 .role(admin.getRole().name())
                 .active(admin.isActive())
                 .emailVerified(admin.isEmailVerified())
+                .dateOfBirth(admin.getDateOfBirth())
+                .profilePicture(admin.getProfilePicture())
+                .employeeId(admin.getEmployeeId())
+                .department(admin.getDepartment())
+                .position(admin.getPosition())
+                .notes(admin.getNotes())
                 .createdAt(admin.getCreatedAt())
                 .lastLoginAt(admin.getLastLoginAt())
                 .build();

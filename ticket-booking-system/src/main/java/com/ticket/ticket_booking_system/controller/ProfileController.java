@@ -192,4 +192,37 @@ public class ProfileController {
         response.put("marketingEmails", marketingEmails);
         return ResponseEntity.ok(response);
     }
+    // Email OTP Verification (Organizer only)
+
+    @PostMapping("/send-email-otp")
+    @PreAuthorize("hasAnyRole('ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> sendEmailOtp(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+        profileService.sendEmailVerificationOtp(email);
+        Map<String, String> resp = new HashMap<>();
+        resp.put("message", "OTP sent to " + email + ". Valid for 10 minutes.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/verify-email-otp")
+    @PreAuthorize("hasAnyRole('ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> verifyEmailOtp(
+            @RequestBody Map<String, String> body,
+            Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+        String otp = body.get("otp");
+
+        boolean verified = profileService.verifyEmailOtp(email, otp);
+        Map<String, Object> resp = new HashMap<>();
+        if (verified) {
+            resp.put("verified", true);
+            resp.put("message", "Email verified successfully!");
+        } else {
+            resp.put("verified", false);
+            resp.put("message", "Invalid or expired OTP. Please try again.");
+        }
+        return ResponseEntity.ok(resp);
+    }
 }

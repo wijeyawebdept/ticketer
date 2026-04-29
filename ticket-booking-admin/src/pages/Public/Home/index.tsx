@@ -13,14 +13,20 @@ import {
   CardMedia,
   CardContent,
   IconButton,
+  Snackbar,
+  Alert,
+  Slide,
+  SlideProps,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CalendarToday, LocationOn } from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import BannerService, { BannerResponse } from '../../../services/banner.service';
 import { Event } from '../../../types';
+
+const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
 // Import carousel images from public folder
 const carouselImages = [
@@ -233,6 +239,17 @@ const Home: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+  const location = useLocation();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // Show logout toast when arriving from logout
+  useEffect(() => {
+    const state = location.state as { loggedOut?: boolean } | undefined;
+    if (state?.loggedOut) {
+      setLogoutOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Get carousel images - use banners if available, fallback to default images
   const carouselImages = banners.length > 0 
@@ -880,6 +897,30 @@ const Home: React.FC = () => {
         </Box>
       </Container>
       <PublicFooter />
+
+      {/* Logout confirmation Toast */}
+      <Snackbar
+        open={logoutOpen}
+        autoHideDuration={5000}
+        onClose={() => setLogoutOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        TransitionComponent={SlideTransition}
+      >
+        <Alert
+          onClose={() => setLogoutOpen(false)}
+          severity="info"
+          variant="filled"
+          elevation={6}
+          sx={{
+            fontFamily: 'Raleway, sans-serif',
+            fontWeight: 600,
+            fontSize: '1rem',
+            minWidth: 320,
+          }}
+        >
+          You've been signed out. See you next time!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

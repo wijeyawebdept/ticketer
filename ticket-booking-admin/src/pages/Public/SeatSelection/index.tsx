@@ -455,7 +455,7 @@ const SeatSelectionPage: React.FC = () => {
       // store sessionId so return page can verify
       localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);
 
-      showMessage('success', 'Connecting to payment gateway...');
+      showMessage('success', 'You are being redirecting to payment gateway...');
       await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
 
       // Close modal, then open MPGS payment page

@@ -332,6 +332,16 @@ export interface ProfileDTO {
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
   marketingEmailsEnabled: boolean;
+  // Organizer-specific
+  organizationName?: string;
+  businessRegistrationNumber?: string;
+  taxId?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+  // Banking
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankRoutingNumber?: string;
 }
 
 export interface ProfileUpdateDTO {
@@ -341,6 +351,16 @@ export interface ProfileUpdateDTO {
   phoneNumber?: string;
   dateOfBirth?: string;
   profilePicture?: string;
+  // Organizer-specific
+  organizationName?: string;
+  businessRegistrationNumber?: string;
+  taxId?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+  // Banking
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankRoutingNumber?: string;
 }
 
 // Role Management types

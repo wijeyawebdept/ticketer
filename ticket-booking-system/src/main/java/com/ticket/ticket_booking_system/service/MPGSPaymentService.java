@@ -79,7 +79,7 @@ public class MPGSPaymentService {
         interaction.put("cancelUrl", cancelUrl);
         
         Map<String, Object> merchant = new HashMap<>();
-        merchant.put("name", "Tickets.lk");
+        merchant.put("name", "Ticketer.lk");
         interaction.put("merchant", merchant);
 
         Map<String, Object> sessionRequest = new HashMap<>();

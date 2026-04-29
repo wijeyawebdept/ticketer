@@ -169,7 +169,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {t('header.employeeTitle') || 'Organizer Employee Panel'}
+            {t('header.employeeTitle') || 'Ticketer Organizer Employee Panel'}
           </Typography>
           <div>
             <Tooltip title={userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Employee Profile"}>

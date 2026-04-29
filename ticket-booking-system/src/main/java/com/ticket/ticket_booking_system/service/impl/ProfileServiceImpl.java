@@ -1,6 +1,10 @@
 package com.ticket.ticket_booking_system.service.impl;
 
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,28 +21,36 @@ import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.FileUploadService;
 import com.ticket.ticket_booking_system.service.ProfileService;
 
 @Service
 public class ProfileServiceImpl implements ProfileService {
-    
+
+    // In-memory OTP store: email -> [otp, expiryTime]
+    private final Map<String, String[]> otpStore = new ConcurrentHashMap<>();
+    private final SecureRandom secureRandom = new SecureRandom();
+
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
     private final FileUploadService fileUploadService;
     private final PasswordEncoder passwordEncoder;
-    
+    private final EmailService emailService;
+
     public ProfileServiceImpl(UserRepository userRepository, AdminRepository adminRepository,
                              OrganizerRepository organizerRepository, OrganizerEmployeeRepository employeeRepository,
-                             FileUploadService fileUploadService, PasswordEncoder passwordEncoder) {
+                             FileUploadService fileUploadService, PasswordEncoder passwordEncoder,
+                             EmailService emailService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
         this.fileUploadService = fileUploadService;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
     
     @Override
@@ -113,6 +125,24 @@ public class ProfileServiceImpl implements ProfileService {
             if (profileUpdateDTO.getProfilePicture() != null) {
                 organizer.setProfilePicture(profileUpdateDTO.getProfilePicture());
             }
+            // Business info
+            if (profileUpdateDTO.getOrganizationName() != null)
+                organizer.setOrganizationName(profileUpdateDTO.getOrganizationName());
+            if (profileUpdateDTO.getBusinessRegistrationNumber() != null)
+                organizer.setBusinessRegistrationNumber(profileUpdateDTO.getBusinessRegistrationNumber());
+            if (profileUpdateDTO.getTaxId() != null)
+                organizer.setTaxId(profileUpdateDTO.getTaxId());
+            if (profileUpdateDTO.getBusinessAddress() != null)
+                organizer.setBusinessAddress(profileUpdateDTO.getBusinessAddress());
+            if (profileUpdateDTO.getBusinessPhone() != null)
+                organizer.setBusinessPhone(profileUpdateDTO.getBusinessPhone());
+            // Banking info
+            if (profileUpdateDTO.getBankName() != null)
+                organizer.setBankName(profileUpdateDTO.getBankName());
+            if (profileUpdateDTO.getBankAccountNumber() != null)
+                organizer.setBankAccountNumber(profileUpdateDTO.getBankAccountNumber());
+            if (profileUpdateDTO.getBankRoutingNumber() != null)
+                organizer.setBankRoutingNumber(profileUpdateDTO.getBankRoutingNumber());
             Organizer updatedOrganizer = organizerRepository.save(organizer);
             return convertOrganizerToProfileDTO(updatedOrganizer);
         }
@@ -251,6 +281,16 @@ public class ProfileServiceImpl implements ProfileService {
                 .createdAt(organizer.getCreatedAt())
                 .lastLoginAt(organizer.getLastLoginAt())
                 .updatedAt(organizer.getUpdatedAt())
+                // Organizer-specific
+                .organizationName(organizer.getOrganizationName())
+                .businessRegistrationNumber(organizer.getBusinessRegistrationNumber())
+                .taxId(organizer.getTaxId())
+                .businessAddress(organizer.getBusinessAddress())
+                .businessPhone(organizer.getBusinessPhone())
+                // Banking
+                .bankName(organizer.getBankName())
+                .bankAccountNumber(organizer.getBankAccountNumber())
+                .bankRoutingNumber(organizer.getBankRoutingNumber())
                 .build();
     }
     
@@ -399,5 +439,74 @@ public class ProfileServiceImpl implements ProfileService {
         user.setSmsNotificationsEnabled(smsNotifications);
         user.setMarketingEmailsEnabled(marketingEmails);
         userRepository.save(user);
+    }
+    // Email OTP Verification
+
+    @Override
+    public void sendEmailVerificationOtp(String email) {
+        String firstName;
+        String recipientEmail;
+
+        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+        if (organizer != null) {
+            firstName = organizer.getFirstName();
+            recipientEmail = organizer.getEmail();
+        } else {
+            OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+            if (employee != null) {
+                firstName = employee.getFirstName();
+                recipientEmail = employee.getEmail();
+            } else {
+                Admin admin = adminRepository.findByEmail(email)
+                        .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+                firstName = admin.getFirstName();
+                recipientEmail = admin.getEmail();
+            }
+        }
+
+        String otp = String.format("%06d", secureRandom.nextInt(1_000_000));
+        String expiry = LocalDateTime.now().plusMinutes(10).toString();
+        otpStore.put(email, new String[]{otp, expiry});
+
+        emailService.sendEmailVerificationCode(recipientEmail, firstName, otp);
+    }
+
+    @Override
+    public boolean verifyEmailOtp(String email, String otp) {
+        String[] stored = otpStore.get(email);
+        if (stored == null) return false;
+
+        String storedOtp = stored[0];
+        LocalDateTime expiry = LocalDateTime.parse(stored[1]);
+
+        if (LocalDateTime.now().isAfter(expiry)) {
+            otpStore.remove(email);
+            return false;
+        }
+        if (!storedOtp.equals(otp)) return false;
+
+        // Try updating Organizer first
+        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+        if (organizer != null) {
+            organizer.setEmailVerified(true);
+            organizerRepository.save(organizer);
+        } else {
+            // Try updating OrganizerEmployee
+            OrganizerEmployee employee = employeeRepository.findByEmail(email).orElse(null);
+            if (employee != null) {
+                employee.setEmailVerified(true);
+                employeeRepository.save(employee);
+            } else {
+                // Try updating Admin
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) {
+                    admin.setEmailVerified(true);
+                    adminRepository.save(admin);
+                }
+            }
+        }
+        
+        otpStore.remove(email);
+        return true;
     }
 }

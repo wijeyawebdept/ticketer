@@ -37,6 +37,12 @@ class DashboardService {
     return response.data;
   }
 
+  async getDraftEvents(count: number = 10): Promise<any> {
+    const basePath = this.getBasePath();
+    const response = await api.get(`${basePath}/dashboard/draft-events?count=${count}`);
+    return response.data;
+  }
+
   async getTopSellingEvents(count: number = 5): Promise<any> {
     const basePath = this.getBasePath();
     const response = await api.get(`${basePath}/dashboard/top-selling-events?count=${count}`);

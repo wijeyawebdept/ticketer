@@ -10,13 +10,10 @@ export interface OrganizerEmployee {
   dateOfBirth?: string;
   employeePosition?: string;
   department?: string;
-  isEmployee: boolean;
-  isVerified: boolean;
+  emailVerified: boolean;
   active: number; // 1 = active, 0 = deactivated, -1 = soft deleted
-  canCreateEmployees: boolean;
-  parentOrganizerId?: string;
   organizationName?: string;
-  organizationType?: string;
+  hireDate?: string;
   createdAt?: string;
   updatedAt?: string;
   lastLoginAt?: string;
@@ -41,9 +38,9 @@ export interface UpdateEmployeeRequest {
   phoneNumber?: string;
   dateOfBirth?: string;
   employeePosition?: string;
-  canCreateEmployees?: boolean;
+  department?: string;
+  hireDate?: string;
   active?: boolean;
-  isVerified?: boolean;
 }
 
 export interface EmployeeStatistics {

@@ -27,13 +27,19 @@ import {
   Refresh as RefreshIcon,
   CheckCircle as ActivateIcon,
   Block as DeactivateIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Visibility as VisibilityIcon,
+  Person as PersonIcon,
+  Work as WorkIcon,
+  MarkEmailRead as VerifiedIcon,
+  MailOutline as UnverifiedIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import AdminForm from './components/AdminForm';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
+import { Avatar, Divider, Grid } from '@mui/material';
 
 interface Admin {
   adminId: string;
@@ -43,15 +49,45 @@ interface Admin {
   phoneNumber?: string;
   role: 'ADMIN' | 'SUPER_ADMIN';
   active: boolean;
+  emailVerified: boolean;
+  dateOfBirth?: string;
+  profilePicture?: string;
+  employeeId?: string;
+  department?: string;
+  position?: string;
+  notes?: string;
   createdAt: string;
+  updatedAt?: string;
   lastLoginAt?: string;
 }
+
+const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: 0.5 }}>
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ mt: 0.25, wordBreak: 'break-all' }}>
+      {value || <em style={{ color: '#bbb' }}>Not provided</em>}
+    </Typography>
+  </Box>
+);
+
+const SectionTitle = ({ icon, title, color }: { icon: React.ReactNode; title: string; color: string }) => (
+  <Box display="flex" alignItems="center" gap={1} mb={1.5} mt={3}>
+    <Box sx={{ display: 'flex', color: color }}>{icon}</Box>
+    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.75rem' }}>
+      {title}
+    </Typography>
+  </Box>
+);
 
 const Admins: React.FC = () => {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
+  const [viewAdmin, setViewAdmin] = useState<Admin | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -125,6 +161,16 @@ const Admins: React.FC = () => {
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setSelectedAdmin(null);
+  };
+
+  const handleViewClick = (admin: Admin) => {
+    setViewAdmin(admin);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleViewDialogClose = () => {
+    setIsViewDialogOpen(false);
+    setViewAdmin(null);
   };
 
   const handleDeleteDialogClose = () => {
@@ -335,6 +381,22 @@ const Admins: React.FC = () => {
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
+          <IconButton
+            onClick={() => handleViewClick(params.row as Admin)}
+            size="small"
+            color="info"
+            disabled={!isSuperAdmin()}
+            sx={{
+              backgroundColor: isSuperAdmin() ? 'rgba(2, 136, 209, 0.1)' : 'rgba(0, 0, 0, 0.12)',
+              '&:hover': {
+                backgroundColor: isSuperAdmin() ? 'rgba(2, 136, 209, 0.2)' : 'rgba(0, 0, 0, 0.12)',
+              },
+              mr: 1
+            }}
+            title="View Details (Super Admin Only)"
+          >
+            <VisibilityIcon />
+          </IconButton>
           <IconButton
             onClick={() => handleEditClick(params.row as Admin)}
             size="small"
@@ -583,6 +645,66 @@ const Admins: React.FC = () => {
           )}
         </Box>
       </Paper>
+
+      {/* View Admin Details Dialog */}
+      <Dialog open={isViewDialogOpen} onClose={handleViewDialogClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Admin Profile Details
+          <IconButton onClick={handleViewDialogClose} size="small"><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {viewAdmin && (
+            <Box>
+              <Box display="flex" alignItems="center" gap={2.5} mb={3}>
+                <Avatar 
+                  src={viewAdmin.profilePicture} 
+                  sx={{ width: 80, height: 80, bgcolor: '#d32f2f', fontSize: '2rem', fontWeight: 600, boxShadow: '0 4px 10px rgba(211, 47, 47, 0.2)' }}
+                >
+                  {viewAdmin.firstName[0]}{viewAdmin.lastName[0]}
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                    {viewAdmin.firstName} {viewAdmin.lastName}
+                  </Typography>
+                  <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>
+                    {viewAdmin.role} • {viewAdmin.department || 'No Department'}
+                  </Typography>
+                  <Box display="flex" gap={1}>
+                    <Chip label={viewAdmin.active ? 'Active' : 'Inactive'} color={viewAdmin.active ? 'success' : 'default'} size="small" />
+                    <Chip 
+                      icon={viewAdmin.emailVerified ? <VerifiedIcon sx={{ fontSize: '1rem !important' }} /> : <UnverifiedIcon sx={{ fontSize: '1rem !important' }} />}
+                      label={viewAdmin.emailVerified ? 'Verified' : 'Unverified'} 
+                      color={viewAdmin.emailVerified ? 'success' : 'warning'} 
+                      size="small" 
+                      variant="outlined"
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <SectionTitle icon={<PersonIcon />} title="Personal Information" color="#d32f2f" />
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}><DetailRow label="Email Address" value={viewAdmin.email} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Phone Number" value={formatPhoneNumber(viewAdmin.phoneNumber)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Date of Birth" value={formatDateShort(viewAdmin.dateOfBirth)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Created At" value={formatDateTime(viewAdmin.createdAt)} /></Grid>
+              </Grid>
+
+              <SectionTitle icon={<WorkIcon />} title="Work Information" color="#1976d2" />
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}><DetailRow label="Employee ID" value={viewAdmin.employeeId} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Position" value={viewAdmin.position} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Department" value={viewAdmin.department} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Last Login" value={formatDateTime(viewAdmin.lastLoginAt)} /></Grid>
+                <Grid item xs={12}><DetailRow label="Admin Notes" value={viewAdmin.notes} /></Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={handleViewDialogClose} variant="contained" color="error" sx={{ borderRadius: 2, px: 4 }}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Admin Form Dialog */}
       <Dialog open={isDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>

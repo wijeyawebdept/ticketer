@@ -79,7 +79,7 @@ const PublicNavbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     setUserMenuAnchor(null);
-    navigate('/');
+    navigate('/', { state: { loggedOut: true } });
   };
 
   const navItems = [

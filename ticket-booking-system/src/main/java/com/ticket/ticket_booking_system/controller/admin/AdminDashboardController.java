@@ -55,6 +55,13 @@ public class AdminDashboardController {
         return ResponseEntity.ok(dashboardService.getUpcomingEvents(count));
     }
 
+    @GetMapping("/draft-events")
+    public ResponseEntity<Map<String, Object>> getDraftEvents(
+            @RequestParam(defaultValue = "10") int count) {
+
+        return ResponseEntity.ok(dashboardService.getDraftEvents(count));
+    }
+
     @GetMapping("/top-selling-events")
     public ResponseEntity<Map<String, Object>> getTopSellingEvents(
             @RequestParam(defaultValue = "5") int count) {

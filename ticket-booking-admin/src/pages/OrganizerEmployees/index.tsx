@@ -19,20 +19,28 @@ import {
   Autocomplete,
   Chip,
   Tooltip,
-  InputAdornment
+  InputAdornment,
+  Divider,
+  Grid,
+  Avatar
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import {
   Add as AddIcon, 
   Edit as EditIcon, 
-  Delete as DeleteIcon, 
   Refresh as RefreshIcon,
   CheckCircle as ActivateIcon,
   Block as DeactivateIcon,
   Search as SearchIcon,
   DeleteSweep as DeleteSweepIcon,
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  Close as CloseIcon,
+  Person as PersonIcon,
+  Business as BusinessIcon,
+  Work as WorkIcon,
+  CheckCircle as VerifiedIcon,
+  Cancel as UnverifiedIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
@@ -45,7 +53,7 @@ interface OrganizerEmployee {
   phoneNumber: string;
   dateOfBirth: string | null;
   role: string;
-  active: boolean;
+  active: number; // 1 = active, 0 = deactivated, -1 = soft deleted
   emailVerified: boolean;
   organizerId: string;
   organizerName: string;
@@ -57,6 +65,7 @@ interface OrganizerEmployee {
   hireDate: string | null;
   createdAt: string;
   updatedAt: string;
+  lastLoginAt: string | null;
 }
 
 interface Organizer {
@@ -80,6 +89,24 @@ interface FormData {
   hireDate: string;
 }
 
+const DetailRow = ({ label, value }: { label: string; value?: string | null }) => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: 0.5 }}>
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ mt: 0.25, wordBreak: 'break-all' }}>
+      {value || <em style={{ color: '#bbb' }}>Not provided</em>}
+    </Typography>
+  </Box>
+);
+
+const SectionTitle = ({ icon, title, color = '#1976d2' }: { icon: React.ReactNode; title: string; color?: string }) => (
+  <Box display="flex" alignItems="center" gap={1} mb={1.5} mt={1}>
+    <Box sx={{ color, display: 'flex' }}>{icon}</Box>
+    <Typography variant="subtitle1" sx={{ fontWeight: 700, color }}>{title}</Typography>
+  </Box>
+);
+
 const OrganizerEmployees: React.FC = () => {
   const [employees, setEmployees] = useState<OrganizerEmployee[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
@@ -92,6 +119,8 @@ const OrganizerEmployees: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<OrganizerEmployee | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<OrganizerEmployee | null>(null);
+  const [viewEmployee, setViewEmployee] = useState<OrganizerEmployee | null>(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -206,6 +235,11 @@ const OrganizerEmployees: React.FC = () => {
     setEditingEmployee(null);
   };
 
+  const handleViewEmployee = (employee: OrganizerEmployee) => {
+    setViewEmployee(employee);
+    setOpenViewDialog(true);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -317,6 +351,16 @@ const OrganizerEmployees: React.FC = () => {
     setSelectedEmployeeIds(newSelection);
   };
 
+  const formatDateTime = (dateString?: string | null) => {
+    if (!dateString) return 'Never';
+    return new Date(dateString).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDateShort = (dateString?: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   const columns: GridColDef[] = [
     { field: 'firstName', headerName: 'First Name', width: 120 },
     { field: 'lastName', headerName: 'Last Name', width: 120 },
@@ -359,8 +403,8 @@ const OrganizerEmployees: React.FC = () => {
       width: 100,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
-          label={params.value ? 'Active' : 'Inactive'}
-          color={params.value ? 'success' : 'default'}
+          label={params.value === 1 ? 'Active' : 'Inactive'}
+          color={params.value === 1 ? 'success' : 'default'}
           size="small"
           sx={{ fontWeight: 500 }}
         />
@@ -369,23 +413,31 @@ const OrganizerEmployees: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 200,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
-          <Tooltip title="Edit Employee" arrow>
-            <IconButton size="small" onClick={() => handleOpenDialog(params.row)}>
-              <EditIcon />
+          <Tooltip title="View Details" arrow>
+            <IconButton size="small" color="info" onClick={() => handleViewEmployee(params.row as OrganizerEmployee)}
+              sx={{ backgroundColor: 'rgba(2,136,209,0.1)', '&:hover': { backgroundColor: 'rgba(2,136,209,0.2)' }, mr: 0.5 }}>
+              <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          {params.row.active ? (
+          <Tooltip title="Edit Employee" arrow>
+            <IconButton size="small" color="primary" onClick={() => handleOpenDialog(params.row as OrganizerEmployee)}
+              sx={{ backgroundColor: 'rgba(25,118,210,0.1)', '&:hover': { backgroundColor: 'rgba(25,118,210,0.2)' }, mr: 0.5 }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {params.row.active === 1 ? (
             <Tooltip title="Deactivate Employee" arrow>
               <IconButton
                 size="small"
                 color="error"
                 onClick={() => handleDeactivateEmployee(params.row.employeeId)}
+                sx={{ backgroundColor: 'rgba(211,47,47,0.1)', '&:hover': { backgroundColor: 'rgba(211,47,47,0.2)' }, mr: 0.5 }}
               >
-                <DeactivateIcon />
+                <DeactivateIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           ) : (
@@ -394,14 +446,16 @@ const OrganizerEmployees: React.FC = () => {
                 size="small"
                 color="success"
                 onClick={() => handleActivateEmployee(params.row.employeeId)}
+                sx={{ backgroundColor: 'rgba(46,125,50,0.1)', '&:hover': { backgroundColor: 'rgba(46,125,50,0.2)' }, mr: 0.5 }}
               >
-                <ActivateIcon />
+                <ActivateIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
           <Tooltip title="Delete Employee" arrow>
-            <IconButton size="small" color="warning" onClick={() => handleDeleteClick(params.row)}>
-              <DeleteSweepIcon />
+            <IconButton size="small" color="warning" onClick={() => handleDeleteClick(params.row as OrganizerEmployee)}
+              sx={{ backgroundColor: 'rgba(255,152,0,0.1)', '&:hover': { backgroundColor: 'rgba(255,152,0,0.2)' } }}>
+              <DeleteSweepIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -409,10 +463,12 @@ const OrganizerEmployees: React.FC = () => {
     }
   ];
 
+  const e = viewEmployee;
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Organizer Employees</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Organizer Employees</Typography>
         <Box display="flex" gap={2} alignItems="center">
           {organizers.length > 0 && (
             <Autocomplete
@@ -443,6 +499,7 @@ const OrganizerEmployees: React.FC = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{ borderRadius: 2, fontWeight: 600 }}
           >
             Add New Employee
           </Button>
@@ -450,41 +507,43 @@ const OrganizerEmployees: React.FC = () => {
       </Box>
 
       {/* Search and Filter Section */}
-      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          size="small"
-          placeholder="Search by name or email..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ flexGrow: 1, maxWidth: 400 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
-          </Select>
-        </FormControl>
-        <Typography variant="body2" color="text.secondary">
-          Total: {employees.length} employee{employees.length !== 1 ? 's' : ''}
-        </Typography>
-      </Box>
+      <Paper sx={{ p: 2, mb: 2, borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ flexGrow: 1, maxWidth: 400 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="inactive">Inactive</MenuItem>
+            </Select>
+          </FormControl>
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto', fontWeight: 500 }}>
+            Total: {employees.length} employee{employees.length !== 1 ? 's' : ''}
+          </Typography>
+        </Box>
+      </Paper>
 
       {/* Bulk Operations Toolbar */}
       {selectedEmployeeIds.length > 0 && (
-        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+        <Paper sx={{ p: 2, mb: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)', borderRadius: 2 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="body1" fontWeight={500}>
               {selectedEmployeeIds.length} employee{selectedEmployeeIds.length !== 1 ? 's' : ''} selected
@@ -495,7 +554,7 @@ const OrganizerEmployees: React.FC = () => {
                 color="success"
                 size="small"
                 onClick={() => handleBulkOperation('ACTIVATE')}
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, borderRadius: 2 }}
               >
                 Activate Selected
               </Button>
@@ -504,7 +563,7 @@ const OrganizerEmployees: React.FC = () => {
                 color="error"
                 size="small"
                 onClick={() => handleBulkOperation('DEACTIVATE')}
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, borderRadius: 2 }}
               >
                 Deactivate Selected
               </Button>
@@ -513,6 +572,7 @@ const OrganizerEmployees: React.FC = () => {
                 color="warning"
                 size="small"
                 onClick={() => handleBulkOperation('DELETE')}
+                sx={{ borderRadius: 2 }}
               >
                 Delete Selected
               </Button>
@@ -521,24 +581,117 @@ const OrganizerEmployees: React.FC = () => {
         </Paper>
       )}
 
-      <Paper sx={{ height: 600, width: '100%' }}>
-        <DataGrid
-          rows={employees}
-          columns={columns}
-          getRowId={(row) => row.employeeId}
-          loading={loading}
-          pageSizeOptions={[10, 25, 50]}
-          checkboxSelection
-          onRowSelectionModelChange={(newSelection) => handleSelectionChange(newSelection as string[])}
-          rowSelectionModel={selectedEmployeeIds}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 10 } },
-          }}
-        />
+      <Paper sx={{ p: 2, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
+        <Box sx={{ height: 600, width: '100%' }}>
+          <DataGrid
+            rows={employees}
+            columns={columns}
+            getRowId={(row) => row.employeeId}
+            loading={loading}
+            pageSizeOptions={[10, 25, 50]}
+            checkboxSelection
+            onRowSelectionModelChange={(newSelection) => handleSelectionChange(newSelection as string[])}
+            rowSelectionModel={selectedEmployeeIds}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 10 } },
+              sorting: { sortModel: [{ field: 'createdAt', sort: 'desc' }] }
+            }}
+            sx={{
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: 'rgba(25,118,210,0.05)', borderRadius: '8px 8px 0 0' },
+              '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(0,0,0,0.05)' },
+              '& .MuiDataGrid-row:hover': { backgroundColor: 'rgba(25,118,210,0.02)' },
+            }}
+          />
+        </Box>
       </Paper>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>{editingEmployee ? 'Edit Organizer Employee' : 'Add New Organizer Employee'}</DialogTitle>
+      {/* ── View Details Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1976d2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Employee Details
+          <IconButton onClick={() => setOpenViewDialog(false)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 3 }}>
+          {e && (
+            <Box>
+              {/* Header */}
+              <Box display="flex" alignItems="center" gap={2} mb={3}>
+                <Avatar sx={{ width: 72, height: 72, bgcolor: '#1976d2', fontSize: '1.8rem', fontWeight: 700 }}>
+                  {e.firstName?.[0]}{e.lastName?.[0]}
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" fontWeight={700}>{e.firstName} {e.lastName}</Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    {e.employeePosition || 'Employee'} • {e.department || 'N/A'}
+                  </Typography>
+                  <Box display="flex" gap={1} mt={0.5}>
+                    <Chip label={e.active === 1 ? 'Active' : 'Inactive'} color={e.active === 1 ? 'success' : 'default'} size="small" />
+                    <Chip
+                      icon={e.emailVerified ? <VerifiedIcon fontSize="small" /> : <UnverifiedIcon fontSize="small" />}
+                      label={e.emailVerified ? 'Email Verified' : 'Email Unverified'}
+                      color={e.emailVerified ? 'success' : 'warning'} size="small" variant="outlined"
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider sx={{ mb: 2.5 }} />
+
+              {/* Personal Info */}
+              <SectionTitle icon={<PersonIcon />} title="Personal Information" color="#1976d2" />
+              <Grid container spacing={2} mb={3}>
+                <Grid item xs={12} sm={6}><DetailRow label="First Name" value={e.firstName} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Last Name" value={e.lastName} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Email" value={e.email} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Phone Number" value={formatPhoneNumber(e.phoneNumber)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Date of Birth" value={formatDateShort(e.dateOfBirth)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Employee ID" value={e.employeeId} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Account Created" value={formatDateTime(e.createdAt)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Last Login" value={formatDateTime(e.lastLoginAt)} /></Grid>
+              </Grid>
+
+              <Divider sx={{ mb: 2.5 }} />
+
+              {/* Work Info */}
+              <SectionTitle icon={<WorkIcon />} title="Work & Organization" color="#2e7d32" />
+              <Grid container spacing={2} mb={3}>
+                <Grid item xs={12} sm={6}><DetailRow label="Organization" value={e.organizationName} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Organizer Name" value={e.organizerName} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Position" value={e.employeePosition} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Department" value={e.department} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Hire Date" value={formatDateShort(e.hireDate)} /></Grid>
+                <Grid item xs={12} sm={6}><DetailRow label="Role" value={e.role} /></Grid>
+              </Grid>
+
+              {e.createdByAdminName && (
+                <>
+                  <Divider sx={{ mb: 2.5 }} />
+                  <SectionTitle icon={<BusinessIcon />} title="Administration" color="#ed6c02" />
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}><DetailRow label="Created By Admin" value={e.createdByAdminName} /></Grid>
+                    <Grid item xs={12} sm={6}><DetailRow label="Admin ID" value={e.createdByAdminId} /></Grid>
+                  </Grid>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setOpenViewDialog(false)} sx={{ borderRadius: 2 }}>Close</Button>
+          <Button variant="contained" onClick={() => { setOpenViewDialog(false); handleOpenDialog(e!); }}
+            startIcon={<EditIcon />} sx={{ borderRadius: 2, fontWeight: 600 }}>
+            Edit Employee
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit / Add Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>
+          {editingEmployee ? 'Edit Organizer Employee' : 'Add New Organizer Employee'}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', gap: 2 }}>
@@ -675,9 +828,9 @@ const OrganizerEmployees: React.FC = () => {
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button onClick={handleCloseDialog} sx={{ borderRadius: 2 }}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary" sx={{ borderRadius: 2, fontWeight: 600 }}>
             {editingEmployee ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
@@ -689,60 +842,49 @@ const OrganizerEmployees: React.FC = () => {
         onClose={handleDeleteCancel}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>
           Confirm Delete
         </DialogTitle>
         <DialogContent>
           {employeeToDelete && (
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 1 }}>
               <Typography variant="body1" gutterBottom>
                 Are you sure you want to delete this organizer employee?
               </Typography>
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Name:
-                </Typography>
-                <Typography variant="body1" fontWeight="medium" gutterBottom>
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.03)', borderRadius: 2, border: '1px solid rgba(0,0,0,0.05)' }}>
+                <Typography variant="subtitle2" color="text.secondary">Name:</Typography>
+                <Typography variant="body1" fontWeight="700" gutterBottom>
                   {employeeToDelete.firstName} {employeeToDelete.lastName}
                 </Typography>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                  Email:
-                </Typography>
-                <Typography variant="body2" gutterBottom>
-                  {employeeToDelete.email}
-                </Typography>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>
-                  Organization:
-                </Typography>
-                <Typography variant="body2">
-                  {employeeToDelete.organizationName}
-                </Typography>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Email:</Typography>
+                <Typography variant="body2" gutterBottom>{employeeToDelete.email}</Typography>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Organization:</Typography>
+                <Typography variant="body2">{employeeToDelete.organizationName}</Typography>
               </Box>
-              <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-                ⚠️ Warning: This action will deactivate the employee account.
+              <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 500 }}>
+                ⚠️ Warning: This action will move the employee account to the recycle bin.
               </Typography>
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button onClick={handleDeleteCancel} color="inherit" sx={{ borderRadius: 2 }}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} variant="contained" color="error" sx={{ borderRadius: 2, fontWeight: 600 }}>
             Delete
           </Button>
         </DialogActions>
       </Dialog>
 
       <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
-        <Alert onClose={() => setError(null)} severity="error">
+        <Alert onClose={() => setError(null)} severity="error" sx={{ borderRadius: 2 }}>
           {error}
         </Alert>
       </Snackbar>
 
       <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess(null)}>
-        <Alert onClose={() => setSuccess(null)} severity="success">
+        <Alert onClose={() => setSuccess(null)} severity="success" sx={{ borderRadius: 2 }}>
           {success}
         </Alert>
       </Snackbar>

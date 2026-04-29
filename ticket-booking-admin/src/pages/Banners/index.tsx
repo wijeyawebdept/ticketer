@@ -598,7 +598,7 @@ export default function BannersPage() {
 
                       {validationResult.recommendations.length > 0 && (
                         <Box>
-                          <strong>✅ Recommendations:</strong>
+                          <strong>Recommendations:</strong>
                           <Box sx={{ ml: 1, mt: 0.5 }}>
                             {validationResult.recommendations.map((rec, idx) => (
                               <Box key={idx} sx={{ fontSize: '0.85rem', my: 0.5 }}>
