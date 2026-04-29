@@ -47,6 +47,7 @@ import PageContentManager from './pages/PageContentManager';
 import { UserRole } from './types';
 
 // Public pages
+import Landing from './pages/Public/Landing';
 import Home from './pages/Public/Home';
 import About from './pages/Public/About';
 import Services from './pages/Public/Services';
@@ -211,6 +212,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integration-test" element={<IntegrationTest />} />
+              <Route path="/" element={<Landing />} />
               <Route path="/auth-debug" element={
                 <Suspense fallback={<div>Loading debug tools...</div>}>
                   <AuthDebugPage />
@@ -312,7 +314,6 @@ function App() {
             {/* Public routes - wrapped in PublicRoute to block admin/organizer/employee access
                 MUST be at the END so protected routes match first */}
             <Route element={<PublicRoute />}>
-              <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
               <Route path="/about" element={<About />} />
               <Route path="/services" element={<Services />} />
