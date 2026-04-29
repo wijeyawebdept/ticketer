@@ -42,6 +42,7 @@ import UserDetailsDialog from './components/UserDetailsDialog';
 import { useAuth } from '../../context/AuthContext';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { toast } from 'react-toastify';
 import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 const Users: React.FC = () => {
@@ -219,11 +220,13 @@ const Users: React.FC = () => {
   const handleExportExcel = () => {
     const data = prepareExportData();
     exportToExcel(data, `Users_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to Excel...');
   };
 
   const handleExportCSV = () => {
     const data = prepareExportData();
     exportToCSV(data, `Users_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to CSV...');
   };
 
   const getRoleChipColor = (role: UserRole) => {

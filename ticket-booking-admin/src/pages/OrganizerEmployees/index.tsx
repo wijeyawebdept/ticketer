@@ -45,6 +45,7 @@ import {
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { toast } from 'react-toastify';
 import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 interface OrganizerEmployee {
@@ -347,11 +348,13 @@ const OrganizerEmployees: React.FC = () => {
   const handleExportExcel = () => {
     const data = prepareExportData();
     exportToExcel(data, `Organizer_Employees_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to Excel...');
   };
 
   const handleExportCSV = () => {
     const data = prepareExportData();
     exportToCSV(data, `Organizer_Employees_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to CSV...');
   };
 
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {

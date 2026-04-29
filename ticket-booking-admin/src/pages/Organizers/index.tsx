@@ -43,6 +43,7 @@ import OrganizerForm from './components/OrganizerForm';
 import api from '../../services/api';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
+import { toast } from 'react-toastify';
 import { FileDownload as DownloadIcon } from '@mui/icons-material';
 
 interface Organizer {
@@ -176,11 +177,13 @@ const Organizers: React.FC = () => {
   const handleExportExcel = () => {
     const data = prepareExportData();
     exportToExcel(data, `Organizers_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to Excel...');
   };
 
   const handleExportCSV = () => {
     const data = prepareExportData();
     exportToCSV(data, `Organizers_Export_${new Date().toLocaleDateString()}`);
+    toast.success('Exporting to CSV...');
   };
 
   const handleBulkOperation = async (operation: 'ACTIVATE' | 'DEACTIVATE' | 'DELETE') => {
