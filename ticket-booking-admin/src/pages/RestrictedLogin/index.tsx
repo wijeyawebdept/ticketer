@@ -11,7 +11,12 @@ import {
   IconButton,
   InputAdornment,
   Link as MuiLink,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -49,6 +54,11 @@ const RestrictedLogin: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSent, setForgotSent] = useState(false);
 
   // Check for success message from registration
   useEffect(() => {
@@ -188,11 +198,92 @@ const RestrictedLogin: React.FC = () => {
   };
 
   const handleForgotPassword = () => {
-    // For now, we'll show an alert since we don't have a full implementation
-    alert('Forgot password functionality would be implemented here. In a real application, this would send a password reset link to your email.');
+    setForgotEmail('');
+    setForgotError(null);
+    setForgotSent(false);
+    setForgotOpen(true);
+  };
+
+  const handleForgotSubmit = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotError('Please enter your email address.');
+      return;
+    }
+    setForgotLoading(true);
+    setForgotError(null);
+    try {
+      await AuthService.forgotPassword(forgotEmail.trim().toLowerCase());
+      setForgotSent(true);
+    } catch (err: any) {
+      setForgotError(err.response?.data?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
+    <>
+    {/* Forgot Password Dialog */}
+    <Dialog
+      open={forgotOpen}
+      onClose={() => !forgotLoading && setForgotOpen(false)}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 2 } }}
+    >
+      <DialogTitle sx={{ fontWeight: 700, color: '#1976d2' }}>
+        Reset Password
+      </DialogTitle>
+      <DialogContent>
+        {forgotSent ? (
+          <Alert severity="success" sx={{ mt: 1 }}>
+            If an account with that email exists, a password reset link has been sent. Please check your inbox.
+          </Alert>
+        ) : (
+          <>
+            <DialogContentText sx={{ mb: 2, color: '#555' }}>
+              Enter your registered email address and we'll send you a link to reset your password.
+            </DialogContentText>
+            {forgotError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {forgotError}
+              </Alert>
+            )}
+            <TextField
+              autoFocus
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleForgotSubmit()}
+              disabled={forgotLoading}
+              variant="outlined"
+            />
+          </>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button
+          onClick={() => setForgotOpen(false)}
+          disabled={forgotLoading}
+          sx={{ color: '#666' }}
+        >
+          {forgotSent ? 'Close' : 'Cancel'}
+        </Button>
+        {!forgotSent && (
+          <Button
+            onClick={handleForgotSubmit}
+            disabled={forgotLoading}
+            variant="contained"
+            color="primary"
+          >
+            {forgotLoading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send Reset Link'}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+
     <Container component="main" maxWidth="xs">
       <Paper 
         elevation={6} 
@@ -211,7 +302,7 @@ const RestrictedLogin: React.FC = () => {
           }}
         >
           <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-            Ticket Booking System
+            Ticketer LK
           </Typography>
           
           <Chip 
@@ -327,6 +418,7 @@ const RestrictedLogin: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+    </>
   );
 };
 
