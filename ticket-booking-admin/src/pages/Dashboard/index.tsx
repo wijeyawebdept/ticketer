@@ -136,8 +136,9 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const { isSuperAdmin, user } = useAuth();
   
-  // Check if user is an organizer
-  const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER';
+  // Check if user is an organizer or organizer employee
+  const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER' || 
+                      user?.role === 'ORGANIZER_EMPLOYEE' || user?.role === 'ROLE_ORGANIZER_EMPLOYEE';
 
   useEffect(() => {
     const fetchDashboardData = async () => {
