@@ -43,6 +43,7 @@ public class TicketCategoryDealResponse {
     private String eventStartDateTime;
     private String venueName;
     private BigDecimal eventMinPrice;
+    private String eventSlug;
 
     public static TicketCategoryDealResponse fromEntity(TicketCategory tc) {
         String type = tc.getDealType() != null ? tc.getDealType() : "PERCENTAGE_DISCOUNT";
@@ -95,6 +96,7 @@ public class TicketCategoryDealResponse {
             .eventImageUrl(tc.getEvent() != null ? tc.getEvent().getImageUrl() : null)
             .venueName(tc.getEvent() != null ? tc.getEvent().getVenueName() : null)
             .eventMinPrice(minPrice)
+            .eventSlug(tc.getEvent() != null ? tc.getEvent().getSlug() : null)
             .build();
     }
 }

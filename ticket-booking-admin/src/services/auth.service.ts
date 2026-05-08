@@ -356,8 +356,8 @@ class AuthService {
     }
   }
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    const response = await axios.post<{ message: string }>('/api/auth/forgot-password', { email });
+  async forgotPassword(email: string, roleHint?: string): Promise<{ message: string }> {
+    const response = await axios.post<{ message: string }>('/api/auth/forgot-password', { email, roleHint });
     return response.data;
   }
 

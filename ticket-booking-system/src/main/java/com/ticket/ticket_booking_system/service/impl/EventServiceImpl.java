@@ -73,53 +73,69 @@ public class EventServiceImpl implements EventService {
         System.out.println("Event Name: " + request.getName());
         System.out.println("Venue ID: " + request.getVenueId());
 
-        // Get current authenticated user - check all three tables
+        // Get current authenticated user details from SecurityContext
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         
+        // Extract roles from authorities to prioritize the correct table lookup
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.toList());
+        
+        System.out.println("Role recognition for: " + email + " (Authenticated Roles: " + roles + ")");
+
         // Determine which table the user is from and get their details
         UUID createdByUserId = null;
         String createdByType = null;
         Organizer eventOrganizer = null;
         
-        // Check if user is in users table
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user != null) {
-            createdByUserId = user.getUserId();
-            createdByType = "USER";
-            System.out.println("Current user: " + email + " (Role: USER)");
-            throw new IllegalStateException("Users with USER role cannot create events");
+        // 1. Check if user is an ADMIN or SUPER_ADMIN (Priority 1)
+        if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_SUPER_ADMIN") || 
+            roles.contains("ADMIN") || roles.contains("SUPER_ADMIN")) {
+            Admin admin = adminRepository.findByEmail(email).orElse(null);
+            if (admin != null) {
+                createdByUserId = admin.getAdminId();
+                createdByType = admin.getRole().name(); // "ADMIN" or "SUPER_ADMIN"
+                System.out.println("Validated as: " + email + " (Entity: ADMIN, ID: " + createdByUserId + ")");
+            }
         }
         
-        // Check if admin
-        Admin admin = adminRepository.findByEmail(email).orElse(null);
-        if (admin != null) {
-            createdByUserId = admin.getAdminId();
-            createdByType = admin.getRole().name(); // "ADMIN" or "SUPER_ADMIN"
-            System.out.println("Current user: " + email + " (Role: " + admin.getRole() + ")");
+        // 2. Check if user is an ORGANIZER (Priority 2)
+        if (createdByUserId == null && (roles.contains("ROLE_ORGANIZER") || roles.contains("ORGANIZER"))) {
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null) {
+                createdByUserId = organizer.getOrganizerId();
+                createdByType = "ORGANIZER";
+                eventOrganizer = organizer;
+                System.out.println("Validated as: " + email + " (Entity: ORGANIZER, ID: " + createdByUserId + ")");
+            }
         }
         
-        // Check if organizer
-        Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
-        if (organizer != null) {
-            createdByUserId = organizer.getOrganizerId();
-            createdByType = "ORGANIZER";
-            eventOrganizer = organizer;
-            System.out.println("Current user: " + email + " (Role: ORGANIZER)");
+        // 3. Check if user is an ORGANIZER_EMPLOYEE (Priority 3)
+        if (createdByUserId == null && (roles.contains("ROLE_ORGANIZER_EMPLOYEE") || roles.contains("ORGANIZER_EMPLOYEE"))) {
+            OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(email).orElse(null);
+            if (employee != null) {
+                createdByUserId = employee.getEmployeeId();
+                createdByType = "ORGANIZER_EMPLOYEE";
+                // Employee creates event on behalf of their parent organizer
+                eventOrganizer = employee.getOrganizer();
+                System.out.println("Validated as: " + email + " (Entity: ORGANIZER_EMPLOYEE, ID: " + createdByUserId + ")");
+            }
         }
         
-        // Check if organizer employee
-        OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(email).orElse(null);
-        if (employee != null) {
-            createdByUserId = employee.getEmployeeId();
-            createdByType = "ORGANIZER_EMPLOYEE";
-            // Employee creates event on behalf of their parent organizer
-            eventOrganizer = employee.getOrganizer();
-            System.out.println("Current user: " + email + " (Role: ORGANIZER_EMPLOYEE, Parent Organizer: " + eventOrganizer.getOrganizerId() + ")");
+        // 4. Fallback to regular USER table only if no staff role is present (Priority 4)
+        if (createdByUserId == null) {
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                createdByUserId = user.getUserId();
+                createdByType = "USER";
+                System.out.println("Validated as: " + email + " (Entity: USER)");
+                throw new IllegalStateException("Users with USER role cannot create events through the admin portal");
+            }
         }
         
         if (createdByUserId == null) {
-            throw new IllegalStateException("Current user not found in any authentication table");
+            throw new IllegalStateException("Current user not found in the appropriate authentication table for their role");
         }
 
         // Find venue
@@ -652,6 +668,7 @@ public class EventServiceImpl implements EventService {
                 .category(categoryResponse) // Include category object
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .hasDeal(hasDeal) // Derived from ticket categories
+                .slug(event.getSlug()) // Include slug
                 .build();
     }
 
@@ -823,6 +840,19 @@ public class EventServiceImpl implements EventService {
         }
         if (event.getOrganizer() != null) {
             event.getOrganizer().getOrganizationName(); // Force initialization
+        }
+        
+        return mapEventToResponse(event);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventResponse getPublishedEventBySlug(String slug) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "slug", slug));
+        
+        if (event.getStatus() != Event.EventStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Published Event", "slug", slug);
         }
         
         return mapEventToResponse(event);

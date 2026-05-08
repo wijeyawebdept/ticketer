@@ -185,7 +185,7 @@ const Deals: React.FC = () => {
                         boxShadow: '0 16px 40px rgba(0,200,83,0.25)',
                       },
                     }}
-                    onClick={() => navigate(`/event/${eventId}`)}
+                    onClick={() => navigate(`/event/${firstDeal.eventSlug || eventId}`)}
                   >
                     {/* Badge Row */}
                     <Box
@@ -423,7 +423,7 @@ const Deals: React.FC = () => {
                           variant="contained"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/event/${eventId}`);
+                            navigate(`/event/${firstDeal.eventSlug || eventId}`);
                           }}
                           sx={{
                             backgroundColor: '#0d6efd',

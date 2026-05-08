@@ -57,5 +57,7 @@ public interface EventService {
     
     EventResponse getPublishedEventById(UUID eventId);
     
+    EventResponse getPublishedEventBySlug(String slug);
+    
     Page<EventResponse> searchPublishedEvents(String query, Pageable pageable);
 }

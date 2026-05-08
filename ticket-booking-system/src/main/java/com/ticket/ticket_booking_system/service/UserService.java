@@ -59,8 +59,10 @@ public interface UserService {
 
     /**
      * Initiates the forgot-password flow: generates a token and sends a reset email.
+     * @param email The user's email address
+     * @param roleHint Optional hint ("admin", "organizer", etc.) to prioritize a specific table
      */
-    void forgotPassword(String email);
+    void forgotPassword(String email, String roleHint);
 
     /**
      * Validates the reset token and updates the user's password.

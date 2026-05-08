@@ -409,49 +409,80 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void forgotPassword(String email) {
+    public void forgotPassword(String email, String roleHint) {
         String trimmedEmail = email.trim().toLowerCase();
-        System.out.println("Processing forgotPassword request for: " + trimmedEmail);
+        System.out.println("Processing forgotPassword request for: " + trimmedEmail + " (Hint: " + roleHint + ")");
         
-        // 1. Check users table
-        userRepository.findByEmail(trimmedEmail).ifPresent(user -> {
+        boolean processed = false;
+
+        // 1. Priority based on roleHint
+        if ("admin".equalsIgnoreCase(roleHint)) {
+            // Try Admin table first
+            processed = processAdminForgotPassword(trimmedEmail);
+        } else if ("organizer".equalsIgnoreCase(roleHint)) {
+            // Try Organizer or Employee first
+            processed = processOrganizerForgotPassword(trimmedEmail);
+            if (!processed) {
+                processed = processEmployeeForgotPassword(trimmedEmail);
+            }
+        }
+
+        // 2. Fallback search if not yet processed
+        if (!processed) {
+            // Check in order: Admin -> Organizer -> Employee -> User
+            if (processAdminForgotPassword(trimmedEmail)) return;
+            if (processOrganizerForgotPassword(trimmedEmail)) return;
+            if (processEmployeeForgotPassword(trimmedEmail)) return;
+            if (processUserForgotPassword(trimmedEmail)) return;
+        }
+    }
+
+    private boolean processUserForgotPassword(String email) {
+        return userRepository.findByEmail(email).map(user -> {
             System.out.println("Found user in USER table: " + user.getEmail());
             String token = UUID.randomUUID().toString();
             user.setResetPasswordToken(token);
             user.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
             userRepository.save(user);
             sendResetEmail(user.getEmail(), user.getFirstName(), token);
-        });
+            return true;
+        }).orElse(false);
+    }
 
-        // 2. Check admins table
-        adminRepository.findByEmail(trimmedEmail).ifPresent(admin -> {
+    private boolean processAdminForgotPassword(String email) {
+        return adminRepository.findByEmail(email).map(admin -> {
             System.out.println("Found user in ADMIN table: " + admin.getEmail());
             String token = UUID.randomUUID().toString();
             admin.setResetPasswordToken(token);
             admin.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
             adminRepository.save(admin);
             sendResetEmail(admin.getEmail(), admin.getFirstName(), token);
-        });
+            return true;
+        }).orElse(false);
+    }
 
-        // 3. Check organizers table
-        organizerRepository.findByEmail(trimmedEmail).ifPresent(organizer -> {
+    private boolean processOrganizerForgotPassword(String email) {
+        return organizerRepository.findByEmail(email).map(organizer -> {
             System.out.println("Found user in ORGANIZER table: " + organizer.getEmail());
             String token = UUID.randomUUID().toString();
             organizer.setResetPasswordToken(token);
             organizer.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
             organizerRepository.save(organizer);
             sendResetEmail(organizer.getEmail(), organizer.getFirstName(), token);
-        });
+            return true;
+        }).orElse(false);
+    }
 
-        // 4. Check organizer employees table
-        employeeRepository.findByEmail(trimmedEmail).ifPresent(employee -> {
+    private boolean processEmployeeForgotPassword(String email) {
+        return employeeRepository.findByEmail(email).map(employee -> {
             System.out.println("Found user in EMPLOYEE table: " + employee.getEmail());
             String token = UUID.randomUUID().toString();
             employee.setResetPasswordToken(token);
             employee.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
             employeeRepository.save(employee);
             sendResetEmail(employee.getEmail(), employee.getFirstName(), token);
-        });
+            return true;
+        }).orElse(false);
     }
 
     private void sendResetEmail(String email, String firstName, String token) {

@@ -502,11 +502,13 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
         String email = body.get("email");
+        String roleHint = body.get("roleHint"); // "admin", "organizer", or null
+        
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email is required."));
         }
         // Always return 200 to avoid exposing whether the email exists
-        userService.forgotPassword(email.trim().toLowerCase());
+        userService.forgotPassword(email.trim().toLowerCase(), roleHint);
         return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent."));
     }
 

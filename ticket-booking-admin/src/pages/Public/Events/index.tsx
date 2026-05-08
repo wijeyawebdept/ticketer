@@ -106,9 +106,9 @@ const Events: React.FC = () => {
   };
 
   const handleEventClick = (event: Event) => {
-    const eventId = event.id || event.eventId;
-    if (eventId) {
-      navigate(`/event/${eventId}`);
+    const identifier = event.slug || event.id || event.eventId;
+    if (identifier) {
+      navigate(`/event/${identifier}`);
     } else {
     }
   };

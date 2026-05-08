@@ -110,6 +110,7 @@ export interface TicketCategoryDeal {
   eventStartDateTime?: string;
   venueName?: string;
   eventMinPrice?: number;
+  eventSlug?: string;
 }
 
 export interface TicketDealRequest {
@@ -148,6 +149,7 @@ export interface Event {
   dealType?: string; // e.g., 'DISCOUNT', 'BUY_X_GET_Y', 'CREDIT_CARD', 'EARLY_BIRD'
   dealDescription?: string; // e.g., "Buy 11 Get 1 Off", "20% Off with Visa"
   discountPercentage?: number; // Percentage discount if applicable
+  slug?: string; // URL-friendly name
 }
 
 export enum EventStatus {

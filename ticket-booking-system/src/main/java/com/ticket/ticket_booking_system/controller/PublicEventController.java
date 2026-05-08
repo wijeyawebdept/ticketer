@@ -3,6 +3,8 @@ package com.ticket.ticket_booking_system.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -59,15 +61,21 @@ public class PublicEventController {
      * Get published event by ID (publicly accessible)
      * Returns only if event is PUBLISHED
      */
-    @GetMapping("/{eventId}")
-    public ResponseEntity<EventResponse> getPublishedEventById(@PathVariable String eventId) {
+    @GetMapping("/{identifier}")
+    public ResponseEntity<EventResponse> getPublishedEvent(@PathVariable String identifier) {
         try {
-            UUID uuid = UUID.fromString(eventId);
+            // Try to parse as UUID first
+            UUID uuid = UUID.fromString(identifier);
             EventResponse event = eventService.getPublishedEventById(uuid);
             return ResponseEntity.ok(event);
         } catch (IllegalArgumentException e) {
-            // Invalid UUID format
-            return ResponseEntity.badRequest().build();
+            // Not a UUID, try as slug
+            try {
+                EventResponse event = eventService.getPublishedEventBySlug(identifier);
+                return ResponseEntity.ok(event);
+            } catch (ResourceNotFoundException ex) {
+                return ResponseEntity.notFound().build();
+            }
         }
     }
     

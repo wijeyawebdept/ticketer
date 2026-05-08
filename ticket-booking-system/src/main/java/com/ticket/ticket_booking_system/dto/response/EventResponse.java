@@ -23,6 +23,7 @@ public class EventResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdByType; // "ADMIN", "SUPER_ADMIN", "ORGANIZER", etc.
+    private String slug;
 
     // Event category
     private EventCategoryResponse category;
@@ -159,6 +160,14 @@ public class EventResponse {
         this.createdByType = createdByType;
     }
 
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
+
     public EventCategoryResponse getCategory() {
         return category;
     }
@@ -268,6 +277,11 @@ public class EventResponse {
 
         public Builder createdByType(String createdByType) {
             eventResponse.setCreatedByType(createdByType);
+            return this;
+        }
+
+        public Builder slug(String slug) {
+            eventResponse.setSlug(slug);
             return this;
         }
 

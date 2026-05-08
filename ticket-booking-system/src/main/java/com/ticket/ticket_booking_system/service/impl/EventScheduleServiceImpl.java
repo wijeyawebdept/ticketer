@@ -118,57 +118,65 @@ public class EventScheduleServiceImpl implements EventScheduleService {
             throw new IllegalStateException("Cannot delete schedule with existing bookings. Cancel the schedule instead.");
         }
 
-        // Get the current authenticated user
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String currentUserEmail = auth != null ? auth.getName() : "system";
+        // Get current authenticated user details
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserEmail = authentication.getName();
+        List<String> roles = authentication.getAuthorities().stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.toList());
         
-        // Create a deletedBy user object with proper tracking
-        User deletedBy = User.builder()
+        User deletedBy = null;
+        
+        // Try to find the correct entity based on roles
+        // 1. Try Admin
+        if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_SUPER_ADMIN") || 
+            roles.contains("ADMIN") || roles.contains("SUPER_ADMIN")) {
+            Admin admin = adminRepository.findByEmail(currentUserEmail).orElse(null);
+            if (admin != null) {
+                deletedBy = new User();
+                deletedBy.setId(admin.getAdminId());
+                deletedBy.setEmail(admin.getEmail());
+                deletedBy.setFirstName(admin.getFirstName());
+                deletedBy.setLastName(admin.getLastName());
+            }
+        }
+        
+        // 2. Try Organizer
+        if (deletedBy == null && (roles.contains("ROLE_ORGANIZER") || roles.contains("ORGANIZER"))) {
+            Organizer organizer = organizerRepository.findByEmail(currentUserEmail).orElse(null);
+            if (organizer != null) {
+                deletedBy = new User();
+                deletedBy.setId(organizer.getOrganizerId());
+                deletedBy.setEmail(organizer.getEmail());
+                deletedBy.setFirstName(organizer.getFirstName());
+                deletedBy.setLastName(organizer.getLastName());
+            }
+        }
+        
+        // 3. Try Organizer Employee
+        if (deletedBy == null && (roles.contains("ROLE_ORGANIZER_EMPLOYEE") || roles.contains("ORGANIZER_EMPLOYEE"))) {
+            OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(currentUserEmail).orElse(null);
+            if (employee != null) {
+                deletedBy = new User();
+                deletedBy.setId(employee.getEmployeeId());
+                deletedBy.setEmail(employee.getEmail());
+                deletedBy.setFirstName(employee.getFirstName());
+                deletedBy.setLastName(employee.getLastName());
+            }
+        }
+        
+        // 4. Fallback to regular User
+        if (deletedBy == null) {
+            deletedBy = userRepository.findByEmail(currentUserEmail).orElse(null);
+        }
+        
+        if (deletedBy == null) {
+            // Default system user if not found
+            deletedBy = User.builder()
                 .email(currentUserEmail)
                 .firstName("System")
                 .lastName("User")
                 .build();
-        
-        // Try to find the user in different repositories
-        java.util.Optional<User> userOpt = userRepository.findByEmail(currentUserEmail);
-        if (userOpt.isPresent()) {
-            deletedBy = userOpt.get();
-        } else {
-            // Try admin
-            java.util.Optional<Admin> adminOpt = adminRepository.findByEmail(currentUserEmail);
-            if (adminOpt.isPresent()) {
-                Admin admin = adminOpt.get();
-                deletedBy = User.builder()
-                        .id(admin.getAdminId())
-                        .email(admin.getEmail())
-                        .firstName(admin.getFirstName())
-                        .lastName(admin.getLastName())
-                        .build();
-            } else {
-                // Try organizer
-                java.util.Optional<Organizer> organizerOpt = organizerRepository.findByEmail(currentUserEmail);
-                if (organizerOpt.isPresent()) {
-                    Organizer organizer = organizerOpt.get();
-                    deletedBy = User.builder()
-                            .id(organizer.getOrganizerId())
-                            .email(organizer.getEmail())
-                            .firstName(organizer.getOrganizationName())
-                            .lastName("")
-                            .build();
-                } else {
-                    // Try organizer employee
-                    java.util.Optional<OrganizerEmployee> employeeOpt = organizerEmployeeRepository.findByEmail(currentUserEmail);
-                    if (employeeOpt.isPresent()) {
-                        OrganizerEmployee employee = employeeOpt.get();
-                        deletedBy = User.builder()
-                                .id(employee.getEmployeeId())
-                                .email(employee.getEmail())
-                                .firstName(employee.getFirstName())
-                                .lastName(employee.getLastName())
-                                .build();
-                    }
-                }
-            }
         }
         
         // Create a simplified schedule data map to avoid circular reference issues

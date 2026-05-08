@@ -45,6 +45,7 @@ interface EventCardProps {
   day: string;
   backgroundImage: string;
   eventId: string;
+  slug?: string;
 }
 
 const EventCard: React.FC<EventCardProps> = ({
@@ -56,6 +57,7 @@ const EventCard: React.FC<EventCardProps> = ({
   day,
   backgroundImage,
   eventId,
+  slug,
 }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -201,7 +203,7 @@ const EventCard: React.FC<EventCardProps> = ({
             }}
           >
             <Button
-              onClick={() => navigate(`/event/${eventId}`)}
+              onClick={() => navigate(`/event/${slug || eventId}`)}
               sx={{
                 fontFamily: 'Raleway, sans-serif',
                 fontWeight: 700,
@@ -566,7 +568,7 @@ const Home: React.FC = () => {
                         boxShadow: '0 8px 24px rgba(255, 25, 85, 0.3)',
                       },
                     }}
-                    onClick={() => navigate(`/event/${event.id || event.eventId}`)}
+                    onClick={() => navigate(`/event/${event.slug || event.id || event.eventId}`)}
                   >
                     {/* Badges */}
                     <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', gap: 1 }}>
@@ -699,7 +701,7 @@ const Home: React.FC = () => {
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/event/${event.id || event.eventId}`);
+                            navigate(`/event/${event.slug || event.id || event.eventId}`);
                           }}
                         >
                           {event.dealDescription || 'Book Now • 1+ Deals'}
@@ -869,6 +871,7 @@ const Home: React.FC = () => {
                     day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
                     backgroundImage={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
                     eventId={event.id || event.eventId}
+                    slug={event.slug}
                   />
                 </Grid>
                 );

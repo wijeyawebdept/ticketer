@@ -85,6 +85,9 @@ public class Event {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
@@ -118,6 +121,21 @@ public class Event {
         if (status == null) {
             status = EventStatus.DRAFT;
         }
+        if (slug == null || slug.isEmpty()) {
+            generateSlug();
+        }
+    }
+
+    public void generateSlug() {
+        if (this.name == null) return;
+        String baseSlug = this.name.toLowerCase()
+                .replaceAll("[^a-z0-9\\s]", "")
+                .replaceAll("\\s+", "-");
+        
+        // Append first 8 chars of UUID to ensure uniqueness if possible, 
+        // or just let the database unique constraint handle it for now.
+        // For better UX, we'll just use the name and append a short random string if needed.
+        this.slug = baseSlug + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
     }
 
     @PreUpdate

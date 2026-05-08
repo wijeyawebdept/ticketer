@@ -47,7 +47,11 @@ interface LoginFormValues {
   password: string;
 }
 
-const RestrictedLogin: React.FC = () => {
+interface RestrictedLoginProps {
+  mode?: 'admin' | 'organizer';
+}
+
+const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -89,40 +93,27 @@ const RestrictedLogin: React.FC = () => {
       sessionStorage.removeItem('user_data');
       sessionStorage.removeItem('user');
       
-      // Try different login endpoints in order: admin -> organizer -> organizer-employee
+      // Choose login strategy based on mode
       let loginResponse = null;
       let userRole = '';
       
-      try {
-        // Try admin login first
+      if (mode === 'admin') {
+        // Mode: ADMIN - Only try admin login
         loginResponse = await AuthService.adminLogin({ email: values.email, password: values.password });
         userRole = loginResponse.user?.role || loginResponse.role || '';
-      } catch (adminError: any) {
-        // Any 403 error means wrong role/insufficient privileges, try next login type
-        if (adminError.response?.status === 403) {
-          // Not an admin, try organizer
-          try {
-            loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
+      } else {
+        // Mode: ORGANIZER - Try organizer, then employee
+        try {
+          loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
+          userRole = loginResponse.user?.role || loginResponse.role || '';
+        } catch (organizerError: any) {
+          if (organizerError.response?.status === 403) {
+            // Not an organizer, try organizer employee
+            loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
             userRole = loginResponse.user?.role || loginResponse.role || '';
-          } catch (organizerError: any) {
-            // Any 403 error means wrong role, try organizer employee
-            if (organizerError.response?.status === 403) {
-              // Not an organizer, try organizer employee
-              try {
-                loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
-                userRole = loginResponse.user?.role || loginResponse.role || '';
-              } catch (employeeError: any) {
-                // If all three failed, throw the last error
-                throw employeeError;
-              }
-            } else {
-              // If it's not a 403, it's a different error (401, 500, etc.), throw it
-              throw organizerError;
-            }
+          } else {
+            throw organizerError;
           }
-        } else {
-          // If it's not a 403, it's a different error (401, 500, etc.), throw it
-          throw adminError;
         }
       }
       
@@ -171,20 +162,26 @@ const RestrictedLogin: React.FC = () => {
         
         // Check specific error codes from backend
         if (errorCode === 'INVALID_CREDENTIALS') {
-          errorMessage = '❌ Invalid email or password. Please check your admin credentials and try again.';
+          errorMessage = ' Invalid email or password. Please check your credentials and try again.';
         } else if (errorCode === 'USER_DISABLED') {
-          errorMessage = '⚠️ Your account has been disabled. Please contact the system administrator.';
+          errorMessage = ' Your account has been disabled. Please contact the system administrator.';
+        } else if (errorCode === 'INSUFFICIENT_PRIVILEGES' || err.response?.status === 403) {
+          errorMessage = mode === 'admin' 
+            ? ' This portal is for Administrators only. Your account does not have Admin privileges.' 
+            : ' This portal is for Organizers and Employees only. Your account lacks the required permissions.';
         } else if (responseMessage.includes('user not found') || responseMessage.includes('no user') || responseMessage.includes('does not exist')) {
-          errorMessage = '📧 No admin account found with this email address.';
+          errorMessage = mode === 'admin'
+            ? ' No admin account found with this email address.'
+            : ' No organizer or employee account found with this email address.';
         } else {
-          errorMessage = '❌ Invalid email or password. Please verify your admin login credentials.';
+          errorMessage = ' Invalid email or password. Please verify your login credentials.';
         }
       } else if (err.response?.status === 403) {
-        errorMessage = '🔒 Access denied. Your account may not be activated or you lack the required permissions.';
+        errorMessage = ' Access denied. Your account may not be activated or you lack the required permissions.';
       } else if (err.response?.status === 404) {
-        errorMessage = '📧 No account found with this email address. Please verify your email.';
+        errorMessage = ' No account found with this email address. Please verify your email.';
       } else if (err.response?.status === 500) {
-        errorMessage = '⚠️ Server error occurred. Please try again later or contact support.';
+        errorMessage = ' Server error occurred. Please try again later or contact support.';
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -212,7 +209,8 @@ const RestrictedLogin: React.FC = () => {
     setForgotLoading(true);
     setForgotError(null);
     try {
-      await AuthService.forgotPassword(forgotEmail.trim().toLowerCase());
+      // Pass the current portal mode as a hint to the backend
+      await AuthService.forgotPassword(forgotEmail.trim().toLowerCase(), mode);
       setForgotSent(true);
     } catch (err: any) {
       setForgotError(err.response?.data?.message || 'Something went wrong. Please try again.');
@@ -306,13 +304,13 @@ const RestrictedLogin: React.FC = () => {
           </Typography>
           
           <Chip 
-            label="Restricted Access" 
+            label={mode === 'admin' ? "Admin Access" : "Organizer Access"} 
             color="primary" 
             sx={{ mb: 2, fontWeight: 'bold' }}
           />
           
           <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
-            Sign in
+            {mode === 'admin' ? "Administrator Login" : "Organizer & Employee Login"}
           </Typography>
           
           {successMessage && (
