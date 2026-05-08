@@ -106,7 +106,7 @@ export const getProfilePictureUrl = (path: string | null | undefined): string | 
  * Normalizes an asset URL (e.g., event images).
  */
 export const getAssetUrl = (path?: string | null): string | undefined => {
-  if (!path) return undefined;
+  if (!path || typeof path !== 'string') return undefined;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const backendUrl = 'http://localhost:8081';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;

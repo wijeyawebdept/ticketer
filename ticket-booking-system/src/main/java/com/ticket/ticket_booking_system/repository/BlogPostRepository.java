@@ -13,7 +13,9 @@ import com.ticket.ticket_booking_system.entity.BlogPost;
 @Repository
 public interface BlogPostRepository extends JpaRepository<BlogPost, UUID> {
 
-    Page<BlogPost> findByPublishedTrue(Pageable pageable);
+    Page<BlogPost> findByIsDeletedFalse(Pageable pageable);
 
-    List<BlogPost> findByPublishedTrueAndDigestSentFalse();
+    Page<BlogPost> findByPublishedTrueAndIsDeletedFalse(Pageable pageable);
+
+    List<BlogPost> findByPublishedTrueAndIsDeletedFalseAndDigestSentFalse();
 }

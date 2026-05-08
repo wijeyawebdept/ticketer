@@ -64,7 +64,7 @@ const PublicFooter: React.FC = () => {
                 Helpful Links
               </Typography>
               <Link href="/events" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Events</Link>
-              <Link href="/events" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Ticketer Deals</Link>
+              <Link href="/deals" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Ticketer Deals</Link>
               <Link href="/profile" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>My Account</Link>
               <Link href="/refund-policy" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Refund Policy</Link>
             </Grid>

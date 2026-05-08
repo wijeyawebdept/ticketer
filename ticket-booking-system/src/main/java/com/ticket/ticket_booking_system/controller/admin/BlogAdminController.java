@@ -100,6 +100,12 @@ public class BlogAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/images/order")
+    public ResponseEntity<Void> updateImageOrder(@RequestBody List<UUID> imageIds) {
+        blogService.updateImageOrder(imageIds);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/digest/send")
     public ResponseEntity<String> sendDigest(@RequestBody(required = false) BlogDigestRequest req) {
         String subject = req != null ? req.subject() : null;

@@ -39,6 +39,7 @@ import { EventService, EventScheduleService, EventCategoryService } from '../../
 import { VenueService } from '../../../services';
 import { venueSeatService } from '../../../services/venueSeatService';
 import { useAuth } from '../../../context/AuthContext';
+import { getAssetUrl } from '../../../utils/formatters';
 
 // Define the form values type
 interface FormValues {
@@ -109,9 +110,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
   const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  // For edit mode: keep existing URL as preview until a new file is chosen
+  // For edit mode: keep existing URL as preview until a new file is chosen or removed
   const existingImageUrl = event?.imageUrl || null;
-  const [imagePreview, setImagePreview] = useState<string | null>(existingImageUrl);
+  const [imagePreview, setImagePreview] = useState<string | null>(getAssetUrl(existingImageUrl) || null);
+  const [imageRemoved, setImageRemoved] = useState<boolean>(false);
   const [uploading, setUploading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venueLoading, setVenueLoading] = useState(false);
@@ -334,6 +336,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
       setValidationError(null);
       setSelectedImage(file);
       setFieldValue('imageFile', file);
+      setImageRemoved(false);
       
       // Create a preview
       const reader = new FileReader();
@@ -570,7 +573,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           
           if (event?.id) {
             // Update existing event
-            savedEvent = await EventService.updateEvent(event.id, eventDataForApi);
+            const updateData = { ...eventDataForApi };
+            // If image was explicitly removed and NO new image was selected, tell backend to clear it
+            if (imageRemoved && !selectedImage) {
+              updateData.imageUrl = '';
+            }
+            savedEvent = await EventService.updateEvent(event.id, updateData);
           } else {
             // Create new event
             savedEvent = await EventService.createEvent(eventDataForApi);
@@ -1373,7 +1381,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                     <Card sx={{
                       p: 3, borderRadius: 2, border: '2px dashed',
                       borderColor: imageIsValid ? 'success.main' : (errors.imageFile && touched.imageFile && !isEditMode ? 'error.main' : 'divider'),
-                      bgcolor: imageIsValid ? 'success.50' : 'background.paper'
+                      bgcolor: imageIsValid ? 'rgba(76, 175, 80, 0.04)' : 'background.paper'
                     }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <CloudUploadIcon sx={{
@@ -1413,14 +1421,34 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                       </Box>
                       
                       {imagePreview && (
-                        <Box sx={{ mt: 3 }}>
+                        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           <Typography variant="subtitle2" gutterBottom sx={{ textAlign: 'center', color: 'success.main', mb: 2 }}>
                             <CheckCircleIcon sx={{ fontSize: 18, verticalAlign: 'middle', mr: 0.5 }} />
                             {selectedImage ? 'New Image Preview:' : 'Current Image Preview:'}
                           </Typography>
-                          <ImagePreview src={imagePreview} alt="Event preview" />
+                          <Box sx={{ position: 'relative', width: 240, height: 135, mb: 1 }}>
+                            <Box component="img" src={imagePreview} sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                            <IconButton 
+                              size="small" 
+                              onClick={() => {
+                                setImagePreview(null);
+                                setSelectedImage(null);
+                                setFieldValue('imageFile', null);
+                                setImageRemoved(true);
+                              }}
+                              sx={{ 
+                                position: 'absolute', top: -10, right: -10, 
+                                bgcolor: '#ff1955', color: '#fff', 
+                                width: 24, height: 24, p: 0, 
+                                '&:hover': { bgcolor: '#c0003a' },
+                                boxShadow: 2
+                              }}
+                            >
+                              ×
+                            </IconButton>
+                          </Box>
                           {selectedImage && (
-                            <Typography variant="caption" display="block" sx={{ textAlign: 'center', mt: 1, color: 'text.secondary' }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
                               {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
                             </Typography>
                           )}

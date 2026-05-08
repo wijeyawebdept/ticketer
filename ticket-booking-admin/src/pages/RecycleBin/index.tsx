@@ -80,7 +80,7 @@ const RecycleBin: React.FC = () => {
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
   const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === UserRole.ROLE_ORGANIZER;
-  const entityTypes = ['USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY'];
+  const entityTypes = ['USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY', 'BLOG'];
 
   useEffect(() => {
     fetchRecycleBinItems();
@@ -94,7 +94,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
         data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
       setItems(data);
@@ -168,7 +168,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         await RecycleBinService.emptyRecycleBin();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
         await RecycleBinService.emptyRecycleBinByType(entityType);
       }
       setSuccess('Recycle bin emptied successfully');
@@ -199,6 +199,8 @@ const RecycleBin: React.FC = () => {
         return 'warning';
       case 'EVENT_CATEGORY':
         return 'info';
+      case 'BLOG':
+        return 'primary';
       default:
         return 'default';
     }
@@ -283,6 +285,7 @@ const RecycleBin: React.FC = () => {
           <Tab label="Venues" />
           <Tab label="Schedules" />
           <Tab label="Event Categories" />
+          <Tab label="Blogs" />
         </Tabs>
 
         {loading ? (

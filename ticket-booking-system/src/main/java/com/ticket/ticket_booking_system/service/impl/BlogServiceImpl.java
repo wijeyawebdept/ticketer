@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.ticket.ticket_booking_system.dto.blog.BlogDTOs.BlogCommentRequest;
 import com.ticket.ticket_booking_system.dto.blog.BlogDTOs.BlogCommentResponse;
@@ -29,6 +31,7 @@ import com.ticket.ticket_booking_system.repository.BlogPostRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.BlogService;
 import com.ticket.ticket_booking_system.service.EmailService;
+import com.ticket.ticket_booking_system.service.RecycleBinService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +46,9 @@ public class BlogServiceImpl implements BlogService {
     private final BlogLikeRepository likeRepo;
     private final BlogPostImageRepository imageRepo;
     private final UserRepository userRepo;
+    private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepo;
     private final EmailService emailService;
+    private final RecycleBinService recycleBinService;
 
     // ---- Admin Operations ----
 
@@ -129,7 +134,44 @@ public class BlogServiceImpl implements BlogService {
     @Override
     @Transactional
     public void deletePost(UUID postId) {
-        postRepo.deleteById(postId);
+        BlogPost post = postRepo.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found: " + postId));
+                
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User deletedBy = null;
+        if (authentication != null && authentication.getName() != null) {
+            String email = authentication.getName();
+            deletedBy = userRepo.findByEmail(email).orElse(null);
+            
+            if (deletedBy == null) {
+                com.ticket.ticket_booking_system.entity.Admin admin = adminRepo.findByEmail(email).orElse(null);
+                if (admin != null) {
+                    deletedBy = new User();
+                    deletedBy.setId(admin.getAdminId());
+                    deletedBy.setEmail(admin.getEmail());
+                    deletedBy.setFirstName(admin.getFirstName());
+                    deletedBy.setLastName(admin.getLastName());
+                }
+            }
+        }
+        
+        if (deletedBy == null) {
+            throw new RuntimeException("Could not identify current user for deletion");
+        }
+
+        // Move to recycle bin
+        recycleBinService.moveToRecycleBin(
+            "BLOG",
+            post.getPostId(),
+            post.getTitle(),
+            post,
+            deletedBy,
+            "Blog post soft deleted by " + deletedBy.getEmail()
+        );
+
+        post.setPublished(false);
+        post.setIsDeleted(true);
+        postRepo.save(post);
     }
 
     @Override
@@ -150,15 +192,30 @@ public class BlogServiceImpl implements BlogService {
     }
 
     @Override
+    @Transactional
+    public void updateImageOrder(List<UUID> imageIds) {
+        if (imageIds == null || imageIds.isEmpty()) return;
+        for (int i = 0; i < imageIds.size(); i++) {
+            UUID imageId = imageIds.get(i);
+            var imgOpt = imageRepo.findById(imageId);
+            if (imgOpt.isPresent()) {
+                BlogPostImage img = imgOpt.get();
+                img.setDisplayOrder(i);
+                imageRepo.save(img);
+            }
+        }
+    }
+
+    @Override
     public Page<BlogPostSummaryResponse> getAllPostsForAdmin(Pageable pageable) {
-        return postRepo.findAll(pageable).map(this::toSummary);
+        return postRepo.findByIsDeletedFalse(pageable).map(this::toSummary);
     }
 
     // ---- Public Operations ----
 
     @Override
     public Page<BlogPostSummaryResponse> getPublishedPosts(Pageable pageable) {
-        return postRepo.findByPublishedTrue(pageable).map(this::toSummary);
+        return postRepo.findByPublishedTrueAndIsDeletedFalse(pageable).map(this::toSummary);
     }
 
     @Override
@@ -234,7 +291,7 @@ public class BlogServiceImpl implements BlogService {
     @Override
     @Transactional
     public void sendBlogDigestEmail(String subject, String customMessage) {
-        List<BlogPost> unsentPosts = postRepo.findByPublishedTrueAndDigestSentFalse();
+        List<BlogPost> unsentPosts = postRepo.findByPublishedTrueAndIsDeletedFalseAndDigestSentFalse();
         if (unsentPosts.isEmpty()) {
             log.info("No new blog posts to include in digest.");
             return;

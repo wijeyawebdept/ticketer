@@ -22,6 +22,7 @@ public interface BlogService {
     void deletePost(UUID postId);
     void deleteComment(UUID commentId);
     void deleteImage(UUID imageId);
+    void updateImageOrder(List<UUID> imageIds);
 
     // Admin list
     Page<BlogPostSummaryResponse> getAllPostsForAdmin(Pageable pageable);

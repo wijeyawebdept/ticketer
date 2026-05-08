@@ -105,7 +105,31 @@ public class AuthController {
         }
         try {
             userService.verifyEmail(email, code);
-            return ResponseEntity.ok(Map.of("status", "success", "message", "Email verified successfully! You can now sign in."));
+            
+            // Email verified successfully - auto login the user
+            com.ticket.ticket_booking_system.entity.User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found after verification"));
+
+            // Generate JWT token
+            String token = jwtService.generateToken(user);
+
+            // Update last login timestamp
+            loginSuccessHandler.updateLastLogin(email);
+
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Email verified successfully!");
+            response.put("token", token);
+            response.put("user", Map.of(
+                "id", user.getId(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole().name(),
+                "email", user.getEmail()
+            ));
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "error", "message", e.getMessage()));
         }

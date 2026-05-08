@@ -116,15 +116,6 @@ const PostDetail: React.FC = () => {
     <Box sx={{ bgcolor: '#0d0d0d', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <PublicNavbar />
 
-      {/* Hero Image */}
-      {selectedImage && (
-        <Box sx={{ width: '100%', maxHeight: 500, overflow: 'hidden', position: 'relative' }}>
-          <Box component="img" src={selectedImage} alt={post.title}
-            sx={{ width: '100%', height: 500, objectFit: 'cover', filter: 'brightness(0.65)' }} />
-          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(13,13,13,1) 0%, transparent 100%)', height: 200 }} />
-        </Box>
-      )}
 
       <Container maxWidth="lg" sx={{ py: 5, flexGrow: 1 }}>
         {/* Back Button */}
@@ -175,20 +166,56 @@ const PostDetail: React.FC = () => {
               </Box>
             </Box>
 
-            {/* Image Gallery Thumbnails */}
-            {post.images.length > 1 && (
+            {/* Image Gallery */}
+            {post.images.length > 0 && (
               <Box sx={{ mb: 4 }}>
-                <ImageList sx={{ width: '100%', height: 120 }} cols={Math.min(post.images.length, 6)} rowHeight={120}>
-                  {post.images.map((img) => (
-                    <ImageListItem key={img.imageId}
-                      onClick={() => setSelectedImage(img.imageBase64)}
-                      sx={{ cursor: 'pointer', borderRadius: 1, overflow: 'hidden',
-                        border: selectedImage === img.imageBase64 ? '2px solid #ff1955' : '2px solid transparent',
-                        transition: 'border 0.2s' }}>
-                      <img src={img.imageBase64} alt="" style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-                    </ImageListItem>
-                  ))}
-                </ImageList>
+                {/* Main large image */}
+                <Box
+                  component="img"
+                  src={selectedImage || post.images[0].imageBase64}
+                  alt={post.title}
+                  sx={{
+                    width: '100%',
+                    height: { xs: 280, sm: 400, md: 520 },
+                    objectFit: 'cover',
+                    borderRadius: 2,
+                    display: 'block',
+                    mb: post.images.length > 1 ? 1.5 : 0,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  }}
+                />
+                {/* Thumbnail strip — only shown when multiple images */}
+                {post.images.length > 1 && (
+                  <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5,
+                    '&::-webkit-scrollbar': { height: 4 },
+                    '&::-webkit-scrollbar-track': { bgcolor: '#222' },
+                    '&::-webkit-scrollbar-thumb': { bgcolor: '#444', borderRadius: 2 },
+                  }}>
+                    {post.images.map((img) => (
+                      <Box
+                        key={img.imageId}
+                        component="img"
+                        src={img.imageBase64}
+                        alt=""
+                        onClick={() => setSelectedImage(img.imageBase64)}
+                        sx={{
+                          width: 100,
+                          height: 70,
+                          objectFit: 'cover',
+                          borderRadius: 1.5,
+                          flexShrink: 0,
+                          cursor: 'pointer',
+                          border: selectedImage === img.imageBase64
+                            ? '2px solid #ff1955'
+                            : '2px solid transparent',
+                          opacity: selectedImage === img.imageBase64 ? 1 : 0.6,
+                          transition: 'all 0.2s ease',
+                          '&:hover': { opacity: 1, border: '2px solid rgba(255,25,85,0.6)' },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                )}
               </Box>
             )}
 

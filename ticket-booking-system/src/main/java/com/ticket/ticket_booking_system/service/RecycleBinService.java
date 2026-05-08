@@ -34,6 +34,8 @@ import com.ticket.ticket_booking_system.repository.SeatRepository;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
+import com.ticket.ticket_booking_system.repository.BlogPostRepository;
+import com.ticket.ticket_booking_system.entity.BlogPost;
 
 @Service
 public class RecycleBinService {
@@ -50,6 +52,7 @@ public class RecycleBinService {
     private final TicketCategoryRepository ticketCategoryRepository;
     private final EventCategoryRepository eventCategoryRepository;
     private final EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository;
+    private final BlogPostRepository blogPostRepository;
     private final ObjectMapper objectMapper;
 
     public RecycleBinService(
@@ -64,7 +67,8 @@ public class RecycleBinService {
             SeatRepository seatRepository,
             TicketCategoryRepository ticketCategoryRepository,
             EventCategoryRepository eventCategoryRepository,
-            EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository) {
+            EventEmployeeAssignmentRepository eventEmployeeAssignmentRepository,
+            BlogPostRepository blogPostRepository) {
         this.recycleBinRepository = recycleBinRepository;
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
@@ -77,6 +81,7 @@ public class RecycleBinService {
         this.ticketCategoryRepository = ticketCategoryRepository;
         this.eventCategoryRepository = eventCategoryRepository;
         this.eventEmployeeAssignmentRepository = eventEmployeeAssignmentRepository;
+        this.blogPostRepository = blogPostRepository;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         // Configure ObjectMapper to handle Hibernate lazy loading and empty beans
@@ -251,6 +256,10 @@ public class RecycleBinService {
                 eventScheduleRepository.deleteById(entityId);
                 System.out.println("Event Schedule permanently deleted: " + entityId);
             }
+            case "BLOG" -> {
+                blogPostRepository.deleteById(entityId);
+                System.out.println("Blog permanently deleted: " + entityId);
+            }
             default -> throw new RuntimeException("Unknown entity type: " + entityType);
         }
         
@@ -276,6 +285,7 @@ public class RecycleBinService {
                 case "VENUE" -> restoreVenue(recycleBin);
                 case "SCHEDULE" -> restoreSchedule(recycleBin);
                 case "EVENT_CATEGORY" -> restoreEventCategory(recycleBin);
+                case "BLOG" -> restoreBlog(recycleBin);
                 default -> throw new RuntimeException("Unknown entity type: " + entityType);
             }
             
@@ -379,6 +389,16 @@ public class RecycleBinService {
         System.out.println("Event Category " + category.getCategoryName() + " restored from recycle bin");
     }
 
+    private void restoreBlog(RecycleBin recycleBin) throws JsonProcessingException {
+        BlogPost post = blogPostRepository.findById(recycleBin.getEntityId())
+                .orElseThrow(() -> new RuntimeException("Blog post not found: " + recycleBin.getEntityId()));
+        
+        post.setIsDeleted(false);
+        blogPostRepository.save(post);
+        
+        System.out.println("Blog Post " + post.getTitle() + " restored from recycle bin");
+    }
+
     @Transactional
     public void emptyRecycleBin() {
         List<RecycleBin> allItems = recycleBinRepository.findAll();
@@ -464,6 +484,14 @@ public class RecycleBinService {
                             System.out.println("Event Category not found (already deleted): " + entityId);
                         }
                     }
+                    case "BLOG" -> {
+                        if (blogPostRepository.existsById(entityId)) {
+                            blogPostRepository.deleteById(entityId);
+                            System.out.println("Blog permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Blog not found (already deleted): " + entityId);
+                        }
+                    }
                     default -> System.err.println("Unknown entity type: " + entityType);
                 }
             } catch (Exception e) {
@@ -543,6 +571,14 @@ public class RecycleBinService {
                             System.out.println("Event Category not found (already deleted): " + entityId);
                         }
                     }
+                    case "BLOG" -> {
+                        if (blogPostRepository.existsById(entityId)) {
+                            blogPostRepository.deleteById(entityId);
+                            System.out.println("Blog permanently deleted: " + entityId);
+                        } else {
+                            System.out.println("Blog not found (already deleted): " + entityId);
+                        }
+                    }
                     default -> System.err.println("Unknown entity type: " + entityType);
                 }
             } catch (Exception e) {
@@ -598,6 +634,11 @@ public class RecycleBinService {
                 case "EVENT_CATEGORY" -> {
                     if (eventCategoryRepository.existsById(entityId)) {
                         eventCategoryRepository.deleteById(entityId);
+                    }
+                }
+                case "BLOG" -> {
+                    if (blogPostRepository.existsById(entityId)) {
+                        blogPostRepository.deleteById(entityId);
                     }
                 }
             }

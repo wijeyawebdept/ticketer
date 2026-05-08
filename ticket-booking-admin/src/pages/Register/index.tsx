@@ -90,8 +90,14 @@ const Register: React.FC = () => {
     setVerifyLoading(true);
     setVerifyError(null);
     try {
-      await AuthService.verifyEmail(registeredEmail, verificationCode.trim());
-      navigate('/login', { state: { message: 'Email verified! You can now sign in.' } });
+      const response = await AuthService.verifyEmail(registeredEmail, verificationCode.trim());
+      // Successful verification returns a token (auto-login)
+      if (response.token) {
+        navigate('/events');
+      } else {
+        // Fallback in case token isn't returned
+        navigate('/login', { state: { message: 'Email verified! You can now sign in.' } });
+      }
     } catch (err: any) {
       setVerifyError(err.response?.data?.message || 'Invalid or expired code. Please try again.');
     } finally {
@@ -142,6 +148,7 @@ const Register: React.FC = () => {
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
     hasUppercase: false,
+    hasLowercase: false,
     hasNumber: false,
     hasSymbol: false
   });
@@ -162,6 +169,7 @@ const Register: React.FC = () => {
     setPasswordValidation({
       minLength: password.length >= 8,
       hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
       hasNumber: /[0-9]/.test(password),
       hasSymbol: /[!@#$%^&*(),.?":{}|<>]/.test(password)
     });
@@ -427,6 +435,16 @@ const Register: React.FC = () => {
                         )}
                         <Typography variant="caption" sx={{ color: passwordValidation.hasUppercase ? 'success.main' : 'text.secondary' }}>
                           At least 1 uppercase letter
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {passwordValidation.hasLowercase ? (
+                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        ) : (
+                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: passwordValidation.hasLowercase ? 'success.main' : 'text.secondary' }}>
+                          At least 1 lowercase letter
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

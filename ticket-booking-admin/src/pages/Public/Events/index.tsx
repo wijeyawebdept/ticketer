@@ -81,11 +81,14 @@ const Events: React.FC = () => {
         ? await EventService.searchPublishedEvents(searchQuery, page, 12)
         : await EventService.getPublishedEvents(page, 12, categoryId || undefined);
       
-      // Sort events to show deals first
+      // Sort events to show deals first, then by creation date (newest first)
       const sortedEvents = (response.content || []).sort((a: Event, b: Event) => {
         if (a.hasDeal && !b.hasDeal) return -1;
         if (!a.hasDeal && b.hasDeal) return 1;
-        return 0;
+        
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
       });
       
       setEvents(sortedEvents);

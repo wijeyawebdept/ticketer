@@ -86,6 +86,10 @@ const BlogService = {
     await api.delete(`/api/admin/blog/images/${imageId}`);
   },
 
+  updateImageOrder: async (imageIds: string[]): Promise<void> => {
+    await api.put('/api/admin/blog/images/order', imageIds);
+  },
+
   sendDigest: async (subject?: string, customMessage?: string): Promise<string> => {
     const res = await api.post<string>('/api/admin/blog/digest/send', { subject, customMessage });
     return res.data;

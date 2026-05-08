@@ -8,12 +8,14 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PublicIcon from '@mui/icons-material/Public';
 import PublicOffIcon from '@mui/icons-material/PublicOff';
 import SendIcon from '@mui/icons-material/Send';
+import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from 'react-router-dom';
-import BlogService, { BlogPostSummary } from '../../services/BlogService';
+import BlogService, { BlogPostSummary, BlogImage } from '../../services/BlogService';
 
 const BlogManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -33,11 +35,18 @@ const BlogManagement: React.FC = () => {
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<BlogImage[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
 
   // Digest state
   const [digestSubject, setDigestSubject] = useState('');
   const [digestMessage, setDigestMessage] = useState('');
   const [sendingDigest, setSendingDigest] = useState(false);
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -53,10 +62,33 @@ const BlogManagement: React.FC = () => {
 
   useEffect(() => { fetchPosts(); }, []);
 
-  const handleOpenDialog = async () => {
+  const handleOpenDialog = () => {
     setOpenDialog(true);
+    setEditMode(false);
+    setEditingPostId(null);
     setTitle(''); setSummary(''); setContent('');
     setSelectedFiles([]); setPreviewUrls([]);
+    setExistingImages([]);
+  };
+
+  const handleEdit = async (post: BlogPostSummary) => {
+    setLoading(true);
+    try {
+      const detail = await BlogService.getPostAdmin(post.postId);
+      setEditingPostId(post.postId);
+      setEditMode(true);
+      setTitle(detail.title);
+      setSummary(detail.summary || '');
+      setContent(detail.content || '');
+      setExistingImages(detail.images);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
+      setOpenDialog(true);
+    } catch {
+      setError('Failed to load post for editing');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,14 +115,65 @@ const BlogManagement: React.FC = () => {
       if (summary) form.append('summary', summary);
       if (content) form.append('content', content);
       selectedFiles.forEach((f) => form.append('images', f));
-      await BlogService.createPost(form);
-      setSuccess('Blog post created successfully!');
+      
+      if (editMode && editingPostId) {
+        await BlogService.updatePost(editingPostId, form);
+        setSuccess('Blog post updated successfully!');
+      } else {
+        await BlogService.createPost(form);
+        setSuccess('Blog post created successfully!');
+      }
+      
       setOpenDialog(false);
       fetchPosts();
     } catch {
-      setError('Failed to create post');
+      setError(editMode ? 'Failed to update post' : 'Failed to create post');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteExistingImage = async (imageId: string) => {
+    if (!window.confirm('Remove this image?')) return;
+    try {
+      await BlogService.deleteImage(imageId);
+      setExistingImages((prev) => prev.filter((img) => img.imageId !== imageId));
+      setSuccess('Image removed');
+      // If we are also viewing details, refresh them
+      if (selectedPost) handleViewDetails(selectedPost.postId);
+    } catch {
+      setError('Failed to remove image');
+    }
+  };
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Necessary to allow drop
+  };
+
+  const handleDrop = async (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newImages = [...existingImages];
+    const draggedItem = newImages[draggedIndex];
+    newImages.splice(draggedIndex, 1);
+    newImages.splice(index, 0, draggedItem);
+    
+    setExistingImages(newImages);
+    setDraggedIndex(null);
+    
+    try {
+      await BlogService.updateImageOrder(newImages.map(img => img.imageId));
+      setSuccess('Image order updated');
+    } catch {
+      setError('Failed to update image order');
+      // Revert if failed? Or just keep local
+      fetchPosts(); 
     }
   };
 
@@ -104,14 +187,22 @@ const BlogManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = async (postId: string) => {
-    if (!window.confirm('Delete this post permanently?')) return;
+  const handleDelete = (postId: string) => {
+    setPostToDelete(postId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!postToDelete) return;
+    setDeleteDialogOpen(false);
     try {
-      await BlogService.deletePost(postId);
-      setSuccess('Post deleted');
+      await BlogService.deletePost(postToDelete);
+      setSuccess('Post moved to recycle bin');
       fetchPosts();
     } catch {
       setError('Failed to delete post');
+    } finally {
+      setPostToDelete(null);
     }
   };
 
@@ -236,9 +327,16 @@ const BlogManagement: React.FC = () => {
                           {post.published ? <PublicOffIcon fontSize="small" /> : <PublicIcon fontSize="small" />}
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton size="small" color="error" onClick={() => handleDelete(post.postId)}>
-                          <DeleteIcon fontSize="small" />
+                      <Tooltip title="Move to Recycle Bin">
+                        <IconButton size="small" color="warning"
+                          sx={{ backgroundColor: 'rgba(255,152,0,0.1)', '&:hover': { backgroundColor: 'rgba(255,152,0,0.2)' } }}
+                          onClick={() => handleDelete(post.postId)}>
+                          <DeleteSweepIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit">
+                        <IconButton size="small" color="secondary" onClick={() => handleEdit(post)}>
+                          <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -250,9 +348,9 @@ const BlogManagement: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Post Dialog */}
+      {/* Create/Edit Post Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Blog Post</DialogTitle>
+        <DialogTitle>{editMode ? 'Edit Blog Post' : 'Create New Blog Post'}</DialogTitle>
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <Grid container spacing={3} sx={{ mt: 0 }}>
@@ -262,7 +360,39 @@ const BlogManagement: React.FC = () => {
               <TextField fullWidth label="Full Content" value={content} onChange={(e) => setContent(e.target.value)} margin="normal" multiline rows={6} placeholder="Write the full article content here..." />
             </Grid>
             <Grid item xs={12} md={6}>
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Images (multiple allowed, max 5MB each)</Typography>
+              {existingImages.length > 0 && (
+                <>
+                  <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Existing Images (drag to reorder, click × to remove)</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {existingImages.map((img, index) => (
+                      <Box 
+                        key={img.imageId} 
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(index)}
+                        sx={{ 
+                          position: 'relative', width: 100, height: 75, cursor: 'grab',
+                          '&:active': { cursor: 'grabbing' },
+                          opacity: draggedIndex === index ? 0.5 : 1,
+                          border: '2px solid transparent',
+                          transition: 'all 0.2s',
+                          '&:hover': { borderColor: '#ff1955' }
+                        }}
+                      >
+                        <Box component="img" src={img.imageBase64} sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} />
+                        <IconButton size="small" onClick={() => handleDeleteExistingImage(img.imageId)}
+                          sx={{ position: 'absolute', top: -6, right: -6, bgcolor: '#ff1955', color: '#fff', width: 20, height: 20, p: 0, '&:hover': { bgcolor: '#c0003a' } }}>
+                          ×
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                </>
+              )}
+              
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>{editMode ? 'Add New Images' : 'Images'} (multiple allowed, max 5MB each)</Typography>
               <Button variant="outlined" component="label" sx={{ mb: 2 }}>
                 Add Images
                 <input type="file" multiple hidden accept="image/*" onChange={handleFilesChange} />
@@ -285,7 +415,7 @@ const BlogManagement: React.FC = () => {
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" disabled={loading || !title.trim()}
             sx={{ bgcolor: '#ff1955', '&:hover': { bgcolor: '#e01545' } }}>
-            {loading ? 'Creating...' : 'Create Post'}
+            {loading ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Post' : 'Create Post')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -386,6 +516,22 @@ const BlogManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Move Blog Post to Recycle Bin</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to move this blog post to the recycle bin? You can restore it later from the Recycle Bin section.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} sx={{ fontWeight: 500 }}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} variant="contained" color="warning" sx={{ fontWeight: 500 }}>
+            Move to Recycle Bin
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -79,6 +79,33 @@ class AuthService {
     return this.storageType === 'sessionStorage' ? sessionStorage : localStorage;
   }
 
+  private setSession(token: string, user: LoginResponse['user']): void {
+    const storage = this.getStorage();
+    storage.setItem('auth_token', token);
+    
+    let userRole = '';
+    try {
+      const decoded = jwt_decode<DecodedToken>(token);
+      userRole = decoded.role;
+    } catch (err) {
+      devLog('Error decoding JWT token:', err);
+    }
+    
+    if (user) {
+      const normalizedRole = (userRole || user.role).replace(/^ROLE_/, '');
+      
+      const userData = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: normalizedRole
+      };
+      storage.setItem('user_data', JSON.stringify({ email: userData.email }));
+      storage.setItem('user', JSON.stringify(userData));
+    }
+  }
+
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
       const response = await axios.post<RegisterResponse>('/api/auth/register', userData);
@@ -92,8 +119,16 @@ class AuthService {
     await axios.post('/api/auth/send-verification', { email });
   }
 
-  async verifyEmail(email: string, code: string): Promise<void> {
-    await axios.post('/api/auth/verify-email', { email, code });
+  async verifyEmail(email: string, code: string): Promise<LoginResponse> {
+    try {
+      const response = await axios.post<LoginResponse>('/api/auth/verify-email', { email, code });
+      if (response.data.token) {
+        this.setSession(response.data.token, response.data.user);
+      }
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
   }
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -101,33 +136,8 @@ class AuthService {
       const response = await axios.post<LoginResponse>('/api/auth/login', credentials);
       
       if (response.data.token) {
-        const storage = this.getStorage();
-        storage.setItem('auth_token', response.data.token);
-        
-        // Decode JWT token
-        let userRole = '';
-        try {
-          const decoded = jwt_decode<DecodedToken>(response.data.token);
-          userRole = decoded.role;
-        } catch (err) {
-          devLog('Error decoding JWT token:', err);
-        }
-        
-        // Store user data with role from JWT token
-        if (response.data.user) {
-          const normalizedRole = (userRole || response.data.user.role).replace(/^ROLE_/, '');
-          
-          const userData = {
-            id: response.data.user.id,
-            email: response.data.user.email,
-            firstName: response.data.user.firstName,
-            lastName: response.data.user.lastName,
-            role: normalizedRole
-          };
-          storage.setItem('user_data', JSON.stringify({ email: userData.email }));
-          storage.setItem('user', JSON.stringify(userData));
-          devLog('User logged in successfully');
-        }
+        this.setSession(response.data.token, response.data.user);
+        devLog('User logged in successfully');
       }
       
       // Return a compatible LoginResponse object
@@ -373,30 +383,8 @@ class AuthService {
       });
       
       if (response.data.token) {
-        const storage = this.getStorage();
-        storage.setItem('auth_token', response.data.token);
-        
-        // Decode JWT token to get user role
-        let userRole = '';
-        try {
-          const decoded = jwt_decode<DecodedToken>(response.data.token);
-          userRole = decoded.role;
-        } catch (err) {
-          devLog('Error decoding JWT token:', err);
-        }
-        
-        // Store user data
-        if (response.data.user) {
-          const userData = {
-            id: response.data.user.id,
-            email: response.data.user.email,
-            firstName: response.data.user.firstName,
-            lastName: response.data.user.lastName,
-            role: userRole || response.data.user.role
-          };
-          storage.setItem('user', JSON.stringify(userData));
-          devLog('Google login successful');
-        }
+        this.setSession(response.data.token, response.data.user);
+        devLog('Google login successful');
       }
       
       return response.data;

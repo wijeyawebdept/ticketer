@@ -299,7 +299,18 @@ public class EventServiceImpl implements EventService {
         }
 
         if (request.getImageUrl() != null) {
-            event.setImageUrl(request.getImageUrl());
+            // If the image is being cleared (empty string), delete the old file
+            if (request.getImageUrl().isEmpty() && event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
+                try {
+                    fileUploadService.deleteProfilePicture(event.getImageUrl());
+                } catch (IOException e) {
+                    // Log error but continue
+                }
+                event.setImageUrl(null);
+            } else if (!request.getImageUrl().isEmpty()) {
+                // If it's a new URL string, just update it
+                event.setImageUrl(request.getImageUrl());
+            }
         }
 
         if (request.getCategoryId() != null) {

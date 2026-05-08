@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Container,
@@ -235,7 +235,7 @@ const Home: React.FC = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [events, setEvents] = useState<Event[]>([]);
   const [dealEvents, setDealEvents] = useState<Event[]>([]);
-  const [dealScrollPosition, setDealScrollPosition] = useState(0);
+  const dealsScrollRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [banners, setBanners] = useState<BannerResponse[]>([]);
   const [timeFilter, setTimeFilter] = useState<'this-month' | 'next-month'>('this-month');
@@ -312,6 +312,14 @@ const Home: React.FC = () => {
         
         // Separate deal events from regular events
         const allEvents = response.content || [];
+        
+        // Ensure events are sorted by newest first
+        allEvents.sort((a: Event, b: Event) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+
         const eventsWithDeals = allEvents.filter((event: Event) => event.hasDeal);
         const eventsWithoutDeals = allEvents.filter((event: Event) => !event.hasDeal);
         
@@ -383,9 +391,12 @@ const Home: React.FC = () => {
   };
 
   const handleDealScroll = (direction: 'left' | 'right') => {
-    const cardWidth = isMobile ? 300 : 350;
-    const scrollAmount = direction === 'left' ? -cardWidth : cardWidth;
-    setDealScrollPosition(prev => prev + scrollAmount);
+    if (dealsScrollRef.current) {
+      const cardWidth = isMobile ? 280 : 330;
+      const gap = 24; // theme.spacing(3) is 24px
+      const scrollAmount = direction === 'left' ? -(cardWidth + gap) : (cardWidth + gap);
+      dealsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -478,7 +489,7 @@ const Home: React.FC = () => {
               Ticketer Deals
             </Typography>
             <Button
-              onClick={() => navigate('/events')}
+              onClick={() => navigate('/deals')}
               sx={{
                 fontFamily: 'Raleway, sans-serif',
                 fontWeight: 600,
@@ -499,7 +510,6 @@ const Home: React.FC = () => {
             {!isMobile && dealEvents.length > 3 && (
               <IconButton
                 onClick={() => handleDealScroll('left')}
-                disabled={dealScrollPosition >= 0}
                 sx={{
                   position: 'absolute',
                   left: -20,
@@ -509,7 +519,7 @@ const Home: React.FC = () => {
                   backgroundColor: 'rgba(255, 25, 85, 0.9)',
                   color: '#fff',
                   '&:hover': { backgroundColor: '#ff1955' },
-                  '&:disabled': { opacity: 0.3 },
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                 }}
               >
                 <ChevronLeft />
@@ -518,20 +528,23 @@ const Home: React.FC = () => {
 
             {/* Deals Cards Container */}
             <Box
+              ref={dealsScrollRef}
               sx={{
-                overflow: 'hidden',
-                position: 'relative',
+                display: 'flex',
+                gap: 3,
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                scrollSnapType: 'x mandatory',
+                scrollBehavior: 'smooth',
+                pb: 2,
+                px: 1, // Add padding to avoid cutting off box shadows
+                mx: -1,
+                '&::-webkit-scrollbar': { display: 'none' },
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
               }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 3,
-                  transition: 'transform 0.3s ease',
-                  transform: `translateX(${dealScrollPosition}px)`,
-                }}
-              >
-                {dealEvents.map((event) => {
+              {dealEvents.map((event) => {
                   // Compute the true lowest current price across all categories (with and without deals)
                   const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
                     const originalPrice = Number(tc.price) || 0;
@@ -558,6 +571,8 @@ const Home: React.FC = () => {
                     sx={{
                       minWidth: isMobile ? '280px' : '330px',
                       maxWidth: isMobile ? '280px' : '330px',
+                      scrollSnapAlign: 'start',
+                      flexShrink: 0,
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
                       borderRadius: 2,
                       cursor: 'pointer',
@@ -711,14 +726,12 @@ const Home: React.FC = () => {
                   </Card>
                   );
                 })}
-              </Box>
             </Box>
 
             {/* Scroll Right Button */}
             {!isMobile && dealEvents.length > 3 && (
               <IconButton
                 onClick={() => handleDealScroll('right')}
-                disabled={Math.abs(dealScrollPosition) >= (dealEvents.length - 3) * 350}
                 sx={{
                   position: 'absolute',
                   right: -20,
@@ -728,7 +741,7 @@ const Home: React.FC = () => {
                   backgroundColor: 'rgba(255, 25, 85, 0.9)',
                   color: '#fff',
                   '&:hover': { backgroundColor: '#ff1955' },
-                  '&:disabled': { opacity: 0.3 },
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                 }}
               >
                 <ChevronRight />
