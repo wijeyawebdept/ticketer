@@ -81,6 +81,12 @@ public class Organizer implements UserDetails {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column(name = "reset_password_token", unique = true)
+    private String resetPasswordToken;
+
+    @Column(name = "reset_password_token_expiry")
+    private LocalDateTime resetPasswordTokenExpiry;
+
     // Organizer-specific fields
     @Column(name = "organization_name", nullable = false, length = 255)
     private String organizationName;

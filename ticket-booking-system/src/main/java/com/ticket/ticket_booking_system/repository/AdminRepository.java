@@ -21,6 +21,7 @@ import com.ticket.ticket_booking_system.entity.Admin;
 public interface AdminRepository extends JpaRepository<Admin, UUID>, JpaSpecificationExecutor<Admin> {
     Optional<Admin> findByEmail(String email);
     boolean existsByEmail(String email);
+    Optional<Admin> findByResetPasswordToken(String token);
     
     // Update last login timestamp
     @Modifying

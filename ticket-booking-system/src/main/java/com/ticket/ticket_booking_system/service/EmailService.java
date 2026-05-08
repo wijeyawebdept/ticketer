@@ -57,6 +57,7 @@ public class EmailService {
     }
 
     public void sendHtml(String toEmail, String subject, String htmlBody) throws MessagingException {
+        System.out.println("sendHtml called for: " + toEmail + " with subject: " + subject);
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper =
                 new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
@@ -71,7 +72,9 @@ public class EmailService {
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
 
+        System.out.println("Actually sending email via mailSender...");
         mailSender.send(message);
+        System.out.println("mailSender.send() completed.");
     }
 
     public void sendBookingConfirmationEmail(Booking booking, String customerEmail) {
@@ -243,6 +246,7 @@ public class EmailService {
 
     public void sendPasswordResetEmail(String customerEmail, String firstName, String resetLink) {
         try {
+            System.out.println("EmailService: sendPasswordResetEmail called for " + customerEmail);
             Context ctx = new Context();
             ctx.setVariable("firstName", firstName);
             ctx.setVariable("resetLink", resetLink);
@@ -252,8 +256,11 @@ public class EmailService {
             String subject = "Reset Your Ticketer Password";
 
             sendHtml(customerEmail, subject, htmlBody);
+            System.out.println("EmailService: Password reset email sent successfully to " + customerEmail);
             log.info("Password reset email sent to: {}", customerEmail);
         } catch (Exception e) {
+            System.err.println("EmailService ERROR: Failed to send password reset email to " + customerEmail + ": " + e.getMessage());
+            e.printStackTrace();
             log.error("Failed to send password reset email to {}: {}", customerEmail, e.getMessage());
         }
     }

@@ -14,8 +14,6 @@ import PublicOffIcon from '@mui/icons-material/PublicOff';
 import SendIcon from '@mui/icons-material/Send';
 import { useNavigate } from 'react-router-dom';
 import BlogService, { BlogPostSummary } from '../../services/BlogService';
-import EventCategoryService from '../../services/eventCategory.service';
-import { EventCategory } from '../../types';
 
 const BlogManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -24,14 +22,15 @@ const BlogManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [digestDialogOpen, setDigestDialogOpen] = useState(false);
-  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
@@ -56,12 +55,8 @@ const BlogManagement: React.FC = () => {
 
   const handleOpenDialog = async () => {
     setOpenDialog(true);
-    setTitle(''); setSummary(''); setContent(''); setCategory('');
+    setTitle(''); setSummary(''); setContent('');
     setSelectedFiles([]); setPreviewUrls([]);
-    try {
-      const cats = await EventCategoryService.getActiveCategories();
-      setCategories(cats);
-    } catch { }
   };
 
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,14 +76,12 @@ const BlogManagement: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('Title is required'); return; }
-    if (!category.trim()) { setError('Category is required'); return; }
     setLoading(true);
     try {
       const form = new FormData();
       form.append('title', title);
       if (summary) form.append('summary', summary);
       if (content) form.append('content', content);
-      form.append('category', category);
       selectedFiles.forEach((f) => form.append('images', f));
       await BlogService.createPost(form);
       setSuccess('Blog post created successfully!');
@@ -119,6 +112,35 @@ const BlogManagement: React.FC = () => {
       fetchPosts();
     } catch {
       setError('Failed to delete post');
+    }
+  };
+
+  const handleViewDetails = async (postId: string) => {
+    setDetailsLoading(true);
+    setDetailsDialogOpen(true);
+    try {
+      const data = await BlogService.getPostAdmin(postId);
+      setSelectedPost(data);
+    } catch {
+      setError('Failed to load post details');
+      setDetailsDialogOpen(false);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      await BlogService.deleteComment(commentId);
+      setSuccess('Comment deleted');
+      // Refresh details
+      if (selectedPost) {
+        handleViewDetails(selectedPost.postId);
+        fetchPosts(); // Also update comment count in main list
+      }
+    } catch {
+      setError('Failed to delete comment');
     }
   };
 
@@ -175,7 +197,7 @@ const BlogManagement: React.FC = () => {
             </TableHead>
             <TableBody>
               {posts.length === 0 ? (
-                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3 }}>No blog posts yet. Create your first post!</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3 }}>No blog posts yet. Create your first post!</TableCell></TableRow>
               ) : (
                 posts.map((post) => (
                   <TableRow key={post.postId} hover>
@@ -198,9 +220,14 @@ const BlogManagement: React.FC = () => {
                     <TableCell align="center">{post.commentCount}</TableCell>
                     <TableCell>{formatDate(post.createdAt)}</TableCell>
                     <TableCell align="center">
+                      <Tooltip title="View Details & Comments">
+                        <IconButton size="small" color="primary" onClick={() => handleViewDetails(post.postId)}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="View on public site">
                         <IconButton size="small" color="info" onClick={() => window.open(`/blog/${post.postId}`, '_blank')}>
-                          <VisibilityIcon fontSize="small" />
+                          <PublicIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title={post.published ? 'Unpublish' : 'Publish'}>
@@ -284,6 +311,81 @@ const BlogManagement: React.FC = () => {
             sx={{ bgcolor: '#ff1955', '&:hover': { bgcolor: '#e01545' } }}>
             {sendingDigest ? 'Sending...' : 'Send Digest'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Details & Comments Dialog */}
+      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">{selectedPost?.title || 'Post Details'}</Typography>
+          {selectedPost && (
+            <Chip label={selectedPost.published ? 'Published' : 'Draft'} 
+                  color={selectedPost.published ? 'success' : 'default'} size="small" />
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          {detailsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+          ) : selectedPost ? (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={7}>
+                <Typography variant="subtitle2" color="text.secondary">Summary</Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>{selectedPost.summary || 'No summary provided.'}</Typography>
+                
+                <Typography variant="subtitle2" color="text.secondary">Content</Typography>
+                <Box sx={{ 
+                  bgcolor: '#f9f9f9', p: 2, borderRadius: 1, border: '1px solid #eee',
+                  maxHeight: '300px', overflowY: 'auto', whiteSpace: 'pre-wrap', fontSize: '0.9rem'
+                }}>
+                  {selectedPost.content || 'No content provided.'}
+                </Box>
+                
+                <Typography variant="subtitle2" sx={{ mt: 3, mb: 1 }}>Images</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedPost.images.map((img: any, i: number) => (
+                    <Box key={i} component="img" src={img.imageBase64} 
+                         sx={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 1, border: '1px solid #ddd' }} />
+                  ))}
+                  {selectedPost.images.length === 0 && <Typography variant="caption">No images.</Typography>}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={5}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
+                    Comments ({selectedPost.comments.length})
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                <Box sx={{ maxHeight: '450px', overflowY: 'auto' }}>
+                  {selectedPost.comments.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+                      No comments yet.
+                    </Typography>
+                  ) : (
+                    selectedPost.comments.map((comment: any) => (
+                      <Box key={comment.commentId} sx={{ mb: 2, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #eee' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{comment.userName}</Typography>
+                          <Typography variant="caption" color="text.secondary">{formatDate(comment.createdAt)}</Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ color: '#444', mb: 1 }}>{comment.content}</Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button size="small" color="error" startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
+                                  onClick={() => handleDeleteComment(comment.commentId)} sx={{ fontSize: '0.7rem', py: 0 }}>
+                            Delete
+                          </Button>
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

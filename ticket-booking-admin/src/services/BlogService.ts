@@ -103,9 +103,6 @@ const BlogService = {
     return res.data;
   },
 
-  getCategories: async (): Promise<string[]> => {
-    return [];
-  },
 
   toggleLike: async (postId: string): Promise<boolean> => {
     const res = await api.post<boolean>(`/api/public/blog/posts/${postId}/like`);

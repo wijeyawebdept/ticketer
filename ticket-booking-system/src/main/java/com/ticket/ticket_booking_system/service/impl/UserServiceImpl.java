@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -409,37 +410,125 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        // Silently return if email not found — avoid user enumeration
-        userRepository.findByEmail(email).ifPresent(user -> {
+        String trimmedEmail = email.trim().toLowerCase();
+        System.out.println("Processing forgotPassword request for: " + trimmedEmail);
+        
+        // 1. Check users table
+        userRepository.findByEmail(trimmedEmail).ifPresent(user -> {
+            System.out.println("Found user in USER table: " + user.getEmail());
             String token = UUID.randomUUID().toString();
             user.setResetPasswordToken(token);
             user.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
             userRepository.save(user);
-
-            String resetLink = frontendUrl + "/reset-password?token=" + token;
-            emailService.sendPasswordResetEmail(
-                    user.getEmail(),
-                    user.getFirstName(),
-                    resetLink
-            );
+            sendResetEmail(user.getEmail(), user.getFirstName(), token);
         });
+
+        // 2. Check admins table
+        adminRepository.findByEmail(trimmedEmail).ifPresent(admin -> {
+            System.out.println("Found user in ADMIN table: " + admin.getEmail());
+            String token = UUID.randomUUID().toString();
+            admin.setResetPasswordToken(token);
+            admin.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
+            adminRepository.save(admin);
+            sendResetEmail(admin.getEmail(), admin.getFirstName(), token);
+        });
+
+        // 3. Check organizers table
+        organizerRepository.findByEmail(trimmedEmail).ifPresent(organizer -> {
+            System.out.println("Found user in ORGANIZER table: " + organizer.getEmail());
+            String token = UUID.randomUUID().toString();
+            organizer.setResetPasswordToken(token);
+            organizer.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
+            organizerRepository.save(organizer);
+            sendResetEmail(organizer.getEmail(), organizer.getFirstName(), token);
+        });
+
+        // 4. Check organizer employees table
+        employeeRepository.findByEmail(trimmedEmail).ifPresent(employee -> {
+            System.out.println("Found user in EMPLOYEE table: " + employee.getEmail());
+            String token = UUID.randomUUID().toString();
+            employee.setResetPasswordToken(token);
+            employee.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(24));
+            employeeRepository.save(employee);
+            sendResetEmail(employee.getEmail(), employee.getFirstName(), token);
+        });
+    }
+
+    private void sendResetEmail(String email, String firstName, String token) {
+        System.out.println("Initiating email send to: " + email);
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(email, firstName, resetLink);
     }
 
     @Override
     @Transactional
     public void resetPasswordWithToken(String token, String newPassword) {
-        User user = userRepository.findByResetPasswordToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset link."));
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        boolean found = false;
 
-        if (user.getResetPasswordTokenExpiry() == null
-                || user.getResetPasswordTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Password reset link has expired. Please request a new one.");
+        // Try Users
+        Optional<User> userOpt = userRepository.findByResetPasswordToken(token);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            validateExpiry(user.getResetPasswordTokenExpiry());
+            user.setPassword(encodedPassword);
+            user.setResetPasswordToken(null);
+            user.setResetPasswordTokenExpiry(null);
+            userRepository.save(user);
+            found = true;
         }
 
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setResetPasswordToken(null);
-        user.setResetPasswordTokenExpiry(null);
-        userRepository.save(user);
+        if (!found) {
+            // Try Admins
+            Optional<Admin> adminOpt = adminRepository.findByResetPasswordToken(token);
+            if (adminOpt.isPresent()) {
+                Admin admin = adminOpt.get();
+                validateExpiry(admin.getResetPasswordTokenExpiry());
+                admin.setPassword(encodedPassword);
+                admin.setResetPasswordToken(null);
+                admin.setResetPasswordTokenExpiry(null);
+                adminRepository.save(admin);
+                found = true;
+            }
+        }
+
+        if (!found) {
+            // Try Organizers
+            Optional<Organizer> organizerOpt = organizerRepository.findByResetPasswordToken(token);
+            if (organizerOpt.isPresent()) {
+                Organizer organizer = organizerOpt.get();
+                validateExpiry(organizer.getResetPasswordTokenExpiry());
+                organizer.setPassword(encodedPassword);
+                organizer.setResetPasswordToken(null);
+                organizer.setResetPasswordTokenExpiry(null);
+                organizerRepository.save(organizer);
+                found = true;
+            }
+        }
+
+        if (!found) {
+            // Try Organizer Employees
+            Optional<OrganizerEmployee> employeeOpt = employeeRepository.findByResetPasswordToken(token);
+            if (employeeOpt.isPresent()) {
+                OrganizerEmployee employee = employeeOpt.get();
+                validateExpiry(employee.getResetPasswordTokenExpiry());
+                employee.setPassword(encodedPassword);
+                employee.setResetPasswordToken(null);
+                employee.setResetPasswordTokenExpiry(null);
+                employeeRepository.save(employee);
+                found = true;
+            }
+        }
+
+        if (!found) {
+            throw new IllegalArgumentException("Invalid or expired password reset link.");
+        }
+    }
+
+    private void validateExpiry(LocalDateTime expiry) {
+        if (expiry == null || expiry.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Password reset link has expired. Please request a new one.");
+        }
     }
 
     @Override

@@ -20,8 +20,8 @@ import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 @Repository
 public interface OrganizerEmployeeRepository extends JpaRepository<OrganizerEmployee, UUID>, JpaSpecificationExecutor<OrganizerEmployee> {
     Optional<OrganizerEmployee> findByEmail(String email);
-    
     boolean existsByEmail(String email);
+    Optional<OrganizerEmployee> findByResetPasswordToken(String token);
     
     // Update last login timestamp
     @Modifying

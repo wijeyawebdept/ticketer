@@ -50,14 +50,19 @@ public class BlogAdminController {
     }
 
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<BlogPostDetailResponse> createPost(
+    public ResponseEntity<?> createPost(
             @RequestPart("title") String title,
             @RequestPart(value = "summary", required = false) String summary,
             @RequestPart(value = "content", required = false) String content,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 
-        BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content);
-        return ResponseEntity.ok(blogService.createPost(req, images));
+        try {
+            BlogPostCreateRequest req = new BlogPostCreateRequest(title, summary, content);
+            return ResponseEntity.ok(blogService.createPost(req, images));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(java.util.Map.of("message", "Error creating post: " + e.getMessage()));
+        }
     }
 
     @PutMapping(value = "/{postId}", consumes = "multipart/form-data")
