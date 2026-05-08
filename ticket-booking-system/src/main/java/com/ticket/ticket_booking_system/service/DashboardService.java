@@ -4,22 +4,29 @@ import java.util.Map;
 
 public interface DashboardService {
 
+    Map<String, Object> getDashboardOverview(java.util.UUID organizerId);
     Map<String, Object> getDashboardOverview();
 
+    Map<String, Object> getAnalyticsByPeriod(String period, java.util.UUID organizerId);
     Map<String, Object> getAnalyticsByPeriod(String period);
 
+    Map<String, Object> getRevenueChartData(String period, String startDate, String endDate, java.util.UUID organizerId);
     Map<String, Object> getRevenueChartData(String period, String startDate, String endDate);
 
+    Map<String, Object> getRecentTransactions(int count, java.util.UUID organizerId);
     Map<String, Object> getRecentTransactions(int count);
 
+    Map<String, Object> getUpcomingEvents(int count, java.util.UUID organizerId);
     Map<String, Object> getUpcomingEvents(int count);
 
     Map<String, Object> getDraftEvents(int count);
 
     Map<String, Object> getDraftEventsByOrganizer(java.util.UUID organizerId, int count);
 
+    Map<String, Object> getTopSellingEvents(int count, java.util.UUID organizerId);
     Map<String, Object> getTopSellingEvents(int count);
 
     // New method for trend data
+    Map<String, Object> getTrendData(java.util.UUID organizerId);
     Map<String, Object> getTrendData();
 }

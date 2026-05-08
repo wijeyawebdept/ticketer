@@ -63,6 +63,29 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'PAYMENT' AND t.status = 'SUCCESS' AND t.createdAt BETWEEN :startDate AND :endDate")
         BigDecimal findRevenueForPeriod(LocalDateTime startDate, LocalDateTime endDate);
 
+        @Query("SELECT t FROM Transaction t " +
+               "LEFT JOIN FETCH t.booking b " +
+               "LEFT JOIN FETCH b.event e " +
+               "WHERE e.organizer.organizerId = :organizerId " +
+               "ORDER BY t.createdAt DESC")
+        List<Transaction> findRecentTransactionsByOrganizerEager(UUID organizerId);
+
+        @Query("SELECT t FROM Transaction t " +
+               "LEFT JOIN FETCH t.booking b " +
+               "LEFT JOIN FETCH b.event e " +
+               "WHERE e.organizer.organizerId = :organizerId AND t.createdAt BETWEEN :startDate AND :endDate")
+        List<Transaction> findByDateRangeByOrganizer(LocalDateTime startDate, LocalDateTime endDate, UUID organizerId);
+
+        @Query("SELECT SUM(t.amount) FROM Transaction t " +
+               "JOIN t.booking b JOIN b.event e " +
+               "WHERE e.organizer.organizerId = :organizerId AND t.type = 'PAYMENT' AND t.status = 'SUCCESS'")
+        BigDecimal findTotalRevenueByOrganizer(UUID organizerId);
+
+        @Query("SELECT SUM(t.amount) FROM Transaction t " +
+               "JOIN t.booking b JOIN b.event e " +
+               "WHERE e.organizer.organizerId = :organizerId AND t.type = 'PAYMENT' AND t.status = 'SUCCESS' AND t.createdAt BETWEEN :startDate AND :endDate")
+        BigDecimal findRevenueForPeriodByOrganizer(LocalDateTime startDate, LocalDateTime endDate, UUID organizerId);
+
         @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'REFUND' AND t.status = 'SUCCESS'")
         BigDecimal findTotalRefunds();
 }

@@ -46,8 +46,8 @@ public class OrganizerDashboardController {
      */
     @GetMapping("/overview")
     public ResponseEntity<Map<String, Object>> getDashboardOverview(Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getDashboardOverview());
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getDashboardOverview(organizerId));
     }
 
     /**
@@ -57,8 +57,8 @@ public class OrganizerDashboardController {
     public ResponseEntity<Map<String, Object>> getAnalytics(
             @RequestParam(defaultValue = "week") String period,
             Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getAnalyticsByPeriod(period));
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getAnalyticsByPeriod(period, organizerId));
     }
 
     /**
@@ -70,8 +70,8 @@ public class OrganizerDashboardController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getRevenueChartData(period, startDate, endDate));
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getRevenueChartData(period, startDate, endDate, organizerId));
     }
 
     /**
@@ -81,8 +81,8 @@ public class OrganizerDashboardController {
     public ResponseEntity<Map<String, Object>> getRecentTransactions(
             @RequestParam(defaultValue = "10") int count,
             Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getRecentTransactions(count));
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getRecentTransactions(count, organizerId));
     }
 
     /**
@@ -92,8 +92,8 @@ public class OrganizerDashboardController {
     public ResponseEntity<Map<String, Object>> getUpcomingEvents(
             @RequestParam(defaultValue = "5") int count,
             Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getUpcomingEvents(count));
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getUpcomingEvents(count, organizerId));
     }
 
     /**
@@ -103,8 +103,8 @@ public class OrganizerDashboardController {
     public ResponseEntity<Map<String, Object>> getTopSellingEvents(
             @RequestParam(defaultValue = "5") int count,
             Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getTopSellingEvents(count));
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getTopSellingEvents(count, organizerId));
     }
 
     /**
@@ -128,8 +128,8 @@ public class OrganizerDashboardController {
      */
     @GetMapping("/trends")
     public ResponseEntity<Map<String, Object>> getTrendData(Authentication authentication) {
-
-        return ResponseEntity.ok(dashboardService.getTrendData());
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        return ResponseEntity.ok(dashboardService.getTrendData(organizerId));
     }
 
     /**

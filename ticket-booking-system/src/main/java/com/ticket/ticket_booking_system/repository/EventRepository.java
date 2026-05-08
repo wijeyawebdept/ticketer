@@ -32,6 +32,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e GROUP BY e ORDER BY COUNT(b) DESC")
     List<Event> findTopSellingEvents(Pageable pageable);
 
+    @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e WHERE e.organizer.organizerId = :organizerId GROUP BY e ORDER BY COUNT(b) DESC")
+    List<Event> findTopSellingEventsByOrganizer(UUID organizerId, Pageable pageable);
+
+    long countByStatus(Event.EventStatus status);
+
     // Add JOIN FETCH queries to avoid LazyInitializationException
     // Changed to LEFT JOIN FETCH for organizer to include events created by ADMIN/SUPER_ADMIN (organizer_id = NULL)
     // Filter out soft-deleted events (is_deleted = false)
