@@ -30,6 +30,7 @@ public class AdminSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         createDefaultAdmin();
+        createDefaultSuperAdmin();
     }
 
     private void createDefaultAdmin() {
@@ -62,7 +63,41 @@ public class AdminSeeder implements CommandLineRunner {
         
         log.info("Default admin user created successfully!");
         log.info("Email: {}", adminEmail);
-        log.info("Password: 1234");
+        log.info("Password: admin1234");
+        log.info("IMPORTANT: Please change this password immediately after first login!");
+    }
+
+    private void createDefaultSuperAdmin() {
+        String superAdminEmail = "superadmin@ticketbooking.com";
+        
+        // Check if super admin already exists
+        if (adminRepository.existsByEmail(superAdminEmail)) {
+            log.info("Super admin user already exists: {}", superAdminEmail);
+            return;
+        }
+
+        // Create new super admin user
+        String encodedPassword = passwordEncoder.encode("superadmin1234");
+        Admin superAdmin = Admin.builder()
+                .email(superAdminEmail)
+                .password(encodedPassword) // Default password
+                .firstName("System")
+                .lastName("Super Administrator")
+                .phoneNumber("+94770000000")
+                .dateOfBirth(LocalDate.of(1985, 1, 1))
+                .role(Admin.Role.SUPER_ADMIN)
+                .emailVerified(true)
+                .active(1)
+                .accessLevel(Admin.AccessLevel.SUPER)
+                .canDeleteUsers(true)
+                .canModifySystemSettings(true)
+                .build();
+
+        adminRepository.save(superAdmin);
+        
+        log.info("Default super admin user created successfully!");
+        log.info("Email: {}", superAdminEmail);
+        log.info("Password: superadmin1234");
         log.info("IMPORTANT: Please change this password immediately after first login!");
     }
 }
