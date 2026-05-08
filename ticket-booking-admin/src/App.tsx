@@ -61,6 +61,7 @@ import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import CookiePolicy from './pages/Public/CookiePolicy';
 import TermsAndConditions from './pages/Public/TermsAndConditions';
 import FAQ from './pages/Public/FAQ';
+import RefundPolicy from './pages/Public/RefundPolicy';
 import UserProfile from './pages/Public/UserProfile';
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
@@ -327,6 +328,7 @@ function App() {
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
               {/* Payment Result Pages */}
               <Route path="/booking/payment-return" element={<BookingPaymentReturn />} />
               <Route path="/booking/payment-success" element={<PaymentSuccess />} />

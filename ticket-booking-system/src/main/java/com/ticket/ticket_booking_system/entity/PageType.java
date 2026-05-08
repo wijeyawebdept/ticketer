@@ -7,5 +7,6 @@ public enum PageType {
     PRIVACY_POLICY,
     COOKIE_POLICY,
     TERMS_AND_CONDITIONS,
-    FAQ
+    FAQ,
+    REFUND_POLICY
 }

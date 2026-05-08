@@ -10,10 +10,12 @@ import com.ticket.ticket_booking_system.entity.CookiePolicy;
 import com.ticket.ticket_booking_system.entity.FAQ;
 import com.ticket.ticket_booking_system.entity.PageType;
 import com.ticket.ticket_booking_system.entity.PrivacyPolicy;
+import com.ticket.ticket_booking_system.entity.RefundPolicy;
 import com.ticket.ticket_booking_system.entity.TermsAndConditions;
 import com.ticket.ticket_booking_system.repository.CookiePolicyRepository;
 import com.ticket.ticket_booking_system.repository.FAQRepository;
 import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
+import com.ticket.ticket_booking_system.repository.RefundPolicyRepository;
 import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
 import com.ticket.ticket_booking_system.service.PageContentService;
 
@@ -29,6 +31,7 @@ public class PageContentServiceImpl implements PageContentService {
     private final TermsAndConditionsRepository termsAndConditionsRepository;
     private final CookiePolicyRepository cookiePolicyRepository;
     private final FAQRepository faqRepository;
+    private final RefundPolicyRepository refundPolicyRepository;
 
     @Override
     public PageContentResponse getPageContent(String pageType) {
@@ -37,26 +40,32 @@ public class PageContentServiceImpl implements PageContentService {
                 case "PRIVACY_POLICY" -> {
                     PrivacyPolicy content = privacyPolicyRepository.findAll().stream()
                             .findFirst()
-                            .orElseThrow(() -> new RuntimeException("Privacy Policy not found"));
+                            .orElse(PrivacyPolicy.builder().title("Privacy Policy").content("").build());
                     yield convertToResponse(content, "PRIVACY_POLICY");
                 }
                 case "TERMS_AND_CONDITIONS" -> {
                     TermsAndConditions content = termsAndConditionsRepository.findAll().stream()
                             .findFirst()
-                            .orElseThrow(() -> new RuntimeException("Terms and Conditions not found"));
+                            .orElse(TermsAndConditions.builder().title("Terms and Conditions").content("").build());
                     yield convertToResponse(content, "TERMS_AND_CONDITIONS");
                 }
                 case "COOKIE_POLICY" -> {
                     CookiePolicy content = cookiePolicyRepository.findAll().stream()
                             .findFirst()
-                            .orElseThrow(() -> new RuntimeException("Cookie Policy not found"));
+                            .orElse(CookiePolicy.builder().title("Cookie Policy").content("").build());
                     yield convertToResponse(content, "COOKIE_POLICY");
                 }
                 case "FAQ" -> {
                     FAQ content = faqRepository.findAll().stream()
                             .findFirst()
-                            .orElseThrow(() -> new RuntimeException("FAQ not found"));
+                            .orElse(FAQ.builder().title("FAQ").content("").build());
                     yield convertToResponse(content, "FAQ");
+                }
+                case "REFUND_POLICY" -> {
+                    RefundPolicy content = refundPolicyRepository.findAll().stream()
+                            .findFirst()
+                            .orElse(RefundPolicy.builder().title("Refund Policy").content("").build());
+                    yield convertToResponse(content, "REFUND_POLICY");
                 }
                 default -> throw new RuntimeException("Invalid page type: " + pageType);
             };
@@ -118,6 +127,18 @@ public class PageContentServiceImpl implements PageContentService {
                     log.info("FAQ updated");
                     yield convertToResponse(content, "FAQ");
                 }
+                case "REFUND_POLICY" -> {
+                    RefundPolicy content = refundPolicyRepository.findAll().stream()
+                            .findFirst()
+                            .orElse(RefundPolicy.builder().build());
+                    content.setTitle(request.getTitle());
+                    content.setContent(request.getContent());
+                    content.setUpdatedBy(updatedBy);
+                    content.setUpdatedAt(LocalDateTime.now());
+                    content = refundPolicyRepository.save(content);
+                    log.info("Refund Policy updated");
+                    yield convertToResponse(content, "REFUND_POLICY");
+                }
                 default -> throw new RuntimeException("Invalid page type: " + pageType);
             };
         } catch (Exception e) {
@@ -148,6 +169,11 @@ public class PageContentServiceImpl implements PageContentService {
             var faq = faqRepository.findById(contentId);
             if (faq.isPresent()) {
                 return convertToResponse(faq.get(), "FAQ");
+            }
+
+            var refundPolicy = refundPolicyRepository.findById(contentId);
+            if (refundPolicy.isPresent()) {
+                return convertToResponse(refundPolicy.get(), "REFUND_POLICY");
             }
 
             throw new RuntimeException("Page content not found with ID: " + contentId);
@@ -197,6 +223,16 @@ public class PageContentServiceImpl implements PageContentService {
                     .createdAt(f.getCreatedAt())
                     .updatedAt(f.getUpdatedAt())
                     .updatedBy(f.getUpdatedBy())
+                    .build();
+        } else if (content instanceof RefundPolicy r) {
+            return PageContentResponse.builder()
+                    .contentId(r.getId())
+                    .pageType(PageType.REFUND_POLICY)
+                    .title(r.getTitle())
+                    .content(r.getContent())
+                    .createdAt(r.getCreatedAt())
+                    .updatedAt(r.getUpdatedAt())
+                    .updatedBy(r.getUpdatedBy())
                     .build();
         }
         throw new RuntimeException("Unknown content type");

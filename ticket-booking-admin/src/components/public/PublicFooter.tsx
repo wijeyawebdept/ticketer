@@ -66,7 +66,7 @@ const PublicFooter: React.FC = () => {
               <Link href="/events" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Events</Link>
               <Link href="/events" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Ticketer Deals</Link>
               <Link href="/profile" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>My Account</Link>
-              <Link href="/" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Refund Policy</Link>
+              <Link href="/refund-policy" display="block" color="inherit" sx={{ mb: 1, textDecoration: 'none', fontFamily: 'Raleway, sans-serif', '&:hover': { color: '#fff' } }}>Refund Policy</Link>
             </Grid>
 
             {/* Column 3: About Us */}

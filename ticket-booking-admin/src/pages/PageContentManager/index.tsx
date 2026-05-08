@@ -45,6 +45,7 @@ const pageTypes = [
   { key: 'COOKIE_POLICY', label: 'Cookie Policy' },
   { key: 'TERMS_AND_CONDITIONS', label: 'Terms and Conditions' },
   { key: 'FAQ', label: 'FAQ' },
+  { key: 'REFUND_POLICY', label: 'Refund Policy' },
 ];
 
 export default function PageContentManager() {
@@ -59,6 +60,7 @@ export default function PageContentManager() {
     COOKIE_POLICY: { title: '', content: '' },
     TERMS_AND_CONDITIONS: { title: '', content: '' },
     FAQ: { title: '', content: '' },
+    REFUND_POLICY: { title: '', content: '' },
   });
 
   // Load all page contents
@@ -182,7 +184,7 @@ export default function PageContentManager() {
       <Box sx={{ mb: 3 }}>
         <h1>Page Content Manager</h1>
         <Typography color="textSecondary">
-          Manage Privacy Policy, Cookie Policy, Terms and Conditions, and FAQ
+          Manage Privacy Policy, Cookie Policy, Terms and Conditions, FAQ, and Refund Policy
         </Typography>
       </Box>
 

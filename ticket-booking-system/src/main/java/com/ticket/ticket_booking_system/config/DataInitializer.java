@@ -6,10 +6,12 @@ import org.springframework.stereotype.Component;
 import com.ticket.ticket_booking_system.entity.CookiePolicy;
 import com.ticket.ticket_booking_system.entity.FAQ;
 import com.ticket.ticket_booking_system.entity.PrivacyPolicy;
+import com.ticket.ticket_booking_system.entity.RefundPolicy;
 import com.ticket.ticket_booking_system.entity.TermsAndConditions;
 import com.ticket.ticket_booking_system.repository.CookiePolicyRepository;
 import com.ticket.ticket_booking_system.repository.FAQRepository;
 import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
+import com.ticket.ticket_booking_system.repository.RefundPolicyRepository;
 import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     private final TermsAndConditionsRepository termsAndConditionsRepository;
     private final CookiePolicyRepository cookiePolicyRepository;
     private final FAQRepository faqRepository;
+    private final RefundPolicyRepository refundPolicyRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -132,6 +135,26 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             faqRepository.save(faq);
             log.info("FAQ initialized with default content");
+        }
+
+        // Initialize Refund Policy
+        if (refundPolicyRepository.findAll().isEmpty()) {
+            RefundPolicy refundPolicy = RefundPolicy.builder()
+                    .title("Refund Policy")
+                    .content("<h1>Refund Policy</h1>\n" +
+                            "<p>This is the default refund policy. Please update this content from the Admin Panel > Page Content Manager.</p>\n" +
+                            "<h2>Refund Eligibility</h2>\n" +
+                            "<p>Refunds are generally provided if an event is cancelled or significantly rescheduled. Each event organizer may have specific refund rules which will be stated on the event page.</p>\n" +
+                            "<h2>Process for Requesting a Refund</h2>\n" +
+                            "<p>To request a refund, please contact us at our support email with your booking reference number and the reason for the refund request.</p>\n" +
+                            "<h2>Timeline</h2>\n" +
+                            "<p>Once approved, refunds typically take 5-10 business days to reflect in your original payment method.</p>\n" +
+                            "<h2>Contact Us</h2>\n" +
+                            "<p>If you have any questions about our Refund Policy, please contact us at our support email.</p>")
+                    .updatedBy("SYSTEM")
+                    .build();
+            refundPolicyRepository.save(refundPolicy);
+            log.info("Refund Policy initialized with default content");
         }
     }
 }
