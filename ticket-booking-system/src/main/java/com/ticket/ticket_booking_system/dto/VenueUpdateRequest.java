@@ -1,7 +1,5 @@
 package com.ticket.ticket_booking_system.dto;
 
-import java.util.Map;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -36,7 +34,7 @@ public class VenueUpdateRequest {
     @Positive(message = "Capacity must be positive")
     private Integer capacity;
 
-    private Map<String, Object> seatingLayout;
+
     
     // Shared area fields
     private Boolean hasSharedAreas;
@@ -115,13 +113,9 @@ public class VenueUpdateRequest {
         this.capacity = capacity;
     }
 
-    public Map<String, Object> getSeatingLayout() {
-        return seatingLayout;
-    }
+    
 
-    public void setSeatingLayout(Map<String, Object> seatingLayout) {
-        this.seatingLayout = seatingLayout;
-    }
+    
     
     public Boolean getHasSharedAreas() {
         return hasSharedAreas;

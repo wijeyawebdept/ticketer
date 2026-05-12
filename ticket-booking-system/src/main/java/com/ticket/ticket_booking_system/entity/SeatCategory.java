@@ -3,6 +3,8 @@ package com.ticket.ticket_booking_system.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,6 +42,11 @@ public class SeatCategory {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @JsonIgnore // Prevent LazyInitializationException during JSON serialization
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "venue_id")
+    private Venue venue;
 
     @PrePersist
     protected void onCreate() {

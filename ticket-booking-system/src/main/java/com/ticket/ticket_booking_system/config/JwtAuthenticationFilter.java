@@ -54,7 +54,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userEmail;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -62,31 +61,44 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(jwt);
 
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // Extract the role that was embedded at login time so we load from the correct
-            // table. Without this, an admin/organizer who also has a customer account would
-            // have their UserDetails loaded from the users table (ROLE_USER) on every
-            // subsequent request, breaking their elevated-role access.
-            String roleFromToken = null;
-            try {
-                roleFromToken = jwtService.extractRole(jwt);
-            } catch (Exception e) {
-                // ignore — fall through to the default multi-table lookup
+        // Wrap ALL JWT processing in try-catch so expired or malformed tokens are
+        // silently ignored rather than propagating as 500 errors.
+        // This is critical for public/permitAll endpoints (e.g. /api/public/**,
+        // /api/admin/banners/**) that still receive a token from the frontend
+        // when the user's session has expired.
+        try {
+            final String userEmail = jwtService.extractUsername(jwt);
+
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Extract the role that was embedded at login time so we load from the correct
+                // table. Without this, an admin/organizer who also has a customer account would
+                // have their UserDetails loaded from the users table (ROLE_USER) on every
+                // subsequent request, breaking their elevated-role access.
+                String roleFromToken = null;
+                try {
+                    roleFromToken = jwtService.extractRole(jwt);
+                } catch (Exception e) {
+                    // ignore — fall through to the default multi-table lookup
+                }
+
+                UserDetails userDetails = loadUserDetailsByRole(userEmail, roleFromToken);
+
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
-
-            UserDetails userDetails = loadUserDetailsByRole(userEmail, roleFromToken);
-
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+        } catch (Exception e) {
+            // Token is expired, malformed, or otherwise invalid.
+            // Continue the filter chain unauthenticated — Spring Security's access
+            // rules will still apply: permitAll endpoints succeed, protected ones return 401/403.
+            logger.debug("JWT authentication skipped (invalid/expired token): " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

@@ -124,6 +124,10 @@ public class Organizer implements UserDetails {
     @Column(name = "bank_routing_number", length = 50)
     private String bankRoutingNumber;
 
+    @Column(name = "total_revenue", precision = 38, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal totalRevenue = java.math.BigDecimal.ZERO;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

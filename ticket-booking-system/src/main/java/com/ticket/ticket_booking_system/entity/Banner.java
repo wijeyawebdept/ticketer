@@ -11,7 +11,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -40,8 +39,7 @@ public class Banner {
     @Column(length = 500)
     private String description;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(columnDefinition = "bytea")
     private byte[] imageData;
 
     @Column(nullable = false)

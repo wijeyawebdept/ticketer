@@ -145,7 +145,7 @@ public class OrganizerVenueController {
         response.setState(venue.getState());
         response.setZipCode(venue.getZipCode());
         response.setCapacity(venue.getCapacity());
-        response.setSeatingLayout(venue.getSeatingLayout());
+        
         response.setCreatedAt(venue.getCreatedAt());
         response.setUpdatedAt(venue.getUpdatedAt());
         // Shared area fields
@@ -167,7 +167,7 @@ public class OrganizerVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
-        venue.setSeatingLayout(request.getSeatingLayout());
+        
         // Shared area fields
         venue.setHasSharedAreas(request.getHasSharedAreas() != null ? request.getHasSharedAreas() : false);
         venue.setSharedAreaCount(request.getSharedAreaCount() != null ? request.getSharedAreaCount() : 0);
@@ -187,7 +187,7 @@ public class OrganizerVenueController {
         venue.setState(request.getState());
         venue.setZipCode(request.getZipCode());
         venue.setCapacity(request.getCapacity());
-        venue.setSeatingLayout(request.getSeatingLayout());
+        
         // Shared area fields
         venue.setHasSharedAreas(request.getHasSharedAreas() != null ? request.getHasSharedAreas() : false);
         venue.setSharedAreaCount(request.getSharedAreaCount() != null ? request.getSharedAreaCount() : 0);

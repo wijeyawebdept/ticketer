@@ -95,6 +95,24 @@ public class Booking {
     @Column(name = "discount_amount")
     private BigDecimal discountAmount;
 
+    @Column(name = "refund_amount")
+    private BigDecimal refundAmount;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
+
+    @Column(name = "payment_status", length = 20)
+    private String paymentStatus;
+
+    @Column(name = "booking_status", length = 20)
+    private String bookingStatus;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default

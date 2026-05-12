@@ -40,7 +40,7 @@ public class GalleryImage {
     @Column(nullable = false, length = 100)
     private String category;
 
-    @Column(nullable = false, columnDefinition = "bytea")
+    @Column(columnDefinition = "bytea")
     private byte[] imageData;
 
     @Column(nullable = false)

@@ -37,7 +37,7 @@ public class BlogPostImage {
     @JoinColumn(name = "post_id", nullable = false)
     private BlogPost post;
 
-    @Column(nullable = false, columnDefinition = "bytea")
+    @Column(columnDefinition = "bytea")
     private byte[] imageData;
 
     @Column(nullable = false)

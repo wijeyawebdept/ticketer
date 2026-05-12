@@ -101,9 +101,9 @@ public class PaymentController {
                 bookingService.cancelBooking(booking.getBookingId().toString());
             }
 
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(java.util.Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of(
                     "message", "Payment initiation failed",
-                    "details", e.getMessage()));
+                    "details", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 

@@ -1,7 +1,6 @@
 package com.ticket.ticket_booking_system.dto;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 public class VenueResponse {
@@ -15,7 +14,7 @@ public class VenueResponse {
     private String zipCode;
     private Integer capacity;
     private Integer status; // 1 = active, 0 = inactive, -1 = soft deleted
-    private Map<String, Object> seatingLayout;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
@@ -111,13 +110,9 @@ public class VenueResponse {
         this.status = status;
     }
     
-    public Map<String, Object> getSeatingLayout() {
-        return seatingLayout;
-    }
     
-    public void setSeatingLayout(Map<String, Object> seatingLayout) {
-        this.seatingLayout = seatingLayout;
-    }
+    
+    
     
     public LocalDateTime getCreatedAt() {
         return createdAt;

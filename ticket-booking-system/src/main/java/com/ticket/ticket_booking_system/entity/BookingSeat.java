@@ -77,6 +77,19 @@ public class BookingSeat {
     @Column(name = "venue_seat_id", length = 20)
     private String venueSeatId;
     
+    @Column(name = "seat_id")
+    private UUID seatId;
+
+    @Column(name = "checked_in")
+    @Builder.Default
+    private Boolean checkedIn = false;
+
+    @Column(name = "checked_in_at")
+    private java.time.LocalDateTime checkedInAt;
+
+    @Column(name = "checked_in_by")
+    private UUID checkedInBy;
+    
     // Add compatibility methods to support existing code
     public UUID getId() {
         return bookingSeatId;

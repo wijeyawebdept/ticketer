@@ -16,7 +16,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -51,7 +50,7 @@ public class Transaction {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "type", nullable = false)
     private TransactionType type;
 
     @Enumerated(EnumType.STRING)
@@ -63,8 +62,7 @@ public class Transaction {
 
     private LocalDateTime updatedAt;
 
-    @Column(length = 5000)
-    @Lob
+    @Column(name = "payment_gateway_response", columnDefinition = "TEXT")
     private String paymentGatewayResponse;
 
     @Column(name = "user_id")

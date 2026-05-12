@@ -425,6 +425,15 @@ const SeatSelectionPage: React.FC = () => {
       return showMessage('error', 'Please fill all required fields');
     }
 
+    // Guard: eventId must be loaded before proceeding
+    const resolvedEventId = eventDetails?.eventId;
+    if (!resolvedEventId) {
+      return showMessage('error', 'Event details are still loading. Please wait a moment and try again.');
+    }
+
+    const HANDLING_FEE = 100;
+    const finalAmount = totalPrice + HANDLING_FEE;
+
     setLoading(true);
 
     try {
@@ -432,7 +441,7 @@ const SeatSelectionPage: React.FC = () => {
       const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
 
       const paymentRequest: InitiatePaymentRequest = {
-        eventId: eventDetails?.eventId || '',
+        eventId: resolvedEventId,
         scheduleId: eventScheduleId || '',
         seatIds: selectedSeatDetails.map(seat => seat.seatId).filter((id: string) => id),
         sharedAreaTickets: sharedAreaSelections.map(selection => ({
@@ -442,7 +451,7 @@ const SeatSelectionPage: React.FC = () => {
           ticketCount: selection.ticketCount,
           pricePerTicket: selection.pricePerTicket,
         })),
-        totalAmount: totalPrice + 200,
+        totalAmount: finalAmount,
         discountAmount: totalDiscount,
         currency: 'LKR',
         customerInfo: {
@@ -458,22 +467,18 @@ const SeatSelectionPage: React.FC = () => {
 
       const sessionResponse = await paymentService.initiatePayment(paymentRequest);
 
-      // MPGS session created
-
       // store sessionId so return page can verify
       localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);
 
-      showMessage('success', 'You are being redirecting to payment gateway...');
+      showMessage('success', 'You are being redirected to the payment gateway...');
       await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
 
-      // Close modal, then open MPGS payment page
       setPaymentModalOpen(false);
-
-      // Order details must be passed to Checkout.configure() - CBMPGS requires this
       paymentService.startCheckout(sessionResponse);
 
     } catch (error: any) {
-      showMessage('error', error.response?.data?.message || 'Failed to initiate payment. Please try again.');
+      const detail = error.response?.data?.details || error.response?.data?.message || error.message || 'Failed to initiate payment. Please try again.';
+      showMessage('error', `Payment initiation failed: ${detail}`);
     } finally {
       setLoading(false);
     }

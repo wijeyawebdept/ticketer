@@ -1,12 +1,7 @@
 package com.ticket.ticket_booking_system.entity;
 
 import java.time.LocalDateTime;
-import java.util.Map;
-
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.type.SqlTypes;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -67,13 +62,7 @@ public class Venue {
     @Column(name = "shared_area_total_capacity")
     private Integer sharedAreaTotalCapacity = 0;
     
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "seating_chart_config", columnDefinition = "jsonb")
-    private String seatingChartConfig;
-    
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column
-    private Map<String, Object> seatingLayout;
+
 
     @Builder.Default
     @Column(name = "status", nullable = false)

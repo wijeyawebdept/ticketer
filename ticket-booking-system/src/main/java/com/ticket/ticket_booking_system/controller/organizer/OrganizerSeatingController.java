@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.service.VenueService;
 
 /**
@@ -37,8 +36,8 @@ public class OrganizerSeatingController {
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getSeatingLayout(@PathVariable UUID venueId) {
-        Venue venue = venueService.getVenueById(venueId);
-        return ResponseEntity.ok(venue.getSeatingLayout());
+        venueService.getVenueById(venueId);
+        return ResponseEntity.ok(new java.util.HashMap<>());
     }
 
     /**
@@ -50,7 +49,7 @@ public class OrganizerSeatingController {
             @PathVariable UUID venueId,
             @RequestBody Map<String, Object> seatingLayout) {
 
-        Venue updatedVenue = venueService.updateSeatingLayout(venueId, seatingLayout);
-        return ResponseEntity.ok(updatedVenue.getSeatingLayout());
+        venueService.updateSeatingLayout(venueId, seatingLayout);
+        return ResponseEntity.ok(new java.util.HashMap<>());
     }
 }

@@ -59,6 +59,10 @@ export default function BannersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [currentBanner, setCurrentBanner] = useState<BannerResponse | null>(null);
+
+  // Delete confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<BannerFormData>({
     title: '',
@@ -236,17 +240,29 @@ export default function BannersPage() {
     }
   };
 
-  const handleDelete = async (bannerId: string) => {
-    if (window.confirm('Are you sure you want to delete this banner?')) {
-      try {
-        setError(null);
-        await BannerService.deleteBanner(bannerId);
-        setSuccess('Banner deleted successfully');
-        loadBanners();
-      } catch (err) {
-        setError('Failed to delete banner');
-      }
+  const handleDelete = (bannerId: string) => {
+    setBannerToDelete(bannerId);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!bannerToDelete) return;
+    try {
+      setError(null);
+      setConfirmOpen(false);
+      await BannerService.deleteBanner(bannerToDelete);
+      setSuccess('Banner deleted successfully');
+      loadBanners();
+    } catch (err) {
+      setError('Failed to delete banner');
+    } finally {
+      setBannerToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setBannerToDelete(null);
   };
 
   const handleStatusChange = async (bannerId: string, newStatus: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED') => {
@@ -724,6 +740,26 @@ export default function BannersPage() {
               {dialogMode === 'create' ? 'Create' : 'Update'}
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={confirmOpen} onClose={handleCancelDelete} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <DeleteIcon fontSize="small" />
+          Delete Banner
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 1, color: 'text.secondary' }}>
+            Are you sure you want to delete this banner? This action <strong>cannot be undone</strong>.
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelDelete} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} variant="contained" color="error">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
