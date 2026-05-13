@@ -91,7 +91,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody UserCreateRequest request, HttpServletRequest servletRequest) {
         UserResponse createdUser = userService.createUser(request);
-        auditService.logAction(createdUser.getUserId(), "REGISTER", "USER", createdUser.getUserId(), "User registered: " + createdUser.getEmail(), getClientIp(servletRequest));
+        auditService.logAction(createdUser.getId(), "REGISTER", "USER", createdUser.getId(), "User registered: " + createdUser.getEmail(), getClientIp(servletRequest));
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
