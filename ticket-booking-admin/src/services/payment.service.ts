@@ -117,6 +117,13 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
     return response.data;
   }
 
+  async cancelPayment(bookingId: string): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>(
+      `/api/payments/cancel?bookingId=${encodeURIComponent(bookingId)}`
+    );
+    return response.data;
+  }
+
   loadMPGSScript(scriptUrl: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (document.getElementById('mpgs-checkout-script')) {

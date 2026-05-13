@@ -66,12 +66,16 @@ public class PaymentController {
                     + (request.getReturnUrl().contains("?") ? "&" : "?")
                     + "bookingId=" + booking.getBookingId().toString();
 
+            String cancelUrl = request.getCancelUrl()
+                    + (request.getCancelUrl().contains("?") ? "&" : "?")
+                    + "bookingId=" + booking.getBookingId().toString();
+
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),
                     request.getTotalAmount(),
                     request.getCurrency(),
                     returnUrl,
-                    request.getCancelUrl());
+                    cancelUrl);
 
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
@@ -467,6 +471,39 @@ public class PaymentController {
                             .status("ERROR")
                             .message("Error checking payment status")
                             .build());
+        }
+    }
+
+    @PostMapping("/cancel")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<java.util.Map<String, String>> cancelPayment(
+            @RequestParam String bookingId,
+            Authentication authentication) {
+
+        log.info("Cancelling payment for booking: {}", bookingId);
+
+        try {
+            Booking booking = bookingService.getBookingById(bookingId);
+            UUID userId = extractUserIdFromAuth(authentication);
+
+            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(java.util.Map.of("message", "Not authorized to cancel this booking"));
+            }
+
+            if (booking.getStatus() == Booking.BookingStatus.PENDING) {
+                bookingService.cancelBookingAfterPaymentFailure(UUID.fromString(bookingId), "User cancelled payment");
+                seatService.releaseSeatHolds(userId);
+                
+                return ResponseEntity.ok(java.util.Map.of("message", "Booking cancelled and seats released successfully"));
+            } else {
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Only pending bookings can be cancelled"));
+            }
+
+        } catch (Exception e) {
+            log.error("Error cancelling payment", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "Error cancelling booking"));
         }
     }
 

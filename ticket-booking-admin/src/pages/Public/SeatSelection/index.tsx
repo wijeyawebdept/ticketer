@@ -522,6 +522,12 @@ const SeatSelectionPage: React.FC = () => {
                 <strong>{(totalPrice + 100).toLocaleString()} LKR</strong>
               </div>
             </div>
+            <button 
+              className="redirection-back-btn" 
+              onClick={() => setIsRedirecting(false)}
+            >
+              Cancel & Return
+            </button>
           </div>
         </div>
       ) : (
@@ -741,7 +747,7 @@ const SeatSelectionPage: React.FC = () => {
 
               <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
                 <Button variant="outlined" onClick={handleClosePaymentModal} sx={{ borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600 }}>
-                  Back
+                  Back to selection
                 </Button>
                 <Button variant="contained" fullWidth onClick={handleConfirmBooking} disabled={loading} sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700 }}>
                   {loading ? 'Processing...' : 'Confirm booking'}
@@ -750,9 +756,18 @@ const SeatSelectionPage: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
-                Ticket Summary
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Ticket Summary
+                </Typography>
+                <Button 
+                  size="small" 
+                  onClick={handleClosePaymentModal}
+                  sx={{ color: '#ff1955', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
+                >
+                  Change Seats
+                </Button>
+              </Box>
 
               {/* Event Details Section */}
               <Box sx={{ mb: 3 }}>

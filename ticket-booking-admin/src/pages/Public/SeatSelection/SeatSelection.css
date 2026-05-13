@@ -620,6 +620,34 @@
   color: white;
 }
 
+.redirection-back-btn {
+  margin-top: 32px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 10px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+.redirection-back-btn:hover {
+  background: rgba(255, 25, 85, 0.1);
+  border-color: #ff1955;
+  color: #ff1955;
+  transform: translateY(-2px);
+}
+
+/* Modal Change Seats Button */
+.MuiButton-root[sx*="Change Seats"]:hover {
+  text-decoration: underline;
+  background-color: transparent;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(1.05); }
   to { opacity: 1; transform: scale(1); }
