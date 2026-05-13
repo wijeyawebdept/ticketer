@@ -100,19 +100,21 @@ public class Event {
 
     // Creator reference - can be User, Admin, or Organizer
     // Store the UUID and type separately since creator can be from different tables
-    @Column(name = "created_by_user_id")
+    @Column(name = "created_by_user_id", nullable = false)
     private java.util.UUID createdByUserId;
     
-    @Column(name = "created_by_type", length = 20)
+    @Column(name = "created_by_type", nullable = false, length = 20)
     private String createdByType; // "USER", "ADMIN", "SUPER_ADMIN", "ORGANIZER"
 
     // Added ticket categories relationship
     @JsonIgnore
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 20)
     private List<TicketCategory> ticketCategories;
 
     @JsonIgnore
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 20)
     private List<EventEmployeeAssignment> employeeAssignments;
 
     @PrePersist
@@ -144,7 +146,7 @@ public class Event {
     }
 
     public enum EventStatus {
-        DRAFT, PUBLISHED, CANCELLED, COMPLETED
+        DRAFT, PUBLISHED, CANCELLED, COMPLETED, POSTPONED
     }
 
     @Builder.Default

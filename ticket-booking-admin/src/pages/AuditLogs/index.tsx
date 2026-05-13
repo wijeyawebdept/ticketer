@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +10,6 @@ import {
   DialogActions,
   Button,
   IconButton,
-  CircularProgress,
   Chip,
   TextField,
   MenuItem,
@@ -60,11 +59,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     { value: 'BLOG', label: 'Blog' },
   ];
 
-  useEffect(() => {
-    fetchLogs();
-  }, [paginationModel, entityType, actionKeyword]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const response = isMyLogs 
@@ -92,7 +87,11 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isMyLogs, paginationModel.page, paginationModel.pageSize, entityType, actionKeyword]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleViewDetails = (log: AuditLog) => {
     setSelectedLog(log);

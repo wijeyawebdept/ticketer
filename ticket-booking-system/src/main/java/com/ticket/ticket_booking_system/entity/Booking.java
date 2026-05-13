@@ -20,7 +20,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
@@ -76,8 +75,7 @@ public class Booking {
 
     private LocalDateTime cancelledAt;
     
-    @Column(length = 5000)
-    @Lob
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
     @Column(name = "number_of_tickets")
