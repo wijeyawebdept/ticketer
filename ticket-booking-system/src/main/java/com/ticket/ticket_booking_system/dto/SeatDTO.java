@@ -35,7 +35,7 @@ public class SeatDTO {
     private String notes;
     
     // Hold/Booking information for admin real-time view
-    private Long heldByUserId;
+    private java.util.UUID heldByUserId;
     private String heldByUserName;
     private String heldByUserEmail;
     private LocalDateTime holdExpiresAt;

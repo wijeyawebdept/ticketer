@@ -222,7 +222,7 @@ public class VenueSeatController {
     public ResponseEntity<Map<String, Object>> confirmBooking(
             @org.springframework.web.bind.annotation.RequestParam UUID eventScheduleId,
             @org.springframework.web.bind.annotation.RequestParam Long bookingRefId,
-            @org.springframework.web.bind.annotation.RequestParam Long userId,
+            @org.springframework.web.bind.annotation.RequestParam UUID userId,
             @RequestBody List<String> seatIds) {
         try {
             boolean success = venueSeatService.confirmBooking(eventScheduleId, seatIds, userId, bookingRefId);

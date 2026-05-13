@@ -50,14 +50,14 @@ public interface SeatHoldRepository extends JpaRepository<SeatHold, UUID> {
     @Query("SELECT sh FROM SeatHold sh WHERE sh.userId = :userId " +
            "AND sh.eventSchedule.scheduleId = :scheduleId " +
            "AND (sh.isPermanent = true OR sh.expiresAt > :now)")
-    List<SeatHold> findActiveHoldsByUserAndSchedule(Long userId, UUID scheduleId, LocalDateTime now);
+    List<SeatHold> findActiveHoldsByUserAndSchedule(UUID userId, UUID scheduleId, LocalDateTime now);
 
     /**
      * Find all holds by user across all schedules.
      */
     @Query("SELECT sh FROM SeatHold sh WHERE sh.userId = :userId " +
            "AND (sh.isPermanent = true OR sh.expiresAt > :now)")
-    List<SeatHold> findActiveHoldsByUser(Long userId, LocalDateTime now);
+    List<SeatHold> findActiveHoldsByUser(UUID userId, LocalDateTime now);
 
     /**
      * Delete expired holds.
@@ -80,7 +80,7 @@ public interface SeatHoldRepository extends JpaRepository<SeatHold, UUID> {
     @Modifying
     @Query("DELETE FROM SeatHold sh WHERE sh.userId = :userId " +
            "AND sh.eventSchedule.scheduleId = :scheduleId")
-    int deleteByUserAndScheduleId(Long userId, UUID scheduleId);
+    int deleteByUserAndScheduleId(UUID userId, UUID scheduleId);
 
     /**
      * Check if a specific seat is held (excluding a specific user's hold).
@@ -89,5 +89,5 @@ public interface SeatHoldRepository extends JpaRepository<SeatHold, UUID> {
            "AND sh.eventSchedule.scheduleId = :scheduleId " +
            "AND sh.userId != :excludeUserId " +
            "AND (sh.isPermanent = true OR sh.expiresAt > :now)")
-    boolean isSeatHeldByOther(String venueSeatId, UUID scheduleId, Long excludeUserId, LocalDateTime now);
+    boolean isSeatHeldByOther(String venueSeatId, UUID scheduleId, UUID excludeUserId, LocalDateTime now);
 }

@@ -117,6 +117,10 @@ public class Event {
     @org.hibernate.annotations.BatchSize(size = 20)
     private List<EventEmployeeAssignment> employeeAssignments;
 
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY, cascade = jakarta.persistence.CascadeType.ALL)
+    @org.hibernate.annotations.BatchSize(size = 20)
+    private List<EventSchedule> schedules;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

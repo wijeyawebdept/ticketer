@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 public class SeatHoldRequest {
     private UUID eventScheduleId;
     private List<String> seatIds;
-    private Long userId;
+    private UUID userId;
     private int holdDurationMinutes = 5; // Default 5 minutes
 }

@@ -80,8 +80,6 @@ public class AdminVenueSeatController {
                    .holdExpiresAt(hold.getExpiresAt())
                    .holdCreatedAt(hold.getCreatedAt())
                    .isPermanentHold(hold.getIsPermanent());
-            // Note: User lookup skipped due to userId type mismatch (Long vs UUID)
-            // User details should be fetched separately if needed
         } else {
             String notes = venueSeat.getNotes() != null ? venueSeat.getNotes().toLowerCase() : "";
             if (notes.contains("[locked]")) {
@@ -108,7 +106,7 @@ public class AdminVenueSeatController {
             .orElseThrow(() -> new RuntimeException("No hold found for seat: " + seatId));
         
         // Get user info before deleting
-        Long userId = hold.getUserId();
+        UUID userId = hold.getUserId();
         
         // Delete the hold
         seatHoldRepository.delete(hold);

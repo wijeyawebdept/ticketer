@@ -118,7 +118,6 @@ public class VenueSeatService {
         java.util.Map<String, SeatHold> seatHoldMap = new java.util.HashMap<>();
         for (SeatHold hold : activeHolds) {
             seatHoldMap.put(hold.getVenueSeatId(), hold);
-            // Note: User lookup skipped due to userId type mismatch (Long vs UUID)
         }
 
         // Build price map: venueSeatCategoryName -> event ticket price
@@ -192,7 +191,6 @@ public class VenueSeatService {
                         .holdExpiresAt(hold.getExpiresAt())
                         .holdCreatedAt(hold.getCreatedAt())
                         .isPermanentHold(hold.getIsPermanent());
-                // Note: User name/email not populated due to userId type mismatch
             }
 
             seatDTOs.add(builder.build());
@@ -275,7 +273,7 @@ public class VenueSeatService {
      *         unavailable
      */
     @Transactional
-    public boolean holdSeats(UUID eventScheduleId, List<String> seatIds, Long userId) {
+    public boolean holdSeats(UUID eventScheduleId, List<String> seatIds, UUID userId) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
                 .orElseThrow(() -> new RuntimeException("Event schedule not found"));
 
@@ -334,7 +332,7 @@ public class VenueSeatService {
      * @param userId          the user whose holds should be released
      */
     @Transactional
-    public void releaseUserHolds(UUID eventScheduleId, Long userId) {
+    public void releaseUserHolds(UUID eventScheduleId, UUID userId) {
         seatHoldRepository.deleteByUserAndScheduleId(userId, eventScheduleId);
     }
 
@@ -349,7 +347,7 @@ public class VenueSeatService {
      * @return true if the booking was confirmed successfully
      */
     @Transactional
-    public boolean confirmBooking(UUID eventScheduleId, List<String> seatIds, Long userId, Long bookingRefId) {
+    public boolean confirmBooking(UUID eventScheduleId, List<String> seatIds, UUID userId, Long bookingRefId) {
         // Verify the user has holds on these seats or seats are available
         LocalDateTime now = LocalDateTime.now();
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleId);

@@ -31,4 +31,8 @@ public interface SystemAuditLogRepository extends JpaRepository<SystemAuditLog, 
             @Param("entityType") String entityType,
             @Param("action") String action,
             Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM SystemAuditLog s WHERE s.createdAt < :cutoffDate")
+    int deleteByCreatedAtBefore(@Param("cutoffDate") java.time.LocalDateTime cutoffDate);
 }

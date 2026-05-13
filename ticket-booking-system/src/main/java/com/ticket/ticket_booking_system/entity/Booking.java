@@ -113,8 +113,13 @@ public class Booking {
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
+    @org.hibernate.annotations.BatchSize(size = 20)
     @Builder.Default
     private Set<BookingSeat> bookingSeats = new HashSet<>();
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 10)
+    private java.util.List<Transaction> transactions;
 
     @PrePersist
     protected void onCreate() {

@@ -93,7 +93,7 @@ public class VenueSeatController {
     public ResponseEntity<Map<String, Object>> confirmBooking(
         @RequestParam UUID eventScheduleId,
         @RequestParam Long bookingRefId,
-        @RequestParam Long userId,
+        @RequestParam UUID userId,
         @RequestBody List<String> seatIds
     ) {
         boolean success = venueSeatService.confirmBooking(

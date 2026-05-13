@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.response.AuditLogResponse;
 import com.ticket.ticket_booking_system.entity.SystemAuditLog;
-import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.SystemAuditLogRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.AdminAuditService;
@@ -24,11 +26,20 @@ public class AdminAuditServiceImpl implements AdminAuditService {
 
     private final SystemAuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
+    private final OrganizerEmployeeRepository organizerEmployeeRepository;
 
     public AdminAuditServiceImpl(SystemAuditLogRepository auditLogRepository,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository,
+                                 AdminRepository adminRepository,
+                                 OrganizerRepository organizerRepository,
+                                 OrganizerEmployeeRepository organizerEmployeeRepository) {
         this.auditLogRepository = auditLogRepository;
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
+        this.organizerRepository = organizerRepository;
+        this.organizerEmployeeRepository = organizerEmployeeRepository;
     }
 
     @Override
@@ -134,23 +145,64 @@ public class AdminAuditServiceImpl implements AdminAuditService {
         logger.info("Audit log deleted: {}", auditId);
     }
 
+    @Override
+    public int purgeOldAuditLogs(int daysToKeep) {
+        java.time.LocalDateTime cutoffDate = java.time.LocalDateTime.now().minusDays(daysToKeep);
+        logger.info("Purging audit logs older than {} days (cutoff: {})", daysToKeep, cutoffDate);
+        
+        int deletedCount = auditLogRepository.deleteByCreatedAtBefore(cutoffDate);
+        
+        if (deletedCount > 0) {
+            logger.info("Successfully purged {} audit logs", deletedCount);
+            // Log the cleanup action itself (optional, but good for tracking system maintenance)
+            logAction(null, "AUDIT_LOG_PURGE", "SYSTEM", null, 
+                "Purged " + deletedCount + " logs older than " + daysToKeep + " days");
+        }
+        
+        return deletedCount;
+    }
+
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
 
     private AuditLogResponse toResponse(SystemAuditLog log) {
-        String performedByName = null;
+        String performedByName = "System";
         String performedByEmail = null;
 
         if (log.getPerformedBy() != null) {
+            UUID actorId = log.getPerformedBy();
             try {
-                User user = userRepository.findById(log.getPerformedBy()).orElse(null);
+                // Try User repository
+                com.ticket.ticket_booking_system.entity.User user = userRepository.findById(actorId).orElse(null);
                 if (user != null) {
                     performedByName = user.getFirstName() + " " + user.getLastName();
                     performedByEmail = user.getEmail();
+                } else {
+                    // Try Admin repository
+                    com.ticket.ticket_booking_system.entity.Admin admin = adminRepository.findById(actorId).orElse(null);
+                    if (admin != null) {
+                        performedByName = admin.getFirstName() + " " + admin.getLastName();
+                        performedByEmail = admin.getEmail();
+                    } else {
+                        // Try Organizer repository
+                        com.ticket.ticket_booking_system.entity.Organizer organizer = organizerRepository.findById(actorId).orElse(null);
+                        if (organizer != null) {
+                            performedByName = organizer.getFirstName() + " " + organizer.getLastName();
+                            performedByEmail = organizer.getEmail();
+                        } else {
+                            // Try Organizer Employee repository
+                            com.ticket.ticket_booking_system.entity.OrganizerEmployee employee = organizerEmployeeRepository.findById(actorId).orElse(null);
+                            if (employee != null) {
+                                performedByName = employee.getFirstName() + " " + employee.getLastName();
+                                performedByEmail = employee.getEmail();
+                            }
+                        }
+                    }
                 }
             } catch (Exception e) {
-                logger.warn("Could not resolve user for audit log {}: {}", log.getAuditId(), e.getMessage());
+                logger.warn("Could not resolve actor for audit log {}: {}", log.getAuditId(), e.getMessage());
+                performedByName = "Unknown Actor (" + actorId + ")";
             }
         }
 

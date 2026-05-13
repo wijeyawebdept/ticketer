@@ -54,7 +54,7 @@ public class SeatHold {
     private EventSchedule eventSchedule;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private java.util.UUID userId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

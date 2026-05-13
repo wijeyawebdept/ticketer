@@ -53,6 +53,9 @@ public class Transaction {
     @Column(name = "type", nullable = false)
     private TransactionType type;
 
+    @Column(name = "transaction_type", length = 255)
+    private String transactionType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;
@@ -85,7 +88,7 @@ public class Transaction {
     }
 
     public enum TransactionType {
-        PAYMENT, REFUND, CHARGEBACK
+        PAYMENT, REFUND, CHARGEBACK, PAYOUT
     }
 
     public enum TransactionStatus {

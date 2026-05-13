@@ -52,4 +52,10 @@ public interface AdminAuditService {
     Page<AuditLogResponse> getAuditLogsByEntity(String entityType, UUID entityId, Pageable pageable);
 
     void deleteAuditLog(UUID auditId);
+    
+    /**
+     * Purge audit logs older than a certain number of days.
+     * Returns the number of logs deleted.
+     */
+    int purgeOldAuditLogs(int daysToKeep);
 }
