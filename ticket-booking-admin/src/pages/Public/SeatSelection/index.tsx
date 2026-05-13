@@ -88,6 +88,8 @@ const SeatSelectionPage: React.FC = () => {
     email: '',
   });
 
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
   const handleHoldExpired = useCallback(() => {
     setIsHolding(false);
     setSelectedSeats([]);
@@ -470,7 +472,7 @@ const SeatSelectionPage: React.FC = () => {
       // store sessionId so return page can verify
       localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);
 
-      showMessage('success', 'You are being redirected to the payment gateway...');
+      setIsRedirecting(true);
       await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
 
       setPaymentModalOpen(false);
@@ -495,9 +497,38 @@ const SeatSelectionPage: React.FC = () => {
 
   return (
     <div className="seat-selection-page">
-      {message && <div className={`message-notification ${message.type}`}>{message.text}</div>}
+      {isRedirecting ? (
+        <div className="payment-redirection-view">
+          <div className="redirection-content">
+            <div className="secure-badge">
+              <span className="lock-icon"></span>
+              SECURE CHECKOUT
+            </div>
+            <h1>Initializing Secure Payment</h1>
+            <p>Please do not refresh the page or click the back button.</p>
+            <div className="loading-container">
+              <div className="loading-orbit">
+                <div className="loading-dot"></div>
+              </div>
+              <div className="loading-text">Connecting to Payment Gateway...</div>
+            </div>
+            <div className="order-summary-mini">
+              <div className="summary-item">
+                <span>Event:</span>
+                <strong>{eventDetails.title}</strong>
+              </div>
+              <div className="summary-item">
+                <span>Total Amount:</span>
+                <strong>{(totalPrice + 100).toLocaleString()} LKR</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {message && <div className={`message-notification ${message.type}`}>{message.text}</div>}
 
-      <div className="event-header">
+          <div className="event-header">
         <button onClick={() => navigate(-1)} className="back-btn">← Back</button>
         <div className="event-info">
           <h1>{eventDetails.title}</h1>
@@ -838,6 +869,8 @@ const SeatSelectionPage: React.FC = () => {
       </Dialog>
 
       {/* (Terms dialog unchanged) */}
+        </>
+      )}
     </div>
   );
 };
