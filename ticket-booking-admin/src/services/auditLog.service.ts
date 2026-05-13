@@ -88,6 +88,15 @@ class AuditLogService {
       throw error;
     }
   }
+
+  async deleteAuditLog(auditId: string): Promise<void> {
+    try {
+      await api.delete(`/api/admin/superadmin/audit-logs/${auditId}`);
+    } catch (error) {
+      console.error('Error deleting audit log:', error);
+      throw error;
+    }
+  }
 }
 
 const auditLogService = new AuditLogService();

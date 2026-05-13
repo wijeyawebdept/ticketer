@@ -18,6 +18,8 @@ public interface AdminAuditService {
      */
     void logAction(UUID performedBy, String action, String entityType, UUID entityId, String details);
 
+    void logAction(UUID performedBy, String action, String entityType, UUID entityId, String details, String ipAddress);
+
     /**
      * Log an action with full old/new value diff and IP address capture.
      */
@@ -48,4 +50,6 @@ public interface AdminAuditService {
      * Get audit logs for a specific entity.
      */
     Page<AuditLogResponse> getAuditLogsByEntity(String entityType, UUID entityId, Pageable pageable);
+
+    void deleteAuditLog(UUID auditId);
 }

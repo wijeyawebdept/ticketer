@@ -52,6 +52,7 @@ public class BookingService {
     private final VenueSeatRepository venueSeatRepository;
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
+    private final AdminAuditService auditService;
 
     /**
      * Create a PENDING booking before payment is processed
@@ -195,6 +196,12 @@ public class BookingService {
         bookingRepository.save(booking);
         log.info("Booking confirmed with reference: {}", booking.getBookingReference());
 
+        // Log booking confirmation
+        if (booking.getUser() != null) {
+            auditService.logAction(booking.getUser().getId(), "BOOKING_CONFIRMED", "BOOKING", booking.getBookingId(), 
+                    "Booking confirmed: " + booking.getBookingReference());
+        }
+
         // Re-fetch with all lazy associations loaded so the caller (e.g. email service)
         // can access user, event, eventSchedule, bookingSeats without a LazyInitializationException.
         return bookingRepository.findByIdWithDetails(bookingId)
@@ -221,6 +228,12 @@ public class BookingService {
         Booking cancelledBooking = bookingRepository.save(booking);
         log.info("Booking cancelled due to: {}", reason);
 
+        // Log booking cancellation
+        if (cancelledBooking.getUser() != null) {
+            auditService.logAction(cancelledBooking.getUser().getId(), "BOOKING_CANCELLED_PAYMENT_FAILURE", "BOOKING", 
+                    cancelledBooking.getBookingId(), "Booking cancelled due to payment failure: " + reason);
+        }
+
         return cancelledBooking;
     }
 
@@ -231,7 +244,7 @@ public class BookingService {
         log.info("Fetching all bookings for admin with filters - eventId: {}, userId: {}, status: {}, search: {}", eventId, userId, status, search);
         
         try {
-            Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null);
+            Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null, null);
             Page<Booking> page = bookingRepository.findAll(spec, pageable);
             
             // Eagerly load all relationships while still in transaction
@@ -273,7 +286,7 @@ public class BookingService {
      * Get all bookings for admin with schedule filter and proper eager loading
      */
     public Page<Booking> getAllBookingsForAdmin(String eventId, String userId, String status, String search, String scheduleId, Pageable pageable) {
-        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, scheduleId);
+        Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, scheduleId, null);
         Page<Booking> page = bookingRepository.findAll(spec, pageable);
         
         // Eagerly load all relationships while still in transaction
@@ -303,36 +316,54 @@ public class BookingService {
     }
     
     /**
-     * Get all bookings for organizer with proper eager loading
+     * Get all bookings for organizer with filters and proper eager loading
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public Page<Booking> getAllBookingsForOrganizer(java.util.UUID organizerId, String eventId, String userId, String status, String search, Pageable pageable) {
+        log.info("Fetching all bookings for organizer {} with filters - eventId: {}, userId: {}, status: {}, search: {}", 
+                organizerId, eventId, userId, status, search);
+        
+        try {
+            // Use specification to filter by organizer AND other filters
+            Specification<Booking> spec = createBookingSpecification(eventId, userId, status, search, null, organizerId);
+            Page<Booking> page = bookingRepository.findAll(spec, pageable);
+            
+            // Eagerly load all relationships while still in transaction
+            page.getContent().forEach(booking -> {
+                if (booking.getUser() != null) {
+                    booking.getUser().getFirstName();
+                    booking.getUser().getLastName();
+                    booking.getUser().getEmail();
+                }
+                if (booking.getEvent() != null) {
+                    booking.getEvent().getName();
+                    booking.getEvent().getDescription();
+                    if (booking.getEvent().getVenue() != null) {
+                        booking.getEvent().getVenue().getName();
+                    }
+                }
+                if (booking.getEventSchedule() != null) {
+                    booking.getEventSchedule().getStartTime();
+                    booking.getEventSchedule().getEndTime();
+                }
+                if (booking.getBookingSeats() != null) {
+                    booking.getBookingSeats().size();
+                }
+            });
+            
+            return page;
+        } catch (Exception e) {
+            log.error("Error fetching bookings for organizer: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch bookings: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Legacy method for backward compatibility
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Page<Booking> getAllBookingsForOrganizer(java.util.UUID organizerId, Pageable pageable) {
-        Page<Booking> page = bookingRepository.findByEvent_Organizer_OrganizerId(organizerId, pageable);
-        
-        // Eagerly load all relationships while still in transaction
-        page.getContent().forEach(booking -> {
-            if (booking.getUser() != null) {
-                booking.getUser().getFirstName();
-                booking.getUser().getLastName();
-                booking.getUser().getEmail();
-            }
-            if (booking.getEvent() != null) {
-                booking.getEvent().getName();
-                booking.getEvent().getDescription();
-                if (booking.getEvent().getVenue() != null) {
-                    booking.getEvent().getVenue().getName();
-                }
-            }
-            if (booking.getEventSchedule() != null) {
-                booking.getEventSchedule().getStartTime();
-                booking.getEventSchedule().getEndTime();
-            }
-            if (booking.getBookingSeats() != null) {
-                booking.getBookingSeats().size();
-            }
-        });
-        
-        return page;
+        return getAllBookingsForOrganizer(organizerId, null, null, null, null, pageable);
     }
     
     /**
@@ -731,9 +762,14 @@ public class BookingService {
     /**
      * Create specification for dynamic filtering
      */
-    private Specification<Booking> createBookingSpecification(String eventId, String userId, String status, String search, String scheduleId) {
+    private Specification<Booking> createBookingSpecification(String eventId, String userId, String status, String search, String scheduleId, UUID organizerId) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // Filter by organizer ID (if provided)
+            if (organizerId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("event").get("organizer").get("organizerId"), organizerId));
+            }
 
             // Filter by event ID
             if (eventId != null && !eventId.trim().isEmpty()) {

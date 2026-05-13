@@ -34,7 +34,18 @@ public class AdminAuditServiceImpl implements AdminAuditService {
     @Override
     public void logAction(UUID performedBy, String action, String entityType,
                           UUID entityId, String details) {
-        logActionWithDetails(performedBy, action, entityType, entityId, null, details, null);
+        logAction(performedBy, action, entityType, entityId, details, null);
+    }
+
+    @Override
+    public void logAction(UUID performedBy, String action, String entityType,
+                          UUID entityId, String details, String ipAddress) {
+        // Wrap plain text details in a JSON object to satisfy the JSONB column requirement
+        String jsonDetails = null;
+        if (details != null) {
+            jsonDetails = "{\"message\": \"" + details.replace("\"", "\\\"").replace("\n", "\\n") + "\"}";
+        }
+        logActionWithDetails(performedBy, action, entityType, entityId, null, jsonDetails, ipAddress);
     }
 
     @Override
@@ -42,13 +53,17 @@ public class AdminAuditServiceImpl implements AdminAuditService {
                                      UUID entityId, String oldValues, String newValues,
                                      String ipAddress) {
         try {
+            // Ensure values are valid JSON if they aren't already
+            String processedOld = ensureJson(oldValues);
+            String processedNew = ensureJson(newValues);
+
             SystemAuditLog log = SystemAuditLog.builder()
                     .performedBy(performedBy)
                     .action(action)
                     .entityType(entityType)
                     .entityId(entityId)
-                    .oldValues(oldValues)
-                    .newValues(newValues)
+                    .oldValues(processedOld)
+                    .newValues(processedNew)
                     .ipAddress(ipAddress)
                     .build();
             auditLogRepository.save(log);
@@ -59,6 +74,23 @@ public class AdminAuditServiceImpl implements AdminAuditService {
             logger.error("Failed to save audit log for action={}, entityType={}: {}",
                     action, entityType, e.getMessage());
         }
+    }
+
+    /**
+     * Simple helper to ensure a string is valid JSON for PostgreSQL JSONB columns.
+     * If it doesn't look like JSON (doesn't start with { or [), wrap it in a message object.
+     */
+    private String ensureJson(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || 
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+            return trimmed;
+        }
+        // Not a JSON object/array, wrap it
+        return "{\"message\": \"" + value.replace("\"", "\\\"").replace("\n", "\\n") + "\"}";
     }
 
     @Override
@@ -91,6 +123,15 @@ public class AdminAuditServiceImpl implements AdminAuditService {
     public Page<AuditLogResponse> getAuditLogsByEntity(String entityType, UUID entityId, Pageable pageable) {
         return auditLogRepository.findByEntityTypeAndEntityId(entityType, entityId, pageable)
                 .map(this::toResponse);
+    }
+
+    @Override
+    public void deleteAuditLog(UUID auditId) {
+        if (!auditLogRepository.existsById(auditId)) {
+            throw new RuntimeException("Audit log not found with ID: " + auditId);
+        }
+        auditLogRepository.deleteById(auditId);
+        logger.info("Audit log deleted: {}", auditId);
     }
 
     // -----------------------------------------------------------------------

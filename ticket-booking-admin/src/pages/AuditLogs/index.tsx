@@ -20,7 +20,8 @@ import {
 import { 
   Visibility as VisibilityIcon, 
   FilterList as FilterListIcon,
-  Refresh as RefreshIcon 
+  Refresh as RefreshIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from '@mui/x-data-grid';
 import { auditLogService } from '../../services';
@@ -41,6 +42,8 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
 
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState<boolean>(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [auditIdToDelete, setAuditIdToDelete] = useState<string | null>(null);
 
   // Filters
   const [entityType, setEntityType] = useState<string>('');
@@ -100,6 +103,25 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     setIsDetailsDialogOpen(false);
     setSelectedLog(null);
   };
+  
+  const handleDeleteClick = (auditId: string) => {
+    setAuditIdToDelete(auditId);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!auditIdToDelete) return;
+    
+    try {
+      await auditLogService.deleteAuditLog(auditIdToDelete);
+      fetchLogs();
+    } catch (error) {
+      console.error('Failed to delete audit log', error);
+    } finally {
+      setIsDeleteConfirmOpen(false);
+      setAuditIdToDelete(null);
+    }
+  };
 
   const getActionColor = (action: string) => {
     const act = action.toLowerCase();
@@ -154,23 +176,40 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     },
     {
       field: 'actions',
-      headerName: 'Details',
-      width: 80,
+      headerName: 'Actions',
+      width: 120,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <IconButton 
-          onClick={() => handleViewDetails(params.row as AuditLog)}
-          size="small"
-          color="primary"
-          sx={{
-            backgroundColor: 'rgba(25, 118, 210, 0.1)',
-            '&:hover': {
-              backgroundColor: 'rgba(25, 118, 210, 0.2)',
-            }
-          }}
-        >
-          <VisibilityIcon fontSize="small" />
-        </IconButton>
+        <Stack direction="row" spacing={1}>
+          <IconButton 
+            onClick={() => handleViewDetails(params.row as AuditLog)}
+            size="small"
+            color="primary"
+            sx={{
+              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+              }
+            }}
+          >
+            <VisibilityIcon fontSize="small" />
+          </IconButton>
+          {!isMyLogs && (
+            <IconButton 
+              onClick={() => handleDeleteClick(params.row.auditId)}
+              size="small"
+              color="error"
+              sx={{
+                backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                }
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Stack>
       ),
     },
   ];
@@ -350,6 +389,32 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
         <DialogActions sx={{ p: 2, borderTop: '1px solid #eee' }}>
           <Button onClick={handleDetailsDialogClose} variant="contained" color="inherit">
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={isDeleteConfirmOpen} 
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: 3, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: '#c62828' }}>
+          Confirm Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to permanently delete this audit log entry? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setIsDeleteConfirmOpen(false)} variant="outlined" color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} variant="contained" color="error" autoFocus>
+            Delete Permanently
           </Button>
         </DialogActions>
       </Dialog>

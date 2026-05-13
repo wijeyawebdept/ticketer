@@ -63,8 +63,9 @@ public class EventServiceImpl implements EventService {
     private final FileUploadService fileUploadService;
     private final TicketCategoryRepository ticketCategoryRepository; // Added repository
     private final SeatRepository seatRepository; // Added repository for seat deletion
-    private final RecycleBinService recycleBinService; // Added for soft delete
+    private final RecycleBinService recycleBinService;
     private final EmailService emailService;
+    private final com.ticket.ticket_booking_system.service.AdminAuditService auditService;
 
     @Override
     @Transactional
@@ -173,6 +174,9 @@ public class EventServiceImpl implements EventService {
         try {
             savedEvent = eventRepository.save(event);
             System.out.println("Event saved with ID: " + savedEvent.getEventId());
+
+            // Log event creation
+            auditService.logAction(createdByUserId, "CREATE_EVENT", "EVENT", savedEvent.getEventId(), "Created event: " + savedEvent.getName());
         } catch (Exception e) {
             System.err.println("ERROR saving event to database: " + e.getMessage());
             e.printStackTrace();
@@ -321,6 +325,9 @@ public class EventServiceImpl implements EventService {
 
         Event savedEvent = eventRepository.save(event);
         
+        // Log event update
+        auditService.logAction(event.getCreatedByUserId(), "UPDATE_EVENT", "EVENT", savedEvent.getEventId(), "Updated event: " + savedEvent.getName());
+        
         // Handle ticket categories update if provided
         if (request.getTicketCategories() != null && !request.getTicketCategories().isEmpty()) {
             System.out.println("UPDATE EVENT: Processing " + request.getTicketCategories().size() + " ticket categories");
@@ -451,6 +458,9 @@ public class EventServiceImpl implements EventService {
         eventRepository.save(event);
         
         System.out.println("Event " + event.getName() + " moved to recycle bin with status=-1");
+
+        // Log event soft delete
+        auditService.logAction(deletedBy.getId(), "SOFT_DELETE_EVENT", "EVENT", event.getEventId(), "Moved event to recycle bin: " + event.getName());
     }
 
     @Override
@@ -486,6 +496,11 @@ public class EventServiceImpl implements EventService {
             }
             
             Event savedEvent = eventRepository.save(event);
+            
+            // Log status change
+            auditService.logAction(event.getCreatedByUserId(), "CHANGE_EVENT_STATUS", "EVENT", savedEvent.getEventId(), 
+                    "Changed event status to " + status + ": " + event.getName());
+            
             return mapEventToResponse(savedEvent);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid event status: " + status);
@@ -761,6 +776,10 @@ public class EventServiceImpl implements EventService {
             System.err.println("⚠ Failed to send organizer assignment email: " + e.getMessage());
         }
 
+        // Log organizer assignment
+        auditService.logAction(null, "ASSIGN_ORGANIZER", "EVENT", savedEvent.getEventId(), 
+                "Assigned organizer " + organizer.getOrganizationName() + " to event: " + savedEvent.getName());
+
         return mapEventToResponse(savedEvent);
     }
 
@@ -796,6 +815,9 @@ public class EventServiceImpl implements EventService {
         Event savedEvent = eventRepository.save(event);
         
         System.out.println("Event " + event.getName() + " activated (status=1, PUBLISHED)");
+
+        // Log event activation
+        auditService.logAction(event.getCreatedByUserId(), "ACTIVATE_EVENT", "EVENT", savedEvent.getEventId(), "Activated event: " + event.getName());
         
         return mapEventToResponse(savedEvent);
     }
@@ -811,6 +833,9 @@ public class EventServiceImpl implements EventService {
         Event savedEvent = eventRepository.save(event);
         
         System.out.println("Event " + event.getName() + " deactivated (status=0)");
+
+        // Log event deactivation
+        auditService.logAction(event.getCreatedByUserId(), "DEACTIVATE_EVENT", "EVENT", savedEvent.getEventId(), "Deactivated event: " + event.getName());
         
         return mapEventToResponse(savedEvent);
     }

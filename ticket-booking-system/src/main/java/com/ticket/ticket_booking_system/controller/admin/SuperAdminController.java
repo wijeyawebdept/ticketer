@@ -195,6 +195,25 @@ public class SuperAdminController {
     }
 
     /**
+     * SUPER ADMIN EXCLUSIVE: Delete an audit log entry.
+     */
+    @DeleteMapping("/audit-logs/{auditId}")
+    public ResponseEntity<Map<String, String>> deleteAuditLog(@PathVariable UUID auditId) {
+        try {
+            auditService.deleteAuditLog(auditId);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Audit log entry deleted");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Failed to delete audit log: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
      * SUPER ADMIN EXCLUSIVE: Access system configuration
      */
     @GetMapping("/system-config")

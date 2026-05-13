@@ -31,7 +31,9 @@ import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.GoogleOAuthService;
 import com.ticket.ticket_booking_system.service.UserService;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -51,6 +53,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final LoginSuccessHandler loginSuccessHandler;
     private final EmailService emailService;
+    private final AdminAuditService auditService;
     
     public AuthController(
             UserService userService, 
@@ -62,9 +65,9 @@ public class AuthController {
             OrganizerEmployeeRepository organizerEmployeeRepository,
             PasswordEncoder passwordEncoder,
             LoginSuccessHandler loginSuccessHandler,
-            EmailService emailService) {
+            EmailService emailService,
+            AdminAuditService auditService) {
         this.userService = userService;
-
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.userRepository = userRepository;
@@ -74,11 +77,21 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
         this.loginSuccessHandler = loginSuccessHandler;
         this.emailService = emailService;
+        this.auditService = auditService;
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader == null) {
+            return request.getRemoteAddr();
+        }
+        return xfHeader.split(",")[0];
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody UserCreateRequest request) {
+    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody UserCreateRequest request, HttpServletRequest servletRequest) {
         UserResponse createdUser = userService.createUser(request);
+        auditService.logAction(createdUser.getUserId(), "REGISTER", "USER", createdUser.getUserId(), "User registered: " + createdUser.getEmail(), getClientIp(servletRequest));
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
@@ -97,7 +110,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody Map<String, String> body, HttpServletRequest servletRequest) {
         String email = body.get("email");
         String code  = body.get("code");
         if (email == null || code == null || email.isBlank() || code.isBlank()) {
@@ -106,17 +119,14 @@ public class AuthController {
         try {
             userService.verifyEmail(email, code);
             
-            // Email verified successfully - auto login the user
             com.ticket.ticket_booking_system.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found after verification"));
 
-            // Generate JWT token
             String token = jwtService.generateToken(user);
-
-            // Update last login timestamp
             loginSuccessHandler.updateLastLogin(email);
+            
+            auditService.logAction(user.getId(), "LOGIN_VERIFIED", "USER", user.getId(), "Login successful after email verification: " + email, getClientIp(servletRequest));
 
-            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Email verified successfully!");
@@ -136,12 +146,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest servletRequest) {
         try {
-            // Public portal: authenticate ONLY against the users (customers) table.
-            // Admins, organizers, and organizer employees who share the same email must
-            // use the restricted login portal. This means a staff member can have a
-            // separate customer account under the same email and buy tickets normally.
             com.ticket.ticket_booking_system.entity.User user =
                     userRepository.findByEmail(loginRequest.getEmail()).orElse(null);
 
@@ -153,7 +159,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Block if account is inactive / soft-deleted
             if (!user.isEnabled()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -162,7 +167,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Block login if email is not verified
             if (!user.isEmailVerified()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -179,13 +183,11 @@ public class AuthController {
                 logger.warn("Failed to send login notification email to {}: {}", user.getEmail(), emailEx.getMessage());
             }
 
-            // Update last login timestamp
             loginSuccessHandler.updateLastLogin(loginRequest.getEmail());
-
-            // Generate JWT token — User entity implements UserDetails (ROLE_USER authority)
             String token = jwtService.generateToken(user);
+            
+            auditService.logAction(user.getId(), "LOGIN", "USER", user.getId(), "Login successful: " + user.getEmail(), getClientIp(servletRequest));
 
-            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Login successful");
@@ -210,10 +212,8 @@ public class AuthController {
     }
 
     @PostMapping("/admin/login")
-    public ResponseEntity<Map<String, Object>> adminLogin(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> adminLogin(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest servletRequest) {
         try {
-            // Authenticate directly against the admins table — prevents users table (role=USER)
-            // from shadowing an admin if both entries share the same email.
             Admin admin = adminRepository.findByEmail(loginRequest.getEmail())
                 .orElse(null);
 
@@ -225,7 +225,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
 
-            // Verify password against the admin's stored password
             if (!passwordEncoder.matches(loginRequest.getPassword(), admin.getPassword())) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -234,7 +233,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Check account is active
             if (!admin.isEnabled()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -243,15 +241,12 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Update last login timestamp for Admin
             loginSuccessHandler.updateAdminLastLogin(loginRequest.getEmail());
-
-            // Generate JWT token using Admin as UserDetails
             String token = jwtService.generateToken(admin);
-
             String adminRole = admin.getRole().name();
+            
+            auditService.logAction(admin.getAdminId(), "ADMIN_LOGIN", "ADMIN", admin.getAdminId(), "Admin login successful: " + admin.getEmail(), getClientIp(servletRequest));
 
-            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Admin login successful");
@@ -277,10 +272,8 @@ public class AuthController {
     }
 
     @PostMapping("/organizer/login")
-    public ResponseEntity<Map<String, Object>> organizerLogin(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> organizerLogin(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest servletRequest) {
         try {
-            // Authenticate directly against the organizers table — this prevents the
-            // users table (role=USER) from shadowing an organizer who also has a customer account.
             Organizer organizer = organizerRepository.findByEmail(loginRequest.getEmail())
                 .orElse(null);
 
@@ -292,7 +285,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
 
-            // Verify password against the organizer's stored password
             if (!passwordEncoder.matches(loginRequest.getPassword(), organizer.getPassword())) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -301,7 +293,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Check account is active
             if (!organizer.isEnabled()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -310,13 +301,11 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Update last login timestamp for Organizer
             loginSuccessHandler.updateOrganizerLastLogin(loginRequest.getEmail());
-
-            // Generate JWT token using Organizer as UserDetails (its getAuthorities() returns ROLE_ORGANIZER)
             String token = jwtService.generateToken(organizer);
+            
+            auditService.logAction(organizer.getOrganizerId(), "ORGANIZER_LOGIN", "ORGANIZER", organizer.getOrganizerId(), "Organizer login successful: " + organizer.getEmail(), getClientIp(servletRequest));
 
-            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Organizer login successful");
@@ -341,10 +330,8 @@ public class AuthController {
     }
 
     @PostMapping("/organizer-employee/login")
-    public ResponseEntity<Map<String, Object>> organizerEmployeeLogin(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> organizerEmployeeLogin(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest servletRequest) {
         try {
-            // Authenticate directly against the organizer_employees table — this prevents
-            // the users table (role=USER) from shadowing an employee who also has a customer account.
             OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(loginRequest.getEmail())
                 .orElse(null);
 
@@ -356,7 +343,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
 
-            // Verify password against the employee's stored password
             if (!passwordEncoder.matches(loginRequest.getPassword(), employee.getPassword())) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -365,7 +351,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Check account is active
             if (!employee.isEnabled()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");
@@ -374,13 +359,11 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
-            // Update last login timestamp for OrganizerEmployee
             loginSuccessHandler.updateOrganizerEmployeeLastLogin(loginRequest.getEmail());
-
-            // Generate JWT token using OrganizerEmployee as UserDetails
             String token = jwtService.generateToken(employee);
+            
+            auditService.logAction(employee.getEmployeeId(), "EMPLOYEE_LOGIN", "ORGANIZER_EMPLOYEE", employee.getEmployeeId(), "Organizer employee login successful: " + employee.getEmail(), getClientIp(servletRequest));
 
-            // Build response
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Organizer employee login successful");
@@ -406,7 +389,7 @@ public class AuthController {
 
     @PostMapping("/google-login")
     @Transactional
-    public ResponseEntity<Map<String, Object>> googleLogin(@RequestBody com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest request) {
+    public ResponseEntity<Map<String, Object>> googleLogin(@RequestBody com.ticket.ticket_booking_system.dto.request.GoogleLoginRequest request, HttpServletRequest servletRequest) {
         try {
             String idToken = request.getToken();
             if (idToken == null || idToken.trim().isEmpty()) {
@@ -417,7 +400,6 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
             logger.info("Processing Google OAuth login (ID token flow)");
-            // Verify Google ID token and extract user info
             com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = googleOAuthService.verifyGoogleToken(idToken);
             GoogleOAuthService.GoogleUserInfo googleUserInfo = new GoogleOAuthService.GoogleUserInfo(payload);
             if (!googleUserInfo.isEmailVerified()) {
@@ -427,14 +409,12 @@ public class AuthController {
                 response.put("error_code", "EMAIL_NOT_VERIFIED");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-            // User linking/creation logic
             com.ticket.ticket_booking_system.entity.User user = userRepository.findByGoogleId(googleUserInfo.getGoogleId())
                 .orElse(null);
             if (user == null) {
                 user = userRepository.findByEmail(googleUserInfo.getEmail())
                     .orElse(null);
                 if (user != null) {
-                    // Link Google account
                     user.setGoogleId(googleUserInfo.getGoogleId());
                     if (googleUserInfo.getPictureUrl() != null && !googleUserInfo.getPictureUrl().isEmpty()
                         && (user.getProfilePicture() == null || user.getProfilePicture().isEmpty())) {
@@ -442,11 +422,6 @@ public class AuthController {
                     }
                     userRepository.save(user);
                 } else {
-                    // Create new user
-                    // NOTE: googleId is intentionally NOT set in the builder to avoid a Lombok
-                    // @Builder.Default + @AllArgsConstructor interaction where builder fields
-                    // may not be persisted correctly on first em.persist() call.
-                    // It is set explicitly via setter below before save.
                     user = com.ticket.ticket_booking_system.entity.User.builder()
                         .email(googleUserInfo.getEmail())
                         .firstName(googleUserInfo.getFirstName() != null && !googleUserInfo.getFirstName().isEmpty() ? googleUserInfo.getFirstName() : "User")
@@ -455,17 +430,17 @@ public class AuthController {
                         .active(1)
                         .emailVerified(true)
                         .profilePicture(googleUserInfo.getPictureUrl())
-                        .password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for OAuth users
+                        .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .build();
-                    user.setGoogleId(googleUserInfo.getGoogleId()); // Set explicitly to ensure it persists
+                    user.setGoogleId(googleUserInfo.getGoogleId());
                     user = userRepository.save(user);
-                    // Send welcome email for new Google-registered users
                     try {
                         emailService.sendWelcomeEmail(user.getEmail(), user.getFirstName());
                         logger.info("Welcome email sent to new Google user: {}", user.getEmail());
                     } catch (Exception emailEx) {
                         logger.warn("Failed to send welcome email for Google user {}: {}", user.getEmail(), emailEx.getMessage());
                     }
+                    auditService.logAction(user.getId(), "REGISTER_GOOGLE", "USER", user.getId(), "User registered via Google: " + user.getEmail(), getClientIp(servletRequest));
                 }
             }
             if (user.getActive() != 1) {
@@ -477,7 +452,6 @@ public class AuthController {
             }
             loginSuccessHandler.updateLastLogin(user.getEmail());
 
-            // Send login notification email (fire-and-forget)
             try {
                 if (user.isLoginEmailEnabled()) {
                     emailService.sendLoginNotificationEmail(user.getEmail(), user.getFirstName());
@@ -493,6 +467,9 @@ public class AuthController {
                     user.getAuthorities()
                 );
             String token = jwtService.generateToken(userDetails);
+            
+            auditService.logAction(user.getId(), "LOGIN_GOOGLE", "USER", user.getId(), "Login successful via Google: " + user.getEmail(), getClientIp(servletRequest));
+
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "Google login successful");
@@ -526,12 +503,11 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
         String email = body.get("email");
-        String roleHint = body.get("roleHint"); // "admin", "organizer", or null
+        String roleHint = body.get("roleHint");
         
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email is required."));
         }
-        // Always return 200 to avoid exposing whether the email exists
         userService.forgotPassword(email.trim().toLowerCase(), roleHint);
         return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent."));
     }
