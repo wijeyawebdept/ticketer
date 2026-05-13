@@ -43,7 +43,7 @@ class AuditLogService {
       }
 
       const response = await api.get(`/api/admin/superadmin/audit-logs?${params.toString()}`);
-      return response.data;
+      return response.data as AuditLogResponse;
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       throw error;
@@ -59,9 +59,32 @@ class AuditLogService {
       const response = await api.get(`/api/admin/superadmin/audit-logs/user/${userId}`, {
         params: { page, size }
       });
-      return response.data;
+      return response.data as AuditLogResponse;
     } catch (error) {
       console.error('Error fetching audit logs for user:', error);
+      throw error;
+    }
+  }
+
+  async getMyAuditLogs(
+    page: number = 0,
+    size: number = 10,
+    entityType?: string,
+    action?: string
+  ): Promise<AuditLogResponse> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+      });
+
+      if (entityType) params.append('entityType', entityType);
+      if (action) params.append('action', action);
+
+      const response = await api.get(`/api/profile/audit-logs?${params.toString()}`);
+      return response.data as AuditLogResponse;
+    } catch (error) {
+      console.error('Error fetching my audit logs:', error);
       throw error;
     }
   }

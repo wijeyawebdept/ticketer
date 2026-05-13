@@ -26,7 +26,11 @@ import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from 
 import { auditLogService } from '../../services';
 import { AuditLog } from '../../services/auditLog.service';
 
-const AuditLogs: React.FC = () => {
+interface AuditLogsProps {
+  isMyLogs?: boolean;
+}
+
+const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [totalItems, setTotalItems] = useState<number>(0);
@@ -60,12 +64,19 @@ const AuditLogs: React.FC = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const response = await auditLogService.getAuditLogs(
-        paginationModel.page,
-        paginationModel.pageSize,
-        entityType || undefined,
-        actionKeyword || undefined
-      );
+      const response = isMyLogs 
+        ? await auditLogService.getMyAuditLogs(
+            paginationModel.page,
+            paginationModel.pageSize,
+            entityType || undefined,
+            actionKeyword || undefined
+          )
+        : await auditLogService.getAuditLogs(
+            paginationModel.page,
+            paginationModel.pageSize,
+            entityType || undefined,
+            actionKeyword || undefined
+          );
       // Map auditId to id for DataGrid
       const rows = response.data.map((log) => ({
         ...log,
@@ -178,7 +189,9 @@ const AuditLogs: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4" sx={{ fontWeight: 600, color: '#c62828' }}>System Audit Logs</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: isMyLogs ? '#1976d2' : '#c62828' }}>
+            {isMyLogs ? 'My Activity Logs' : 'System Audit Logs'}
+          </Typography>
           <Tooltip title="Refresh Logs">
             <IconButton onClick={fetchLogs} color="primary">
               <RefreshIcon />
@@ -257,15 +270,15 @@ const AuditLogs: React.FC = () => {
               sx={{
                 border: 'none',
                 '& .MuiDataGrid-columnHeaders': {
-                  backgroundColor: 'rgba(198, 40, 40, 0.05)',
-                  color: '#c62828',
+                  backgroundColor: isMyLogs ? 'rgba(25, 118, 210, 0.05)' : 'rgba(198, 40, 40, 0.05)',
+                  color: isMyLogs ? '#1976d2' : '#c62828',
                   fontWeight: 'bold',
                 },
                 '& .MuiDataGrid-cell': {
                   borderBottom: '1px solid rgba(0,0,0,0.05)',
                 },
                 '& .MuiDataGrid-row:hover': {
-                  backgroundColor: 'rgba(198, 40, 40, 0.02)',
+                  backgroundColor: isMyLogs ? 'rgba(25, 118, 210, 0.02)' : 'rgba(198, 40, 40, 0.02)',
                 },
               }}
             />
@@ -275,7 +288,7 @@ const AuditLogs: React.FC = () => {
 
       {/* Audit Log Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onClose={handleDetailsDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600, color: '#c62828', borderBottom: '1px solid #eee' }}>
+        <DialogTitle sx={{ fontWeight: 600, color: isMyLogs ? '#1976d2' : '#c62828', borderBottom: '1px solid #eee' }}>
           Audit Log Details
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>

@@ -275,6 +275,7 @@ function App() {
                 <Route path="/organizer/event-assignments" element={<EventAssignments />} />
                 <Route path="/organizer/recycle-bin" element={<RecycleBin />} />
                 <Route path="/organizer/profile" element={<Profile />} />
+                <Route path="/organizer/audit-logs" element={<AuditLogs isMyLogs={true} />} />
                 <Route path="/organizer/settings" element={<Settings />} />
               </Route>
             </Route>
@@ -293,6 +294,7 @@ function App() {
                 <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/employee/recycle-bin" element={<RecycleBin />} />
                 <Route path="/employee/profile" element={<Profile />} />
+                <Route path="/employee/audit-logs" element={<AuditLogs isMyLogs={true} />} />
                 <Route path="/employee/settings" element={<Settings />} />
               </Route>
             </Route>

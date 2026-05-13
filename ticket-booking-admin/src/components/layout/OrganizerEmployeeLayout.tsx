@@ -31,6 +31,7 @@ import {
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
   EventSeat as EventSeatIcon,
+  Assignment as AssignmentIcon,
   Delete as DeleteIcon,
   LocalOffer as LocalOfferIcon,
 } from '@mui/icons-material';
@@ -152,6 +153,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/employee/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/employee/bookings' },
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/employee/recycle-bin' },
+    { text: 'Activity Logs', icon: <AssignmentIcon />, path: '/employee/audit-logs' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/employee/settings' },
   ];
 

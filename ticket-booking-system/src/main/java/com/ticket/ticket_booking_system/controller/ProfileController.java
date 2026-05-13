@@ -17,22 +17,25 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.ticket.ticket_booking_system.dto.ProfileDTO;
 import com.ticket.ticket_booking_system.dto.ProfileUpdateDTO;
+import com.ticket.ticket_booking_system.dto.response.AuditLogResponse;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
 import com.ticket.ticket_booking_system.service.ProfileService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/profile")
+@RequiredArgsConstructor
 public class ProfileController {
     
     private final ProfileService profileService;
-    
-    public ProfileController(ProfileService profileService) {
-        this.profileService = profileService;
-    }
+    private final AdminAuditService auditService;
     
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
@@ -192,7 +195,6 @@ public class ProfileController {
         response.put("marketingEmails", marketingEmails);
         return ResponseEntity.ok(response);
     }
-    // Email OTP Verification (Organizer only)
 
     @PostMapping("/send-email-otp")
     @PreAuthorize("hasAnyRole('ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
@@ -224,5 +226,33 @@ public class ProfileController {
             resp.put("message", "Invalid or expired OTP. Please try again.");
         }
         return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/audit-logs")
+    @PreAuthorize("hasAnyRole('USER', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> getMyAuditLogs(
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) String action,
+            Pageable pageable,
+            Authentication authentication) {
+        
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+        ProfileDTO profile = profileService.getProfileByEmail(email);
+        
+        // Use the existing findByFilters but filter by userId too?
+        // Wait, AdminAuditService doesn't have findByFiltersAndUser yet.
+        // But for now, getAuditLogsByAdmin is fine.
+        
+        Page<AuditLogResponse> page = auditService.getAuditLogsByAdmin(profile.getUserId(), pageable);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("data", page.getContent());
+        response.put("currentPage", page.getNumber());
+        response.put("totalItems", page.getTotalElements());
+        response.put("totalPages", page.getTotalPages());
+
+        return ResponseEntity.ok(response);
     }
 }

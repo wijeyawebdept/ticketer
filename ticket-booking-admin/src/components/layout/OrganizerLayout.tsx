@@ -161,6 +161,7 @@ const OrganizerLayout: React.FC = () => {
     { text: t('navigation.organizerEmployees'), icon: <PeopleIcon />, path: '/organizer/employees' },
     { text: 'Event Assignments', icon: <AssignmentIcon />, path: '/organizer/event-assignments' },
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/organizer/recycle-bin' },
+    { text: 'Activity Logs', icon: <AssignmentIcon />, path: '/organizer/audit-logs' },
     { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/organizer/profile' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/organizer/settings' },
   ];
