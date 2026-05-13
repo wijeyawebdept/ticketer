@@ -175,6 +175,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/admin/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/admin/bookings' },
     { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/admin/recycle-bin' },
+    { text: 'Audit Logs', icon: <AssignmentIcon />, path: '/admin/audit-logs' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/admin/settings' },
   ];
 

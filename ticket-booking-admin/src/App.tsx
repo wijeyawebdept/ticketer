@@ -44,6 +44,7 @@ import Banners from './pages/Banners';
 import GalleryManagement from './pages/GalleryManagement';
 import BlogManagement from './pages/BlogManagement';
 import PageContentManager from './pages/PageContentManager';
+import AuditLogs from './pages/AuditLogs';
 import { UserRole } from './types';
 
 // Public pages
@@ -253,6 +254,7 @@ function App() {
                 <Route path="/admin/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/admin/profile" element={<Profile />} />
                 <Route path="/admin/settings" element={<Settings />} />
+                <Route path="/admin/audit-logs" element={<AuditLogs />} />
                 <Route path="/admin/recycle-bin" element={<RecycleBin />} />
               </Route>
             </Route>

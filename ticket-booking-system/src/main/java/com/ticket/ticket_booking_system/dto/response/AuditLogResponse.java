@@ -13,14 +13,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuditLogResponse {
-    
-    private UUID logId;
-    private UUID adminId;
-    private String adminEmail;
-    private String adminName;
+
+    private UUID auditId;
+    private UUID performedBy;
+    private String performedByName;
+    private String performedByEmail;
     private String action;
     private String entityType;
     private UUID entityId;
-    private String details;
-    private LocalDateTime timestamp;
+    private String oldValues;
+    private String newValues;
+    private String ipAddress;
+    private LocalDateTime createdAt;
 }

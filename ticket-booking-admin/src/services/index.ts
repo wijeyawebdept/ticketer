@@ -6,6 +6,7 @@ import EventScheduleService from './eventSchedule.service';
 import EventCategoryService from './eventCategory.service';
 import BookingService from './booking.service';
 import TransactionService from './transaction.service';
+import auditLogService from './auditLog.service';
 import { VenueService } from './venue.service';
 import { profileService } from './profile.service';
 import { RoleService } from './role.service';
@@ -26,6 +27,7 @@ export {
   BookingService,
   OrganizerService,
   TransactionService,
+  auditLogService,
   VenueService,
   profileService,
   RoleService,

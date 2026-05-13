@@ -20,20 +20,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.dto.response.AuditLogResponse;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
 import com.ticket.ticket_booking_system.service.UserService;
 
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/superadmin")
-@PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'SUPER_ADMIN')")
+@PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ADMIN')")
 public class SuperAdminController {
 
     private final UserService userService;
+    private final AdminAuditService auditService;
 
-    public SuperAdminController(UserService userService) {
+    public SuperAdminController(UserService userService, AdminAuditService auditService) {
         this.userService = userService;
+        this.auditService = auditService;
     }
 
     /**
@@ -138,7 +142,7 @@ public class SuperAdminController {
     }
 
     /**
-     * SUPER ADMIN EXCLUSIVE: View audit logs (placeholder for future implementation)
+     * SUPER ADMIN EXCLUSIVE: View audit logs with optional filtering by entityType and action keyword.
      */
     @GetMapping("/audit-logs")
     public ResponseEntity<Map<String, Object>> getAuditLogs(
@@ -146,16 +150,46 @@ public class SuperAdminController {
             @RequestParam(required = false) String action,
             Pageable pageable) {
         try {
+            Page<AuditLogResponse> page = auditService.getAuditLogs(entityType, action, pageable);
+
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
-            response.put("message", "Audit logs feature to be implemented");
-            response.put("data", List.of());
-            
+            response.put("data", page.getContent());
+            response.put("currentPage", page.getNumber());
+            response.put("totalItems", page.getTotalElements());
+            response.put("totalPages", page.getTotalPages());
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "Failed to fetch audit logs: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * SUPER ADMIN EXCLUSIVE: Get audit logs for a specific user/admin.
+     */
+    @GetMapping("/audit-logs/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getAuditLogsByUser(
+            @PathVariable UUID userId,
+            Pageable pageable) {
+        try {
+            Page<AuditLogResponse> page = auditService.getAuditLogsByAdmin(userId, pageable);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", page.getContent());
+            response.put("currentPage", page.getNumber());
+            response.put("totalItems", page.getTotalElements());
+            response.put("totalPages", page.getTotalPages());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Failed to fetch audit logs for user: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
