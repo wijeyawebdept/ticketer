@@ -641,6 +641,20 @@ public class BookingService {
                         } else if (bookingSeat.getVenueSeatId() != null) {
                             // VenueSeat format (e.g., "L-A-01")
                             seatBuilder.seatNumber(bookingSeat.getVenueSeatId());
+                            
+                            // Look up VenueSeat to get section and row
+                            try {
+                                venueSeatRepository.findById(bookingSeat.getVenueSeatId()).ifPresent(vs -> {
+                                    seatBuilder.seatRow(vs.getRowLabel());
+                                    seatBuilder.section(vs.getSection());
+                                    // Use formatted seat number if available, else keep the ID
+                                    if (vs.getSeatNumber() != null) {
+                                        seatBuilder.seatNumber(String.valueOf(vs.getSeatNumber()));
+                                    }
+                                });
+                            } catch (Exception e) {
+                                log.warn("Could not fetch VenueSeat details for ID: {}", bookingSeat.getVenueSeatId());
+                            }
                         } else {
                             // Fallback if neither is present
                             seatBuilder.seatNumber("Unknown Seat");
