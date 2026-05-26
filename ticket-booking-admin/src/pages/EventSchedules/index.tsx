@@ -33,6 +33,7 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { EventScheduleService, EventService } from '../../services';
@@ -43,6 +44,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 
 const EventSchedules: React.FC = () => {
+  const { t } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -291,7 +293,7 @@ const EventSchedules: React.FC = () => {
             </IconButton>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                Event Schedules
+                {t('schedules.title')}
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 {event?.name}
@@ -313,10 +315,10 @@ const EventSchedules: React.FC = () => {
               zIndex: 10,
             }}
           >
-            Add Event Schedule
+            {t('schedules.addSchedule')}
           </Button>
         </Grid>
-
+ 
         {/* Event Info Card */}
         {event && (
           <Grid item xs={12}>
@@ -324,17 +326,17 @@ const EventSchedules: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="textSecondary">
-                    Starting From
+                    {t('schedules.startingFrom')}
                   </Typography>
                   <Typography variant="h6">
                     {event.ticketCategories && event.ticketCategories.length > 0
-                      ? `LKR ${Math.min(...event.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => Number(tc.price) || 0)).toLocaleString()}`
+                      ? `${t('schedules.currencyPrefix')}${Math.min(...event.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => Number(tc.price) || 0)).toLocaleString()}`
                       : 'TBA'}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="textSecondary">
-                    Total Schedules
+                    {t('schedules.totalSchedules')}
                   </Typography>
                   <Typography variant="h6">{schedules.length}</Typography>
                 </Grid>
@@ -342,7 +344,7 @@ const EventSchedules: React.FC = () => {
             </Paper>
           </Grid>
         )}
-
+ 
         {/* Schedules Table */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
@@ -354,28 +356,28 @@ const EventSchedules: React.FC = () => {
               <Box textAlign="center" py={5}>
                 <ScheduleIcon sx={{ fontSize: 60, color: '#ccc', mb: 2 }} />
                 <Typography variant="h6" color="textSecondary">
-                  No schedules yet
+                  {t('schedules.noSchedulesYet')}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Add your first schedule to get started
+                  {t('schedules.addFirstSchedule')}
                 </Typography>
               </Box>
             ) : (
               <TableContainer>
                 <Box sx={{ px: 2, py: 1, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
                   <Typography variant="caption" color="textSecondary">
-                     All times shown in Asia/Colombo (GMT+5:30)
+                     {t('schedules.timeZoneNote')}
                   </Typography>
                 </Box>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: 'rgba(25, 118, 210, 0.1)' }}>
-                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Time & Duration</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Capacity</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.dateHeader')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.timeDurationHeader')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.capacityHeader')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.priceHeader')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.statusHeader')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('schedules.actionsHeader')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -399,7 +401,7 @@ const EventSchedules: React.FC = () => {
                               {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
-                              Duration: {getScheduleDuration(schedule.startTime, schedule.endTime)}
+                              {t('schedules.durationLabel')} {getScheduleDuration(schedule.startTime, schedule.endTime)}
                             </Typography>
                           </Box>
                         </TableCell>
@@ -409,13 +411,13 @@ const EventSchedules: React.FC = () => {
                               {schedule.availableSeats}/{schedule.capacity}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
-                              {schedule.bookedSeats} booked
+                              {schedule.bookedSeats}{t('schedules.bookedSuffix')}
                             </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Box>
-                            <Typography variant="body2" fontWeight={500}>LKR {formatPrice(schedule.finalPrice)}</Typography>
+                            <Typography variant="body2" fontWeight={500}>{t('schedules.currencyPrefix')}{formatPrice(schedule.finalPrice)}</Typography>
                             {schedule.priceAdjustment !== 0 && (
                               <Typography
                                 variant="caption"
@@ -473,14 +475,16 @@ const EventSchedules: React.FC = () => {
                               </Tooltip>
                             )}
                             <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                color="warning"
-                                onClick={() => handleDeleteClick(schedule)}
-                                disabled={schedule.bookedSeats > 0}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() => handleDeleteClick(schedule)}
+                                  disabled={schedule.bookedSeats > 0}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                           </Box>
                         </TableCell>
@@ -499,7 +503,7 @@ const EventSchedules: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 600, color: '#1976d2' }}>
           {selectedSchedule ? 'Edit Event Schedule' : 'Add Event Schedule'}
           {event && (
-            <Typography variant="subtitle2" color="textSecondary" sx={{ mt: 0.5 }}>
+            <Typography variant="subtitle2" component="div" color="textSecondary" sx={{ mt: 0.5 }}>
               {event.name}
             </Typography>
           )}
@@ -578,12 +582,12 @@ const EventSchedules: React.FC = () => {
                     {/* Capacity Info Alert */}
                     {event && (
                       <Alert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight="bold">Event Capacity:</Typography>
+                        <Typography variant="body2" fontWeight="bold">{t('schedules.eventCapacity')}</Typography>
                         <Typography variant="body2">
-                          Maximum capacity per schedule: {event.totalCapacity || 0} seats
+                          {t('schedules.maxCapacityNote', { capacity: event.totalCapacity || 0 })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Note: Each schedule is independent and can use the full event capacity.
+                          {t('schedules.independentScheduleNote')}
                         </Typography>
                       </Alert>
                     )}
@@ -651,8 +655,8 @@ const EventSchedules: React.FC = () => {
                             sx={{ py: 0.5 }}
                           >
                             <Typography variant="body2">
-                              <strong>Event Duration:</strong> {formatDuration(duration)}
-                              {duration < 15 && ' - Minimum 15 minutes required'}
+                              <strong>{t('schedules.eventDuration')}</strong> {formatDuration(duration)}
+                              {duration < 15 && t('schedules.minDurationWarning')}
                             </Typography>
                           </Alert>
                         </Grid>
@@ -718,7 +722,7 @@ const EventSchedules: React.FC = () => {
                         onClick={handleDialogClose} 
                         disabled={isSubmitting}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </Button>
                       <Button
                         type="submit"
@@ -727,7 +731,7 @@ const EventSchedules: React.FC = () => {
                         disabled={isSubmitting || (hasTouched && hasErrors)}
                         startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckCircleIcon />}
                       >
-                        {isSubmitting ? 'Saving...' : selectedSchedule ? 'Update Schedule' : 'Create Schedule'}
+                        {isSubmitting ? t('common.saving') : selectedSchedule ? t('schedules.updateSchedule') : t('schedules.createSchedule')}
                       </Button>
                     </Box>
                   </Box>
@@ -740,28 +744,26 @@ const EventSchedules: React.FC = () => {
 
       {/* Move to Recycle Bin Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onClose={handleDeleteDialogClose}>
-        <DialogTitle sx={{ fontWeight: 600 }}>Move Schedule to Recycle Bin</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t('schedules.deleteTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to move this schedule to the Recycle Bin? It will be marked as deleted
-            and can be restored later or permanently deleted from the Recycle Bin page.
+            {t('schedules.deleteConfirmMsg')}
           </Typography>
           {selectedSchedule && selectedSchedule.bookedSeats > 0 && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              This schedule has {selectedSchedule.bookedSeats} booked seats. Cancel the schedule
-              instead of deleting it.
+              {t('schedules.bookedWarning', { count: selectedSchedule.bookedSeats })}
             </Alert>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+          <Button onClick={handleDeleteDialogClose}>{t('common.cancel')}</Button>
           <Button
             variant="contained"
             color="error"
             onClick={handleDeleteConfirm}
             disabled={selectedSchedule?.bookedSeats! > 0}
           >
-            Move to Recycle Bin
+            {t('schedules.moveToRecycleBin')}
           </Button>
         </DialogActions>
       </Dialog>

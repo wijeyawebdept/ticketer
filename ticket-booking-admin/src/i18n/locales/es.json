@@ -134,6 +134,37 @@
     "edit": "Editar",
     "delete": "Eliminar",
     "refresh": "Actualizar",
-    "search": "Buscar"
+    "search": "Buscar",
+    "saving": "Guardando..."
+  },
+  "schedules": {
+    "title": "Horarios del Evento",
+    "addSchedule": "Agregar Horario del Evento",
+    "editSchedule": "Editar Horario del Evento",
+    "createSchedule": "Crear Horario",
+    "updateSchedule": "Actualizar Horario",
+    "startingFrom": "A partir de",
+    "totalSchedules": "Horarios Totales",
+    "noSchedulesYet": "No hay horarios aún",
+    "addFirstSchedule": "Agrega tu primer horario para comenzar",
+    "timeZoneNote": "Todos los horarios se muestran en Asia/Colombo (GMT+5:30)",
+    "dateHeader": "Fecha",
+    "timeDurationHeader": "Hora y Duración",
+    "capacityHeader": "Capacidad",
+    "priceHeader": "Precio",
+    "statusHeader": "Estado",
+    "actionsHeader": "Acciones",
+    "durationLabel": "Duración:",
+    "currencyPrefix": "LKR ",
+    "eventCapacity": "Capacidad del Evento:",
+    "maxCapacityNote": "Capacidad máxima por horario: {{capacity}} asientos",
+    "independentScheduleNote": "Nota: Cada horario es independiente y puede utilizar la capacidad total del evento.",
+    "eventDuration": "Duración del Evento:",
+    "deleteTitle": "Mover Horario a la Papelera de Reciclaje",
+    "deleteConfirmMsg": "¿Está seguro de que desea mover este horario a la Papelera de Reciclaje? Se marcará como eliminado y se puede restaurar más tarde o eliminar permanentemente desde la página de la Papelera de Reciclaje.",
+    "bookedWarning": "Este horario tiene {{count}} asientos reservados. Cancele el horario en lugar de eliminarlo.",
+    "bookedSuffix": " reservado(s)",
+    "minDurationWarning": " - Se requiere un mínimo de 15 minutos",
+    "moveToRecycleBin": "Mover a la Papelera de Reciclaje"
   }
 }

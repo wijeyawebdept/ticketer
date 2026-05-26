@@ -134,6 +134,37 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "refresh": "Aktualisieren",
-    "search": "Suchen"
+    "search": "Suchen",
+    "saving": "Speichern..."
+  },
+  "schedules": {
+    "title": "Veranstaltungspläne",
+    "addSchedule": "Veranstaltungsplan hinzufügen",
+    "editSchedule": "Veranstaltungsplan bearbeiten",
+    "createSchedule": "Zeitplan erstellen",
+    "updateSchedule": "Zeitplan aktualisieren",
+    "startingFrom": "Ab",
+    "totalSchedules": "Zeitpläne Gesamt",
+    "noSchedulesYet": "Noch keine Zeitpläne",
+    "addFirstSchedule": "Fügen Sie Ihren ersten Zeitplan hinzu, um zu beginnen",
+    "timeZoneNote": "Alle Zeiten werden in Asien/Colombo (GMT+5:30) angezeigt",
+    "dateHeader": "Datum",
+    "timeDurationHeader": "Zeit & Dauer",
+    "capacityHeader": "Kapazität",
+    "priceHeader": "Preis",
+    "statusHeader": "Status",
+    "actionsHeader": "Aktionen",
+    "durationLabel": "Dauer:",
+    "currencyPrefix": "LKR ",
+    "eventCapacity": "Veranstaltungskapazität:",
+    "maxCapacityNote": "Maximale Kapazität pro Zeitplan: {{capacity}} Plätze",
+    "independentScheduleNote": "Hinweis: Jeder Zeitplan ist unabhängig und kann die volle Veranstaltungskapazität nutzen.",
+    "eventDuration": "Veranstaltungsdauer:",
+    "deleteTitle": "Zeitplan in den Papierkorb verschieben",
+    "deleteConfirmMsg": "Sind Sie sicher, dass Sie diesen Zeitplan in den Papierkorb verschieben möchten? Er wird als gelöscht markiert und kann später wiederhergestellt oder dauerhaft auf der Papierkorb-Seite gelöscht werden.",
+    "bookedWarning": "Dieser Zeitplan hat {{count}} gebuchte Plätze. Stornieren Sie den Zeitplan, anstatt ihn zu löschen.",
+    "bookedSuffix": " gebucht",
+    "minDurationWarning": " - Mindestens 15 Minuten erforderlich",
+    "moveToRecycleBin": "In den Papierkorb verschieben"
   }
 }

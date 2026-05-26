@@ -297,6 +297,21 @@ public class EventServiceImpl implements EventService {
             try {
                 Event.EventStatus status = Event.EventStatus.valueOf(request.getStatus().toUpperCase());
                 event.setStatus(status);
+                
+                if (status == Event.EventStatus.PUBLISHED) {
+                    event.setActive(1);
+                } else {
+                    event.setActive(0);
+                    
+                    // Deactivate deals for this event
+                    List<TicketCategory> categories = ticketCategoryRepository.findByEventId(event.getEventId());
+                    for (TicketCategory category : categories) {
+                        if (Boolean.TRUE.equals(category.getDealActive())) {
+                            category.setDealActive(false);
+                            ticketCategoryRepository.save(category);
+                        }
+                    }
+                }
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid event status: " + request.getStatus());
             }
@@ -456,6 +471,15 @@ public class EventServiceImpl implements EventService {
         event.setActive(-1);
         event.setIsDeleted(true);
         eventRepository.save(event);
+
+        // Deactivate deals for this event
+        List<TicketCategory> categories = ticketCategoryRepository.findByEventId(event.getEventId());
+        for (TicketCategory category : categories) {
+            if (Boolean.TRUE.equals(category.getDealActive())) {
+                category.setDealActive(false);
+                ticketCategoryRepository.save(category);
+            }
+        }
         
         System.out.println("Event " + event.getName() + " moved to recycle bin with status=-1");
 
@@ -493,6 +517,15 @@ public class EventServiceImpl implements EventService {
                 event.setActive(1); // Active
             } else {
                 event.setActive(0); // Inactive for DRAFT, CANCELLED, COMPLETED
+                
+                // Deactivate deals for this event
+                List<TicketCategory> categories = ticketCategoryRepository.findByEventId(event.getEventId());
+                for (TicketCategory category : categories) {
+                    if (Boolean.TRUE.equals(category.getDealActive())) {
+                        category.setDealActive(false);
+                        ticketCategoryRepository.save(category);
+                    }
+                }
             }
             
             Event savedEvent = eventRepository.save(event);
@@ -833,6 +866,15 @@ public class EventServiceImpl implements EventService {
         Event savedEvent = eventRepository.save(event);
         
         System.out.println("Event " + event.getName() + " deactivated (status=0)");
+
+        // Deactivate deals for this event
+        List<TicketCategory> categories = ticketCategoryRepository.findByEventId(event.getEventId());
+        for (TicketCategory category : categories) {
+            if (Boolean.TRUE.equals(category.getDealActive())) {
+                category.setDealActive(false);
+                ticketCategoryRepository.save(category);
+            }
+        }
 
         // Log event deactivation
         auditService.logAction(event.getCreatedByUserId(), "DEACTIVATE_EVENT", "EVENT", savedEvent.getEventId(), "Deactivated event: " + event.getName());

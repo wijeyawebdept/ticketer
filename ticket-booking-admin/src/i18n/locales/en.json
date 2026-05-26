@@ -135,6 +135,37 @@
     "edit": "Edit",
     "delete": "Delete",
     "refresh": "Refresh",
-    "search": "Search"
+    "search": "Search",
+    "saving": "Saving..."
+  },
+  "schedules": {
+    "title": "Event Schedules",
+    "addSchedule": "Add Event Schedule",
+    "editSchedule": "Edit Event Schedule",
+    "createSchedule": "Create Schedule",
+    "updateSchedule": "Update Schedule",
+    "startingFrom": "Starting From",
+    "totalSchedules": "Total Schedules",
+    "noSchedulesYet": "No schedules yet",
+    "addFirstSchedule": "Add your first schedule to get started",
+    "timeZoneNote": "All times shown in Asia/Colombo (GMT+5:30)",
+    "dateHeader": "Date",
+    "timeDurationHeader": "Time & Duration",
+    "capacityHeader": "Capacity",
+    "priceHeader": "Price",
+    "statusHeader": "Status",
+    "actionsHeader": "Actions",
+    "durationLabel": "Duration:",
+    "currencyPrefix": "LKR ",
+    "eventCapacity": "Event Capacity:",
+    "maxCapacityNote": "Maximum capacity per schedule: {{capacity}} seats",
+    "independentScheduleNote": "Note: Each schedule is independent and can use the full event capacity.",
+    "eventDuration": "Event Duration:",
+    "deleteTitle": "Move Schedule to Recycle Bin",
+    "deleteConfirmMsg": "Are you sure you want to move this schedule to the Recycle Bin? It will be marked as deleted and can be restored later or permanently deleted from the Recycle Bin page.",
+    "bookedWarning": "This schedule has {{count}} booked seats. Cancel the schedule instead of deleting it.",
+    "bookedSuffix": " booked",
+    "minDurationWarning": " - Minimum 15 minutes required",
+    "moveToRecycleBin": "Move to Recycle Bin"
   }
 }

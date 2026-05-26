@@ -134,6 +134,37 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "refresh": "Actualiser",
-    "search": "Rechercher"
+    "search": "Rechercher",
+    "saving": "Enregistrement..."
+  },
+  "schedules": {
+    "title": "Horaires de l'Événement",
+    "addSchedule": "Ajouter un Horaire d'Événement",
+    "editSchedule": "Modifier l'Horaire de l'Événement",
+    "createSchedule": "Créer un Horaire",
+    "updateSchedule": "Mettre à Jour l'Horaire",
+    "startingFrom": "À partir de",
+    "totalSchedules": "Horaires Totaux",
+    "noSchedulesYet": "Pas encore d'horaires",
+    "addFirstSchedule": "Ajoutez votre premier horaire pour commencer",
+    "timeZoneNote": "Tous les horaires sont affichés en Asie/Colombo (GMT+5:30)",
+    "dateHeader": "Date",
+    "timeDurationHeader": "Heure & Durée",
+    "capacityHeader": "Capacité",
+    "priceHeader": "Prix",
+    "statusHeader": "Statut",
+    "actionsHeader": "Actions",
+    "durationLabel": "Durée:",
+    "currencyPrefix": "LKR ",
+    "eventCapacity": "Capacité de l'Événement :",
+    "maxCapacityNote": "Capacité maximale par horaire : {{capacity}} places",
+    "independentScheduleNote": "Remarque : Chaque horaire est indépendant et peut utiliser la capacité totale de l'événement.",
+    "eventDuration": "Durée de l'Événement :",
+    "deleteTitle": "Déplacer l'Horaire vers la Corbeille",
+    "deleteConfirmMsg": "Êtes-vous sûr de vouloir déplacer cet horaire vers la Corbeille ? Il sera marqué comme supprimé et pourra être restauré plus tard ou supprimé définitivement depuis la page de la Corbeille.",
+    "bookedWarning": "Cet horaire a {{count}} sièges réservés. Annulez l'horaire au lieu de le supprimer.",
+    "bookedSuffix": " réservé(s)",
+    "minDurationWarning": " - Minimum 15 minutes requises",
+    "moveToRecycleBin": "Déplacer vers la Corbeille"
   }
 }

@@ -205,7 +205,7 @@ function App() {
         <CssBaseline />
         <AuthProvider>
           <CurrencyProvider>
-            <Router>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               {/* Public authentication routes - must come before protected routes */}
               <Route path="/admin/login" element={<Login />} />

@@ -1,5 +1,7 @@
 package com.ticket.ticket_booking_system.repository;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -7,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.ticket.ticket_booking_system.entity.Event;
@@ -82,4 +85,10 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
            "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
            "ORDER BY e.createdAt DESC")
     Page<Event> searchPublishedEvents(String query, Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+           "AND EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false) " +
+           "AND NOT EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false " +
+           "AND (es.scheduleDate > :currentDate OR (es.scheduleDate = :currentDate AND es.endTime >= :currentTime)))")
+    List<Event> findExpiredEvents(@Param("currentDate") LocalDate currentDate, @Param("currentTime") LocalTime currentTime);
 }
