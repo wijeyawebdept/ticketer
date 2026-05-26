@@ -42,6 +42,11 @@ public interface AdminAuditService {
     Page<AuditLogResponse> getAuditLogsByAdmin(UUID performedBy, Pageable pageable);
 
     /**
+     * Get audit logs for a specific admin/user with optional entityType and action filtering.
+     */
+    Page<AuditLogResponse> getAuditLogsByAdmin(UUID performedBy, String entityType, String action, Pageable pageable);
+
+    /**
      * Get audit logs for a specific entity type.
      */
     Page<AuditLogResponse> getAuditLogsByEntityType(String entityType, Pageable pageable);

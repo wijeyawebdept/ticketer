@@ -15,6 +15,15 @@ import com.ticket.ticket_booking_system.dto.response.GalleryResponse;
 import com.ticket.ticket_booking_system.entity.GalleryImage;
 import com.ticket.ticket_booking_system.repository.GalleryImageRepository;
 import com.ticket.ticket_booking_system.service.GalleryService;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +34,10 @@ import lombok.extern.slf4j.Slf4j;
 public class GalleryServiceImpl implements GalleryService {
 
     private final GalleryImageRepository galleryImageRepository;
+    private final AdminAuditService auditService;
+    private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
     private static final long MAX_FILE_SIZE = 5_242_880; // 5MB
 
     @Override
@@ -54,6 +67,7 @@ public class GalleryServiceImpl implements GalleryService {
 
             galleryImage = galleryImageRepository.save(galleryImage);
             log.info("Gallery image created: {}", galleryImage.getGalleryId());
+            auditService.logAction(getCurrentUserId(), "CREATE_GALLERY_IMAGE", "GALLERY", galleryImage.getGalleryId(), "Created gallery image: " + galleryImage.getTitle());
 
             return convertToResponse(galleryImage);
         } catch (Exception e) {
@@ -91,6 +105,7 @@ public class GalleryServiceImpl implements GalleryService {
 
             galleryImage = galleryImageRepository.save(galleryImage);
             log.info("Gallery image updated: {}", galleryId);
+            auditService.logAction(getCurrentUserId(), "UPDATE_GALLERY_IMAGE", "GALLERY", galleryImage.getGalleryId(), "Updated gallery image: " + galleryImage.getTitle());
 
             return convertToResponse(galleryImage);
         } catch (Exception e) {
@@ -135,11 +150,11 @@ public class GalleryServiceImpl implements GalleryService {
 
     @Override
     public void deleteGalleryImage(UUID galleryId) {
-        if (!galleryImageRepository.existsById(galleryId)) {
-            throw new RuntimeException("Gallery image not found");
-        }
-        galleryImageRepository.deleteById(galleryId);
+        GalleryImage galleryImage = galleryImageRepository.findById(galleryId)
+                .orElseThrow(() -> new RuntimeException("Gallery image not found"));
+        galleryImageRepository.delete(galleryImage);
         log.info("Gallery image deleted: {}", galleryId);
+        auditService.logAction(getCurrentUserId(), "DELETE_GALLERY_IMAGE", "GALLERY", galleryId, "Deleted gallery image: " + galleryImage.getTitle());
     }
 
     @Override
@@ -150,6 +165,7 @@ public class GalleryServiceImpl implements GalleryService {
         galleryImage.setActive(!galleryImage.isActive());
         galleryImage = galleryImageRepository.save(galleryImage);
         log.info("Gallery image status toggled: {}, active: {}", galleryId, galleryImage.isActive());
+        auditService.logAction(getCurrentUserId(), "TOGGLE_GALLERY_IMAGE_STATUS", "GALLERY", galleryImage.getGalleryId(), "Toggled active status to " + galleryImage.isActive() + " for gallery image: " + galleryImage.getTitle());
 
         return convertToResponse(galleryImage);
     }
@@ -163,6 +179,7 @@ public class GalleryServiceImpl implements GalleryService {
             galleryImageRepository.save(galleryImage);
         }
         log.info("Gallery images reordered");
+        auditService.logAction(getCurrentUserId(), "REORDER_GALLERY_IMAGES", "GALLERY", null, "Reordered gallery images: " + galleryIds);
     }
 
     private GalleryResponse convertToResponse(GalleryImage galleryImage) {
@@ -199,5 +216,26 @@ public class GalleryServiceImpl implements GalleryService {
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new RuntimeException("File must be a valid image");
         }
+    }
+
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
     }
 }

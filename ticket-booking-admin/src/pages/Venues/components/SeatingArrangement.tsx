@@ -37,6 +37,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { UserRole } from '../../../types';
+import { VenueService } from '../../../services';
 
 interface VenueSeat {
   seatId: string;
@@ -84,6 +85,7 @@ const SeatingArrangement: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [venueName, setVenueName] = useState<string>('');
   
   // Check if user is admin or organizer
   const isAdminOrOrganizer = user && (
@@ -155,6 +157,18 @@ const SeatingArrangement: React.FC = () => {
     setCategories([]);
     setError(null);
     fetchHardcodedSeats();
+
+    if (id) {
+      VenueService.getVenueById(id)
+        .then(venue => {
+          if (venue && venue.name) {
+            setVenueName(venue.name);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch venue details:', err);
+        });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, eventScheduleId]);
 
@@ -518,7 +532,7 @@ const SeatingArrangement: React.FC = () => {
     <Box p={3}>
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Venue Seating Layout (Kularathna Auditorium)
+          Venue Seating Layout {venueName ? `(${venueName})` : ''}
         </Typography>
         
         <Alert severity="info" sx={{ mb: 3 }}>

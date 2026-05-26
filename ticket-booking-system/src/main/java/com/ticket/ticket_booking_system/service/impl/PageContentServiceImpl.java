@@ -18,6 +18,16 @@ import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
 import com.ticket.ticket_booking_system.repository.RefundPolicyRepository;
 import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
 import com.ticket.ticket_booking_system.service.PageContentService;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +42,10 @@ public class PageContentServiceImpl implements PageContentService {
     private final CookiePolicyRepository cookiePolicyRepository;
     private final FAQRepository faqRepository;
     private final RefundPolicyRepository refundPolicyRepository;
+    private final AdminAuditService auditService;
+    private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
 
     @Override
     public PageContentResponse getPageContent(String pageType) {
@@ -89,6 +103,7 @@ public class PageContentServiceImpl implements PageContentService {
                     content.setUpdatedAt(LocalDateTime.now());
                     content = privacyPolicyRepository.save(content);
                     log.info("Privacy Policy updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Privacy Policy content");
                     yield convertToResponse(content, "PRIVACY_POLICY");
                 }
                 case "TERMS_AND_CONDITIONS" -> {
@@ -101,6 +116,7 @@ public class PageContentServiceImpl implements PageContentService {
                     content.setUpdatedAt(LocalDateTime.now());
                     content = termsAndConditionsRepository.save(content);
                     log.info("Terms and Conditions updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Terms and Conditions content");
                     yield convertToResponse(content, "TERMS_AND_CONDITIONS");
                 }
                 case "COOKIE_POLICY" -> {
@@ -113,6 +129,7 @@ public class PageContentServiceImpl implements PageContentService {
                     content.setUpdatedAt(LocalDateTime.now());
                     content = cookiePolicyRepository.save(content);
                     log.info("Cookie Policy updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Cookie Policy content");
                     yield convertToResponse(content, "COOKIE_POLICY");
                 }
                 case "FAQ" -> {
@@ -125,6 +142,7 @@ public class PageContentServiceImpl implements PageContentService {
                     content.setUpdatedAt(LocalDateTime.now());
                     content = faqRepository.save(content);
                     log.info("FAQ updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_FAQ", "FAQ", content.getId(), "Updated FAQ content");
                     yield convertToResponse(content, "FAQ");
                 }
                 case "REFUND_POLICY" -> {
@@ -137,6 +155,7 @@ public class PageContentServiceImpl implements PageContentService {
                     content.setUpdatedAt(LocalDateTime.now());
                     content = refundPolicyRepository.save(content);
                     log.info("Refund Policy updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Refund Policy content");
                     yield convertToResponse(content, "REFUND_POLICY");
                 }
                 default -> throw new RuntimeException("Invalid page type: " + pageType);
@@ -236,5 +255,26 @@ public class PageContentServiceImpl implements PageContentService {
                     .build();
         }
         throw new RuntimeException("Unknown content type");
+    }
+
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
     }
 }

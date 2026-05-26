@@ -25,12 +25,14 @@ import {
 import { DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel } from '@mui/x-data-grid';
 import { auditLogService } from '../../services';
 import { AuditLog } from '../../services/auditLog.service';
+import { useTranslation } from 'react-i18next';
 
 interface AuditLogsProps {
   isMyLogs?: boolean;
 }
 
 const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [totalItems, setTotalItems] = useState<number>(0);
@@ -49,14 +51,18 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
   const [actionKeyword, setActionKeyword] = useState<string>('');
 
   const entityTypes = [
-    { value: '', label: 'All Entities' },
-    { value: 'USER', label: 'User' },
-    { value: 'EVENT', label: 'Event' },
-    { value: 'VENUE', label: 'Venue' },
-    { value: 'BOOKING', label: 'Booking' },
-    { value: 'TRANSACTION', label: 'Transaction' },
-    { value: 'BANNER', label: 'Banner' },
-    { value: 'BLOG', label: 'Blog' },
+    { value: '', label: t('auditLogs.allEntities') },
+    { value: 'USER', label: t('auditLogs.user') },
+    { value: 'EVENT', label: t('auditLogs.event') },
+    { value: 'VENUE', label: t('auditLogs.venue') },
+    { value: 'BOOKING', label: t('auditLogs.booking') },
+    { value: 'TRANSACTION', label: t('auditLogs.transaction') },
+    { value: 'BANNER', label: t('auditLogs.banner') },
+    { value: 'BLOG', label: t('auditLogs.blog') },
+    { value: 'GALLERY', label: t('auditLogs.gallery') },
+    { value: 'DEAL', label: t('auditLogs.deal') },
+    { value: 'FAQ', label: t('auditLogs.faq') },
+    { value: 'PAGE_CONTENT', label: t('auditLogs.pageContent') },
   ];
 
   const fetchLogs = useCallback(async () => {
@@ -88,6 +94,11 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
       setLoading(false);
     }
   }, [isMyLogs, paginationModel.page, paginationModel.pageSize, entityType, actionKeyword]);
+
+  // Reset pagination to page 0 when filters change
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [entityType, actionKeyword]);
 
   useEffect(() => {
     fetchLogs();
@@ -134,24 +145,24 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
   const columns: GridColDef[] = [
     { 
       field: 'createdAt', 
-      headerName: 'Timestamp', 
+      headerName: t('auditLogs.timestamp'), 
       width: 180, 
       valueFormatter: (params) => new Date(params.value as string).toLocaleString() 
     },
     { 
       field: 'performedByName', 
-      headerName: 'Performed By', 
+      headerName: t('auditLogs.performedBy'), 
       flex: 1,
       renderCell: (params) => (
         <Box>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>{params.row.performedByName || 'System'}</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{params.row.performedByName || t('auditLogs.system', 'System')}</Typography>
           <Typography variant="caption" color="textSecondary">{params.row.performedByEmail || ''}</Typography>
         </Box>
       )
     },
     { 
       field: 'action', 
-      headerName: 'Action', 
+      headerName: t('auditLogs.action'), 
       width: 180,
       renderCell: (params) => (
         <Chip 
@@ -165,17 +176,17 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     },
     { 
       field: 'entityType', 
-      headerName: 'Entity Type', 
+      headerName: t('auditLogs.filterEntityType'), 
       width: 130 
     },
     { 
       field: 'ipAddress', 
-      headerName: 'IP Address', 
+      headerName: t('auditLogs.ipAddress'), 
       width: 130 
     },
     {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: t('auditLogs.actions', 'Actions'),
       width: 120,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
@@ -228,9 +239,9 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
       <Grid container spacing={3}>
         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h4" sx={{ fontWeight: 600, color: isMyLogs ? '#1976d2' : '#c62828' }}>
-            {isMyLogs ? 'My Activity Logs' : 'System Audit Logs'}
+            {isMyLogs ? t('auditLogs.myLogsTitle') : t('auditLogs.title')}
           </Typography>
-          <Tooltip title="Refresh Logs">
+          <Tooltip title={t('auditLogs.refreshLogs')}>
             <IconButton onClick={fetchLogs} color="primary">
               <RefreshIcon />
             </IconButton>
@@ -245,7 +256,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
                 <TextField
                   fullWidth
                   select
-                  label="Entity Type"
+                  label={t('auditLogs.filterEntityType')}
                   size="small"
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
@@ -260,9 +271,9 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
               <Grid item xs={12} sm={8} md={6}>
                 <TextField
                   fullWidth
-                  label="Search Action"
+                  label={t('auditLogs.filterAction')}
                   size="small"
-                  placeholder="e.g. Create, Update, Login..."
+                  placeholder={t('auditLogs.filterActionPlaceholder')}
                   value={actionKeyword}
                   onChange={(e) => setActionKeyword(e.target.value)}
                   InputProps={{
@@ -278,7 +289,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
                     setActionKeyword('');
                   }}
                 >
-                  Clear Filters
+                  {t('auditLogs.clearFilters')}
                 </Button>
               </Grid>
             </Grid>
@@ -327,45 +338,45 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
       {/* Audit Log Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onClose={handleDetailsDialogClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, color: isMyLogs ? '#1976d2' : '#c62828', borderBottom: '1px solid #eee' }}>
-          Audit Log Details
+          {t('auditLogs.detailsTitle')}
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           {selectedLog && (
             <Stack spacing={3}>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">Log ID</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.logId')}</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{selectedLog.auditId}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">Timestamp</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.timestamp')}</Typography>
                   <Typography variant="body1">{new Date(selectedLog.createdAt).toLocaleString()}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">Performed By</Typography>
-                  <Typography variant="body1">{selectedLog.performedByName || 'System'} ({selectedLog.performedByEmail || 'N/A'})</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.performedBy')}</Typography>
+                  <Typography variant="body1">{selectedLog.performedByName || t('auditLogs.system', 'System')} ({selectedLog.performedByEmail || t('auditLogs.na', 'N/A')})</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">IP Address</Typography>
-                  <Typography variant="body1">{selectedLog.ipAddress || 'Unknown'}</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.ipAddress')}</Typography>
+                  <Typography variant="body1">{selectedLog.ipAddress || t('auditLogs.unknown', 'Unknown')}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">Action</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.action')}</Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Chip label={selectedLog.action} size="small" color={getActionColor(selectedLog.action)} />
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary">Entity</Typography>
-                  <Typography variant="body1">{selectedLog.entityType || 'N/A'} {selectedLog.entityId ? `(${selectedLog.entityId})` : ''}</Typography>
+                  <Typography variant="caption" color="textSecondary">{t('auditLogs.entity')}</Typography>
+                  <Typography variant="body1">{selectedLog.entityType || t('auditLogs.na', 'N/A')} {selectedLog.entityId ? `(${selectedLog.entityId})` : ''}</Typography>
                 </Grid>
               </Grid>
 
               <Box>
-                <Typography variant="subtitle2" gutterBottom color="primary">Changes / Data</Typography>
+                <Typography variant="subtitle2" gutterBottom color="primary">{t('auditLogs.changesData')}</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="textSecondary">Old Values</Typography>
+                    <Typography variant="caption" color="textSecondary">{t('auditLogs.oldValues')}</Typography>
                     <Paper variant="outlined" sx={{ p: 1, backgroundColor: '#fafafa', maxHeight: 300, overflow: 'auto' }}>
                       <pre style={{ margin: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
                         {formatJson(selectedLog.oldValues)}
@@ -373,7 +384,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
                     </Paper>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="caption" color="textSecondary">New Values</Typography>
+                    <Typography variant="caption" color="textSecondary">{t('auditLogs.newValues')}</Typography>
                     <Paper variant="outlined" sx={{ p: 1, backgroundColor: '#f0fff4', maxHeight: 300, overflow: 'auto' }}>
                       <pre style={{ margin: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
                         {formatJson(selectedLog.newValues)}
@@ -387,7 +398,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid #eee' }}>
           <Button onClick={handleDetailsDialogClose} variant="contained" color="inherit">
-            Close
+            {t('auditLogs.close')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -401,19 +412,19 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
         }}
       >
         <DialogTitle sx={{ fontWeight: 600, color: '#c62828' }}>
-          Confirm Deletion
+          {t('auditLogs.confirmDeletion')}
         </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to permanently delete this audit log entry? This action cannot be undone.
+            {t('auditLogs.deleteConfirmMsg')}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setIsDeleteConfirmOpen(false)} variant="outlined" color="inherit">
-            Cancel
+            {t('auditLogs.cancel')}
           </Button>
           <Button onClick={handleConfirmDelete} variant="contained" color="error" autoFocus>
-            Delete Permanently
+            {t('auditLogs.deletePermanently')}
           </Button>
         </DialogActions>
       </Dialog>

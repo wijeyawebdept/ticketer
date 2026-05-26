@@ -28,6 +28,7 @@ import com.ticket.ticket_booking_system.repository.VenueRepository;
 import com.ticket.ticket_booking_system.service.EventService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
 import com.ticket.ticket_booking_system.service.VenueService;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -43,11 +44,13 @@ public class VenueServiceImpl implements VenueService {
     private final OrganizerRepository organizerRepository;
     private final RecycleBinService recycleBinService;
     private final EventService eventService;
+    private final AdminAuditService auditService;
 
     public VenueServiceImpl(VenueRepository venueRepository, SeatRepository seatRepository,
             EventRepository eventRepository, UserRepository userRepository, 
             AdminRepository adminRepository, OrganizerRepository organizerRepository,
-            RecycleBinService recycleBinService, EventService eventService) {
+            RecycleBinService recycleBinService, EventService eventService,
+            AdminAuditService auditService) {
         this.venueRepository = venueRepository;
         this.seatRepository = seatRepository;
         this.eventRepository = eventRepository;
@@ -56,6 +59,7 @@ public class VenueServiceImpl implements VenueService {
         this.organizerRepository = organizerRepository;
         this.recycleBinService = recycleBinService;
         this.eventService = eventService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -84,6 +88,7 @@ public class VenueServiceImpl implements VenueService {
         System.out.println("Venue saved with ID: " + savedVenue.getVenueId());
         System.out.println("CREATE VENUE COMPLETE - No automatic seat generation");
         
+        auditService.logAction(getCurrentUserId(), "CREATE_VENUE", "VENUE", savedVenue.getVenueId(), "Created venue: " + savedVenue.getName());
         return savedVenue;
     }
 
@@ -107,7 +112,9 @@ public class VenueServiceImpl implements VenueService {
         venue.setSharedAreaTotalCapacity(venueDetails.getSharedAreaTotalCapacity());
         venue.setUpdatedAt(LocalDateTime.now());
 
-        return venueRepository.save(venue);
+        Venue savedVenue = venueRepository.save(venue);
+        auditService.logAction(getCurrentUserId(), "UPDATE_VENUE", "VENUE", savedVenue.getVenueId(), "Updated venue: " + savedVenue.getName());
+        return savedVenue;
     }
 
     @Override
@@ -194,6 +201,7 @@ public class VenueServiceImpl implements VenueService {
         // Mark venue as soft deleted - set status to -1 (in recycle bin)
         venue.setStatus(-1);
         venueRepository.save(venue);
+        auditService.logAction(deletedBy.getId(), "SOFT_DELETE_VENUE", "VENUE", venue.getVenueId(), "Soft deleted venue: " + venue.getName());
         
         System.out.println("Venue soft deleted successfully");
         System.out.println("SOFT DELETE VENUE COMPLETE");
@@ -245,6 +253,7 @@ public class VenueServiceImpl implements VenueService {
 
             // Now delete the venue itself
             venueRepository.delete(venue);
+            auditService.logAction(getCurrentUserId(), "PERMANENT_DELETE_VENUE", "VENUE", venueId, "Permanently deleted venue: " + venue.getName());
             venueRepository.flush();
 
             System.out.println("Venue permanently deleted successfully");
@@ -296,6 +305,8 @@ public class VenueServiceImpl implements VenueService {
         venue.setUpdatedAt(LocalDateTime.now());
         
         Venue savedVenue = venueRepository.save(venue);
+        auditService.logAction(getCurrentUserId(), "TOGGLE_VENUE_STATUS", "VENUE", savedVenue.getVenueId(), 
+                "Toggled status to " + (newStatus == 1 ? "ACTIVE" : "INACTIVE") + " for venue: " + savedVenue.getName());
         
         System.out.println("New status: " + newStatus + " (" + (newStatus == 1 ? "ACTIVE" : "INACTIVE") + ")");
         System.out.println("TOGGLE VENUE STATUS END");
@@ -310,6 +321,27 @@ public class VenueServiceImpl implements VenueService {
     }
 
     
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
+    }
+
     /**
      * Convert Venue entity to VenueResponse DTO
      */

@@ -16,6 +16,15 @@ import com.ticket.ticket_booking_system.entity.Banner;
 import com.ticket.ticket_booking_system.entity.Banner.BannerStatus;
 import com.ticket.ticket_booking_system.repository.BannerRepository;
 import com.ticket.ticket_booking_system.service.BannerService;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
+import com.ticket.ticket_booking_system.repository.UserRepository;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +35,10 @@ import lombok.extern.slf4j.Slf4j;
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
+    private final AdminAuditService auditService;
+    private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
     private static final long MAX_FILE_SIZE = 5_242_880; // 5MB
 
     @Override
@@ -54,6 +67,7 @@ public class BannerServiceImpl implements BannerService {
 
             banner = bannerRepository.save(banner);
             log.info("Banner created: {}", banner.getBannerId());
+            auditService.logAction(getCurrentUserId(), "CREATE_BANNER", "BANNER", banner.getBannerId(), "Created banner: " + banner.getTitle());
 
             return convertToResponse(banner);
         } catch (Exception e) {
@@ -88,6 +102,7 @@ public class BannerServiceImpl implements BannerService {
 
             banner = bannerRepository.save(banner);
             log.info("Banner updated: {}", bannerId);
+            auditService.logAction(getCurrentUserId(), "UPDATE_BANNER", "BANNER", banner.getBannerId(), "Updated banner: " + banner.getTitle());
 
             return convertToResponse(banner);
         } catch (Exception e) {
@@ -164,11 +179,11 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public void deleteBanner(UUID bannerId) {
-        if (!bannerRepository.existsById(bannerId)) {
-            throw new RuntimeException("Banner not found");
-        }
-        bannerRepository.deleteById(bannerId);
+        Banner banner = bannerRepository.findById(bannerId)
+                .orElseThrow(() -> new RuntimeException("Banner not found"));
+        bannerRepository.delete(banner);
         log.info("Banner deleted: {}", bannerId);
+        auditService.logAction(getCurrentUserId(), "DELETE_BANNER", "BANNER", bannerId, "Deleted banner: " + banner.getTitle());
     }
 
     @Override
@@ -179,6 +194,7 @@ public class BannerServiceImpl implements BannerService {
         banner.setStatus(status);
         banner = bannerRepository.save(banner);
         log.info("Banner status updated: {}, status: {}", bannerId, status);
+        auditService.logAction(getCurrentUserId(), "TOGGLE_BANNER_STATUS", "BANNER", banner.getBannerId(), "Toggled banner status to " + status + " for banner: " + banner.getTitle());
 
         return convertToResponse(banner);
     }
@@ -192,6 +208,7 @@ public class BannerServiceImpl implements BannerService {
             bannerRepository.save(banner);
         }
         log.info("Banners reordered");
+        auditService.logAction(getCurrentUserId(), "REORDER_BANNERS", "BANNER", null, "Reordered banners: " + bannerIds);
     }
 
     private BannerResponse convertToResponse(Banner banner) {
@@ -227,5 +244,26 @@ public class BannerServiceImpl implements BannerService {
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new RuntimeException("File must be a valid image");
         }
+    }
+
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
     }
 }

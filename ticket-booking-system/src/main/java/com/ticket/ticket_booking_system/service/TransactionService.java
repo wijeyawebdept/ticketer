@@ -27,6 +27,7 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final BookingRepository bookingRepository;
+    private final AdminAuditService auditService;
 
     /**
      * Create initial pending transaction record
@@ -60,6 +61,9 @@ public class TransactionService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
+        auditService.logAction(booking.getUser() != null ? booking.getUser().getUserId() : null,
+                "CREATE_PENDING_TRANSACTION", "TRANSACTION", transaction.getTransactionId(),
+                "Created pending transaction for booking: " + bookingId + ", amount: " + amount);
 
         log.info("Pending transaction created: TransactionID={}", transaction.getTransactionId());
 
@@ -105,6 +109,9 @@ public class TransactionService {
         }
 
         transaction = transactionRepository.save(transaction);
+        auditService.logAction(transaction.getUserId(),
+                "TRANSACTION_STATUS_UPDATED", "TRANSACTION", transaction.getTransactionId(),
+                "Updated transaction status to: " + status + " for reference: " + transactionRef);
 
         log.info("Transaction updated: TransactionID={}, NewStatus={}",
                  transaction.getTransactionId(), status);

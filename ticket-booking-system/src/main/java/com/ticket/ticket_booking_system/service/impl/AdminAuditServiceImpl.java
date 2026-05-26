@@ -125,6 +125,13 @@ public class AdminAuditServiceImpl implements AdminAuditService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<AuditLogResponse> getAuditLogsByAdmin(UUID performedBy, String entityType, String action, Pageable pageable) {
+        Page<SystemAuditLog> logs = auditLogRepository.findByPerformedByAndFilters(performedBy, entityType, action, pageable);
+        return logs.map(this::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<AuditLogResponse> getAuditLogsByEntityType(String entityType, Pageable pageable) {
         return auditLogRepository.findByEntityType(entityType, pageable).map(this::toResponse);
     }

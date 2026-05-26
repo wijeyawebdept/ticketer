@@ -12,6 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.entity.Admin;
 
 import com.ticket.ticket_booking_system.dto.blog.BlogDTOs.BlogCommentRequest;
 import com.ticket.ticket_booking_system.dto.blog.BlogDTOs.BlogCommentResponse;
@@ -47,8 +51,10 @@ public class BlogServiceImpl implements BlogService {
     private final BlogPostImageRepository imageRepo;
     private final UserRepository userRepo;
     private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepo;
+    private final OrganizerRepository organizerRepo;
     private final EmailService emailService;
     private final RecycleBinService recycleBinService;
+    private final AdminAuditService auditService;
 
     // ---- Admin Operations ----
 
@@ -83,6 +89,7 @@ public class BlogServiceImpl implements BlogService {
                 }
             }
         }
+        auditService.logAction(getCurrentUserId(), "CREATE_BLOG_POST", "BLOG", post.getPostId(), "Created blog post: " + post.getTitle());
         return getPostDetail(post.getPostId(), null);
     }
 
@@ -118,6 +125,7 @@ public class BlogServiceImpl implements BlogService {
                 }
             }
         }
+        auditService.logAction(getCurrentUserId(), "UPDATE_BLOG_POST", "BLOG", post.getPostId(), "Updated blog post: " + post.getTitle());
         return getPostDetail(postId, null);
     }
 
@@ -128,6 +136,7 @@ public class BlogServiceImpl implements BlogService {
                 .orElseThrow(() -> new RuntimeException("Post not found: " + postId));
         post.setPublished(!post.isPublished());
         postRepo.save(post);
+        auditService.logAction(getCurrentUserId(), "TOGGLE_PUBLISH_BLOG_POST", "BLOG", post.getPostId(), "Toggled publish status to " + post.isPublished() + " for blog post: " + post.getTitle());
         return getPostDetail(postId, null);
     }
 
@@ -172,6 +181,7 @@ public class BlogServiceImpl implements BlogService {
         post.setPublished(false);
         post.setIsDeleted(true);
         postRepo.save(post);
+        auditService.logAction(getCurrentUserId(), "SOFT_DELETE_BLOG_POST", "BLOG", post.getPostId(), "Soft deleted blog post: " + post.getTitle());
     }
 
     @Override
@@ -182,12 +192,17 @@ public class BlogServiceImpl implements BlogService {
         BlogPost post = comment.getPost();
         post.setCommentCount(Math.max(0, post.getCommentCount() - 1));
         postRepo.save(post);
+        auditService.logAction(getCurrentUserId(), "DELETE_BLOG_COMMENT", "BLOG", post.getPostId(), "Deleted comment from post: " + post.getTitle());
         commentRepo.deleteById(commentId);
     }
 
     @Override
     @Transactional
     public void deleteImage(UUID imageId) {
+        BlogPostImage img = imageRepo.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Image not found: " + imageId));
+        BlogPost post = img.getPost();
+        auditService.logAction(getCurrentUserId(), "DELETE_BLOG_IMAGE", "BLOG", post.getPostId(), "Deleted blog image " + img.getImageFileName() + " from post: " + post.getTitle());
         imageRepo.deleteById(imageId);
     }
 
@@ -394,5 +409,26 @@ public class BlogServiceImpl implements BlogService {
         sb.append("<p style='color:#555;font-size:12px;text-align:center;'>You received this because you opted in to email notifications. <br/>Ticketer.lk — Your Event Partner</p>");
         sb.append("</div></body></html>");
         return sb.toString();
+    }
+
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepo.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepo.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepo.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
     }
 }

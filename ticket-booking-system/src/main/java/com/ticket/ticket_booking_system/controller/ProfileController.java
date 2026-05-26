@@ -240,11 +240,7 @@ public class ProfileController {
         String email = userDetails.getUsername();
         ProfileDTO profile = profileService.getProfileByEmail(email);
         
-        // Use the existing findByFilters but filter by userId too?
-        // Wait, AdminAuditService doesn't have findByFiltersAndUser yet.
-        // But for now, getAuditLogsByAdmin is fine.
-        
-        Page<AuditLogResponse> page = auditService.getAuditLogsByAdmin(profile.getUserId(), pageable);
+        Page<AuditLogResponse> page = auditService.getAuditLogsByAdmin(profile.getUserId(), entityType, action, pageable);
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");

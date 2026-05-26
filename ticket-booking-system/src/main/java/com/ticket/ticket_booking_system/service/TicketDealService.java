@@ -13,6 +13,12 @@ import com.ticket.ticket_booking_system.entity.TicketCategory;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.Organizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @Transactional
@@ -20,14 +26,23 @@ public class TicketDealService {
 
     private final TicketCategoryRepository ticketCategoryRepository;
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final OrganizerRepository organizerRepository;
     private final EmailService emailService;
+    private final AdminAuditService auditService;
 
     public TicketDealService(TicketCategoryRepository ticketCategoryRepository, 
                            UserRepository userRepository,
-                           EmailService emailService) {
+                           AdminRepository adminRepository,
+                           OrganizerRepository organizerRepository,
+                           EmailService emailService,
+                           AdminAuditService auditService) {
         this.ticketCategoryRepository = ticketCategoryRepository;
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
+        this.organizerRepository = organizerRepository;
         this.emailService = emailService;
+        this.auditService = auditService;
     }
 
     /** Apply or update a deal on a ticket category */
@@ -82,6 +97,8 @@ public class TicketDealService {
             notifyCustomersAboutDeal(saved);
         }
 
+        auditService.logAction(getCurrentUserId(), "APPLY_TICKET_DEAL", "DEAL", saved.getCategoryId(), "Applied deal " + saved.getDealLabel() + " (type: " + saved.getDealType() + ") to category: " + saved.getCategoryName());
+
         return TicketCategoryDealResponse.fromEntity(saved);
     }
 
@@ -112,6 +129,7 @@ public class TicketDealService {
         tc.setDealLabel(null);
 
         TicketCategory saved = ticketCategoryRepository.save(tc);
+        auditService.logAction(getCurrentUserId(), "REMOVE_TICKET_DEAL", "DEAL", saved.getCategoryId(), "Removed deal from category: " + saved.getCategoryName());
         return TicketCategoryDealResponse.fromEntity(saved);
     }
 
@@ -173,5 +191,26 @@ public class TicketDealService {
     @Transactional(readOnly = true)
     public boolean eventHasDeal(UUID eventId) {
         return ticketCategoryRepository.existsActiveDealForEvent(eventId);
+    }
+
+    private UUID getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String email = authentication.getName();
+                
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user != null) return user.getUserId();
+                
+                Admin admin = adminRepository.findByEmail(email).orElse(null);
+                if (admin != null) return admin.getAdminId();
+                
+                Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+                if (organizer != null) return organizer.getOrganizerId();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
     }
 }

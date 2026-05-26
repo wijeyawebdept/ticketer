@@ -32,6 +32,21 @@ public interface SystemAuditLogRepository extends JpaRepository<SystemAuditLog, 
             @Param("action") String action,
             Pageable pageable);
 
+    @Query(value = "SELECT * FROM system_audit_log s WHERE " +
+           "s.performed_by = :performedBy AND " +
+           "(CAST(:entityType AS TEXT) IS NULL OR s.entity_type = CAST(:entityType AS TEXT)) AND " +
+           "(CAST(:action AS TEXT) IS NULL OR s.action ILIKE CONCAT('%', CAST(:action AS TEXT), '%'))",
+           countQuery = "SELECT count(*) FROM system_audit_log s WHERE " +
+                        "s.performed_by = :performedBy AND " +
+                        "(CAST(:entityType AS TEXT) IS NULL OR s.entity_type = CAST(:entityType AS TEXT)) AND " +
+                        "(CAST(:action AS TEXT) IS NULL OR s.action ILIKE CONCAT('%', CAST(:action AS TEXT), '%'))",
+           nativeQuery = true)
+    Page<SystemAuditLog> findByPerformedByAndFilters(
+            @Param("performedBy") UUID performedBy,
+            @Param("entityType") String entityType,
+            @Param("action") String action,
+            Pageable pageable);
+
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM SystemAuditLog s WHERE s.createdAt < :cutoffDate")
     int deleteByCreatedAtBefore(@Param("cutoffDate") java.time.LocalDateTime cutoffDate);
