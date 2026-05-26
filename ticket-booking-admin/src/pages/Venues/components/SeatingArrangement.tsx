@@ -188,14 +188,16 @@ const SeatingArrangement: React.FC = () => {
           currentPrice: seat.currentPrice
         }));
         
-        setSeats(availabilitySeats);
-        
+        const filteredSeats = availabilitySeats.filter(
+          (seat: any) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && seat.status === 'LOCKED')
+        );
+        setSeats(filteredSeats);
         
         // Extract unique categories from availability response
         const uniqueCategories = Array.from(
-          new Set(availabilitySeats.map((seat: VenueSeat) => seat.categoryName))
+          new Set(filteredSeats.map((seat: VenueSeat) => seat.categoryName))
         ).map(name => {
-          const seat = availabilitySeats.find((s: VenueSeat) => s.categoryName === name);
+          const seat = filteredSeats.find((s: VenueSeat) => s.categoryName === name);
           return {
             name: seat?.categoryName,
             color: seat?.colorCode
@@ -206,14 +208,16 @@ const SeatingArrangement: React.FC = () => {
       } else {
         // Otherwise, fetch hardcoded venue seats layout filtered by venue ID
         const response = await api.get<VenueSeat[]>(`/api/venue-seats/layout/${id}`);
-        setSeats(response.data);
-        
+        const filteredSeats = response.data.filter(
+          (seat: VenueSeat) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]')))
+        );
+        setSeats(filteredSeats);
         
         // Extract unique categories from layout response
         const uniqueCategories = Array.from(
-          new Set(response.data.map((seat: VenueSeat) => seat.categoryName))
+          new Set(filteredSeats.map((seat: VenueSeat) => seat.categoryName))
         ).map(name => {
-          const seat = response.data.find((s: VenueSeat) => s.categoryName === name);
+          const seat = filteredSeats.find((s: VenueSeat) => s.categoryName === name);
           return {
             name: seat?.categoryName,
             color: seat?.colorCode

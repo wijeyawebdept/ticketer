@@ -330,8 +330,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         case 'VIP_RESERVED':
           return '#FF0000'; // Red – sold
         case 'LOCKED':
-          // Nelum Pokuna Outdoor Arena: locked seats invisible to customers
-          if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && !isRestrictedUser())
+          // Nelum Pokuna Outdoor Arena: locked seats physically do not exist and are invisible to everyone
+          if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898')
             return 'transparent';
           return '#6c757d'; // Grey – locked
         case 'TEMPORARY_HOLD':
@@ -610,8 +610,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                       const isUnavailable = status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status);
                       const isHiddenLockedSeat =
                         status?.status === 'LOCKED' &&
-                        venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' &&
-                        !isRestrictedUser();
+                        venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898';
+
+                      if (isHiddenLockedSeat) {
+                        return null;
+                      }
 
                       return (
                         <circle
