@@ -58,7 +58,6 @@ const EventDetails: React.FC = () => {
     nic: '',
   });
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
-  const [checkingSeating, setCheckingSeating] = useState(true);
   const [showSeatingMessage, setShowSeatingMessage] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
   const [showCountdown, setShowCountdown] = useState<boolean>(false);
@@ -69,12 +68,10 @@ const EventDetails: React.FC = () => {
   useEffect(() => {
     const checkVenueSeating = async () => {
       if (!event?.venue?.id) {
-        setCheckingSeating(false);
         return;
       }
 
       try {
-        setCheckingSeating(true);
         
         // Try multiple approaches to check for seating
         try {
@@ -113,8 +110,6 @@ const EventDetails: React.FC = () => {
         }
       } catch (error) {
         setHasSeatingLayout(false);
-      } finally {
-        setCheckingSeating(false);
       }
     };
 
@@ -137,7 +132,7 @@ const EventDetails: React.FC = () => {
         
         // Fetch bookable schedules for this event
         try {
-          const schedulesData = await EventScheduleService.getPublicBookableSchedulesForEvent(id);
+          const schedulesData = await EventScheduleService.getPublicBookableSchedulesForEvent(eventData.id);
           setSchedules(schedulesData);
           // Set the first non-past schedule as default selected
           if (schedulesData.length > 0) {
@@ -319,14 +314,7 @@ const EventDetails: React.FC = () => {
     return total;
   };
 
-  const handlePaymentMethodChange = (
-    event: React.MouseEvent<HTMLElement>,
-    newMethod: string | null
-  ) => {
-    if (newMethod !== null) {
-      setSelectedPaymentMethod(newMethod);
-    }
-  };
+
 
   const handleCustomerInfoChange = (field: string, value: string) => {
     setCustomerInfo({

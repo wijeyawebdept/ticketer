@@ -425,7 +425,43 @@ const SeatingArrangement: React.FC = () => {
     );
   }
 
-  // Calculate SVG dimensions based on seat positions
+  // Calculate stage dimensions and center it horizontally, placing it above the top-most seat
+  const getStageLayout = () => {
+    if (seats.length === 0) {
+      return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
+    }
+    
+    const xPositions = seats.map(s => Number(s.xposition) || 0).filter(x => x > 0);
+    const yPositions = seats.map(s => Number(s.yposition) || 0).filter(y => y > 0);
+    
+    if (xPositions.length === 0 || yPositions.length === 0) {
+      return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
+    }
+    
+    const minX = Math.min(...xPositions);
+    const maxX = Math.max(...xPositions);
+    const minY = Math.min(...yPositions);
+    
+    // Width of the stage should be proportional to the seating area, capped between 400px and 700px
+    const seatingWidth = maxX - minX;
+    const stageWidth = Math.max(400, Math.min(700, seatingWidth * 0.7));
+    const stageHeight = 65;
+    const stageGap = 50; // Gap between stage bottom and top row of seats
+    
+    const stageX = minX + (seatingWidth - stageWidth) / 2;
+    const stageY = minY - stageHeight - stageGap;
+    
+    return {
+      x: stageX,
+      y: stageY,
+      width: stageWidth,
+      height: stageHeight,
+      centerX: stageX + stageWidth / 2,
+      centerY: stageY + stageHeight / 2 + 8 // vertical alignment helper for text
+    };
+  };
+
+  // Calculate SVG dimensions based on seat positions and stage layout
   const getViewBox = () => {
     if (seats.length === 0) return "0 0 1200 800";
     
@@ -438,39 +474,20 @@ const SeatingArrangement: React.FC = () => {
     
     const minX = Math.min(...xPositions);
     const maxX = Math.max(...xPositions);
-    const minY = Math.min(...yPositions);
     const maxY = Math.max(...yPositions);
     
+    const stage = getStageLayout();
     
-    // Add padding for stage area at top and sides
-    const padding = 50;
-    const topPadding = 100; // Extra space for stage
+    const padding = 60; // Left, right, bottom padding
+    const topPadding = 40; // Padding above stage top
+    
+    const minViewBoxX = minX - padding;
+    const minViewBoxY = stage.y - topPadding;
+    
     const width = maxX - minX + padding * 2;
-    const height = maxY - minY + padding + topPadding;
+    const height = maxY - minViewBoxY + padding;
     
-    return `${minX - padding} ${minY - topPadding} ${width} ${height}`;
-  };
-
-  // Calculate stage position to center it horizontally
-  const getStagePosition = () => {
-    if (seats.length === 0) {
-      return { x: 400, centerX: 750 };
-    }
-    
-    const xPositions = seats.map(s => Number(s.xposition) || 0).filter(x => x > 0);
-    if (xPositions.length === 0) {
-      return { x: 400, centerX: 750 };
-    }
-    
-    const minX = Math.min(...xPositions);
-    const maxX = Math.max(...xPositions);
-    const stageWidth = 700;
-    
-    // Center the stage between min and max seat positions
-    const stageX = minX + (maxX - minX - stageWidth) / 2;
-    const stageCenterX = stageX + stageWidth / 2;
-    
-    return { x: stageX, centerX: stageCenterX };
+    return `${minViewBoxX} ${minViewBoxY} ${width} ${height}`;
   };
 
   const handleBalconyClick = () => {
@@ -723,11 +740,85 @@ const SeatingArrangement: React.FC = () => {
                   preserveAspectRatio="xMidYMid meet"
                   style={{ display: 'block', pointerEvents: isDragging ? 'none' : 'auto' }}
                 >
+                  <defs>
+                    {/* Premium Drop Shadow for the Stage */}
+                    <filter id="stageShadow" x="-10%" y="-10%" width="120%" height="130%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25"/>
+                    </filter>
+                    
+                    {/* Modern slate gradient for the Stage */}
+                    <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#1e293b" />
+                      <stop offset="100%" stopColor="#0f172a" />
+                    </linearGradient>
+                    
+                    {/* Glowing front edge gradient for the stage */}
+                    <linearGradient id="stageGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                      <stop offset="15%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="50%" stopColor="#60a5fa" stopOpacity="1" />
+                      <stop offset="85%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+
+                  <style>{`
+                    .venue-seat {
+                      transition: r 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                                  stroke-width 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  filter 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    .venue-seat:hover {
+                      r: 9.5px !important;
+                      stroke: #ffffff !important;
+                      stroke-width: 2px !important;
+                      opacity: 1 !important;
+                      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4)) !important;
+                    }
+                  `}</style>
+
                   {/* Stage area at top center */}
-                  <rect x={getStagePosition().x} y="50" width="700" height="70" fill="#d3d3d3" stroke="#666" strokeWidth="3" rx="8" />
-                  <text x={getStagePosition().centerX} y="95" fontSize="28" fontWeight="bold" fill="#333" textAnchor="middle">
-                    STAGE
-                  </text>
+                  {(() => {
+                    const stage = getStageLayout();
+                    return (
+                      <g filter="url(#stageShadow)">
+                        {/* Main Stage Rectangle */}
+                        <rect 
+                          x={stage.x} 
+                          y={stage.y} 
+                          width={stage.width} 
+                          height={stage.height} 
+                          fill="url(#stageGrad)" 
+                          stroke="#334155" 
+                          strokeWidth="2" 
+                          rx="10" 
+                        />
+                        {/* Glowing Apron Highlight (bottom edge of the stage) */}
+                        <rect 
+                          x={stage.x + 4} 
+                          y={stage.y + stage.height - 4} 
+                          width={stage.width - 8} 
+                          height="3" 
+                          fill="url(#stageGlow)" 
+                          rx="1.5" 
+                        />
+                        {/* Stage Text */}
+                        <text 
+                          x={stage.centerX} 
+                          y={stage.centerY} 
+                          fontSize="20" 
+                          fontWeight="700" 
+                          fill="#f8fafc" 
+                          letterSpacing="5"
+                          textAnchor="middle"
+                          style={{ userSelect: 'none' }}
+                        >
+                          STAGE
+                        </text>
+                      </g>
+                    );
+                  })()}
                   
                   {/* Render all seats as circles */}
                   {seats.map((seat) => {
@@ -751,6 +842,7 @@ const SeatingArrangement: React.FC = () => {
                         cx={x}
                         cy={y}
                         r="6"
+                        className="venue-seat"
                         fill={finalColor}
                         stroke={isMultiSelected ? '#2196f3' : (isSingleSelected ? '#ff1955' : '#333')}
                         strokeWidth={isMultiSelected || isSingleSelected ? '3' : '1'}

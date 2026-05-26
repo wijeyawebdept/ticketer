@@ -15,7 +15,9 @@ import {
   FormControlLabel,
   Button,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
@@ -39,6 +41,7 @@ const SeatSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -286,18 +289,19 @@ const SeatSelectionPage: React.FC = () => {
     let newTotal = 0;
     let newTotalDiscount = 0;
 
-    // Group selected seats by category
-    const seatsByCategory: Record<string, any[]> = {};
+    // Group selected seats by category using a Map to prevent CWE-94 Prototype Pollution
+    const seatsByCategory = new Map<string, any[]>();
     selectedSeatDetails.forEach(seat => {
       if (!seat) return;
-      if (!seatsByCategory[seat.categoryName]) {
-        seatsByCategory[seat.categoryName] = [];
+      const catName = seat.categoryName;
+      if (!seatsByCategory.has(catName)) {
+        seatsByCategory.set(catName, []);
       }
-      seatsByCategory[seat.categoryName].push(seat);
+      seatsByCategory.get(catName)!.push(seat);
     });
 
     // Calculate seats
-    Object.values(seatsByCategory).forEach(categorySeats => {
+    Array.from(seatsByCategory.values()).forEach(categorySeats => {
       const count = categorySeats.length;
       if (count === 0) return;
       const sample = categorySeats[0];
@@ -492,7 +496,7 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   if (!eventDetails) {
-    return <div className="loading">Loading event details...</div>;
+    return <div className="loading">{t('loadingEventDetails', 'Loading event details...')}</div>;
   }
 
   return (
@@ -502,23 +506,41 @@ const SeatSelectionPage: React.FC = () => {
           <div className="redirection-content">
             <div className="secure-badge">
               <span className="lock-icon"></span>
-              SECURE CHECKOUT
+              {t('secureCheckout', 'SECURE CHECKOUT')}
             </div>
-            <h1>Initializing Secure Payment</h1>
-            <p>Please do not refresh the page or click the back button.</p>
+            <h1>{t('initializingSecurePayment', 'Initializing Secure Payment')}</h1>
+            <p>{t('doNotRefresh', 'Please do not refresh the page or click the back button.')}</p>
             <div className="loading-container">
-              <div className="loading-orbit">
-                <div className="loading-dot"></div>
-              </div>
-              <div className="loading-text">Connecting to Payment Gateway...</div>
+              <CircularProgress sx={{ color: '#ff1955', mb: 2 }} />
+              <div className="loading-text">{t('connectingToPayment', 'Connecting to Payment Gateway...')}</div>
             </div>
             <div className="order-summary-mini">
               <div className="summary-item">
-                <span>Event:</span>
+                <span>{t('eventLabel', 'Event:')}</span>
                 <strong>{eventDetails.title}</strong>
               </div>
+              {eventDetails.date && eventDetails.time && (
+                <div className="summary-item">
+                  <span>{t('timeSlotLabel', 'Time Slot:')}</span>
+                  <strong>{eventDetails.date} • {eventDetails.time}</strong>
+                </div>
+              )}
+              {selectedSeats.length > 0 && (
+                <div className="summary-item">
+                  <span>{t('selectedSeatsLabel', 'Selected Seats:')}</span>
+                  <strong>{selectedSeats.join(', ')}</strong>
+                </div>
+              )}
+              {sharedAreaSelections.length > 0 && (
+                <div className="summary-item">
+                  <span>{t('ticketsLabel', 'Tickets:')}</span>
+                  <strong>
+                    {sharedAreaSelections.map(s => `${s.categoryName} (x${s.ticketCount})`).join(', ')}
+                  </strong>
+                </div>
+              )}
               <div className="summary-item">
-                <span>Total Amount:</span>
+                <span>{t('totalAmountLabel', 'Total Amount:')}</span>
                 <strong>{(totalPrice + 100).toLocaleString()} LKR</strong>
               </div>
             </div>
@@ -526,7 +548,7 @@ const SeatSelectionPage: React.FC = () => {
               className="redirection-back-btn" 
               onClick={() => setIsRedirecting(false)}
             >
-              Cancel & Return
+              {t('cancelReturn', 'Cancel & Return')}
             </button>
           </div>
         </div>
@@ -535,7 +557,7 @@ const SeatSelectionPage: React.FC = () => {
           {message && <div className={`message-notification ${message.type}`}>{message.text}</div>}
 
           <div className="event-header">
-        <button onClick={() => navigate(-1)} className="back-btn">← Back</button>
+        <button onClick={() => navigate(-1)} className="back-btn">{t('back', '← Back')}</button>
         <div className="event-info">
           <h1>{eventDetails.title}</h1>
           <p className="event-meta">
@@ -546,7 +568,7 @@ const SeatSelectionPage: React.FC = () => {
           {showCountdown && countdownText && (
             <div className={`event-countdown countdown-${countdownStatus}`}>
               <span className="countdown-text">
-                <strong>Event starts in:</strong> {countdownText}
+                <strong>{t('eventStartsIn', 'Event starts in:')}</strong> {countdownText}
               </span>
             </div>
           )}
@@ -568,7 +590,7 @@ const SeatSelectionPage: React.FC = () => {
         <div className={`booking-summary ${isCollapsed ? 'collapsed' : ''}`} ref={summaryRef}>
           <div className="summary-content">
             <div className="summary-header">
-              <h3>Booking Summary</h3>
+              <h3>{t('bookingSummary', 'Booking Summary')}</h3>
               <button className="collapse-btn" onClick={() => setIsCollapsed(!isCollapsed)}>
                 {isCollapsed ? '▲' : '▼'}
               </button>
@@ -580,11 +602,11 @@ const SeatSelectionPage: React.FC = () => {
                   {selectedSeats.length > 0 && (
                     <>
                       <div className="summary-row">
-                        <span>Selected Seats:</span>
+                        <span>{t('selectedSeatsLabelSummary', 'Selected Seats:')}</span>
                         <strong>{selectedSeats.length}</strong>
                       </div>
                       <div className="summary-row">
-                        <span>Seat IDs:</span>
+                        <span>{t('seatIdsLabel', 'Seat IDs:')}</span>
                         <div className="seat-badges">
                           {selectedSeats.map(seatId => (
                             <span key={seatId} className="seat-badge">{seatId}</span>
@@ -598,17 +620,17 @@ const SeatSelectionPage: React.FC = () => {
                     <React.Fragment key={`shared-area-${selection.areaNumber}`}>
                       <div className="summary-row">
                         <span>{selection.categoryName}:</span>
-                        <strong>{selection.ticketCount} ticket{selection.ticketCount > 1 ? 's' : ''}</strong>
+                        <strong>{selection.ticketCount} {selection.ticketCount > 1 ? t('ticketsPlural', 'tickets') : t('ticketSingular', 'ticket')}</strong>
                       </div>
                       <div className="summary-row">
-                        <span>Price ({selection.categoryName}):</span>
+                        <span>{t('priceLabel', 'Price')} ({selection.categoryName}):</span>
                         <strong>{(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR</strong>
                       </div>
                     </React.Fragment>
                   ))}
 
                   <div className="summary-row total">
-                    <span>Total Price:</span>
+                    <span>{t('totalPriceLabel', 'Total Price:')}</span>
                     <strong>{totalPrice.toLocaleString()} LKR</strong>
                   </div>
                 </div>
@@ -617,22 +639,22 @@ const SeatSelectionPage: React.FC = () => {
                   {!isHolding ? (
                     <>
                       <button onClick={handleHoldSeats} className="btn btn-primary" disabled={loading || selectedSeats.length === 0}>
-                        {loading ? 'Processing...' : 'Hold Seats (5 min)'}
+                        {loading ? t('processing', 'Processing...') : t('holdSeats', 'Hold Seats (5 min)')}
                       </button>
                       <button onClick={handleProceedToPayment} className="btn btn-success" disabled={selectedSeats.length === 0 && sharedAreaSelections.length === 0}>
-                        Proceed to Payment
+                        {t('proceedToPayment', 'Proceed to Payment')}
                       </button>
                       <button onClick={() => { setSelectedSeats([]); setSharedAreaSelections([]); setTotalPrice(0); }} className="btn btn-secondary">
-                        Clear Selection
+                        {t('clearSelection', 'Clear Selection')}
                       </button>
                     </>
                   ) : (
                     <>
                       <button onClick={handleProceedToPayment} className="btn btn-success" disabled={loading}>
-                        Proceed to Payment
+                        {t('proceedToPayment', 'Proceed to Payment')}
                       </button>
                       <button onClick={handleReleaseSeats} className="btn btn-danger" disabled={loading}>
-                        Release Seats
+                        {t('releaseSeats', 'Release Seats')}
                       </button>
                     </>
                   )}
@@ -660,27 +682,27 @@ const SeatSelectionPage: React.FC = () => {
           <Grid container>
             <Grid item xs={12} md={7} sx={{ p: 4, borderRight: { md: '1px solid #f0f0f0' } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, fontFamily: 'Raleway, sans-serif' }}>
-                Checkout
+                {t('checkout', 'Checkout')}
               </Typography>
 
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Delivery method
+                  {t('deliveryMethod', 'Delivery method')}
                 </Typography>
                 <FormControl fullWidth>
                   <Select value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)} size="small">
-                    <MenuItem value="online">Online</MenuItem>
-                    <MenuItem value="pickup">Pick up</MenuItem>
+                    <MenuItem value="online">{t('online', 'Online')}</MenuItem>
+                    <MenuItem value="pickup">{t('pickup', 'Pick up')}</MenuItem>
                   </Select>
                 </FormControl>
                 <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
-                  Ha. Ha. Ha. we're gonna charge u more 100/=
+                  {t('handlingFeeNotice', "Ha. Ha. Ha. we're gonna charge u more 100/=")}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Payment Method <span style={{ color: '#d32f2f' }}>(Select one)</span>
+                  {t('paymentMethodSelect', 'Payment Method')} <span style={{ color: '#d32f2f' }}>({t('selectOne', 'Select one')})</span>
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   {[
@@ -735,22 +757,22 @@ const SeatSelectionPage: React.FC = () => {
               <Box sx={{ mb: 2 }}>
                 <FormControlLabel
                   control={<input type="checkbox" checked={bookingForSomeoneElse} onChange={(e) => setBookingForSomeoneElse(e.target.checked)} style={{ marginRight: '8px' }} />}
-                  label={<Typography variant="body2">I am booking for someone else</Typography>}
+                  label={<Typography variant="body2">{t('bookingForSomeoneElse', 'I am booking for someone else')}</Typography>}
                 />
                 <Box sx={{ mt: 1 }}>
                   <FormControlLabel
                     control={<input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} style={{ marginRight: '8px' }} />}
-                    label={<Typography variant="body2">I accept and agree to Terms and Conditions</Typography>}
+                    label={<Typography variant="body2">{t('acceptTerms', 'I accept and agree to Terms and Conditions')}</Typography>}
                   />
                 </Box>
               </Box>
 
               <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
                 <Button variant="outlined" onClick={handleClosePaymentModal} sx={{ borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600 }}>
-                  Back to selection
+                  {t('backToSelection', 'Back to selection')}
                 </Button>
                 <Button variant="contained" fullWidth onClick={handleConfirmBooking} disabled={loading} sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700 }}>
-                  {loading ? 'Processing...' : 'Confirm booking'}
+                  {loading ? t('processing', 'Processing...') : t('confirmBooking', 'Confirm booking')}
                 </Button>
               </Box>
             </Grid>
@@ -758,14 +780,14 @@ const SeatSelectionPage: React.FC = () => {
             <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Ticket Summary
+                  {t('ticketSummary', 'Ticket Summary')}
                 </Typography>
                 <Button 
                   size="small" 
                   onClick={handleClosePaymentModal}
                   sx={{ color: '#ff1955', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
                 >
-                  Change Seats
+                  {t('changeSeats', 'Change Seats')}
                 </Button>
               </Box>
 
@@ -798,17 +820,17 @@ const SeatSelectionPage: React.FC = () => {
               {/* Selected Tickets Section */}
               <Box sx={{ mb: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  Selected Tickets
+                  {t('selectedTickets', 'Selected Tickets')}
                 </Typography>
 
                 {/* Seated Tickets */}
                 {selectedSeatDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Seats ({selectedSeatDetails.length})</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>{t('seatsLabelShort', 'Seats')} ({selectedSeatDetails.length})</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
                       {selectedSeatDetails.map((seat, index) => (
                         <Box
-                          key={seat?.seatId || index}
+                          key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)}
                           sx={{
                             px: 1,
                             py: 0.5,
@@ -819,14 +841,14 @@ const SeatSelectionPage: React.FC = () => {
                             fontWeight: 500
                           }}
                         >
-                          {seat?.seatId || selectedSeats[index]}
+                          {seat?.seatId || selectedSeats.find((_, i) => i === index)}
                         </Box>
                       ))}
                     </Box>
                     {selectedSeatDetails.map((seat, index) => (
-                      <Box key={seat?.seatId || index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {seat?.seatId || selectedSeats[index]} - {seat?.categoryName || 'Standard'}
+                          {(seat?.seatId || selectedSeats.find((_, i) => i === index))} - {seat?.categoryName || t('standard', 'Standard')}
                         </Typography>
                         <Typography variant="caption" sx={{ fontWeight: 600 }}>
                           {(seat?.currentPrice || 0).toLocaleString()} LKR
@@ -853,7 +875,7 @@ const SeatSelectionPage: React.FC = () => {
                 {/* Show message if no tickets selected */}
                 {selectedSeatDetails.length === 0 && sharedAreaSelections.length === 0 && (
                   <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                    No tickets selected
+                    {t('noTicketsSelected', 'No tickets selected')}
                   </Typography>
                 )}
               </Box>
@@ -861,18 +883,18 @@ const SeatSelectionPage: React.FC = () => {
               {/* Amount Section */}
               <Box sx={{ pt: 2, borderTop: '2px solid #e0e0e0' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  Amount
+                  {t('amount', 'Amount')}
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Sub Total</Typography>
+                  <Typography variant="body2">{t('subTotal', 'Sub Total')}</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalPrice.toLocaleString()} LKR</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="body2">Handling fee</Typography>
+                  <Typography variant="body2">{t('handlingFee', 'Handling fee')}</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>100 LKR</Typography>
                 </Box>
                 <Box sx={{ borderTop: '2px solid #e0e0e0', pt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Total</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('total', 'Total')}</Typography>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>{(totalPrice + 100).toLocaleString()} LKR</Typography>
                 </Box>
               </Box>

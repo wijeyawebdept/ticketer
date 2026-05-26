@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle, Button, Box, Typography, IconButton
 import { Close } from '@mui/icons-material';
 import axiosInstance from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import './VenueSeatMap.css';
 
 interface VenueSeatData {
@@ -88,6 +89,33 @@ interface VenueSeatMapProps {
   bookedSeats?: string[];
 }
 
+const getAreaColor = (index: number): string => {
+  const mod = index % 5;
+  if (mod === 0) return '#FFE082';
+  if (mod === 1) return '#B3E5FC';
+  if (mod === 2) return '#C8E6C9';
+  if (mod === 3) return '#F8BBD9';
+  return '#D1C4E9';
+};
+
+const getBorderColor = (index: number): string => {
+  const mod = index % 5;
+  if (mod === 0) return '#FFA000';
+  if (mod === 1) return '#0288D1';
+  if (mod === 2) return '#388E3C';
+  if (mod === 3) return '#C2185B';
+  return '#7B1FA2';
+};
+
+const getTextColor = (index: number): string => {
+  const mod = index % 5;
+  if (mod === 0) return '#FF6F00';
+  if (mod === 1) return '#01579B';
+  if (mod === 2) return '#1B5E20';
+  if (mod === 3) return '#880E4F';
+  return '#4A148C';
+};
+
 export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   eventScheduleId,
   venueId,
@@ -98,6 +126,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   bookedSeats = [],
 }) => {
   const { isRestrictedUser } = useAuth();
+  const { t } = useTranslation();
   const [venueSeats, setVenueSeats] = useState<VenueSeatData[]>([]);
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
   const [localSelectedSeats, setLocalSelectedSeats] = useState<Set<string>>(new Set(selectedSeats));
@@ -119,21 +148,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   // Check if venue has shared areas from database
   const hasSharedAreas = sharedAreas.length > 0;
 
-  // Debug: Log venue ID changes
-  useEffect(() => {
-  }, [venueId, hasSharedAreas, sharedAreas]);
-
-  // Fetch seat availability from backend
-  useEffect(() => {
-    fetchSeatAvailability();
-  }, [eventScheduleId]);
-
-  // Sync localSelectedSeats with selectedSeats prop when it changes externally
-  useEffect(() => {
-    setLocalSelectedSeats(new Set(selectedSeats));
-  }, [selectedSeats]);
-
-  const fetchSeatAvailability = async () => {
+  const fetchSeatAvailability = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get<SeatAvailabilityResponse>(`/api/venue-seats/availability/${eventScheduleId}`);
@@ -205,9 +220,23 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventScheduleId]);
 
-  const handleSeatClick = (seat: VenueSeatData, e?: React.MouseEvent) => {
+  // Debug: Log venue ID changes
+  useEffect(() => {
+  }, [venueId, hasSharedAreas, sharedAreas]);
+
+  // Fetch seat availability from backend
+  useEffect(() => {
+    fetchSeatAvailability();
+  }, [fetchSeatAvailability]);
+
+  // Sync localSelectedSeats with selectedSeats prop when it changes externally
+  useEffect(() => {
+    setLocalSelectedSeats(new Set(selectedSeats));
+  }, [selectedSeats]);
+
+  const handleSeatClick = useCallback((seat: VenueSeatData, e?: React.MouseEvent) => {
     // Stop event propagation to prevent panning
     if (e) {
       e.stopPropagation();
@@ -234,7 +263,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
     setLocalSelectedSeats(newSelected);
     onSeatSelect?.(Array.from(newSelected));
-  };
+  }, [seatStatuses, localSelectedSeats, maxSelection, onSeatSelect]);
 
   // Pan handlers - Define handleMouseMove first since handleSVGMouseMove depends on it
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -383,7 +412,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     <div className="venue-seat-map-container">
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          Loading venue layout... is sucks
+          {t('loadingVenueLayout', 'Loading venue layout... is sucks')}
         </div>
       )}
 
@@ -393,9 +422,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           <div className="venue-controls">
             <button onClick={handleZoomIn} className="control-btn">+</button>
             <button onClick={handleZoomOut} className="control-btn">-</button>
-            <button onClick={handleResetView} className="control-btn">Reset</button>
+            <button onClick={handleResetView} className="control-btn">{t('reset', 'Reset')}</button>
             <span className="selected-count">
-              Selected: {totalOccupiedSeats} / {customerFacingTotal || venueSeats.length}
+              {t('selectedLabel', 'Selected:')} {totalOccupiedSeats} / {customerFacingTotal || venueSeats.length}
             </span>
           </div>
 
@@ -415,15 +444,15 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                 })}
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
-                  <span>Sold / Selected</span>
+                  <span>{t('soldSelected', 'Sold / Selected')}</span>
                 </div>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                  <span>Locked</span>
+                  <span>{t('locked', 'Locked')}</span>
                 </div>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
-                  <span>Temporarily Hold</span>
+                  <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
                 </div>
               </>
             ) : (
@@ -431,19 +460,19 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               <>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(255,255,255,0.4)' }} />
-                  <span>Available</span>
+                  <span>{t('available', 'Available')}</span>
                 </div>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
-                  <span>Sold / Selected</span>
+                  <span>{t('soldSelected', 'Sold / Selected')}</span>
                 </div>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                  <span>Locked</span>
+                  <span>{t('locked', 'Locked')}</span>
                 </div>
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
-                  <span>Temporarily Hold</span>
+                  <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
                 </div>
               </>
             )}
@@ -459,7 +488,17 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               const minY = Math.min(...yPos);
               const maxY = Math.max(...yPos);
 
-              const contentTop = Math.min(minY, 30);
+              // Position stage dynamically above minY (first row of seats)
+              const stageWidth = Math.max(400, Math.min(800, (maxX - minX) * 0.75));
+              const stageHeight = 65;
+              const stageGap = 50;
+              const stageY = minY - stageHeight - stageGap;
+              const stageX = ((minX + maxX) / 2) - (stageWidth / 2);
+              const stageCenterX = (minX + maxX) / 2;
+              const stageCenterY = stageY + stageHeight / 2 + 8;
+
+              // The top of our viewport should be slightly above the stage top
+              const contentTop = stageY - 40; 
               const centerX = (minX + maxX) / 2;
               const centerY = (contentTop + maxY) / 2;
 
@@ -488,39 +527,81 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   onMouseLeave={handleMouseUp}
                   onClick={handleSVGClick}
                 >
-                  {/* Stage - Calculated based on seat alignment */}
-                  {venueSeats.length > 0 && (() => {
-                    const stageWidth = (maxX - minX) * 1.05;
-                    const stageX = centerX - (stageWidth / 2);
-                    const stageY = 30;
-                    const stageHeight = 80;
+                  <defs>
+                    {/* Premium Drop Shadow for the Stage */}
+                    <filter id="stageShadow" x="-10%" y="-10%" width="120%" height="130%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25"/>
+                    </filter>
+                    
+                    {/* Modern slate gradient for the Stage */}
+                    <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#1e293b" />
+                      <stop offset="100%" stopColor="#0f172a" />
+                    </linearGradient>
+                    
+                    {/* Glowing front edge gradient for the stage */}
+                    <linearGradient id="stageGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                      <stop offset="15%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="50%" stopColor="#60a5fa" stopOpacity="1" />
+                      <stop offset="85%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
 
-                    return (
-                      <>
-                        <rect
-                          x={stageX}
-                          y={stageY}
-                          width={stageWidth}
-                          height={stageHeight}
-                          fill="#4a5568"
-                          stroke="rgba(255,255,255,0.1)"
-                          strokeWidth="3"
-                          rx="12"
-                        />
-                        <text
-                          x={centerX}
-                          y={stageY + stageHeight - 18}
-                          textAnchor="middle"
-                          fontSize="28"
-                          fontWeight="900"
-                          fill="#fcd0a5"
-                          style={{ letterSpacing: '4px' }}
-                        >
-                          STAGE
-                        </text>
-                      </>
-                    );
-                  })()}
+                  <style>{`
+                    .seat-circle {
+                      transition: r 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                                  stroke-width 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  filter 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    .seat-circle:hover {
+                      r: 9.5px !important;
+                      stroke: #ffffff !important;
+                      stroke-width: 2px !important;
+                      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4)) !important;
+                    }
+                  `}</style>
+
+                  {/* Stage - Calculated based on seat alignment */}
+                  {venueSeats.length > 0 && (
+                    <g filter="url(#stageShadow)">
+                      {/* Main Stage Rectangle */}
+                      <rect 
+                        x={stageX} 
+                        y={stageY} 
+                        width={stageWidth} 
+                        height={stageHeight} 
+                        fill="url(#stageGrad)" 
+                        stroke="#334155" 
+                        strokeWidth="2" 
+                        rx="10" 
+                      />
+                      {/* Glowing Apron Highlight (bottom edge of the stage) */}
+                      <rect 
+                        x={stageX + 4} 
+                        y={stageY + stageHeight - 4} 
+                        width={stageWidth - 8} 
+                        height="3" 
+                        fill="url(#stageGlow)" 
+                        rx="1.5" 
+                      />
+                      {/* Stage Text */}
+                      <text 
+                        x={stageCenterX} 
+                        y={stageCenterY} 
+                        fontSize="20" 
+                        fontWeight="700" 
+                        fill="#f8fafc" 
+                        letterSpacing="5"
+                        textAnchor="middle"
+                        style={{ userSelect: 'none' }}
+                      >
+                        {t('stage', 'STAGE')}
+                      </text>
+                    </g>
+                  )}
 
                   {/* Seats - Render from database */}
                   <g id="seats-container">
@@ -576,11 +657,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                       : minX_shared + totalWidth_shared * 0.25;
                     const areaY = maxY_shared + 60;
                     const areaHeight = 80;
-
-                    const areaColors = ['#FFE082', '#B3E5FC', '#C8E6C9', '#F8BBD9', '#D1C4E9'];
-                    const borderColors = ['#FFA000', '#0288D1', '#388E3C', '#C2185B', '#7B1FA2'];
-                    const textColors = ['#FF6F00', '#01579B', '#1B5E20', '#880E4F', '#4A148C'];
-
                     return (
                       <g key={`shared-area-${area.sharedAreaNumber}`}>
                         <rect
@@ -588,9 +664,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           y={areaY}
                           width={areaWidth}
                           height={areaHeight}
-                          fill={areaColors[index % areaColors.length]}
+                          fill={getAreaColor(index)}
                           fillOpacity="0.4"
-                          stroke={borderColors[index % borderColors.length]}
+                          stroke={getBorderColor(index)}
                           strokeWidth="3"
                           className="shared-area"
                           style={{ cursor: 'pointer', pointerEvents: 'auto' }}
@@ -605,7 +681,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           textAnchor="middle"
                           fontSize="18"
                           fontWeight="bold"
-                          fill={textColors[index % textColors.length]}
+                          fill={getTextColor(index)}
                           style={{ cursor: 'pointer', pointerEvents: 'none' }}
                         >
                           {area.categoryName}
@@ -615,10 +691,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           y={areaY + areaHeight / 2 + 12}
                           textAnchor="middle"
                           fontSize="14"
-                          fill={textColors[index % textColors.length]}
+                          fill={getTextColor(index)}
                           style={{ cursor: 'pointer', pointerEvents: 'none' }}
                         >
-                          LKR {area.price.toLocaleString()} • {area.availableTickets} available
+                          {t('lkr', 'LKR')} {area.price.toLocaleString()} • {area.availableTickets} {t('availableLower', 'available')}
                         </text>
                       </g>
                     );
@@ -636,13 +712,13 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             return (
               <div className="seat-tooltip">
                 <strong>{hoveredSeat.seatId}</strong>
-                <div>Section: {hoveredSeat.section}</div>
-                <div>Row: {hoveredSeat.rowLabel}, Seat: {hoveredSeat.seatNumber}</div>
-                <div>Category: {hoveredSeat.categoryName}</div>
+                <div>{t('sectionLabel', 'Section:')} {hoveredSeat.section}</div>
+                <div>{t('rowLabelText', 'Row:')} {hoveredSeat.rowLabel}, {t('seatLabel', 'Seat:')} {hoveredSeat.seatNumber}</div>
+                <div>{t('categoryLabel', 'Category:')} {hoveredSeat.categoryName}</div>
                 {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
-                  <div>Price: Rs.{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
+                  <div>{t('priceRs', 'Price: Rs.')}{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
                 )}
-                <div>Status: {hoveredStatus || 'AVAILABLE'}</div>
+                <div>{t('statusLabel', 'Status:')} {hoveredStatus || t('availableUpper', 'AVAILABLE')}</div>
               </div>
             );
           })()}
@@ -676,23 +752,23 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
             <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                {selectedSharedArea?.categoryName || 'Standing Area'}
+                {selectedSharedArea?.categoryName || t('standingArea', 'Standing Area')}
               </Typography>
 
               <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
-                This section is a <strong>*Shared Space*</strong> and does not have any allocated seats.
+                {t('sharedSpaceNoticeStart', 'This section is a')} <strong>{t('sharedSpaceNoticeStrong', '*Shared Space*')}</strong> {t('sharedSpaceNoticeEnd', 'and does not have any allocated seats.')}
               </Typography>
 
               <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                Price per ticket: <strong>LKR {selectedSharedArea?.price.toLocaleString()}</strong>
+                {t('pricePerTicket', 'Price per ticket:')} <strong>{t('lkr', 'LKR')} {selectedSharedArea?.price.toLocaleString()}</strong>
               </Typography>
 
               <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-                Available: <strong>{selectedSharedArea?.availableTickets}</strong> tickets
+                {t('availableLabel', 'Available:')} <strong>{selectedSharedArea?.availableTickets}</strong> {t('tickets', 'tickets')}
               </Typography>
 
               <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-                How many tickets do you want?
+                {t('howManyTickets', 'How many tickets do you want?')}
               </Typography>
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', mb: 4 }}>
@@ -720,7 +796,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
               {sharedAreaTicketCount && selectedSharedArea && (
                 <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                  Total: LKR {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
+                  {t('totalLabel', 'Total:')} {t('lkr', 'LKR')} {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
                 </Typography>
               )}
 
@@ -742,7 +818,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                     }
                   }}
                 >
-                  Select tickets
+                  {t('selectTickets', 'Select tickets')}
                 </Button>
               </Box>
 
@@ -755,7 +831,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   fontWeight: 500
                 }}
               >
-                Cancel
+                {t('cancel', 'Cancel')}
               </Button>
             </DialogContent>
           </Dialog>
