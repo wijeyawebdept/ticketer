@@ -203,7 +203,7 @@ const SeatingArrangement: React.FC = () => {
         }));
         
         const filteredSeats = availabilitySeats.filter(
-          (seat: any) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && seat.status === 'LOCKED')
+          (seat: any) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]')))
         );
         setSeats(filteredSeats);
         

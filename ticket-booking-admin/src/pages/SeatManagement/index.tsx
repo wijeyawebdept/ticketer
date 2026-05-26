@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -54,7 +55,10 @@ import {
   NotificationsActive,
   Delete,
   RemoveCircle,
-  BookmarkRemove
+  BookmarkRemove,
+  ZoomIn,
+  ZoomOut,
+  CenterFocusStrong
 } from '@mui/icons-material';
 import { Seat, SeatService } from '../../services/seat.service';
 import { venueSeatService, VenueSeat, SeatDTO } from '../../services/venueSeatService';
@@ -72,6 +76,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   eventId: propEventId,
   isAdmin = false 
 }) => {
+  const { t } = useTranslation();
   const [eventId, setEventId] = useState<string>(propEventId || '');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<EventSchedule | null>(null);
@@ -89,6 +94,156 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showActivityPanel, setShowActivityPanel] = useState(true);
+
+  // Zoom and Pan state
+  const [scale, setScale] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const svgContainerRef = useRef<HTMLDivElement>(null);
+
+  // Shared areas for standing sections
+  const [sharedAreas, setSharedAreas] = useState<any[]>([]);
+
+  // Constant Kularathna Stadium ID
+  const KULARATHNA_STADIUM_ID = '54fd37e5-5a1c-4834-af83-ad9c8bf1f300';
+
+  // Zoom and Pan handlers
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.2, 5));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleResetView = () => {
+    setScale(1);
+    setPanX(0);
+    setPanY(0);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as SVGElement;
+    if (target.closest('[data-clickable]') || target.tagName === 'circle' || target.tagName === 'rect') {
+      return;
+    }
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPanX(e.clientX - dragStart.x);
+      setPanY(e.clientY - dragStart.y);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  // Helper functions for SVG stage and viewBox
+  const getStageLayout = () => {
+    if (venueSeats.length === 0) {
+      return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
+    }
+    const xPositions = venueSeats.map(s => Number(s.xPosition ?? (s as any).xposition) || 0).filter(x => x > 0);
+    const yPositions = venueSeats.map(s => Number(s.yPosition ?? (s as any).yposition) || 0).filter(y => y > 0);
+    if (xPositions.length === 0 || yPositions.length === 0) {
+      return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
+    }
+    const minX = Math.min(...xPositions);
+    const maxX = Math.max(...xPositions);
+    const minY = Math.min(...yPositions);
+    const seatingWidth = maxX - minX;
+    const stageWidth = Math.max(400, Math.min(700, seatingWidth * 0.7));
+    const stageHeight = 65;
+    const stageGap = 50;
+    const stageX = minX + (seatingWidth - stageWidth) / 2;
+    const stageY = minY - stageHeight - stageGap;
+    return {
+      x: stageX,
+      y: stageY,
+      width: stageWidth,
+      height: stageHeight,
+      centerX: stageX + stageWidth / 2,
+      centerY: stageY + stageHeight / 2 + 8
+    };
+  };
+
+  const getViewBox = () => {
+    if (venueSeats.length === 0) return "0 0 1200 800";
+    const xPositions = venueSeats.map(s => Number(s.xPosition ?? (s as any).xposition) || 0).filter(x => x > 0);
+    const yPositions = venueSeats.map(s => Number(s.yPosition ?? (s as any).yposition) || 0).filter(y => y > 0);
+    if (xPositions.length === 0 || yPositions.length === 0) {
+      return "0 0 1200 800";
+    }
+    const minX = Math.min(...xPositions);
+    const maxX = Math.max(...xPositions);
+    const maxY = Math.max(...yPositions);
+    const stage = getStageLayout();
+    const padding = 60;
+    const topPadding = 40;
+    const minViewBoxX = minX - padding;
+    const minViewBoxY = stage.y - topPadding;
+    const width = maxX - minX + padding * 2;
+    const height = maxY - minViewBoxY + padding;
+    return `${minViewBoxX} ${minViewBoxY} ${width} ${height}`;
+  };
+
+  // Helper function to get status and color for rendering a circle
+  const getSeatStatusAndColor = (seat: VenueSeat) => {
+    const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
+    const status = availabilityInfo?.status;
+    const notes = (availabilityInfo?.notes || seat.notes || '').toLowerCase();
+    const categoryName = (availabilityInfo?.categoryName || seat.category.categoryName || '').toLowerCase();
+    const defaultColor = seat.category.colorCode || '#4caf50';
+
+    if (status) {
+      if (status === 'BOOKED') {
+        return { status: 'Sold', color: '#ff5722' }; // Orange-red for sold
+      }
+      if (status === 'LOCKED') {
+        return { status: 'Locked', color: '#6c757d' }; // Gray
+      }
+      if (status === 'VIP_RESERVED') {
+        if (categoryName.includes('platinum') || notes.includes('platinum')) {
+          return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+        } else if (categoryName.includes('gold') || notes.includes('gold')) {
+          return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
+        } else if (categoryName.includes('silver') || notes.includes('silver')) {
+          return { status: 'VIP Silver', color: '#2196f3' }; // Blue
+        }
+        return { status: 'VIP Reserved', color: '#dc3545' }; // Default red
+      }
+      if (status === 'HELD') {
+        return { status: 'On Hold', color: '#ff9800' }; // Orange for customer hold
+      }
+    }
+
+    // Fallback to checking notes (for layout-only view)
+    if (notes.includes('[locked]')) {
+      return { status: 'Locked', color: '#6c757d' }; // Gray
+    }
+    if (notes.includes('[vip]')) {
+      if (categoryName.includes('platinum') || seat.category.categoryName === 'VIP Platinum') {
+        return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+      } else if (categoryName.includes('gold') || seat.category.categoryName === 'VIP Gold') {
+        return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
+      } else if (categoryName.includes('silver') || seat.category.categoryName === 'VIP Silver') {
+        return { status: 'VIP Silver', color: '#2196f3' }; // Blue
+      }
+      return { status: 'VIP Reserved', color: '#dc3545' }; // Red
+    }
+
+    return { status: 'Available', color: defaultColor };
+  };
 
   // Type guards for seat types
   const isVenueSeat = (seat: Seat | VenueSeat | SeatDTO): seat is VenueSeat => {
@@ -134,14 +289,25 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     setError(null);
     try {
       const response = await venueSeatService.getSeatAvailability(scheduleId);
-      setSeatAvailability(response.seats);
-      setSuccess(`Loaded ${response.seats.length} seats (${response.bookedSeats} booked, ${response.heldSeats} held)`);
+      let seats = response.seats;
+      if (selectedEvent?.venue?.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+        seats = seats.filter(
+          (seat: any) => !(seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]'))
+        );
+      }
+      setSeatAvailability(seats);
+      if (response.sharedAreas) {
+        setSharedAreas(response.sharedAreas);
+      } else {
+        setSharedAreas([]);
+      }
+      setSuccess(`Loaded ${seats.length} seats (${response.bookedSeats} booked, ${response.heldSeats} held)`);
     } catch (err: any) {
       setError(err.message || 'Failed to load seat availability');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedEvent]);
 
   // Handle event selection from dropdown
   const handleEventChange = async (event: Event | null) => {
@@ -150,6 +316,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     setSelectedSchedule(null);
     setSchedules([]);
     setSeatAvailability([]);
+    setSharedAreas([]);
     if (event) {
       setEventId(event.id);
       loadVenueSeats(event);
@@ -168,6 +335,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       loadSeatAvailability(schedule.scheduleId);
     } else {
       setSeatAvailability([]);
+      setSharedAreas([]);
     }
   };
 
@@ -182,7 +350,12 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     setError(null);
 
     try {
-      const venueLayout = await venueSeatService.getVenueLayoutByVenueId(event.venue.id);
+      let venueLayout = await venueSeatService.getVenueLayoutByVenueId(event.venue.id);
+      if (event.venue.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+        venueLayout = venueLayout.filter(
+          (seat: any) => !(seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]'))
+        );
+      }
       setVenueSeats(venueLayout);
       setSuccess(`Loaded ${venueLayout.length} venue seats for ${event.venue.name}`);
     } catch (err: any) {
@@ -217,6 +390,12 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           setError('Cannot generate seats: Event does not have a venue assigned');
           return;
         }
+      }
+      
+      if (selectedEvent?.venue?.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+        eventSeats = eventSeats.filter(
+          (seat: any) => !(seat.isBlocked || seat.notes?.toLowerCase().includes('[locked]'))
+        );
       }
       
       setSeats(eventSeats);
@@ -435,7 +614,9 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   };
 
   // Handle seat click - auto-select and show action dialog
-  const handleSeatClick = (seat: Seat) => {
+  const handleSeatClick = (seat: Seat | VenueSeat | SeatDTO, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
     // In multi-select mode, just toggle selection without showing dialog
     if (multiSelectMode) {
       toggleSeatSelection(seat.seatId);
@@ -446,7 +627,13 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     if (!selectedSeats.includes(seat.seatId)) {
       setSelectedSeats(prev => [...prev, seat.seatId]);
     }
-    setSeatActionDialog({ open: true, seat });
+
+    const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
+    if (availabilityInfo) {
+      setSeatActionDialog({ open: true, seat: availabilityInfo });
+    } else {
+      setSeatActionDialog({ open: true, seat });
+    }
   };
 
   // Close seat action dialog
@@ -620,20 +807,24 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   // Group seats by section and row
   const groupedSeats = seats.reduce((acc, seat) => {
     const sectionKey = seat.section;
-    if (!acc[sectionKey]) {
+    if (sectionKey === '__proto__' || sectionKey === 'constructor' || sectionKey === 'prototype') return acc;
+    if (!Object.prototype.hasOwnProperty.call(acc, sectionKey)) {
       acc[sectionKey] = {};
     }
-    if (!acc[sectionKey][seat.rowNumber]) {
-      acc[sectionKey][seat.rowNumber] = [];
+    const rowKey = seat.rowNumber;
+    if (rowKey === '__proto__' || rowKey === 'constructor' || rowKey === 'prototype') return acc;
+    const sectionObj = acc[sectionKey];
+    if (!Object.prototype.hasOwnProperty.call(sectionObj, rowKey)) {
+      sectionObj[rowKey] = [];
     }
-    acc[sectionKey][seat.rowNumber].push(seat);
+    sectionObj[rowKey].push(seat);
     return acc;
   }, {} as Record<string, Record<string, Seat[]>>);
 
   // Use WebSocket seats if available
   const displaySeats = Object.keys(wsSeats).length > 0 ? 
     seats.map(seat => {
-      const wsSeat = wsSeats[seat.seatId];
+      const wsSeat = (seat.seatId && !['__proto__', 'constructor', 'prototype'].includes(seat.seatId) && Object.prototype.hasOwnProperty.call(wsSeats, seat.seatId)) ? (wsSeats as any)[seat.seatId] : undefined;
       if (wsSeat) {
         // Update seat status based on WebSocket data
         return {
@@ -732,11 +923,11 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           {/* Schedule Selector */}
           {selectedEvent && schedules.length > 0 && (
             <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel id="schedule-select-label">Select Schedule</InputLabel>
+              <InputLabel id="schedule-select-label">{t('seatManagement.selectSchedule', 'Select Schedule')}</InputLabel>
               <Select
                 labelId="schedule-select-label"
                 value={selectedSchedule?.scheduleId || ''}
-                label="Select Schedule"
+                label={t('seatManagement.selectSchedule', 'Select Schedule')}
                 onChange={(e) => {
                   const schedule = schedules.find(s => s.scheduleId === e.target.value);
                   handleScheduleChange(schedule || null);
@@ -932,95 +1123,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         </Card>
       )}
 
-      {/* Real-time Activity Panel */}
-      {selectedEvent && wsConnected && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Badge badgeContent={activityLog.length} color="primary" max={99}>
-                  <NotificationsActive color="action" />
-                </Badge>
-                <Typography variant="h6">
-                  Real-time Activity
-                </Typography>
-              </Box>
-              <Box>
-                <IconButton size="small" onClick={() => setShowActivityPanel(!showActivityPanel)}>
-                  {showActivityPanel ? <ExpandLess /> : <ExpandMore />}
-                </IconButton>
-                {activityLog.length > 0 && (
-                  <IconButton size="small" onClick={clearActivityLog} title="Clear activity log">
-                    <Delete fontSize="small" />
-                  </IconButton>
-                )}
-              </Box>
-            </Box>
-            <Collapse in={showActivityPanel}>
-              {activityLog.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                  No activity yet. Seat changes will appear here in real-time.
-                </Typography>
-              ) : (
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    maxHeight: 200, 
-                    overflow: 'auto', 
-                    backgroundColor: '#fafafa',
-                    '& > *:not(:last-child)': { borderBottom: '1px solid #eee' }
-                  }}
-                >
-                  {activityLog.map((activity: SeatActivityLog) => (
-                    <Box 
-                      key={activity.id} 
-                      sx={{ 
-                        p: 1.5, 
-                        display: 'flex', 
-                        alignItems: 'flex-start',
-                        gap: 1.5,
-                        '&:hover': { backgroundColor: '#f5f5f5' }
-                      }}
-                    >
-                      <Box sx={{ 
-                        width: 8, 
-                        height: 8, 
-                        borderRadius: '50%', 
-                        mt: 0.75,
-                        backgroundColor: 
-                          activity.action === 'BOOKED' ? '#4caf50' :
-                          activity.action === 'HELD' ? '#ff9800' :
-                          activity.action === 'RELEASED' ? '#2196f3' :
-                          '#9e9e9e'
-                      }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {activity.message}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          {activity.userEmail && (
-                            <Chip 
-                              icon={<Person sx={{ fontSize: '0.875rem !important' }} />} 
-                              label={activity.userEmail} 
-                              size="small" 
-                              variant="outlined"
-                              sx={{ height: 20, '& .MuiChip-label': { px: 0.5, fontSize: '0.7rem' } }}
-                            />
-                          )}
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <AccessTime sx={{ fontSize: '0.75rem' }} />
-                            {activity.timestamp.toLocaleTimeString()}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  ))}
-                </Paper>
-              )}
-            </Collapse>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Venue Seat Map */}
       {venueSeats.length > 0 && (
@@ -1036,11 +1139,11 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   size="small" 
                   onClick={() => setMultiSelectMode(false)}
                 >
-                  Exit Multi-Select
+                  {t('seatManagement.exitMultiSelect', 'Exit Multi-Select')}
                 </Button>
               }
             >
-              <strong>Multi-Select Mode Active:</strong> Click on seats to select/deselect them, then use the bulk action buttons below.
+              <strong>{t('seatManagement.multiSelectModeActive', 'Multi-Select Mode Active:')}</strong> {t('seatManagement.multiSelectInstructions', 'Click on seats to select/deselect them, then use the bulk action buttons below.')}
             </Alert>
           )}
 
@@ -1049,7 +1152,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
-                  Venue Seat Legend
+                  {t('seatManagement.venueSeatLegend', 'Venue Seat Legend')}
                 </Typography>
                 {isAdmin && !multiSelectMode && (
                   <Button
@@ -1058,7 +1161,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                     startIcon={<SelectAll />}
                     onClick={() => setMultiSelectMode(true)}
                   >
-                    Enable Multi-Select
+                    {t('seatManagement.enableMultiSelect', 'Enable Multi-Select')}
                   </Button>
                 )}
               </Box>
@@ -1081,18 +1184,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                     </Grid>
                   );
                 })}
-                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 1,
-                      border: '3px solid #2196f3',
-                      backgroundColor: 'transparent',
-                    }}
-                  />
-                  <Typography variant="body2">Selected</Typography>
-                </Grid>
+
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     sx={{
@@ -1102,7 +1194,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                       backgroundColor: '#9e9e9e',
                     }}
                   />
-                  <Typography variant="body2">Locked</Typography>
+                  <Typography variant="body2">{t('seatManagement.locked', 'Locked')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
@@ -1113,7 +1205,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                       backgroundColor: '#ffc107',
                     }}
                   />
-                  <Typography variant="body2">VIP Reserved</Typography>
+                  <Typography variant="body2">{t('seatManagement.vipReserved', 'VIP Reserved')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
@@ -1131,7 +1223,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   >
                 
                   </Box>
-                  <Typography variant="body2">Accessible</Typography>
+                  <Typography variant="body2">{t('seatManagement.accessible', 'Accessible')}</Typography>
                 </Grid>
                 {/* Show HELD and BOOKED legend only when schedule is selected */}
                 {selectedSchedule && (
@@ -1178,216 +1270,313 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               </Grid>
             </CardContent>
           </Card>
+          
+          {/* Zoom & Pan Map View */}
+          <Box sx={{ position: 'relative', mb: 3 }}>
+            {/* Zoom Controls */}
+            <Box sx={{ 
+              position: 'absolute', 
+              top: 16, 
+              right: 16, 
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              backgroundColor: 'rgba(255,255,255,0.9)',
+              borderRadius: 2,
+              p: 1,
+              boxShadow: 2
+            }}>
+              <Tooltip title="Zoom In" placement="left">
+                <IconButton onClick={handleZoomIn} size="small" sx={{ bgcolor: 'white' }}>
+                  <ZoomIn />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Zoom Out" placement="left">
+                <IconButton onClick={handleZoomOut} size="small" sx={{ bgcolor: 'white' }}>
+                  <ZoomOut />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Reset View" placement="left">
+                <IconButton onClick={handleResetView} size="small" sx={{ bgcolor: 'white' }}>
+                  <CenterFocusStrong />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption" sx={{ textAlign: 'center', px: 1, fontWeight: 600 }}>
+                {Math.round(scale * 100)}%
+              </Typography>
+            </Box>
 
-          {/* Venue Seat Grid by Section */}
-          {Object.entries(
-            venueSeats.reduce((acc, seat) => {
-              if (!acc[seat.section]) {
-                acc[seat.section] = {};
-              }
-              if (!acc[seat.section][seat.rowLabel]) {
-                acc[seat.section][seat.rowLabel] = [];
-              }
-              acc[seat.section][seat.rowLabel].push(seat);
-              return acc;
-            }, {} as Record<string, Record<string, VenueSeat[]>>)
-          ).map(([section, rows]) => (
-            <Card key={section} sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Section: {section}
-                </Typography>
-                {Object.entries(rows)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([rowLabel, rowSeats]) => (
-                    <Box key={rowLabel} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                        Row {rowLabel}
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {rowSeats
-                          .sort((a, b) => a.seatNumber - b.seatNumber)
-                          .map(seat => {
-                            const isSelected = selectedSeats.includes(seat.seatId);
-                            const isLocked = seat.notes?.toLowerCase().includes('[locked]');
-                            const isVIP = seat.notes?.toLowerCase().includes('[vip]');
-                            const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
-                            const isHeld = availabilityInfo?.status === 'HELD';
-                            const isBooked = availabilityInfo?.status === 'BOOKED';
-                            
-                            // Determine background color based on status
-                            const getBackgroundColor = () => {
-                              if (isBooked) return '#f44336'; // Red for booked
-                              if (isHeld) return '#ff9800'; // Orange for held
-                              if (isLocked || availabilityInfo?.status === 'LOCKED') return '#9e9e9e'; // Grey for locked
-                              if (isVIP || availabilityInfo?.status === 'VIP_RESERVED') return '#ffc107'; // Gold for VIP
-                              if (seat.isAccessible) return '#00bcd4'; // Cyan for accessible
-                              return seat.category.colorCode || '#4caf50'; // Default category color
-                            };
-                            
-                            return (
-                              <Tooltip
-                                key={seat.seatId}
-                                title={
-                                  <Box>
-                                    <Typography variant="body2" fontWeight="bold">
-                                      {seat.seatId}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                      Category: {seat.category.categoryName}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                      Price: LKR {seat.category.basePrice?.toLocaleString()}
-                                    </Typography>
-                                    {/* Show availability status when schedule is selected */}
-                                    {availabilityInfo && (
-                                      <>
-                                        <Typography
-                                          variant="body2"
-                                          fontWeight="bold"
-                                          color={
-                                            isBooked ? 'error.main' :
-                                            isHeld ? 'warning.main' :
-                                            'success.main'
-                                          }
-                                        >
-                                          Status: {availabilityInfo.status}
-                                        </Typography>
-                                        {isHeld && availabilityInfo.heldByUserId && (
-                                          <>
-                                            <Typography variant="body2" fontWeight="bold" color="warning.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,152,0,0.3)' }}>
-                                              👤 CUSTOMER SELECTING THIS SEAT
-                                            </Typography>
-                                            <Typography variant="body2" color="warning.main">
-                                              User #{availabilityInfo.heldByUserId}
-                                              {availabilityInfo.heldByUserName && ` - ${availabilityInfo.heldByUserName}`}
-                                              {availabilityInfo.heldByUserEmail && ` (${availabilityInfo.heldByUserEmail})`}
-                                            </Typography>
-                                            {availabilityInfo.holdExpiresAt && (
-                                              <Typography variant="body2" color="warning.main">
-                                                ⏱ Expires in: {getCountdown(availabilityInfo.holdExpiresAt)}
-                                              </Typography>
-                                            )}
-                                            {availabilityInfo.isPermanentHold && (
-                                              <Typography variant="body2" color="error.main">
-                                                ⚠ Permanent Hold (Admin)
-                                              </Typography>
-                                            )}
-                                          </>
-                                        )}
-                                        {isBooked && (
-                                          <>
-                                            <Typography variant="body2" fontWeight="bold" color="error.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(244,67,54,0.3)' }}>
-                                              ✓ SOLD - BOOKING CONFIRMED
-                                            </Typography>
-                                            {availabilityInfo.bookingReference && (
-                                              <Typography variant="body2" color="error.main">
-                                                Booking Ref: {availabilityInfo.bookingReference}
-                                              </Typography>
-                                            )}
-                                            {availabilityInfo.bookedAt && (
-                                              <Typography variant="body2" color="error.main">
-                                                Booked: {new Date(availabilityInfo.bookedAt).toLocaleString()}
-                                              </Typography>
-                                            )}
-                                            <Typography variant="body2" color="error.main">
-                                              Cannot be modified by customers
-                                            </Typography>
-                                          </>
-                                        )}
-                                      </>
-                                    )}
-                                    {seat.isAccessible && (
-                                      <Typography variant="body2" color="info.main">
-                                         Wheelchair Accessible
-                                      </Typography>
-                                    )}
-                                    {seat.isAisleSeat && (
-                                      <Typography variant="body2">Aisle Seat</Typography>
-                                    )}
-                                    {isLocked && (
-                                      <Typography variant="body2" color="error"> LOCKED</Typography>
-                                    )}
-                                    {isVIP && (
-                                      <Typography variant="body2" color="secondary"> VIP Reserved</Typography>
-                                    )}
-                                    {seat.notes && !isLocked && !isVIP && (
-                                      <Typography variant="body2" color="text.secondary">
-                                        Note: {seat.notes}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                              >
-                                <IconButton
-                                  onClick={() => {
-                                    // In multi-select mode, just toggle selection
-                                    if (multiSelectMode) {
-                                      if (selectedSeats.includes(seat.seatId)) {
-                                        setSelectedSeats(prev => prev.filter(id => id !== seat.seatId));
-                                      } else {
-                                        setSelectedSeats(prev => [...prev, seat.seatId]);
-                                      }
-                                      return;
-                                    }
-                                    // Normal mode: show action dialog (with availability info if schedule selected)
-                                    if (availabilityInfo) {
-                                      setSeatActionDialog({ open: true, seat: availabilityInfo });
-                                    } else {
-                                      setSeatActionDialog({ open: true, seat });
-                                    }
-                                  }}
-                                  sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1,
-                                    backgroundColor: getBackgroundColor(),
-                                    border: isSelected 
-                                      ? '3px solid #2196f3' 
-                                      : isHeld 
-                                        ? '2px dashed #ff9800'
-                                        : isBooked
-                                          ? '2px solid #f44336'
-                                          : 'none',
-                                    color: (isVIP || availabilityInfo?.status === 'VIP_RESERVED') ? '#000' : 'white',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 'bold',
-                                    position: 'relative',
-                                    '&:hover': {
-                                      opacity: 0.8,
-                                    },
-                                    // Show indicator for held/booked seats
-                                    '&::after': (isHeld || isBooked) ? {
-                                      content: isBooked ? '"✓"' : '"👤"',
-                                      position: 'absolute',
-                                      top: -4,
-                                      right: -4,
-                                      fontSize: isBooked ? '0.6rem' : '0.7rem',
-                                      backgroundColor: isBooked ? '#d32f2f' : '#e65100',
-                                      borderRadius: '50%',
-                                      width: 16,
-                                      height: 16,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      border: '1px solid white',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                                    } : {},
-                                  }}
+            <Box 
+              ref={svgContainerRef}
+              sx={{ 
+                border: '2px solid #ddd', 
+                borderRadius: 2, 
+                overflow: 'hidden', 
+                backgroundColor: '#ffffff',
+                cursor: isDragging ? 'grabbing' : 'grab',
+                height: '700px',
+                position: 'relative'
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+            >
+              <Box
+                sx={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <svg
+                  width="100%"
+                  height="700"
+                  viewBox={getViewBox()}
+                  preserveAspectRatio="xMidYMid meet"
+                  style={{ display: 'block', pointerEvents: isDragging ? 'none' : 'auto' }}
+                >
+                  <defs>
+                    {/* Premium Drop Shadow for the Stage */}
+                    <filter id="stageShadow" x="-10%" y="-10%" width="120%" height="130%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25"/>
+                    </filter>
+                    
+                    {/* Modern slate gradient for the Stage */}
+                    <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#1e293b" />
+                      <stop offset="100%" stopColor="#0f172a" />
+                    </linearGradient>
+                    
+                    {/* Glowing front edge gradient for the stage */}
+                    <linearGradient id="stageGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                      <stop offset="15%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="50%" stopColor="#60a5fa" stopOpacity="1" />
+                      <stop offset="85%" stopColor="#3b82f6" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+
+                  <style>{`
+                    .venue-seat {
+                      transition: r 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                                  stroke-width 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                                  filter 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    .venue-seat:hover {
+                      r: 9.5px !important;
+                      stroke: #ffffff !important;
+                      stroke-width: 2px !important;
+                      opacity: 1 !important;
+                      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4)) !important;
+                    }
+                  `}</style>
+
+                  {/* Stage Area */}
+                  {venueSeats.length > 0 && (
+                    <g filter="url(#stageShadow)">
+                      <rect 
+                        x={getStageLayout().x} 
+                        y={getStageLayout().y} 
+                        width={getStageLayout().width} 
+                        height={getStageLayout().height} 
+                        fill="url(#stageGrad)" 
+                        stroke="#334155" 
+                        strokeWidth="2" 
+                        rx="10" 
+                      />
+                      <rect 
+                        x={getStageLayout().x + 4} 
+                        y={getStageLayout().y + getStageLayout().height - 4} 
+                        width={getStageLayout().width - 8} 
+                        height="3" 
+                        fill="url(#stageGlow)" 
+                        rx="1.5" 
+                      />
+                      <text 
+                        x={getStageLayout().centerX} 
+                        y={getStageLayout().centerY} 
+                        fontSize="20" 
+                        fontWeight="700" 
+                        fill="#f8fafc" 
+                        letterSpacing="5"
+                        textAnchor="middle"
+                        style={{ userSelect: 'none' }}
+                      >
+                        STAGE
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Render all seats as circles */}
+                  {venueSeats.map((seat) => {
+                    const x = Number(seat.xPosition ?? (seat as any).xposition) || 0;
+                    const y = Number(seat.yPosition ?? (seat as any).yposition) || 0;
+                    
+                    if (x === 0 || y === 0) return null; // Skip invalid positions
+                    
+                    const isSelected = selectedSeats.includes(seat.seatId);
+                    const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
+                    const { status, color } = getSeatStatusAndColor(seat);
+                    
+                    // Override color if seat is selected
+                    const finalColor = isSelected ? '#ffc107' : color;
+                    
+                    return (
+                      <Tooltip
+                        key={seat.seatId}
+                        title={
+                          <Box>
+                            <Typography variant="body2" fontWeight="bold">
+                              {seat.seatId}
+                            </Typography>
+                            <Typography variant="body2">
+                              Category: {seat.category.categoryName}
+                            </Typography>
+                            <Typography variant="body2">
+                              Price: LKR {seat.category.basePrice?.toLocaleString()}
+                            </Typography>
+                            {availabilityInfo && (
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="bold"
+                                  color={
+                                    availabilityInfo.status === 'BOOKED' ? 'error.main' :
+                                    availabilityInfo.status === 'HELD' ? 'warning.main' :
+                                    'success.main'
+                                  }
                                 >
-                                  {seat.isAccessible ? '♿' : seat.seatNumber}
-                                </IconButton>
-                              </Tooltip>
-                            );
-                          })}
-                      </Box>
-                    </Box>
-                  ))}
-              </CardContent>
-            </Card>
-          ))}
+                                  Status: {availabilityInfo.status}
+                                </Typography>
+                                {availabilityInfo.status === 'HELD' && availabilityInfo.heldByUserId && (
+                                  <>
+                                    <Typography variant="body2" fontWeight="bold" color="warning.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,152,0,0.3)' }}>
+                                      👤 CUSTOMER SELECTING THIS SEAT
+                                    </Typography>
+                                    <Typography variant="body2" color="warning.main">
+                                      User #{availabilityInfo.heldByUserId}
+                                      {availabilityInfo.heldByUserName && ` - ${availabilityInfo.heldByUserName}`}
+                                      {availabilityInfo.heldByUserEmail && ` (${availabilityInfo.heldByUserEmail})`}
+                                    </Typography>
+                                    {availabilityInfo.holdExpiresAt && (
+                                      <Typography variant="body2" color="warning.main">
+                                        ⏱ Expires in: {getCountdown(availabilityInfo.holdExpiresAt)}
+                                      </Typography>
+                                    )}
+                                  </>
+                                )}
+                                {availabilityInfo.status === 'BOOKED' && (
+                                  <>
+                                    <Typography variant="body2" fontWeight="bold" color="error.main" sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(244,67,54,0.3)' }}>
+                                      ✓ SOLD - BOOKING CONFIRMED
+                                    </Typography>
+                                    {availabilityInfo.bookingReference && (
+                                      <Typography variant="body2" color="error.main">
+                                        Booking Ref: {availabilityInfo.bookingReference}
+                                      </Typography>
+                                    )}
+                                    {availabilityInfo.bookedAt && (
+                                      <Typography variant="body2" color="error.main">
+                                        Booked: {new Date(availabilityInfo.bookedAt).toLocaleString()}
+                                      </Typography>
+                                    )}
+                                  </>
+                                )}
+                              </>
+                            )}
+                            {seat.isAccessible && (
+                              <Typography variant="body2" color="info.main">
+                                Wheelchair Accessible
+                              </Typography>
+                            )}
+                            {seat.isAisleSeat && (
+                              <Typography variant="body2">{t('seatManagement.aisleSeat', 'Aisle Seat')}</Typography>
+                            )}
+                            {seat.notes && (
+                              <Typography variant="body2" color="text.secondary">
+                                Note: {seat.notes}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      >
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="6"
+                          className="venue-seat"
+                          fill={finalColor}
+                          stroke={isSelected ? '#2196f3' : '#333'}
+                          strokeWidth={isSelected ? '3' : '1'}
+                          opacity="0.9"
+                          style={{ cursor: 'pointer' }}
+                          onClick={(e) => handleSeatClick(seat, e)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        />
+                      </Tooltip>
+                    );
+                  })}
 
-          {/* Selected Seats Actions */}
+                  {/* Balcony / Standing Area - Only for Kularathna Stadium */}
+                  {selectedEvent?.venue?.id === KULARATHNA_STADIUM_ID && (
+                    <>
+                      <rect
+                        x="350"
+                        y="580"
+                        width="900"
+                        height="80"
+                        fill="#FFE082"
+                        fillOpacity="0.4"
+                        stroke="#FFA000"
+                        strokeWidth="3"
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (sharedAreas.length > 0) {
+                            alert(`Shared Area Balcony:\n\nAvailable Tickets: ${sharedAreas[0].availableTickets}\nTotal Capacity: ${sharedAreas[0].capacity}\nPrice: LKR ${sharedAreas[0].price?.toLocaleString()}`);
+                          } else {
+                            alert('Balcony (Standing Area)');
+                          }
+                        }}
+                      />
+                      <text
+                        x="800"
+                        y="625"
+                        textAnchor="middle"
+                        fontSize="24"
+                        fontWeight="bold"
+                        fill="#FF6F00"
+                        style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                      >
+                        BALCONY (Standing Area)
+                      </text>
+                      {sharedAreas.length > 0 && (
+                        <text
+                          x="800"
+                          y="645"
+                          textAnchor="middle"
+                          fontSize="14"
+                          fill="#FF6F00"
+                          style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                        >
+                          LKR {sharedAreas[0].price?.toLocaleString()} • {sharedAreas[0].availableTickets} available
+                        </text>
+                      )}
+                    </>
+                  )}
+                </svg>
+              </Box>
+            </Box>
+          </Box>
           {selectedSeats.length > 0 && (
             <Card sx={{ mb: 3, position: 'sticky', bottom: 16, zIndex: 10 }}>
               <CardContent>
@@ -1636,95 +1825,103 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Legend
+                {t('seatManagement.legend', 'Legend')}
               </Typography>
               <Grid container spacing={2} alignItems="center">
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <EventSeat sx={{ color: '#4caf50' }} />
-                  <Typography variant="body2">Available</Typography>
+                  <Typography variant="body2">{t('seatManagement.available', 'Available')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <EventSeat sx={{ color: '#2196f3' }} />
-                  <Typography variant="body2">Selected</Typography>
+                  <Typography variant="body2">{t('seatManagement.selected', 'Selected')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Schedule sx={{ color: '#ff9800' }} />
-                  <Typography variant="body2">Held (Customer - 15min)</Typography>
+                  <Typography variant="body2">{t('seatManagement.heldCustomer', 'Held (Customer - 15min)')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Schedule sx={{ color: '#9c27b0' }} />
-                  <Typography variant="body2">Held (Admin - Permanent)</Typography>
+                  <Typography variant="body2">{t('seatManagement.heldAdmin', 'Held (Admin - Permanent)')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CheckCircle sx={{ color: '#9e9e9e' }} />
-                  <Typography variant="body2">Booked</Typography>
+                  <Typography variant="body2">{t('seatManagement.booked', 'Booked')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Block sx={{ color: '#f44336' }} />
-                  <Typography variant="body2">Blocked</Typography>
+                  <Typography variant="body2">{t('seatManagement.blocked', 'Blocked')}</Typography>
                 </Grid>
               </Grid>
             </CardContent>
           </Card>
 
-          {Object.keys(groupedSeats).map(section => (
-            <Card key={section} sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Section {section}
-                </Typography>
-                {Object.keys(groupedSeats[section])
-                  .sort()
-                  .map(row => (
-                    <Box key={row} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Row {row}
-                      </Typography>
-                      <Grid container spacing={1}>
-                        {groupedSeats[section][row]
-                          .sort((a, b) => parseInt(a.seatNumber) - parseInt(b.seatNumber))
-                          .map(seat => (
-                            <Grid item key={seat.seatId}>
-                              <Tooltip
-                                title={
-                                  <Box>
-                                    <Typography variant="body2">Seat {seat.seatNumber} - LKR {seat.price}</Typography>
-                                    {seat.isBlocked && <Typography variant="body2" color="error">BLOCKED</Typography>}
-                                    {seat.isPermanentHold && <Typography variant="body2" color="secondary">PERMANENTLY HELD (Admin)</Typography>}
-                                    {!seat.isAvailable && !seat.isPermanentHold && !seat.holdExpiresAt && <Typography variant="body2">BOOKED</Typography>}
-                                    {seat.holdExpiresAt && !seat.isPermanentHold && (
-                                      <Typography variant="body2" color="warning.main">
-                                        HELD - {getCountdown(seat.holdExpiresAt)} remaining
-                                      </Typography>
-                                    )}
-                                    {seat.isAvailable && !seat.isBlocked && !seat.isPermanentHold && !seat.holdExpiresAt && (
-                                      <Typography variant="body2" color="success.main">AVAILABLE</Typography>
-                                    )}
-                                    <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>Click to see available actions</Typography>
-                                  </Box>
-                                }
-                              >
-                                <IconButton
-                                  onClick={() => handleSeatClick(seat)}
-                                  sx={{
-                                    color: getSeatColor(seat),
-                                    border: selectedSeats.includes(seat.seatId) ? '2px solid #2196f3' : 'none',
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(0,0,0,0.1)'
+          {Object.keys(groupedSeats).map(section => {
+            if (section === '__proto__' || section === 'constructor' || section === 'prototype') return null;
+            const sectionObj = Object.prototype.hasOwnProperty.call(groupedSeats, section) ? (groupedSeats as any)[section] : {};
+            return (
+              <Card key={section} sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {t('seatManagement.section', 'Section')} {section}
+                  </Typography>
+                  {Object.keys(sectionObj)
+                    .sort()
+                    .map(row => {
+                      if (row === '__proto__' || row === 'constructor' || row === 'prototype') return null;
+                      const rowSeats = Object.prototype.hasOwnProperty.call(sectionObj, row) ? (sectionObj as any)[row] : [];
+                      return (
+                        <Box key={row} sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            {t('seatManagement.row', 'Row')} {row}
+                          </Typography>
+                          <Grid container spacing={1}>
+                            {rowSeats
+                              .sort((a: any, b: any) => parseInt(a.seatNumber) - parseInt(b.seatNumber))
+                              .map((seat: any) => (
+                                <Grid item key={seat.seatId}>
+                                  <Tooltip
+                                    title={
+                                      <Box>
+                                        <Typography variant="body2">{t('seatManagement.seat', 'Seat')} {seat.seatNumber} - LKR {seat.price}</Typography>
+                                        {seat.isBlocked && <Typography variant="body2" color="error">{t('seatManagement.statusBlocked', 'BLOCKED')}</Typography>}
+                                        {seat.isPermanentHold && <Typography variant="body2" color="secondary">{t('seatManagement.statusPermanentlyHeld', 'PERMANENTLY HELD (Admin)')}</Typography>}
+                                        {!seat.isAvailable && !seat.isPermanentHold && !seat.holdExpiresAt && <Typography variant="body2">{t('seatManagement.statusBooked', 'BOOKED')}</Typography>}
+                                        {seat.holdExpiresAt && !seat.isPermanentHold && (
+                                          <Typography variant="body2" color="warning.main">
+                                            {t('seatManagement.statusHeld', 'HELD')} - {getCountdown(seat.holdExpiresAt)} {t('seatManagement.remaining', 'remaining')}
+                                          </Typography>
+                                        )}
+                                        {seat.isAvailable && !seat.isBlocked && !seat.isPermanentHold && !seat.holdExpiresAt && (
+                                          <Typography variant="body2" color="success.main">{t('seatManagement.statusAvailable', 'AVAILABLE')}</Typography>
+                                        )}
+                                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>{t('seatManagement.clickForActions', 'Click to see available actions')}</Typography>
+                                      </Box>
                                     }
-                                  }}
-                                >
-                                  {getSeatIcon(seat)}
-                                </IconButton>
-                              </Tooltip>
-                            </Grid>
-                          ))}
-                      </Grid>
-                    </Box>
-                  ))}
-              </CardContent>
-            </Card>
-          ))}
+                                  >
+                                    <IconButton
+                                      onClick={() => handleSeatClick(seat)}
+                                      sx={{
+                                        color: getSeatColor(seat),
+                                        border: selectedSeats.includes(seat.seatId) ? '2px solid #2196f3' : 'none',
+                                        '&:hover': {
+                                          backgroundColor: 'rgba(0,0,0,0.1)'
+                                        }
+                                      }}
+                                    >
+                                      {getSeatIcon(seat)}
+                                    </IconButton>
+                                  </Tooltip>
+                                </Grid>
+                              ))}
+                          </Grid>
+                        </Box>
+                      );
+                    })}
+                </CardContent>
+              </Card>
+            );
+          })}
         </>
       )}
 
@@ -2105,7 +2302,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeSeatActionDialog}>Cancel</Button>
+          <Button onClick={closeSeatActionDialog}>{t('common.cancel', 'Cancel')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

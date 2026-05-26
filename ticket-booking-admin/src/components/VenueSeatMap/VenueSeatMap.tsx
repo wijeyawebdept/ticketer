@@ -154,12 +154,16 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       const response = await axiosInstance.get<SeatAvailabilityResponse>(`/api/venue-seats/availability/${eventScheduleId}`);
       const data = response.data;
 
-      // Debug: Log the first seat to see the actual data structure
-      if (data.seats && data.seats.length > 0) {
+      // Filter out locked seats for Nelum Pokuna Outdoor Arena
+      let rawSeats = data.seats || [];
+      if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+        rawSeats = rawSeats.filter(
+          (seat: any) => !(seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]'))
+        );
       }
 
       // Store venue seats with coordinates
-      const seats: VenueSeatData[] = data.seats.map((seat: any) => {
+      const seats: VenueSeatData[] = rawSeats.map((seat: any) => {
         const xPos = seat.xPosition ? parseFloat(String(seat.xPosition)) : 0;
         const yPos = seat.yPosition ? parseFloat(String(seat.yPosition)) : 0;
 
@@ -180,14 +184,14 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       // Filter out any seats with invalid coordinates
       const validSeats = seats.filter(s => !isNaN(s.xPosition) && !isNaN(s.yPosition));
 
-      if (validSeats.length === 0 && data.seats.length > 0) {
+      if (validSeats.length === 0 && rawSeats.length > 0) {
       }
 
       setVenueSeats(validSeats);
 
       // Store seat statuses
       const statusMap = new Map<string, SeatStatus>();
-      data.seats.forEach((seat: any) => {
+      rawSeats.forEach((seat: any) => {
         statusMap.set(seat.seatId, {
           seatId: seat.seatId,
           status: seat.status,
@@ -202,14 +206,14 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       const permanentlyExcludedStatuses = ['LOCKED', 'NOT_FOR_SALE'];
 
       // Total seats available to customers (excludes permanently locked/not-for-sale)
-      const customerFacing = data.seats.filter(
+      const customerFacing = rawSeats.filter(
         (seat: any) => !permanentlyExcludedStatuses.includes(seat.status)
       ).length;
       setCustomerFacingTotal(customerFacing);
 
       // Occupied = truly reserved seats only (booked, temporarily held, VIP reserved)
       const occupiedStatuses = ['BOOKED', 'TEMPORARY_HOLD', 'VIP_RESERVED'];
-      const occupied = data.seats.filter((seat: any) => occupiedStatuses.includes(seat.status)).length;
+      const occupied = rawSeats.filter((seat: any) => occupiedStatuses.includes(seat.status)).length;
       setTotalOccupiedSeats(occupied);
 
       // Store shared areas if available from API response
@@ -220,7 +224,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [eventScheduleId]);
+  }, [eventScheduleId, venueId]);
 
   // Debug: Log venue ID changes
   useEffect(() => {
@@ -412,7 +416,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     <div className="venue-seat-map-container">
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          {t('loadingVenueLayout', 'Loading venue layout... is sucks')}
+          {t('loadingVenueLayout', 'Loading venue layout...')}
         </div>
       )}
 
@@ -446,10 +450,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
                   <span>{t('soldSelected', 'Sold / Selected')}</span>
                 </div>
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                  <span>{t('locked', 'Locked')}</span>
-                </div>
+                {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+                  <div className="legend-item">
+                    <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                    <span>{t('locked', 'Locked')}</span>
+                  </div>
+                )}
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
                   <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
@@ -466,10 +472,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
                   <span>{t('soldSelected', 'Sold / Selected')}</span>
                 </div>
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                  <span>{t('locked', 'Locked')}</span>
-                </div>
+                {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+                  <div className="legend-item">
+                    <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                    <span>{t('locked', 'Locked')}</span>
+                  </div>
+                )}
                 <div className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
                   <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
