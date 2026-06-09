@@ -40,7 +40,7 @@ const SeatSelectionPage: React.FC = () => {
   const { eventScheduleId } = useParams<{ eventScheduleId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
   const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
 
@@ -372,7 +372,7 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const userId = 1; // from auth context
+      const userId = user?.id || '00000000-0000-0000-0000-000000000000'; // from auth context or dummy guest uuid
       const response = await venueSeatService.holdSeats({
         eventScheduleId: eventScheduleId!,
         seatIds: selectedSeats,
@@ -577,12 +577,14 @@ const SeatSelectionPage: React.FC = () => {
 
       <div className="seat-map-section" ref={seatMapRef}>
         <VenueSeatMap
-          eventScheduleId={eventScheduleId!}
           venueId={venueId}
-          onSeatSelect={handleSeatSelect}
+          eventScheduleId={eventScheduleId!}
+          onSeatSelect={setSelectedSeats}
           onSharedAreaSelect={handleSharedAreaSelect}
-          maxSelection={10}
           selectedSeats={selectedSeats}
+          bookedSeats={[]}
+          maxSelection={10}
+          isHolding={isHolding}
         />
       </div>
 
@@ -650,6 +652,9 @@ const SeatSelectionPage: React.FC = () => {
                     </>
                   ) : (
                     <>
+                      <div style={{ display: 'flex', alignItems: 'center', marginRight: 'auto', fontWeight: 'bold', color: holdTimer < 60 ? '#d32f2f' : '#f57c00' }}>
+                        {t('timeRemaining', 'Time Remaining:')} {Math.floor(holdTimer / 60)}:{(holdTimer % 60).toString().padStart(2, '0')}
+                      </div>
                       <button onClick={handleProceedToPayment} className="btn btn-success" disabled={loading}>
                         {t('proceedToPayment', 'Proceed to Payment')}
                       </button>

@@ -186,11 +186,19 @@ class AuthService {
         
         // Try to get user details from storage
         let email = '';
+        let actualId = decoded.sub; // fallback
         try {
-          const userData = storage.getItem('user_data');
-          if (userData) {
-            const user = JSON.parse(userData);
-            email = user.email || '';
+          const storedUserStr = storage.getItem('user');
+          if (storedUserStr) {
+            const storedUser = JSON.parse(storedUserStr);
+            email = storedUser.email || '';
+            actualId = storedUser.id || actualId;
+          } else {
+            const userData = storage.getItem('user_data');
+            if (userData) {
+              const user = JSON.parse(userData);
+              email = user.email || '';
+            }
           }
         } catch (e) {
         }
@@ -199,7 +207,7 @@ class AuthService {
         const normalizedRole = decoded.role.replace(/^ROLE_/, '');
 
         return {
-          id: decoded.sub,
+          id: actualId,
           role: normalizedRole,
           email: email
         };

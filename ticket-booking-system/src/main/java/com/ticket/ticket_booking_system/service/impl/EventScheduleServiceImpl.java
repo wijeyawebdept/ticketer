@@ -102,6 +102,19 @@ public class EventScheduleServiceImpl implements EventScheduleService {
         schedule.setPriceAdjustment(request.getPriceAdjustment() != null ? request.getPriceAdjustment() : BigDecimal.ZERO);
         schedule.setNotes(request.getNotes());
 
+        // If the schedule was COMPLETED but is now updated to a future date/time, reset status to ACTIVE
+        if (schedule.getStatus() == ScheduleStatus.COMPLETED) {
+            LocalDate today = LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
+            
+            boolean isFutureDate = request.getScheduleDate().isAfter(today);
+            boolean isTodayFutureTime = request.getScheduleDate().isEqual(today) && request.getEndTime().isAfter(now);
+            
+            if (isFutureDate || isTodayFutureTime) {
+                schedule.setStatus(ScheduleStatus.ACTIVE);
+            }
+        }
+
         EventSchedule updated = eventScheduleRepository.save(schedule);
         return convertToResponse(updated);
     }
@@ -114,7 +127,13 @@ public class EventScheduleServiceImpl implements EventScheduleService {
 
         // Check if there are any bookings for this schedule
         int bookedSeats = schedule.getCapacity() - schedule.getAvailableSeats();
-        if (bookedSeats > 0) {
+        
+        LocalDate today = LocalDate.now();
+        java.time.LocalTime now = java.time.LocalTime.now();
+        boolean isPast = schedule.getScheduleDate().isBefore(today) || 
+                         (schedule.getScheduleDate().isEqual(today) && schedule.getEndTime().isBefore(now));
+                         
+        if (bookedSeats > 0 && !isPast) {
             throw new IllegalStateException("Cannot delete schedule with existing bookings. Cancel the schedule instead.");
         }
 
@@ -235,7 +254,13 @@ public class EventScheduleServiceImpl implements EventScheduleService {
 
         // Check if there are any bookings for this schedule
         int bookedSeats = schedule.getCapacity() - schedule.getAvailableSeats();
-        if (bookedSeats > 0) {
+        
+        LocalDate today = LocalDate.now();
+        java.time.LocalTime now = java.time.LocalTime.now();
+        boolean isPast = schedule.getScheduleDate().isBefore(today) || 
+                         (schedule.getScheduleDate().isEqual(today) && schedule.getEndTime().isBefore(now));
+                         
+        if (bookedSeats > 0 && !isPast) {
             throw new IllegalStateException("Cannot permanently delete schedule with existing bookings");
         }
 

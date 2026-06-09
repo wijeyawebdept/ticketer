@@ -480,7 +480,7 @@ const EventSchedules: React.FC = () => {
                                   size="small"
                                   color="warning"
                                   onClick={() => handleDeleteClick(schedule)}
-                                  disabled={schedule.bookedSeats > 0}
+                                  disabled={schedule.bookedSeats > 0 && !isPast}
                                 >
                                   <DeleteIcon fontSize="small" />
                                 </IconButton>
@@ -761,7 +761,7 @@ const EventSchedules: React.FC = () => {
             variant="contained"
             color="error"
             onClick={handleDeleteConfirm}
-            disabled={selectedSchedule?.bookedSeats! > 0}
+            disabled={selectedSchedule ? (selectedSchedule.bookedSeats > 0 && !isSchedulePast(selectedSchedule.scheduleDate, selectedSchedule.endTime)) : true}
           >
             {t('schedules.moveToRecycleBin')}
           </Button>

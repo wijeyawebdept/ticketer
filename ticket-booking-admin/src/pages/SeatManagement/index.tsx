@@ -72,9 +72,9 @@ interface SeatManagementProps {
   isAdmin?: boolean;
 }
 
-const SeatManagement: React.FC<SeatManagementProps> = ({ 
+const SeatManagement: React.FC<SeatManagementProps> = ({
   eventId: propEventId,
-  isAdmin = false 
+  isAdmin = false
 }) => {
   const { t } = useTranslation();
   const [eventId, setEventId] = useState<string>(propEventId || '');
@@ -207,14 +207,14 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
     if (status) {
       if (status === 'BOOKED') {
-        return { status: 'Sold', color: '#ff5722' }; // Orange-red for sold
+        return { status: 'Sold', color: '#f44336' }; // Red for sold
       }
       if (status === 'LOCKED') {
         return { status: 'Locked', color: '#6c757d' }; // Gray
       }
       if (status === 'VIP_RESERVED') {
         if (categoryName.includes('platinum') || notes.includes('platinum')) {
-          return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+          return { status: 'VIP Platinum', color: '#8bc34a' }; // Light green
         } else if (categoryName.includes('gold') || notes.includes('gold')) {
           return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
         } else if (categoryName.includes('silver') || notes.includes('silver')) {
@@ -233,7 +233,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     }
     if (notes.includes('[vip]')) {
       if (categoryName.includes('platinum') || seat.category.categoryName === 'VIP Platinum') {
-        return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+        return { status: 'VIP Platinum', color: '#8bc34a' }; // Light green
       } else if (categoryName.includes('gold') || seat.category.categoryName === 'VIP Gold') {
         return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
       } else if (categoryName.includes('silver') || seat.category.categoryName === 'VIP Silver') {
@@ -277,6 +277,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       // Auto-select first schedule if available
       if (eventSchedules.length > 0) {
         setSelectedSchedule(eventSchedules[0]);
+        loadSeatAvailability(eventSchedules[0].scheduleId);
       }
     } catch (err: any) {
       setSchedules([]);
@@ -378,7 +379,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     try {
       // First, try to get existing seats
       let eventSeats = await SeatService.getSeatsByEvent(targetEventId);
-      
+
       // If no seats exist, generate them from the venue layout
       if (eventSeats.length === 0) {
         if (selectedEvent && selectedEvent.venue) {
@@ -391,13 +392,13 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           return;
         }
       }
-      
+
       if (selectedEvent?.venue?.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
         eventSeats = eventSeats.filter(
           (seat: any) => !(seat.isBlocked || seat.notes?.toLowerCase().includes('[locked]'))
         );
       }
-      
+
       setSeats(eventSeats);
       setSuccess(`Loaded ${eventSeats.length} seats for event`);
     } catch (err: any) {
@@ -422,7 +423,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       setSuccess(`Held ${selectedSeats.length} seats for 15 minutes`);
       setSelectedSeats([]);
       setMultiSelectMode(false); // Exit multi-select mode
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -446,7 +447,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
     try {
       // Update local state immediately
-      setSeats(prevSeats => prevSeats.map(seat => 
+      setSeats(prevSeats => prevSeats.map(seat =>
         selectedSeats.includes(seat.seatId)
           ? { ...seat, isPermanentHold: true, isAvailable: false }
           : seat
@@ -456,7 +457,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       setSuccess(`Permanently held ${selectedSeats.length} seats until event ends`);
       setSelectedSeats([]);
       setMultiSelectMode(false); // Exit multi-select mode
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -479,7 +480,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
     try {
       // Update local state immediately
-      setSeats(prevSeats => prevSeats.map(seat => 
+      setSeats(prevSeats => prevSeats.map(seat =>
         seat.seatId === seatId
           ? { ...seat, isPermanentHold: false, isAvailable: true }
           : seat
@@ -487,7 +488,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
       await SeatService.releasePermanentHold([seatId]);
       setSuccess('Permanent hold released successfully');
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -513,7 +514,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       setSuccess(`Reserved ${selectedSeats.length} seats successfully`);
       setSelectedSeats([]);
       setMultiSelectMode(false); // Exit multi-select mode
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -532,7 +533,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
     try {
       // Update local state immediately
-      setSeats(prevSeats => prevSeats.map(seat => 
+      setSeats(prevSeats => prevSeats.map(seat =>
         seat.seatId === seatId
           ? { ...seat, isAvailable: true }
           : seat
@@ -540,7 +541,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
       await SeatService.unreserveSeats([seatId]);
       setSuccess('Seat unreserved successfully');
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -558,7 +559,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   const releaseTemporaryHold = async (seatId: string) => {
     try {
       // Update local state immediately
-      setSeats(prevSeats => prevSeats.map(seat => 
+      setSeats(prevSeats => prevSeats.map(seat =>
         seat.seatId === seatId
           ? { ...seat, holdExpiresAt: undefined, isAvailable: true }
           : seat
@@ -568,7 +569,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
       // For now, we'll use the unreserve endpoint
       await SeatService.unreserveSeats([seatId]);
       setSuccess('Temporary hold released successfully');
-      
+
       // Reload seats to show updated status
       if (eventId) {
         await loadSeats(eventId);
@@ -591,15 +592,15 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
     try {
       // Update local state immediately for instant feedback
-      setSeats(prevSeats => prevSeats.map(seat => 
-        seat.seatId === seatId 
+      setSeats(prevSeats => prevSeats.map(seat =>
+        seat.seatId === seatId
           ? { ...seat, isBlocked: !currentlyBlocked, isAvailable: currentlyBlocked }
           : seat
       ));
 
       await SeatService.toggleSeatBlock(seatId, !currentlyBlocked);
       setSuccess(`Seat ${currentlyBlocked ? 'unblocked' : 'blocked'} successfully`);
-      
+
       // Reload seats to ensure consistency with backend
       if (eventId) {
         await loadSeats(eventId);
@@ -613,27 +614,15 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     }
   };
 
-  // Handle seat click - auto-select and show action dialog
+  // Handle seat click - toggle selection directly
   const handleSeatClick = (seat: Seat | VenueSeat | SeatDTO, e?: React.MouseEvent) => {
     e?.stopPropagation();
 
-    // In multi-select mode, just toggle selection without showing dialog
-    if (multiSelectMode) {
-      toggleSeatSelection(seat.seatId);
-      return;
-    }
-
-    // Normal mode: auto-select the seat and show dialog
-    if (!selectedSeats.includes(seat.seatId)) {
-      setSelectedSeats(prev => [...prev, seat.seatId]);
-    }
-
-    const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
-    if (availabilityInfo) {
-      setSeatActionDialog({ open: true, seat: availabilityInfo });
-    } else {
-      setSeatActionDialog({ open: true, seat });
-    }
+    // Toggle selection
+    toggleSeatSelection(seat.seatId);
+    
+    // Auto-enable multi-select mode when clicking seats
+    setMultiSelectMode(true);
   };
 
   // Close seat action dialog
@@ -644,18 +633,18 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   // Get countdown string for held seats
   const getCountdown = (holdExpiresAt: string | null): string => {
     if (!holdExpiresAt) return '';
-    
+
     const expiryTime = new Date(holdExpiresAt);
     const diff = expiryTime.getTime() - currentTime.getTime();
-    
+
     if (diff <= 0) {
       return 'EXPIRED';
     }
-    
+
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m ${seconds}s`;
     }
@@ -822,7 +811,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   }, {} as Record<string, Record<string, Seat[]>>);
 
   // Use WebSocket seats if available
-  const displaySeats = Object.keys(wsSeats).length > 0 ? 
+  const displaySeats = Object.keys(wsSeats).length > 0 ?
     seats.map(seat => {
       const wsSeat = (seat.seatId && !['__proto__', 'constructor', 'prototype'].includes(seat.seatId) && Object.prototype.hasOwnProperty.call(wsSeats, seat.seatId)) ? (wsSeats as any)[seat.seatId] : undefined;
       if (wsSeat) {
@@ -847,13 +836,13 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
-      
+
       // Check for expired holds
       displaySeats.forEach(seat => {
         if (seat.holdExpiresAt && !seat.isPermanentHold) {
           const expiryTime = new Date(seat.holdExpiresAt);
           const timeDiff = expiryTime.getTime() - now.getTime();
-          
+
           // If hold just expired (within last second)
           if (timeDiff <= 0 && timeDiff > -1000) {
             setSuccess(`Seat ${seat.section}-${seat.rowNumber}-${seat.seatNumber} hold expired - now available`);
@@ -947,11 +936,11 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
       {/* Live Monitoring Banner (when schedule is selected) */}
       {selectedSchedule && (
-        <Alert 
-          severity="info" 
+        <Alert
+          severity="info"
           icon={<NotificationsActive />}
-          sx={{ 
-            mb: 3, 
+          sx={{
+            mb: 3,
             backgroundColor: '#e3f2fd',
             border: '2px solid #2196f3',
             '& .MuiAlert-message': {
@@ -959,9 +948,9 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
             }
           }}
           action={
-            <Button 
-              color="inherit" 
-              size="small" 
+            <Button
+              color="inherit"
+              size="small"
               startIcon={<Refresh />}
               onClick={() => {
                 if (selectedSchedule) {
@@ -975,10 +964,10 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
           }
         >
           <Typography variant="body2" fontWeight="bold" gutterBottom>
-             LIVE MONITORING: Real-time Customer Seat Selection
+            LIVE MONITORING: Real-time Customer Seat Selection
           </Typography>
           <Typography variant="body2">
-            You are viewing live seat availability for this schedule. Orange seats with  icon are being held by customers during their booking process. 
+            You are viewing live seat availability for this schedule. Orange seats with  icon are being held by customers during their booking process.
             Red seats ✓ are confirmed bookings (sold tickets).
           </Typography>
         </Alert>
@@ -991,7 +980,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
             <Typography variant="h6" gutterBottom>
               Venue: {selectedEvent.venue.name}
               {selectedSchedule && (
-                <Chip 
+                <Chip
                   label={`${selectedSchedule.scheduleDate} ${selectedSchedule.startTime}`}
                   color="primary"
                   size="small"
@@ -1012,7 +1001,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
             {selectedSchedule && seatAvailability.length > 0 && (
               <Paper elevation={2} sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5' }}>
                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                   Seat Statistics for This Schedule
+                  Seat Statistics for This Schedule
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={6} sm={4} md={2}>
@@ -1080,7 +1069,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                 {seatAvailability.filter(s => s.status === 'HELD').length > 0 && (
                   <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ff9800' }}>
                     <Typography variant="body2" fontWeight="bold" color="warning.dark" gutterBottom>
-                       Customer-Held Seats (In Booking Process):
+                      Customer-Held Seats (In Booking Process):
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                       {seatAvailability
@@ -1130,13 +1119,13 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         <>
           {/* Multi-Select Mode Banner */}
           {multiSelectMode && (
-            <Alert 
-              severity="info" 
+            <Alert
+              severity="info"
               sx={{ mb: 2 }}
               action={
-                <Button 
-                  color="inherit" 
-                  size="small" 
+                <Button
+                  color="inherit"
+                  size="small"
                   onClick={() => setMultiSelectMode(false)}
                 >
                   {t('seatManagement.exitMultiSelect', 'Exit Multi-Select')}
@@ -1175,7 +1164,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                           width: 24,
                           height: 24,
                           borderRadius: 1,
-                          backgroundColor: seat?.category.colorCode || '#4caf50',
+                          backgroundColor: categoryName?.includes('Platinum') || categoryName === 'VIP Platinum' ? '#8bc34a' : (seat?.category.colorCode || '#4caf50'),
                         }}
                       />
                       <Typography variant="body2">
@@ -1196,35 +1185,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   />
                   <Typography variant="body2">{t('seatManagement.locked', 'Locked')}</Typography>
                 </Grid>
-                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 1,
-                      backgroundColor: '#ffc107',
-                    }}
-                  />
-                  <Typography variant="body2">{t('seatManagement.vipReserved', 'VIP Reserved')}</Typography>
-                </Grid>
-                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 1,
-                      backgroundColor: '#00bcd4',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '0.8rem',
-                    }}
-                  >
-                
-                  </Box>
-                  <Typography variant="body2">{t('seatManagement.accessible', 'Accessible')}</Typography>
-                </Grid>
+
                 {/* Show HELD and BOOKED legend only when schedule is selected */}
                 {selectedSchedule && (
                   <>
@@ -1270,14 +1231,14 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               </Grid>
             </CardContent>
           </Card>
-          
+
           {/* Zoom & Pan Map View */}
           <Box sx={{ position: 'relative', mb: 3 }}>
             {/* Zoom Controls */}
-            <Box sx={{ 
-              position: 'absolute', 
-              top: 16, 
-              right: 16, 
+            <Box sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
               zIndex: 10,
               display: 'flex',
               flexDirection: 'column',
@@ -1307,12 +1268,12 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               </Typography>
             </Box>
 
-            <Box 
+            <Box
               ref={svgContainerRef}
-              sx={{ 
-                border: '2px solid #ddd', 
-                borderRadius: 2, 
-                overflow: 'hidden', 
+              sx={{
+                border: '2px solid #ddd',
+                borderRadius: 2,
+                overflow: 'hidden',
                 backgroundColor: '#ffffff',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 height: '700px',
@@ -1345,15 +1306,15 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   <defs>
                     {/* Premium Drop Shadow for the Stage */}
                     <filter id="stageShadow" x="-10%" y="-10%" width="120%" height="130%">
-                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25"/>
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25" />
                     </filter>
-                    
+
                     {/* Modern slate gradient for the Stage */}
                     <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stopColor="#1e293b" />
                       <stop offset="100%" stopColor="#0f172a" />
                     </linearGradient>
-                    
+
                     {/* Glowing front edge gradient for the stage */}
                     <linearGradient id="stageGlow" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
@@ -1383,30 +1344,30 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   {/* Stage Area */}
                   {venueSeats.length > 0 && (
                     <g filter="url(#stageShadow)">
-                      <rect 
-                        x={getStageLayout().x} 
-                        y={getStageLayout().y} 
-                        width={getStageLayout().width} 
-                        height={getStageLayout().height} 
-                        fill="url(#stageGrad)" 
-                        stroke="#334155" 
-                        strokeWidth="2" 
-                        rx="10" 
+                      <rect
+                        x={getStageLayout().x}
+                        y={getStageLayout().y}
+                        width={getStageLayout().width}
+                        height={getStageLayout().height}
+                        fill="url(#stageGrad)"
+                        stroke="#334155"
+                        strokeWidth="2"
+                        rx="10"
                       />
-                      <rect 
-                        x={getStageLayout().x + 4} 
-                        y={getStageLayout().y + getStageLayout().height - 4} 
-                        width={getStageLayout().width - 8} 
-                        height="3" 
-                        fill="url(#stageGlow)" 
-                        rx="1.5" 
+                      <rect
+                        x={getStageLayout().x + 4}
+                        y={getStageLayout().y + getStageLayout().height - 4}
+                        width={getStageLayout().width - 8}
+                        height="3"
+                        fill="url(#stageGlow)"
+                        rx="1.5"
                       />
-                      <text 
-                        x={getStageLayout().centerX} 
-                        y={getStageLayout().centerY} 
-                        fontSize="20" 
-                        fontWeight="700" 
-                        fill="#f8fafc" 
+                      <text
+                        x={getStageLayout().centerX}
+                        y={getStageLayout().centerY}
+                        fontSize="20"
+                        fontWeight="700"
+                        fill="#f8fafc"
                         letterSpacing="5"
                         textAnchor="middle"
                         style={{ userSelect: 'none' }}
@@ -1420,16 +1381,16 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   {venueSeats.map((seat) => {
                     const x = Number(seat.xPosition ?? (seat as any).xposition) || 0;
                     const y = Number(seat.yPosition ?? (seat as any).yposition) || 0;
-                    
+
                     if (x === 0 || y === 0) return null; // Skip invalid positions
-                    
+
                     const isSelected = selectedSeats.includes(seat.seatId);
                     const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
                     const { status, color } = getSeatStatusAndColor(seat);
-                    
+
                     // Override color if seat is selected
                     const finalColor = isSelected ? '#ffc107' : color;
-                    
+
                     return (
                       <Tooltip
                         key={seat.seatId}
@@ -1451,8 +1412,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                                   fontWeight="bold"
                                   color={
                                     availabilityInfo.status === 'BOOKED' ? 'error.main' :
-                                    availabilityInfo.status === 'HELD' ? 'warning.main' :
-                                    'success.main'
+                                      availabilityInfo.status === 'HELD' ? 'warning.main' :
+                                        'success.main'
                                   }
                                 >
                                   Status: {availabilityInfo.status}
@@ -1641,94 +1602,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                           Unlock Seats
                         </Button>
                       </Grid>
-                      <Grid item>
-                        <Button
-                          variant="contained"
-                          color="secondary"
-                          onClick={async () => {
-                            try {
-                              for (const seatId of selectedSeats) {
-                                await venueSeatService.reserveForVIP(seatId);
-                              }
-                              setSuccess(`Reserved ${selectedSeats.length} seats for VIP`);
-                              setSelectedSeats([]);
-                              setMultiSelectMode(false);
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to reserve for VIP');
-                            }
-                          }}
-                          startIcon={<Star />}
-                        >
-                          Reserve VIP
-                        </Button>
-                      </Grid>
-                      <Grid item>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          onClick={async () => {
-                            try {
-                              for (const seatId of selectedSeats) {
-                                await venueSeatService.removeVIPReservation(seatId);
-                              }
-                              setSuccess(`Removed VIP reservation from ${selectedSeats.length} seats`);
-                              setSelectedSeats([]);
-                              setMultiSelectMode(false);
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to remove VIP reservation');
-                            }
-                          }}
-                          startIcon={<StarBorder />}
-                        >
-                          Remove VIP
-                        </Button>
-                      </Grid>
-                      <Grid item>
-                        <Button
-                          variant="contained"
-                          color="info"
-                          onClick={async () => {
-                            try {
-                              for (const seatId of selectedSeats) {
-                                await venueSeatService.markAccessible(seatId);
-                              }
-                              setSuccess(`Marked ${selectedSeats.length} seats as accessible`);
-                              setSelectedSeats([]);
-                              setMultiSelectMode(false);
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to mark as accessible');
-                            }
-                          }}
-                          startIcon={<Accessible />}
-                        >
-                          Mark Accessible
-                        </Button>
-                      </Grid>
-                      <Grid item>
-                        <Button
-                          variant="outlined"
-                          color="info"
-                          onClick={async () => {
-                            try {
-                              for (const seatId of selectedSeats) {
-                                await venueSeatService.removeAccessible(seatId);
-                              }
-                              setSuccess(`Removed accessible marking from ${selectedSeats.length} seats`);
-                              setSelectedSeats([]);
-                              setMultiSelectMode(false);
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to remove accessible marking');
-                            }
-                          }}
-                          startIcon={<AccessibleForward />}
-                        >
-                          Remove Accessible
-                        </Button>
-                      </Grid>
+
                     </>
                   )}
                   <Grid item>
@@ -1849,6 +1723,10 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   <Typography variant="body2">{t('seatManagement.booked', 'Booked')}</Typography>
                 </Grid>
                 <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#8bc34a' }} />
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#333' }}>VIP Platinum</Typography>
+                </Grid>
+                <Grid item sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Block sx={{ color: '#f44336' }} />
                   <Typography variant="body2">{t('seatManagement.blocked', 'Blocked')}</Typography>
                 </Grid>
@@ -1960,14 +1838,14 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   <Typography variant="body2" color="text.secondary">
                     {seatActionDialog.seat.categoryName} - LKR {seatActionDialog.seat.currentPrice?.toLocaleString()}
                   </Typography>
-                  <Chip 
+                  <Chip
                     label={seatActionDialog.seat.status}
                     color={
                       seatActionDialog.seat.status === 'BOOKED' ? 'error' :
-                      seatActionDialog.seat.status === 'HELD' ? 'warning' :
-                      seatActionDialog.seat.status === 'LOCKED' ? 'default' :
-                      seatActionDialog.seat.status === 'VIP_RESERVED' ? 'secondary' :
-                      'success'
+                        seatActionDialog.seat.status === 'HELD' ? 'warning' :
+                          seatActionDialog.seat.status === 'LOCKED' ? 'default' :
+                            seatActionDialog.seat.status === 'VIP_RESERVED' ? 'secondary' :
+                              'success'
                     }
                     size="small"
                     sx={{ mt: 1 }}
@@ -2046,8 +1924,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                           <ListItemIcon sx={{ color: 'warning.main' }}>
                             <RemoveCircle />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Force Release Hold" 
+                          <ListItemText
+                            primary="Force Release Hold"
                             secondary={`Release hold from User #${(seatActionDialog.seat as SeatDTO).heldByUserId}`}
                           />
                         </ListItemButton>
@@ -2059,15 +1937,15 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                   {seatActionDialog.seat.status === 'BOOKED' && (
                     <>
                       <ListItem disablePadding>
-                        <ListItemButton 
+                        <ListItemButton
                           onClick={() => handleAdminUnreserveSeat(seatActionDialog.seat!.seatId)}
                           sx={{ color: 'error.main' }}
                         >
                           <ListItemIcon sx={{ color: 'error.main' }}>
                             <BookmarkRemove />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Unreserve Booked Seat" 
+                          <ListItemText
+                            primary="Unreserve Booked Seat"
                             secondary="⚠ Warning: This will cancel the booking"
                           />
                         </ListItemButton>
@@ -2181,91 +2059,11 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                           </ListItemButton>
                         </ListItem>
                       )}
-                      <Divider />
-
-                      {/* Reserve/Remove VIP */}
-                      {(seatActionDialog.seat as VenueSeat).notes?.toLowerCase().includes('[vip]') ? (
-                        <ListItem disablePadding>
-                          <ListItemButton onClick={async () => {
-                            try {
-                              await venueSeatService.removeVIPReservation(seatActionDialog.seat!.seatId);
-                              setSuccess('VIP reservation removed');
-                              closeSeatActionDialog();
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to remove VIP reservation');
-                            }
-                          }}>
-                            <ListItemIcon sx={{ color: 'warning.main' }}>
-                              <StarBorder />
-                            </ListItemIcon>
-                            <ListItemText primary="Remove VIP Reservation" />
-                          </ListItemButton>
-                        </ListItem>
-                      ) : (
-                        <ListItem disablePadding>
-                          <ListItemButton onClick={async () => {
-                            try {
-                              await venueSeatService.reserveForVIP(seatActionDialog.seat!.seatId);
-                              setSuccess('Seat reserved for VIP');
-                              closeSeatActionDialog();
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to reserve for VIP');
-                            }
-                          }}>
-                            <ListItemIcon sx={{ color: 'secondary.main' }}>
-                              <Star />
-                            </ListItemIcon>
-                            <ListItemText primary="Reserve for VIP" />
-                          </ListItemButton>
-                        </ListItem>
-                      )}
-                      <Divider />
-
-                      {/* Mark/Remove Accessible */}
-                      {(seatActionDialog.seat as VenueSeat).isAccessible ? (
-                        <ListItem disablePadding>
-                          <ListItemButton onClick={async () => {
-                            try {
-                              await venueSeatService.removeAccessible(seatActionDialog.seat!.seatId);
-                              setSuccess('Accessible marking removed');
-                              closeSeatActionDialog();
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to remove accessible marking');
-                            }
-                          }}>
-                            <ListItemIcon sx={{ color: 'grey.500' }}>
-                              <AccessibleForward />
-                            </ListItemIcon>
-                            <ListItemText primary="Remove Accessible Marking" />
-                          </ListItemButton>
-                        </ListItem>
-                      ) : (
-                        <ListItem disablePadding>
-                          <ListItemButton onClick={async () => {
-                            try {
-                              await venueSeatService.markAccessible(seatActionDialog.seat!.seatId);
-                              setSuccess('Seat marked as accessible');
-                              closeSeatActionDialog();
-                              if (selectedEvent) loadVenueSeats(selectedEvent);
-                            } catch (err: any) {
-                              setError(err.message || 'Failed to mark as accessible');
-                            }
-                          }}>
-                            <ListItemIcon sx={{ color: 'info.main' }}>
-                              <Accessible />
-                            </ListItemIcon>
-                            <ListItemText primary="Mark as Accessible" />
-                          </ListItemButton>
-                        </ListItem>
-                      )}
                     </>
                   ) : (
                     <ListItem>
-                      <ListItemText 
-                        primary="Select this seat" 
+                      <ListItemText
+                        primary="Select this seat"
                         secondary="Click to add to selection"
                       />
                     </ListItem>
@@ -2290,8 +2088,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                     ))
                   ) : (
                     <ListItem>
-                      <ListItemText 
-                        primary="No actions available" 
+                      <ListItemText
+                        primary="No actions available"
                         secondary="This seat cannot be modified in its current state"
                       />
                     </ListItem>

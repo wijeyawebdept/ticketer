@@ -21,9 +21,10 @@ interface VenueSeatData {
 
 interface SeatStatus {
   seatId: string;
-  status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE' | 'SELECTED' | 'VIP_RESERVED';
+  status: 'AVAILABLE' | 'BOOKED' | 'HELD' | 'LOCKED' | 'NOT_FOR_SALE' | 'SELECTED' | 'VIP_RESERVED';
   currentPrice: number;
   notes?: string;
+  heldByUserId?: string;
 }
 
 // Shared area ticket category from database
@@ -54,7 +55,7 @@ interface SeatAvailabilityResponse {
     yPosition: number;
     isAisleSeat: boolean;
     isAccessible: boolean;
-    status: 'AVAILABLE' | 'BOOKED' | 'TEMPORARY_HOLD' | 'LOCKED' | 'NOT_FOR_SALE' | 'VIP_RESERVED';
+    status: 'AVAILABLE' | 'BOOKED' | 'HELD' | 'LOCKED' | 'NOT_FOR_SALE' | 'VIP_RESERVED';
     currentPrice: number;
     notes?: string;
   }[];
@@ -87,6 +88,7 @@ interface VenueSeatMapProps {
   maxSelection?: number;
   selectedSeats?: string[];
   bookedSeats?: string[];
+  isHolding?: boolean;
 }
 
 const getAreaColor = (index: number): string => {
@@ -124,8 +126,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   maxSelection = 10,
   selectedSeats = [],
   bookedSeats = [],
+  isHolding = false,
 }) => {
-  const { isRestrictedUser } = useAuth();
+  const { isRestrictedUser, user } = useAuth();
   const { t } = useTranslation();
   const [venueSeats, setVenueSeats] = useState<VenueSeatData[]>([]);
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
@@ -197,6 +200,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           status: seat.status,
           currentPrice: seat.currentPrice,
           notes: seat.notes,
+          heldByUserId: seat.heldByUserId,
         });
       });
 
@@ -212,7 +216,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       setCustomerFacingTotal(customerFacing);
 
       // Occupied = truly reserved seats only (booked, temporarily held, VIP reserved)
-      const occupiedStatuses = ['BOOKED', 'TEMPORARY_HOLD', 'VIP_RESERVED'];
+      const occupiedStatuses = ['BOOKED', 'HELD', 'VIP_RESERVED'];
       const occupied = rawSeats.filter((seat: any) => occupiedStatuses.includes(seat.status)).length;
       setTotalOccupiedSeats(occupied);
 
@@ -248,22 +252,28 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
     const status = seatStatuses.get(seat.seatId);
 
-    // Don't allow selection of booked/locked/held/VIP reserved seats
-    if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status)) {
+    // If it's already in our local selection, we should ALWAYS be able to click it to unselect it
+    if (localSelectedSeats.has(seat.seatId)) {
+      const newSelected = new Set(localSelectedSeats);
+      newSelected.delete(seat.seatId);
+      setLocalSelectedSeats(newSelected);
+      onSeatSelect?.(Array.from(newSelected));
       return;
     }
 
-    const newSelected = new Set(localSelectedSeats);
-
-    if (newSelected.has(seat.seatId)) {
-      newSelected.delete(seat.seatId);
-    } else {
-      if (newSelected.size >= maxSelection) {
-        alert(`You can only select up to ${maxSelection} seats`);
+    // Don't allow selection of booked/locked/held/VIP reserved seats
+    if (status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'HELD', 'VIP_RESERVED'].includes(status.status)) {
+      if (!(status.status === 'HELD' && status.heldByUserId === user?.id)) {
         return;
       }
-      newSelected.add(seat.seatId);
     }
+
+    const newSelected = new Set(localSelectedSeats);
+    if (newSelected.size >= maxSelection) {
+      alert(`You can only select up to ${maxSelection} seats`);
+      return;
+    }
+    newSelected.add(seat.seatId);
 
     setLocalSelectedSeats(newSelected);
     onSeatSelect?.(Array.from(newSelected));
@@ -324,9 +334,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const getSeatColor = useCallback((seat: VenueSeatData): string => {
     const status = seatStatuses.get(seat.seatId);
 
-    // Selected by the current user
-    if (localSelectedSeats.has(seat.seatId)) return '#FF0000';
-
     // Status-based colours – same for everyone
     if (status) {
       switch (status.status) {
@@ -338,17 +345,20 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898')
             return 'transparent';
           return '#6c757d'; // Grey – locked
-        case 'TEMPORARY_HOLD':
+        case 'HELD':
           return '#FFD700'; // Yellow – temporarily held
         case 'NOT_FOR_SALE':
           return 'transparent'; // Hidden
       }
     }
 
+    // Selected by the current user
+    if (localSelectedSeats.has(seat.seatId)) return isHolding ? '#FFD700' : '#FF0000';
+
     // Available seats: admin/organizer = category colour, customers = white
     if (isRestrictedUser()) return seat.colorCode || '#4CAF50';
     return '#FFFFFF';
-  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser]);
+  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser, isHolding]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -615,7 +625,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   <g id="seats-container">
                     {venueSeats.map((seat: VenueSeatData) => {
                       const status = seatStatuses.get(seat.seatId);
-                      const isUnavailable = status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'TEMPORARY_HOLD', 'VIP_RESERVED'].includes(status.status);
+                      const isUnavailable = status && ['BOOKED', 'LOCKED', 'NOT_FOR_SALE', 'HELD', 'VIP_RESERVED'].includes(status.status) && !localSelectedSeats.has(seat.seatId) && !(status.status === 'HELD' && status.heldByUserId === user?.id);
                       const isHiddenLockedSeat =
                         status?.status === 'LOCKED' &&
                         venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898';

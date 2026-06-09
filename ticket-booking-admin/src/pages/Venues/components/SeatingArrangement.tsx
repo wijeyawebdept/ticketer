@@ -22,10 +22,10 @@ import {
   Divider,
   Snackbar
 } from '@mui/material';
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  CenterFocusStrong, 
+import {
+  ZoomIn,
+  ZoomOut,
+  CenterFocusStrong,
   Lock,
   LockOpen,
   CheckCircle,
@@ -62,7 +62,7 @@ const SeatingArrangement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [seats, setSeats] = useState<VenueSeat[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  
+
   // Zoom and Pan state
   const [scale, setScale] = useState(1);
   const [panX, setPanX] = useState(0);
@@ -72,11 +72,11 @@ const SeatingArrangement: React.FC = () => {
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const [showBalconyDialog, setShowBalconyDialog] = useState(false);
   const [balconyTicketCount, setBalconyTicketCount] = useState<number | null>(null);
-  
+
   // Kularathna Stadium venue ID
   const KULARATHNA_STADIUM_ID = '54fd37e5-5a1c-4834-af83-ad9c8bf1f300';
   const shouldShowBalcony = id === KULARATHNA_STADIUM_ID;
-  
+
   // Seat management state
   const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: VenueSeat | null }>({ open: false, seat: null });
   const [selectedSeat, setSelectedSeat] = useState<VenueSeat | null>(null);
@@ -86,14 +86,14 @@ const SeatingArrangement: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const { user } = useAuth();
   const [venueName, setVenueName] = useState<string>('');
-  
+
   // Check if user is admin or organizer
   const isAdminOrOrganizer = user && (
-    user.role === UserRole.ADMIN || 
-    user.role === UserRole.ROLE_ADMIN || 
-    user.role === UserRole.ORGANIZER || 
-    user.role === UserRole.ROLE_ORGANIZER || 
-    user.role === UserRole.ORGANIZER_EMPLOYEE || 
+    user.role === UserRole.ADMIN ||
+    user.role === UserRole.ROLE_ADMIN ||
+    user.role === UserRole.ORGANIZER ||
+    user.role === UserRole.ROLE_ORGANIZER ||
+    user.role === UserRole.ORGANIZER_EMPLOYEE ||
     user.role === UserRole.ROLE_ORGANIZER_EMPLOYEE ||
     user.role === UserRole.SUPER_ADMIN ||
     user.role === UserRole.ROLE_SUPER_ADMIN
@@ -103,7 +103,7 @@ const SeatingArrangement: React.FC = () => {
   const getSeatStatusAndColor = (seat: VenueSeat) => {
     const notes = seat.notes?.toLowerCase() || '';
     const categoryName = seat.categoryName?.toLowerCase() || '';
-    
+
     // Check actual status from backend first (for booked seats from availability API)
     if (seat.status) {
       if (seat.status === 'BOOKED') {
@@ -115,7 +115,7 @@ const SeatingArrangement: React.FC = () => {
       if (seat.status === 'VIP_RESERVED') {
         // Determine VIP tier by category
         if (categoryName.includes('platinum') || notes.includes('platinum')) {
-          return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+          return { status: 'VIP Platinum', color: '#8bc34a' }; // Light green
         } else if (categoryName.includes('gold') || notes.includes('gold')) {
           return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
         } else if (categoryName.includes('silver') || notes.includes('silver')) {
@@ -127,17 +127,17 @@ const SeatingArrangement: React.FC = () => {
         return { status: 'On Hold', color: '#FFD700' }; // Gold
       }
     }
-    
+
     // Fallback to checking notes (for layout-only view)
     if (notes.includes('[locked]')) {
       return { status: 'Locked', color: '#6c757d' }; // Gray
     }
-    
+
     // Check VIP reservations by notes
     if (notes.includes('[vip]')) {
       // Determine VIP tier by category if available
       if (categoryName.includes('platinum') || seat.categoryName === 'VIP Platinum') {
-        return { status: 'VIP Platinum', color: '#dc3545' }; // Red
+        return { status: 'VIP Platinum', color: '#8bc34a' }; // Light green
       } else if (categoryName.includes('gold') || seat.categoryName === 'VIP Gold') {
         return { status: 'VIP Gold', color: '#9c27b0' }; // Purple
       } else if (categoryName.includes('silver') || seat.categoryName === 'VIP Silver') {
@@ -146,7 +146,7 @@ const SeatingArrangement: React.FC = () => {
       // Default VIP color if tier not specified
       return { status: 'VIP Reserved', color: '#dc3545' }; // Red
     }
-    
+
     // Return original category color for available seats
     return { status: 'Available', color: seat.colorCode || '#999' };
   };
@@ -175,7 +175,7 @@ const SeatingArrangement: React.FC = () => {
   const fetchHardcodedSeats = async () => {
     try {
       setLoading(true);
-      
+
       // If eventScheduleId is provided, fetch seat availability with booking status
       if (eventScheduleId) {
         const response = await api.get<{
@@ -185,7 +185,7 @@ const SeatingArrangement: React.FC = () => {
           bookedSeats: number;
           temporaryHolds: number;
         }>(`/api/venue-seats/availability/${eventScheduleId}`);
-        
+
         // Transform availability response to match VenueSeat interface
         const availabilitySeats = response.data.seats.map((seat: any) => ({
           seatId: seat.seatId,
@@ -201,12 +201,12 @@ const SeatingArrangement: React.FC = () => {
           status: seat.status,
           currentPrice: seat.currentPrice
         }));
-        
+
         const filteredSeats = availabilitySeats.filter(
           (seat: any) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]')))
         );
         setSeats(filteredSeats);
-        
+
         // Extract unique categories from availability response
         const uniqueCategories = Array.from(
           new Set(filteredSeats.map((seat: VenueSeat) => seat.categoryName))
@@ -217,7 +217,7 @@ const SeatingArrangement: React.FC = () => {
             color: seat?.colorCode
           };
         });
-        
+
         setCategories(uniqueCategories);
       } else {
         // Otherwise, fetch hardcoded venue seats layout filtered by venue ID
@@ -226,7 +226,7 @@ const SeatingArrangement: React.FC = () => {
           (seat: VenueSeat) => !(id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]')))
         );
         setSeats(filteredSeats);
-        
+
         // Extract unique categories from layout response
         const uniqueCategories = Array.from(
           new Set(filteredSeats.map((seat: VenueSeat) => seat.categoryName))
@@ -237,7 +237,7 @@ const SeatingArrangement: React.FC = () => {
             color: seat?.colorCode
           };
         });
-        
+
         setCategories(uniqueCategories);
       }
       setError(null);
@@ -294,13 +294,13 @@ const SeatingArrangement: React.FC = () => {
       return; // Only admin/organizer can manage seats
     }
     e.stopPropagation();
-    
+
     // In multi-select mode, toggle selection instead of opening dialog
     if (multiSelectMode) {
       toggleSeatSelection(seat.seatId);
       return;
     }
-    
+
     setSelectedSeat(seat);
     setSeatActionDialog({ open: true, seat });
   };
@@ -388,11 +388,7 @@ const SeatingArrangement: React.FC = () => {
     actions.push({ label: 'Lock Seat', action: 'lock', icon: <Lock />, color: 'error' });
     actions.push({ label: 'Unlock Seat', action: 'unlock', icon: <LockOpen />, color: 'success' });
 
-    // Reserve for VIP
-    actions.push({ label: 'Reserve for VIP', action: 'reserve-vip', icon: <CheckCircle />, color: 'secondary' });
 
-    // Mark as accessible
-    actions.push({ label: 'Mark as Accessible', action: 'mark-accessible', icon: <EventSeat />, color: 'primary' });
 
     return actions;
   };
@@ -413,12 +409,7 @@ const SeatingArrangement: React.FC = () => {
       case 'unlock':
         await unlockSeat(seat);
         break;
-      case 'reserve-vip':
-        await reserveForVIP(seat);
-        break;
-      case 'mark-accessible':
-        await markAccessible(seat);
-        break;
+
       case 'view-details':
         // Just keep the dialog open to show details
         break;
@@ -448,27 +439,27 @@ const SeatingArrangement: React.FC = () => {
     if (seats.length === 0) {
       return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
     }
-    
+
     const xPositions = seats.map(s => Number(s.xposition) || 0).filter(x => x > 0);
     const yPositions = seats.map(s => Number(s.yposition) || 0).filter(y => y > 0);
-    
+
     if (xPositions.length === 0 || yPositions.length === 0) {
       return { x: 400, y: 50, width: 700, height: 65, centerX: 750, centerY: 90 };
     }
-    
+
     const minX = Math.min(...xPositions);
     const maxX = Math.max(...xPositions);
     const minY = Math.min(...yPositions);
-    
+
     // Width of the stage should be proportional to the seating area, capped between 400px and 700px
     const seatingWidth = maxX - minX;
     const stageWidth = Math.max(400, Math.min(700, seatingWidth * 0.7));
     const stageHeight = 65;
     const stageGap = 50; // Gap between stage bottom and top row of seats
-    
+
     const stageX = minX + (seatingWidth - stageWidth) / 2;
     const stageY = minY - stageHeight - stageGap;
-    
+
     return {
       x: stageX,
       y: stageY,
@@ -482,29 +473,29 @@ const SeatingArrangement: React.FC = () => {
   // Calculate SVG dimensions based on seat positions and stage layout
   const getViewBox = () => {
     if (seats.length === 0) return "0 0 1200 800";
-    
+
     const xPositions = seats.map(s => Number(s.xposition) || 0).filter(x => x > 0);
     const yPositions = seats.map(s => Number(s.yposition) || 0).filter(y => y > 0);
-    
+
     if (xPositions.length === 0 || yPositions.length === 0) {
       return "0 0 1200 800";
     }
-    
+
     const minX = Math.min(...xPositions);
     const maxX = Math.max(...xPositions);
     const maxY = Math.max(...yPositions);
-    
+
     const stage = getStageLayout();
-    
+
     const padding = 60; // Left, right, bottom padding
     const topPadding = 40; // Padding above stage top
-    
+
     const minViewBoxX = minX - padding;
     const minViewBoxY = stage.y - topPadding;
-    
+
     const width = maxX - minX + padding * 2;
     const height = maxY - minViewBoxY + padding;
-    
+
     return `${minViewBoxX} ${minViewBoxY} ${width} ${height}`;
   };
 
@@ -534,9 +525,9 @@ const SeatingArrangement: React.FC = () => {
         <Typography variant="h5" gutterBottom>
           Venue Seating Layout {venueName ? `(${venueName})` : ''}
         </Typography>
-        
+
         <Alert severity="info" sx={{ mb: 3 }}>
-          This is the venue seating layout with <strong>{seats.length} seats</strong>. 
+          This is the venue seating layout with <strong>{seats.length} seats</strong>.
           {eventScheduleId ? (
             <span> Showing real-time seat availability for this event including customer bookings.</span>
           ) : (
@@ -552,7 +543,7 @@ const SeatingArrangement: React.FC = () => {
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#dc3545', border: '2px solid #fff' }} />
+                <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#8bc34a', border: '2px solid #fff' }} />
                 <Typography variant="body2" sx={{ color: '#fff' }}>VIP Platinum</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -589,7 +580,7 @@ const SeatingArrangement: React.FC = () => {
               key={index}
               label={cat.name}
               sx={{
-                backgroundColor: cat.color,
+                backgroundColor: cat.name?.includes('Platinum') || cat.name === 'VIP Platinum' ? '#8bc34a' : cat.color,
                 color: '#fff',
                 fontWeight: 600
               }}
@@ -599,12 +590,12 @@ const SeatingArrangement: React.FC = () => {
 
         {/* Multi-Select Controls */}
         {multiSelectMode && (
-          <Alert 
-            severity="info" 
+          <Alert
+            severity="info"
             sx={{ mb: 3 }}
             action={
-              <Button 
-                color="inherit" 
+              <Button
+                color="inherit"
                 size="small"
                 onClick={() => {
                   setMultiSelectMode(false);
@@ -618,16 +609,16 @@ const SeatingArrangement: React.FC = () => {
             <Typography variant="body2">
               <strong>Multi-Select Mode Active:</strong> {selectedSeats.length} seat(s) selected. Click seats to select/deselect them.
             </Typography>
-            
+
             {/* Batch Actions - Show only when seats are selected */}
             {selectedSeats.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>
                   Batch Actions:
                 </Typography>
-                <Button 
-                  size="small" 
-                  variant="contained" 
+                <Button
+                  size="small"
+                  variant="contained"
                   color="error"
                   startIcon={<Lock />}
                   onClick={async () => {
@@ -641,9 +632,9 @@ const SeatingArrangement: React.FC = () => {
                 >
                   Lock Selected ({selectedSeats.length})
                 </Button>
-                <Button 
-                  size="small" 
-                  variant="contained" 
+                <Button
+                  size="small"
+                  variant="contained"
                   color="success"
                   startIcon={<LockOpen />}
                   onClick={async () => {
@@ -657,25 +648,10 @@ const SeatingArrangement: React.FC = () => {
                 >
                   Unlock Selected ({selectedSeats.length})
                 </Button>
-                <Button 
-                  size="small" 
-                  variant="contained" 
-                  color="secondary"
-                  startIcon={<CheckCircle />}
-                  onClick={async () => {
-                    for (const seatId of selectedSeats) {
-                      const seat = seats.find(s => s.seatId === seatId);
-                      if (seat) await reserveForVIP(seat);
-                    }
-                    setSelectedSeats([]);
-                    setMultiSelectMode(false);
-                  }}
-                >
-                  Reserve for VIP ({selectedSeats.length})
-                </Button>
-                <Button 
-                  size="small" 
-                  variant="outlined" 
+
+                <Button
+                  size="small"
+                  variant="outlined"
                   color="error"
                   onClick={() => setSelectedSeats([])}
                 >
@@ -689,10 +665,10 @@ const SeatingArrangement: React.FC = () => {
         {/* SVG Seat Map with Zoom Controls */}
         <Box sx={{ position: 'relative' }}>
           {/* Zoom Controls */}
-          <Box sx={{ 
-            position: 'absolute', 
-            top: 16, 
-            right: 16, 
+          <Box sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
             zIndex: 10,
             display: 'flex',
             flexDirection: 'column',
@@ -722,12 +698,12 @@ const SeatingArrangement: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box 
+          <Box
             ref={svgContainerRef}
-            sx={{ 
-              border: '2px solid #ddd', 
-              borderRadius: 2, 
-              overflow: 'hidden', 
+            sx={{
+              border: '2px solid #ddd',
+              borderRadius: 2,
+              overflow: 'hidden',
               backgroundColor: '#ffffff',
               cursor: isDragging ? 'grabbing' : 'grab',
               height: '700px',
@@ -761,15 +737,15 @@ const SeatingArrangement: React.FC = () => {
                   <defs>
                     {/* Premium Drop Shadow for the Stage */}
                     <filter id="stageShadow" x="-10%" y="-10%" width="120%" height="130%">
-                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25"/>
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25" />
                     </filter>
-                    
+
                     {/* Modern slate gradient for the Stage */}
                     <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stopColor="#1e293b" />
                       <stop offset="100%" stopColor="#0f172a" />
                     </linearGradient>
-                    
+
                     {/* Glowing front edge gradient for the stage */}
                     <linearGradient id="stageGlow" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
@@ -802,32 +778,32 @@ const SeatingArrangement: React.FC = () => {
                     return (
                       <g filter="url(#stageShadow)">
                         {/* Main Stage Rectangle */}
-                        <rect 
-                          x={stage.x} 
-                          y={stage.y} 
-                          width={stage.width} 
-                          height={stage.height} 
-                          fill="url(#stageGrad)" 
-                          stroke="#334155" 
-                          strokeWidth="2" 
-                          rx="10" 
+                        <rect
+                          x={stage.x}
+                          y={stage.y}
+                          width={stage.width}
+                          height={stage.height}
+                          fill="url(#stageGrad)"
+                          stroke="#334155"
+                          strokeWidth="2"
+                          rx="10"
                         />
                         {/* Glowing Apron Highlight (bottom edge of the stage) */}
-                        <rect 
-                          x={stage.x + 4} 
-                          y={stage.y + stage.height - 4} 
-                          width={stage.width - 8} 
-                          height="3" 
-                          fill="url(#stageGlow)" 
-                          rx="1.5" 
+                        <rect
+                          x={stage.x + 4}
+                          y={stage.y + stage.height - 4}
+                          width={stage.width - 8}
+                          height="3"
+                          fill="url(#stageGlow)"
+                          rx="1.5"
                         />
                         {/* Stage Text */}
-                        <text 
-                          x={stage.centerX} 
-                          y={stage.centerY} 
-                          fontSize="20" 
-                          fontWeight="700" 
-                          fill="#f8fafc" 
+                        <text
+                          x={stage.centerX}
+                          y={stage.centerY}
+                          fontSize="20"
+                          fontWeight="700"
+                          fill="#f8fafc"
                           letterSpacing="5"
                           textAnchor="middle"
                           style={{ userSelect: 'none' }}
@@ -837,23 +813,23 @@ const SeatingArrangement: React.FC = () => {
                       </g>
                     );
                   })()}
-                  
+
                   {/* Render all seats as circles */}
                   {seats.map((seat) => {
                     const x = Number(seat.xposition) || 0;
                     const y = Number(seat.yposition) || 0;
-                    
+
                     if (x === 0 || y === 0) return null; // Skip invalid positions
-                    
+
                     const isSingleSelected = selectedSeat?.seatId === seat.seatId;
                     const isMultiSelected = selectedSeats.includes(seat.seatId);
-                    
+
                     // Get status-based color for admin/organizer view
                     const { status, color } = isAdminOrOrganizer ? getSeatStatusAndColor(seat) : { status: 'Available', color: seat.colorCode || '#999' };
-                    
+
                     // Override color if seat is selected
                     const finalColor = isSingleSelected || isMultiSelected ? '#ffc107' : color; // Yellow for selected
-                    
+
                     return (
                       <circle
                         key={seat.seatId}
@@ -936,9 +912,9 @@ const SeatingArrangement: React.FC = () => {
               const count = seats.filter(s => s.categoryName === cat.name).length;
               return (
                 <Grid item xs={12} sm={6} md={3} key={index}>
-                  <Paper sx={{ 
-                    p: 2, 
-                    textAlign: 'center', 
+                  <Paper sx={{
+                    p: 2,
+                    textAlign: 'center',
                     bgcolor: cat.color,
                     color: '#fff'
                   }}>
@@ -984,8 +960,8 @@ const SeatingArrangement: React.FC = () => {
                 ))
               ) : (
                 <ListItem>
-                  <ListItemText 
-                    primary="No actions available" 
+                  <ListItemText
+                    primary="No actions available"
                     secondary="No management actions available for this seat"
                   />
                 </ListItem>
@@ -1020,8 +996,8 @@ const SeatingArrangement: React.FC = () => {
       </Snackbar>
 
       {/* Balcony Dialog - Only for Kularathna Stadium */}
-      <Dialog 
-        open={showBalconyDialog && shouldShowBalcony} 
+      <Dialog
+        open={showBalconyDialog && shouldShowBalcony}
         onClose={handleCloseBalconyDialog}
         maxWidth="sm"
         fullWidth
@@ -1045,16 +1021,16 @@ const SeatingArrangement: React.FC = () => {
             <Close />
           </IconButton>
         </DialogTitle>
-        
+
         <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
           <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
             This section is a <strong>*Shared Space*</strong> and does not have any allocated seats.
           </Typography>
-          
+
           <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
             How many tickets do you want?
           </Typography>
-          
+
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', mb: 4 }}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
               <Button
@@ -1077,7 +1053,7 @@ const SeatingArrangement: React.FC = () => {
               </Button>
             ))}
           </Box>
-          
+
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
             <Button
               variant="contained"
@@ -1099,7 +1075,7 @@ const SeatingArrangement: React.FC = () => {
               Select tickets
             </Button>
           </Box>
-          
+
           <Button
             onClick={handleCloseBalconyDialog}
             sx={{

@@ -58,7 +58,7 @@ export interface SeatAvailabilityResponse {
 export interface SeatHoldRequest {
   eventScheduleId: string | number;
   seatIds: string[];
-  userId: number;
+  userId: string;
 }
 
 export interface SeatHoldResponse {
