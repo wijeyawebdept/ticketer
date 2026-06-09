@@ -17,6 +17,7 @@ import {
   Stepper,
   Step,
   StepLabel,
+  StepButton,
   Chip,
   Card,
   Snackbar,
@@ -1500,12 +1501,16 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             )}
             
             {/* Stepper */}
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: 4 }} nonLinear={!!event?.id}>
               {steps.map((label, index) => {
                 const hasError = stepErrors[index] && stepErrors[index].length > 0;
+                const isEditMode = !!event?.id;
+                const StepComponent = isEditMode ? StepButton as any : StepLabel;
+                
                 return (
                   <Step key={label}>
-                    <StepLabel 
+                    <StepComponent 
+                      onClick={isEditMode ? () => setActiveStep(index) : undefined}
                       error={hasError}
                       sx={{
                         '& .MuiStepLabel-label': hasError ? {
@@ -1523,7 +1528,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                           sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
                         />
                       )}
-                    </StepLabel>
+                    </StepComponent>
                   </Step>
                 );
               })}

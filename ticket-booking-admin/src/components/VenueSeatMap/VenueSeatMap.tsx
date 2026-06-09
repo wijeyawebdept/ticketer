@@ -668,16 +668,43 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                     const minX_shared = xPos.length > 0 ? Math.min(...xPos) : 200;
                     const maxX_shared = xPos.length > 0 ? Math.max(...xPos) : 1600;
                     const maxY_shared = yPos.length > 0 ? Math.max(...yPos) : 500;
+                    const minY_shared = yPos.length > 0 ? Math.min(...yPos) : 100;
 
-                    const totalWidth_shared = maxX_shared - minX_shared;
-                    const areaWidth = sharedAreas.length > 1
-                      ? (totalWidth_shared - (sharedAreas.length - 1) * 20) / sharedAreas.length
-                      : totalWidth_shared * 0.5;
-                    const areaX = sharedAreas.length > 1
-                      ? minX_shared + index * (areaWidth + 20)
-                      : minX_shared + totalWidth_shared * 0.25;
-                    const areaY = maxY_shared + 60;
-                    const areaHeight = 80;
+                    let areaWidth, areaX, areaY, areaHeight;
+
+                    if (venueId === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+                      // Custom layout for Nelum Pokuna Outdoor Arena (Vertical sides)
+                      const gap = 30;
+                      areaWidth = 160;
+                      areaHeight = Math.max(maxY_shared - minY_shared, 100);
+                      areaY = minY_shared;
+
+                      if (area.sharedAreaNumber === 2) {
+                        areaX = minX_shared - areaWidth * 2 - gap * 2;
+                      } else if (area.sharedAreaNumber === 1) {
+                        areaX = minX_shared - areaWidth - gap;
+                      } else if (area.sharedAreaNumber === 3) {
+                        areaX = maxX_shared + gap;
+                      } else if (area.sharedAreaNumber === 4) {
+                        areaX = maxX_shared + areaWidth + gap * 2;
+                      } else {
+                        // Fallback
+                        areaX = minX_shared + index * (areaWidth + gap);
+                        areaY = maxY_shared + 60;
+                        areaHeight = 80;
+                      }
+                    } else {
+                      // Default horizontal layout
+                      const totalWidth_shared = maxX_shared - minX_shared;
+                      areaWidth = sharedAreas.length > 1
+                        ? (totalWidth_shared - (sharedAreas.length - 1) * 20) / sharedAreas.length
+                        : totalWidth_shared * 0.5;
+                      areaX = sharedAreas.length > 1
+                        ? minX_shared + index * (areaWidth + 20)
+                        : minX_shared + totalWidth_shared * 0.25;
+                      areaY = maxY_shared + 60;
+                      areaHeight = 80;
+                    }
                     return (
                       <g key={`shared-area-${area.sharedAreaNumber}`}>
                         <rect
@@ -686,33 +713,43 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           width={areaWidth}
                           height={areaHeight}
                           fill={getAreaColor(index)}
-                          fillOpacity="0.4"
+                          fillOpacity="0.15"
                           stroke={getBorderColor(index)}
-                          strokeWidth="3"
+                          strokeWidth="2"
+                          rx="8"
                           className="shared-area"
-                          style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                          style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSharedAreaClick(area);
                           }}
+                          onMouseEnter={(e) => {
+                            (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                            (e.target as SVGRectElement).style.strokeWidth = "3";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.target as SVGRectElement).style.fillOpacity = "0.15";
+                            (e.target as SVGRectElement).style.strokeWidth = "2";
+                          }}
                         />
                         <text
                           x={areaX + areaWidth / 2}
-                          y={areaY + areaHeight / 2 - 10}
+                          y={areaY + areaHeight / 2 - 12}
                           textAnchor="middle"
-                          fontSize="18"
-                          fontWeight="bold"
-                          fill={getTextColor(index)}
-                          style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                          fontSize="16"
+                          fontWeight="600"
+                          fill="#f8fafc"
+                          style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '0.5px' }}
                         >
                           {area.categoryName}
                         </text>
                         <text
                           x={areaX + areaWidth / 2}
-                          y={areaY + areaHeight / 2 + 12}
+                          y={areaY + areaHeight / 2 + 16}
                           textAnchor="middle"
-                          fontSize="14"
-                          fill={getTextColor(index)}
+                          fontSize="13"
+                          fontWeight="500"
+                          fill="#cbd5e1"
                           style={{ cursor: 'pointer', pointerEvents: 'none' }}
                         >
                           {t('lkr', 'LKR')} {area.price.toLocaleString()} • {area.availableTickets} {t('availableLower', 'available')}

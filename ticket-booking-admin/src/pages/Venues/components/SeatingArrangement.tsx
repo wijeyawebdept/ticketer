@@ -564,7 +564,7 @@ const SeatingArrangement: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#ffc107', border: '2px solid #fff' }} />
-                <Typography variant="body2" sx={{ color: '#fff' }}>Selected</Typography>
+                <Typography variant="body2" sx={{ color: '#fff' }}>Hold</Typography>
               </Box>
             </Box>
           </Box>
@@ -856,34 +856,129 @@ const SeatingArrangement: React.FC = () => {
 
                   {/* Balcony - Only for Kularathna Stadium */}
                   {shouldShowBalcony && (
-                    <>
-                      <rect
-                        x="350"
-                        y="580"
-                        width="900"
-                        height="80"
-                        fill="#FFE082"
-                        fillOpacity="0.4"
-                        stroke="#FFA000"
-                        strokeWidth="3"
-                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBalconyClick();
-                        }}
-                      />
-                      <text
-                        x="800"
-                        y="630"
-                        textAnchor="middle"
-                        fontSize="24"
-                        fontWeight="bold"
-                        fill="#FF6F00"
-                        style={{ cursor: 'pointer', pointerEvents: 'none' }}
-                      >
-                        BALCONY (Standing Area)
-                      </text>
-                    </>
+                    (() => {
+                      const minX_balcony = seats.length > 0 ? Math.min(...seats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 100;
+                      const maxX_balcony = seats.length > 0 ? Math.max(...seats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 1600;
+                      const maxY_balcony = seats.length > 0 ? Math.max(...seats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 500;
+                      const totalWidth = maxX_balcony - minX_balcony;
+                      const areaWidth = Math.min(700, totalWidth);
+                      const areaX = minX_balcony + (totalWidth - areaWidth) / 2;
+                      const areaY = maxY_balcony + 60;
+                      
+                      return (
+                        <>
+                          <rect
+                            x={areaX}
+                            y={areaY}
+                            width={areaWidth}
+                            height="80"
+                            fill="#FFE082"
+                            fillOpacity="0.25"
+                            stroke="#FF8F00"
+                            strokeWidth="2"
+                            rx="8"
+                            style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBalconyClick();
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.target as SVGRectElement).style.fillOpacity = "0.4";
+                              (e.target as SVGRectElement).style.strokeWidth = "3";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                              (e.target as SVGRectElement).style.strokeWidth = "2";
+                            }}
+                          />
+                          <text
+                            x={areaX + areaWidth / 2}
+                            y={areaY + 45}
+                            textAnchor="middle"
+                            fontSize="20"
+                            fontWeight="700"
+                            fill="#E65100"
+                            style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '1px' }}
+                          >
+                            BALCONY (Standing Area)
+                          </text>
+                        </>
+                      );
+                    })()
+                  )}
+
+                  {/* Shared Areas - Only for Nelum Pokuna Outdoor Arena */}
+                  {id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+                    (() => {
+                      const minX_shared = seats.length > 0 ? Math.min(...seats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 200;
+                      const maxX_shared = seats.length > 0 ? Math.max(...seats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 1600;
+                      const maxY_shared = seats.length > 0 ? Math.max(...seats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 500;
+                      const minY_shared = seats.length > 0 ? Math.min(...seats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 100;
+
+                      const gap = 30;
+                      const areaWidth = 160;
+                      const areaHeight = Math.max(maxY_shared - minY_shared, 100);
+                      const areaY = minY_shared;
+                      
+                      const fillColors = ['#FFA000', '#0288D1', '#388E3C', '#C2185B'];
+                      const borderColors = ['#FF6F00', '#01579B', '#1B5E20', '#880E4F'];
+                      
+                      return [1, 2, 3, 4].map((areaNum, index) => {
+                        let areaX = minX_shared;
+                        if (areaNum === 2) {
+                          areaX = minX_shared - areaWidth * 2 - gap * 2;
+                        } else if (areaNum === 1) {
+                          areaX = minX_shared - areaWidth - gap;
+                        } else if (areaNum === 3) {
+                          areaX = maxX_shared + gap;
+                        } else if (areaNum === 4) {
+                          areaX = maxX_shared + areaWidth + gap * 2;
+                        }
+                        
+                        const fillColor = fillColors[index % fillColors.length];
+                        const borderColor = borderColors[index % borderColors.length];
+
+                        return (
+                          <g key={`shared-area-npoa-${areaNum}`}>
+                            <rect
+                              x={areaX}
+                              y={areaY}
+                              width={areaWidth}
+                              height={areaHeight}
+                              fill={fillColor}
+                              fillOpacity="0.15"
+                              stroke={borderColor}
+                              strokeWidth="2"
+                              rx="8"
+                              style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBalconyClick();
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                                (e.target as SVGRectElement).style.strokeWidth = "3";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.target as SVGRectElement).style.fillOpacity = "0.15";
+                                (e.target as SVGRectElement).style.strokeWidth = "2";
+                              }}
+                            />
+                            <text
+                              x={areaX + areaWidth / 2}
+                              y={areaY + areaHeight / 2}
+                              textAnchor="middle"
+                              fontSize="16"
+                              fontWeight="600"
+                              fill="#f8fafc"
+                              style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '0.5px' }}
+                            >
+                              Standing Area {areaNum}
+                            </text>
+                          </g>
+                        );
+                      });
+                    })()
                   )}
 
                 </svg>
@@ -997,7 +1092,7 @@ const SeatingArrangement: React.FC = () => {
 
       {/* Balcony Dialog - Only for Kularathna Stadium */}
       <Dialog
-        open={showBalconyDialog && shouldShowBalcony}
+        open={showBalconyDialog && (shouldShowBalcony || id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898')}
         onClose={handleCloseBalconyDialog}
         maxWidth="sm"
         fullWidth

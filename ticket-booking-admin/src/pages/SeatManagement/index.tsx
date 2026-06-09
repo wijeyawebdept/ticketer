@@ -1489,50 +1489,72 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
                   {/* Balcony / Standing Area - Only for Kularathna Stadium */}
                   {selectedEvent?.venue?.id === KULARATHNA_STADIUM_ID && (
-                    <>
-                      <rect
-                        x="350"
-                        y="580"
-                        width="900"
-                        height="80"
-                        fill="#FFE082"
-                        fillOpacity="0.4"
-                        stroke="#FFA000"
-                        strokeWidth="3"
-                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (sharedAreas.length > 0) {
-                            alert(`Shared Area Balcony:\n\nAvailable Tickets: ${sharedAreas[0].availableTickets}\nTotal Capacity: ${sharedAreas[0].capacity}\nPrice: LKR ${sharedAreas[0].price?.toLocaleString()}`);
-                          } else {
-                            alert('Balcony (Standing Area)');
-                          }
-                        }}
-                      />
-                      <text
-                        x="800"
-                        y="625"
-                        textAnchor="middle"
-                        fontSize="24"
-                        fontWeight="bold"
-                        fill="#FF6F00"
-                        style={{ cursor: 'pointer', pointerEvents: 'none' }}
-                      >
-                        BALCONY (Standing Area)
-                      </text>
-                      {sharedAreas.length > 0 && (
-                        <text
-                          x="800"
-                          y="645"
-                          textAnchor="middle"
-                          fontSize="14"
-                          fill="#FF6F00"
-                          style={{ cursor: 'pointer', pointerEvents: 'none' }}
-                        >
-                          LKR {sharedAreas[0].price?.toLocaleString()} • {sharedAreas[0].availableTickets} available
-                        </text>
-                      )}
-                    </>
+                    (() => {
+                      const minX_balcony = venueSeats.length > 0 ? Math.min(...venueSeats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 100;
+                      const maxX_balcony = venueSeats.length > 0 ? Math.max(...venueSeats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 1600;
+                      const maxY_balcony = venueSeats.length > 0 ? Math.max(...venueSeats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 500;
+                      const totalWidth = maxX_balcony - minX_balcony;
+                      const areaWidth = Math.min(700, totalWidth);
+                      const areaX = minX_balcony + (totalWidth - areaWidth) / 2;
+                      const areaY = maxY_balcony + 60;
+                      
+                      return (
+                        <>
+                          <rect
+                            x={areaX}
+                            y={areaY}
+                            width={areaWidth}
+                            height="80"
+                            fill="#FFE082"
+                            fillOpacity="0.25"
+                            stroke="#FF8F00"
+                            strokeWidth="2"
+                            rx="8"
+                            style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (sharedAreas.length > 0) {
+                                alert(`Shared Area Balcony:\n\nAvailable Tickets: ${sharedAreas[0].availableTickets}\nTotal Capacity: ${sharedAreas[0].capacity}\nPrice: LKR ${sharedAreas[0].price?.toLocaleString()}`);
+                              } else {
+                                alert('Balcony (Standing Area)');
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.target as SVGRectElement).style.fillOpacity = "0.4";
+                              (e.target as SVGRectElement).style.strokeWidth = "3";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                              (e.target as SVGRectElement).style.strokeWidth = "2";
+                            }}
+                          />
+                          <text
+                            x={areaX + areaWidth / 2}
+                            y={areaY + 45}
+                            textAnchor="middle"
+                            fontSize="20"
+                            fontWeight="700"
+                            fill="#E65100"
+                            style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '1px' }}
+                          >
+                            BALCONY (Standing Area)
+                          </text>
+                          {sharedAreas.length > 0 && (
+                            <text
+                              x={areaX + areaWidth / 2}
+                              y={areaY + 65}
+                              textAnchor="middle"
+                              fontSize="14"
+                              fontWeight="600"
+                              fill="#E65100"
+                              style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                            >
+                              LKR {sharedAreas[0].price?.toLocaleString()} • {sharedAreas[0].availableTickets} available
+                            </text>
+                          )}
+                        </>
+                      );
+                    })()
                   )}
                 </svg>
               </Box>
