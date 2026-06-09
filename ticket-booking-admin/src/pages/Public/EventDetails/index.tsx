@@ -59,6 +59,7 @@ const EventDetails: React.FC = () => {
   });
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
   const [showSeatingMessage, setShowSeatingMessage] = useState(false);
+  const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
   const [showCountdown, setShowCountdown] = useState<boolean>(false);
   const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
@@ -143,7 +144,8 @@ const EventDetails: React.FC = () => {
               return scheduleDate >= new Date();
             });
             if (firstFutureSchedule) {
-              setSelectedShowtime(firstFutureSchedule.scheduleId);
+              // Intentionally not auto-selecting to force user choice
+              // setSelectedShowtime(firstFutureSchedule.scheduleId);
             }
           }
         } catch (schedErr) {
@@ -278,6 +280,12 @@ const EventDetails: React.FC = () => {
   };
 
   const handleNextClick = () => {
+    // Validate that a showtime is selected if there are schedules
+    if (schedules.length > 0 && !selectedShowtime) {
+      setValidationModalOpen(true);
+      return;
+    }
+
     // If showtime is selected, redirect to seat selection page
     if (selectedShowtime) {
       // Find the selected schedule details
@@ -1480,6 +1488,45 @@ const EventDetails: React.FC = () => {
           </Button>
           <Button variant="contained" onClick={() => alert('Payment Processing...')}>
             Payment
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Validation Modal */}
+      <Dialog
+        open={validationModalOpen}
+        onClose={() => setValidationModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 1,
+            textAlign: 'center'
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#ff1955' }}>
+          Action Required
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Please select a show time before proceeding to the next step.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setValidationModalOpen(false)}
+            sx={{
+              backgroundColor: '#ff1955',
+              color: '#ffffff',
+              borderRadius: '25px',
+              px: 4,
+              '&:hover': { backgroundColor: '#e01545' },
+            }}
+          >
+            OK
           </Button>
         </DialogActions>
       </Dialog>
