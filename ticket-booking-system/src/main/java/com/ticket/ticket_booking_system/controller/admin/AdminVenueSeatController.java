@@ -68,7 +68,6 @@ public class AdminVenueSeatController {
             .yPosition(venueSeat.getYPosition())
             .isAisleSeat(venueSeat.getIsAisleSeat())
             .isAccessible(venueSeat.getIsAccessible())
-            .currentPrice(venueSeat.getCategory().getBasePrice())
             .notes(venueSeat.getNotes());
         
         // Set status and hold info

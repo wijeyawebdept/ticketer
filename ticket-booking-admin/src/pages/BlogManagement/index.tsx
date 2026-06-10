@@ -296,7 +296,7 @@ const BlogManagement: React.FC = () => {
                       {post.coverImageBase64 ? (
                         <Box component="img" src={post.coverImageBase64} sx={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 1 }} />
                       ) : (
-                        <Box sx={{ width: 72, height: 52, bgcolor: '#eee', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa' }}>📝</Box>
+                        <Box sx={{ width: 72, height: 52, bgcolor: '#eee', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa' }}></Box>
                       )}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, maxWidth: 220 }}>

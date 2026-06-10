@@ -108,7 +108,7 @@ const Blog: React.FC = () => {
                       height: 200, bgcolor: '#1f1f1f', borderRadius: '12px 12px 0 0',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Typography sx={{ color: '#333', fontSize: '3rem' }}>📝</Typography>
+                      <Typography sx={{ color: '#333', fontSize: '3rem' }}></Typography>
                     </Box>
                   )}
                   <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>

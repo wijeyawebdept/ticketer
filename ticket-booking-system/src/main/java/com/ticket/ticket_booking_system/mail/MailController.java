@@ -6,15 +6,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.service.EmailService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
+
 @RestController
-@RequestMapping("/api")
+@CrossOrigin(origins = "*")
 public class MailController {
 
     private final EmailService emailService;
@@ -23,7 +24,7 @@ public class MailController {
         this.emailService = emailService;
     }
 
-    @PostMapping("/contact")
+    @PostMapping({"/api/contact", "/contact"})
     public ResponseEntity<?> sendContact(@Valid @RequestBody ContactEmailRequest req) {
         try {
             emailService.sendContactEmail(req.name(), req.email(), req.message());

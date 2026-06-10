@@ -344,9 +344,12 @@ public class BlogServiceImpl implements BlogService {
         String coverBase64 = null;
         String coverContentType = null;
         if (!images.isEmpty()) {
-            coverBase64 = "data:" + images.get(0).getImageContentType() + ";base64,"
-                    + Base64.getEncoder().encodeToString(images.get(0).getImageData());
-            coverContentType = images.get(0).getImageContentType();
+            byte[] imageData = images.get(0).getImageData();
+            if (imageData != null && imageData.length > 0) {
+                coverBase64 = "data:" + images.get(0).getImageContentType() + ";base64,"
+                        + Base64.getEncoder().encodeToString(imageData);
+                coverContentType = images.get(0).getImageContentType();
+            }
         }
         return new BlogPostSummaryResponse(
                 post.getPostId().toString(),
@@ -363,8 +366,9 @@ public class BlogServiceImpl implements BlogService {
     }
 
     private BlogImageResponse toImageResponse(BlogPostImage img) {
-        String base64 = "data:" + img.getImageContentType() + ";base64,"
-                + Base64.getEncoder().encodeToString(img.getImageData());
+        byte[] data = img.getImageData();
+        String base64 = (data != null && data.length > 0) ? "data:" + img.getImageContentType() + ";base64,"
+                + Base64.getEncoder().encodeToString(data) : null;
         return new BlogImageResponse(
                 img.getImageId().toString(),
                 base64,

@@ -156,8 +156,8 @@ public class VenueSeatService {
             }
 
             TicketCategory eventCategory = categoryMap.get(seat.getCategory().getCategoryName());
-            java.math.BigDecimal currentPrice = eventCategory != null ? eventCategory.getPrice()
-                    : seat.getCategory().getBasePrice();
+            java.math.BigDecimal currentPrice = eventCategory != null ?
+                    eventCategory.getPrice() : null;
 
             // Build SeatDTO with hold information
             SeatDTO.SeatDTOBuilder builder = SeatDTO.builder()

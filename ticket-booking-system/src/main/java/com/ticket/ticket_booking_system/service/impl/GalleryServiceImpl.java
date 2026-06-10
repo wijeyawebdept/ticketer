@@ -183,7 +183,7 @@ public class GalleryServiceImpl implements GalleryService {
     }
 
     private GalleryResponse convertToResponse(GalleryImage galleryImage) {
-        String imageBase64 = galleryImage.getImageData() != null 
+        String imageBase64 = (galleryImage.getImageData() != null && galleryImage.getImageData().length > 0)
             ? "data:" + galleryImage.getImageContentType() + ";base64," + Base64.getEncoder().encodeToString(galleryImage.getImageData())
             : null;
 

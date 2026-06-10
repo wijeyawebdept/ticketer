@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -30,9 +29,6 @@ public class SeatCategory {
 
     @Column(name = "category_name", nullable = false, unique = true, length = 50)
     private String categoryName;
-
-    @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal basePrice;
 
     @Column(name = "color_code", nullable = false, length = 7)
     private String colorCode;

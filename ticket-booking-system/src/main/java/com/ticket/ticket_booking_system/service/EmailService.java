@@ -68,7 +68,11 @@ public class EmailService {
             throw new MessagingException("Invalid From name encoding", e);
         }
 
-        helper.setTo(toEmail);
+        if (toEmail.contains(",")) {
+            helper.setTo(toEmail.split("\\s*,\\s*"));
+        } else {
+            helper.setTo(toEmail);
+        }
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
 

@@ -1044,16 +1044,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={6} sm={4} md={2}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h5" fontWeight="bold" sx={{ color: '#ffc107' }}>
-                        {seatAvailability.filter(s => s.status === 'VIP_RESERVED').length}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        VIP Reserved
-                      </Typography>
-                    </Box>
-                  </Grid>
+
                   <Grid item xs={6} sm={4} md={2}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h5" fontWeight="bold" color="primary.main">
@@ -1157,6 +1148,8 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               <Grid container spacing={2} alignItems="center">
                 {Array.from(new Set(venueSeats.map(s => s.category.categoryName))).map(categoryName => {
                   const seat = venueSeats.find(s => s.category.categoryName === categoryName);
+                  const seatDto = seatAvailability.find(s => s.categoryName === categoryName);
+                  const displayPrice = seatDto?.currentPrice ?? seat?.category.basePrice;
                   return (
                     <Grid item key={categoryName} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box
@@ -1168,7 +1161,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                         }}
                       />
                       <Typography variant="body2">
-                        {categoryName} - LKR {seat?.category.basePrice?.toLocaleString()}
+                        {categoryName} - LKR {displayPrice?.toLocaleString()}
                       </Typography>
                     </Grid>
                   );
@@ -1390,6 +1383,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
                     // Override color if seat is selected
                     const finalColor = isSelected ? '#ffc107' : color;
+                    const displayPrice = availabilityInfo?.currentPrice ?? seat.category.basePrice;
 
                     return (
                       <Tooltip
@@ -1403,7 +1397,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                               Category: {seat.category.categoryName}
                             </Typography>
                             <Typography variant="body2">
-                              Price: LKR {seat.category.basePrice?.toLocaleString()}
+                              Price: LKR {displayPrice?.toLocaleString()}
                             </Typography>
                             {availabilityInfo && (
                               <>
@@ -1549,11 +1543,117 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
                               fill="#E65100"
                               style={{ cursor: 'pointer', pointerEvents: 'none' }}
                             >
-                              LKR {sharedAreas[0].price?.toLocaleString()} • {sharedAreas[0].availableTickets} available
+                              LKR {sharedAreas[0].price?.toLocaleString()} • {sharedAreas[0].capacity - sharedAreas[0].availableTickets} sold / {sharedAreas[0].capacity} total
                             </text>
                           )}
                         </>
                       );
+                    })()
+                  )}
+
+                  {/* Shared Areas - Only for Nelum Pokuna Outdoor Arena */}
+                  {selectedEvent?.venue?.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+                    (() => {
+                      const minX_shared = venueSeats.length > 0 ? Math.min(...venueSeats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 200;
+                      const maxX_shared = venueSeats.length > 0 ? Math.max(...venueSeats.map(s => Number((s as any).xPosition ?? (s as any).xposition) || 0)) : 1600;
+                      const maxY_shared = venueSeats.length > 0 ? Math.max(...venueSeats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 500;
+                      const minY_shared = venueSeats.length > 0 ? Math.min(...venueSeats.map(s => Number((s as any).yPosition ?? (s as any).yposition) || 0)) : 100;
+
+                      const gap = 30;
+                      const areaWidth = 160;
+                      const areaHeight = Math.max(maxY_shared - minY_shared, 100);
+                      const areaY = minY_shared;
+                      
+                      const fillColors = ['#FFA000', '#0288D1', '#388E3C', '#C2185B'];
+                      const borderColors = ['#FF6F00', '#01579B', '#1B5E20', '#880E4F'];
+                      
+                      return [1, 2, 3, 4].map((areaNum, index) => {
+                        let areaX = minX_shared;
+                        if (areaNum === 2) {
+                          areaX = minX_shared - areaWidth * 2 - gap * 2;
+                        } else if (areaNum === 1) {
+                          areaX = minX_shared - areaWidth - gap;
+                        } else if (areaNum === 3) {
+                          areaX = maxX_shared + gap;
+                        } else if (areaNum === 4) {
+                          areaX = maxX_shared + areaWidth + gap * 2;
+                        }
+                        
+                        const fillColor = fillColors[index % fillColors.length];
+                        const borderColor = borderColors[index % borderColors.length];
+                        
+                        const eventSharedArea = sharedAreas.find(sa => sa.sharedAreaNumber === areaNum);
+
+                        return (
+                          <g key={`shared-area-npoa-${areaNum}`}>
+                            <rect
+                              x={areaX}
+                              y={areaY}
+                              width={areaWidth}
+                              height={areaHeight}
+                              fill={fillColor}
+                              fillOpacity="0.15"
+                              stroke={borderColor}
+                              strokeWidth="2"
+                              rx="8"
+                              style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (eventSharedArea) {
+                                  alert(`Shared Area ${areaNum}:\n\nCategory: ${eventSharedArea.categoryName}\nSold Tickets: ${eventSharedArea.capacity - eventSharedArea.availableTickets}\nTotal Capacity: ${eventSharedArea.capacity}\nPrice: LKR ${eventSharedArea.price?.toLocaleString()}`);
+                                } else {
+                                  alert(`Standing Area ${areaNum}`);
+                                }
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                                (e.target as SVGRectElement).style.strokeWidth = "3";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.target as SVGRectElement).style.fillOpacity = "0.15";
+                                (e.target as SVGRectElement).style.strokeWidth = "2";
+                              }}
+                            />
+                            <text
+                              x={areaX + areaWidth / 2}
+                              y={areaY + areaHeight / 2 - 12}
+                              textAnchor="middle"
+                              fontSize="16"
+                              fontWeight="700"
+                              fill={borderColor}
+                              style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '0.5px' }}
+                            >
+                              {eventSharedArea ? eventSharedArea.categoryName : `Standing Area ${areaNum}`}
+                            </text>
+                            {eventSharedArea && (
+                              <>
+                                <text
+                                  x={areaX + areaWidth / 2}
+                                  y={areaY + areaHeight / 2 + 16}
+                                  textAnchor="middle"
+                                  fontSize="13"
+                                  fontWeight="700"
+                                  fill={borderColor}
+                                  style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                                >
+                                  {eventSharedArea.capacity - eventSharedArea.availableTickets} sold / {eventSharedArea.capacity} total
+                                </text>
+                                <text
+                                  x={areaX + areaWidth / 2}
+                                  y={areaY + areaHeight / 2 + 36}
+                                  textAnchor="middle"
+                                  fontSize="12"
+                                  fontWeight="600"
+                                  fill={borderColor}
+                                  style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                                >
+                                  LKR {eventSharedArea.price?.toLocaleString()}
+                                </text>
+                              </>
+                            )}
+                          </g>
+                        );
+                      });
                     })()
                   )}
                 </svg>
