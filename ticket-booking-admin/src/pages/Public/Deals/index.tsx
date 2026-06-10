@@ -427,7 +427,7 @@ const Deals: React.FC = () => {
                             navigate(`/event/${firstDeal.eventSlug || eventId}`);
                           }}
                           sx={{
-                            backgroundColor: '#0d6efd',
+                            backgroundColor: '#ff1955',
                             color: '#fff',
                             fontFamily: 'Raleway, sans-serif',
                             fontWeight: 700,
@@ -436,7 +436,7 @@ const Deals: React.FC = () => {
                             py: 1.25,
                             fontSize: '0.9rem',
                             boxShadow: 'none',
-                            '&:hover': { backgroundColor: '#0b5ed7', boxShadow: '0 4px 12px rgba(13,110,253,0.4)' },
+                            '&:hover': { backgroundColor: '#e01545', boxShadow: '0 4px 12px rgba(255,25,85,0.4)' },
                           }}
                         >
                           Book Now • {categoryDeals.length}+ Deal{categoryDeals.length > 1 ? 's' : ''}
