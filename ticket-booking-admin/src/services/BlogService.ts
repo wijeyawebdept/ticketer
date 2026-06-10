@@ -2,8 +2,8 @@ import api from './api';
 
 export interface BlogImage {
   imageId: string;
-  imageBase64: string;
-  imageContentType: string;
+  imageUrl: string;
+
   displayOrder: number;
 }
 
@@ -22,8 +22,8 @@ export interface BlogPostSummary {
   published: boolean;
   likeCount: number;
   commentCount: number;
-  coverImageBase64?: string;
-  coverImageContentType?: string;
+  coverImageUrl?: string;
+
   createdAt: string;
   updatedAt: string;
 }

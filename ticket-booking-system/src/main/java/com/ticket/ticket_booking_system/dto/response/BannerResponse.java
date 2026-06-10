@@ -18,10 +18,7 @@ public class BannerResponse {
     private UUID bannerId;
     private String title;
     private String description;
-    private String imageBase64; // Base64 encoded image data
-    private String imageFileName;
-    private String imageContentType;
-    private Long imageSize;
+    private String imageUrl;
     private Integer displayOrder;
     private BannerStatus status;
     private LocalDateTime createdAt;

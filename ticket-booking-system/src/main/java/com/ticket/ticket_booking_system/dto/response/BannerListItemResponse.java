@@ -18,9 +18,7 @@ public class BannerListItemResponse {
     private UUID bannerId;
     private String title;
     private String description;
-    private String imageFileName;
-    private String imageContentType;
-    private Long imageSize;
+    private String imageUrl;
     private Integer displayOrder;
     private BannerStatus status;
     private LocalDateTime createdAt;

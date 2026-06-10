@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.service.impl;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -16,10 +15,12 @@ import com.ticket.ticket_booking_system.entity.Banner;
 import com.ticket.ticket_booking_system.entity.Banner.BannerStatus;
 import com.ticket.ticket_booking_system.repository.BannerRepository;
 import com.ticket.ticket_booking_system.service.BannerService;
-import com.ticket.ticket_booking_system.service.AdminAuditService;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.service.AdminAuditService;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.service.FileUploadService;
+import com.ticket.ticket_booking_system.service.FileUploadService.CloudinaryUploadResult;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -35,10 +36,11 @@ import lombok.extern.slf4j.Slf4j;
 public class BannerServiceImpl implements BannerService {
 
     private final BannerRepository bannerRepository;
-    private final AdminAuditService auditService;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final FileUploadService fileUploadService;
+    private final AdminAuditService auditService;
     private static final long MAX_FILE_SIZE = 5_242_880; // 5MB
 
     @Override
@@ -50,17 +52,15 @@ public class BannerServiceImpl implements BannerService {
             
             validateImageFile(imageFile);
 
-            byte[] imageData = imageFile.getBytes();
+            CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(imageFile);
             
             Integer displayOrder = request.getDisplayOrder() != null ? request.getDisplayOrder() : 0;
 
             Banner banner = Banner.builder()
                     .title(request.getTitle())
                     .description(request.getDescription())
-                    .imageData(imageData)
-                    .imageFileName(imageFile.getOriginalFilename())
-                    .imageContentType(imageFile.getContentType())
-                    .imageSize(imageFile.getSize())
+                    .imageUrl(uploadResult.url())
+                    .publicId(uploadResult.publicId())
                     .displayOrder(displayOrder)
                     .status(BannerStatus.ACTIVE)
                     .build();
@@ -94,10 +94,12 @@ public class BannerServiceImpl implements BannerService {
 
             if (imageFile != null && !imageFile.isEmpty()) {
                 validateImageFile(imageFile);
-                banner.setImageData(imageFile.getBytes());
-                banner.setImageFileName(imageFile.getOriginalFilename());
-                banner.setImageContentType(imageFile.getContentType());
-                banner.setImageSize(imageFile.getSize());
+                if (banner.getPublicId() != null) {
+                    fileUploadService.deleteImage(banner.getPublicId());
+                }
+                CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(imageFile);
+                banner.setImageUrl(uploadResult.url());
+                banner.setPublicId(uploadResult.publicId());
             }
 
             banner = bannerRepository.save(banner);
@@ -120,10 +122,7 @@ public class BannerServiceImpl implements BannerService {
                         .bannerId(item.getBannerId())
                         .title(item.getTitle())
                         .description(item.getDescription())
-                        .imageBase64(null) // Don't include full image data for list endpoints
-                        .imageFileName(item.getImageFileName())
-                        .imageContentType(item.getImageContentType())
-                        .imageSize(item.getImageSize())
+                        .imageUrl(item.getImageUrl())
                         .displayOrder(item.getDisplayOrder())
                         .status(item.getStatus())
                         .createdAt(item.getCreatedAt())
@@ -140,10 +139,7 @@ public class BannerServiceImpl implements BannerService {
                         .bannerId(item.getBannerId())
                         .title(item.getTitle())
                         .description(item.getDescription())
-                        .imageBase64(null) // Don't include full image data for list endpoints
-                        .imageFileName(item.getImageFileName())
-                        .imageContentType(item.getImageContentType())
-                        .imageSize(item.getImageSize())
+                        .imageUrl(item.getImageUrl())
                         .displayOrder(item.getDisplayOrder())
                         .status(item.getStatus())
                         .createdAt(item.getCreatedAt())
@@ -159,10 +155,7 @@ public class BannerServiceImpl implements BannerService {
                         .bannerId(item.getBannerId())
                         .title(item.getTitle())
                         .description(item.getDescription())
-                        .imageBase64(null) // Don't include full image data for list endpoints
-                        .imageFileName(item.getImageFileName())
-                        .imageContentType(item.getImageContentType())
-                        .imageSize(item.getImageSize())
+                        .imageUrl(item.getImageUrl())
                         .displayOrder(item.getDisplayOrder())
                         .status(item.getStatus())
                         .createdAt(item.getCreatedAt())
@@ -181,6 +174,13 @@ public class BannerServiceImpl implements BannerService {
     public void deleteBanner(UUID bannerId) {
         Banner banner = bannerRepository.findById(bannerId)
                 .orElseThrow(() -> new RuntimeException("Banner not found"));
+        if (banner.getPublicId() != null) {
+            try {
+                fileUploadService.deleteImage(banner.getPublicId());
+            } catch (Exception e) {
+                log.error("Failed to delete banner image from Cloudinary", e);
+            }
+        }
         bannerRepository.delete(banner);
         log.info("Banner deleted: {}", bannerId);
         auditService.logAction(getCurrentUserId(), "DELETE_BANNER", "BANNER", bannerId, "Deleted banner: " + banner.getTitle());
@@ -212,18 +212,11 @@ public class BannerServiceImpl implements BannerService {
     }
 
     private BannerResponse convertToResponse(Banner banner) {
-        String imageBase64 = banner.getImageData() != null 
-            ? "data:" + banner.getImageContentType() + ";base64," + Base64.getEncoder().encodeToString(banner.getImageData())
-            : null;
-
         return BannerResponse.builder()
                 .bannerId(banner.getBannerId())
                 .title(banner.getTitle())
                 .description(banner.getDescription())
-                .imageBase64(imageBase64)
-                .imageFileName(banner.getImageFileName())
-                .imageContentType(banner.getImageContentType())
-                .imageSize(banner.getImageSize())
+                .imageUrl(banner.getImageUrl())
                 .displayOrder(banner.getDisplayOrder())
                 .status(banner.getStatus())
                 .createdAt(banner.getCreatedAt())

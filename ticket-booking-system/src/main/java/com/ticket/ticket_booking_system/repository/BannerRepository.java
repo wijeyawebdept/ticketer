@@ -31,24 +31,24 @@ public interface BannerRepository extends JpaRepository<Banner, UUID> {
 
     // Optimized query for list endpoints - excludes large LOB data
     @Query("SELECT NEW com.ticket.ticket_booking_system.dto.response.BannerListItemResponse(" +
-            "b.bannerId, b.title, b.description, b.imageFileName, " +
-            "b.imageContentType, b.imageSize, b.displayOrder, b.status, " +
+            "b.bannerId, b.title, b.description, b.imageUrl, " +
+            "b.displayOrder, b.status, " +
             "b.createdAt, b.updatedAt) " +
             "FROM Banner b ORDER BY b.displayOrder ASC")
     Page<BannerListItemResponse> findAllBannersForList(Pageable pageable);
 
     // Optimized query for status filtering - excludes large LOB data
     @Query("SELECT NEW com.ticket.ticket_booking_system.dto.response.BannerListItemResponse(" +
-            "b.bannerId, b.title, b.description, b.imageFileName, " +
-            "b.imageContentType, b.imageSize, b.displayOrder, b.status, " +
+            "b.bannerId, b.title, b.description, b.imageUrl, " +
+            "b.displayOrder, b.status, " +
             "b.createdAt, b.updatedAt) " +
             "FROM Banner b WHERE b.status = :status ORDER BY b.displayOrder ASC")
     Page<BannerListItemResponse> findByStatusForList(@Param("status") BannerStatus status, Pageable pageable);
 
     // Optimized query for public endpoint - returns active banners without large LOB data
     @Query("SELECT NEW com.ticket.ticket_booking_system.dto.response.BannerListItemResponse(" +
-            "b.bannerId, b.title, b.description, b.imageFileName, " +
-            "b.imageContentType, b.imageSize, b.displayOrder, b.status, " +
+            "b.bannerId, b.title, b.description, b.imageUrl, " +
+            "b.displayOrder, b.status, " +
             "b.createdAt, b.updatedAt) " +
             "FROM Banner b WHERE b.status = 'ACTIVE' ORDER BY b.displayOrder ASC")
     List<BannerListItemResponse> findAllActiveBannersForPublic();

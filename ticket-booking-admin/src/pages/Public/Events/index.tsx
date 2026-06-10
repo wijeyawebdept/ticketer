@@ -25,6 +25,7 @@ import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import { Event } from '../../../types';
+import { getAssetUrl } from '../../../utils/formatters';
 
 const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
@@ -310,7 +311,7 @@ const Events: React.FC = () => {
                       <CardMedia
                         component="img"
                         height="200"
-                        image={event.imageUrl ? `http://localhost:8081/${event.imageUrl}` : '/images/default-event.jpg'}
+                        image={event.imageUrl ? getAssetUrl(event.imageUrl) : '/images/default-event.jpg'}
                         alt={event.name}
                         sx={{ objectFit: 'cover' }}
                       />

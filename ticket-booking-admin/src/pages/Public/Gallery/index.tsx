@@ -145,7 +145,7 @@ const Gallery: React.FC = () => {
                         <div>
                           <Box
                             component="img"
-                            src={item.imageBase64 || ''}
+                            src={item.imageUrl || ''}
                             alt={item.title || 'Gallery photo'}
                             sx={{
                               width: '100%',

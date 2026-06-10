@@ -40,17 +40,11 @@ public class GalleryImage {
     @Column(nullable = false, length = 100)
     private String category;
 
-    @Column(columnDefinition = "bytea")
-    private byte[] imageData;
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
 
-    @Column(nullable = false)
-    private String imageFileName;
-
-    @Column(nullable = false)
-    private String imageContentType;
-
-    @Column(nullable = false)
-    private Long imageSize;
+    @Column(name = "public_id")
+    private String publicId;
 
     @Column(nullable = false)
     private Integer displayOrder;

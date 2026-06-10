@@ -25,6 +25,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
+import { getAssetUrl } from '../../../utils/formatters';
 import EventService from '../../../services/event.service';
 import EventScheduleService from '../../../services/eventSchedule.service';
 import { Event, EventSchedule } from '../../../types';
@@ -530,7 +532,7 @@ const EventDetails: React.FC = () => {
                 >
                   <Box
                     component="img"
-                    src={`http://localhost:8081/${event.imageUrl}`}
+                    src={getAssetUrl(event.imageUrl)}
                     alt={event.name}
                     sx={{
                       display: 'block',

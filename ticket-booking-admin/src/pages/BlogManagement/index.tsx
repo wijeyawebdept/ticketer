@@ -293,8 +293,8 @@ const BlogManagement: React.FC = () => {
                 posts.map((post) => (
                   <TableRow key={post.postId} hover>
                     <TableCell>
-                      {post.coverImageBase64 ? (
-                        <Box component="img" src={post.coverImageBase64} sx={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 1 }} />
+                      {post.coverImageUrl ? (
+                        <Box component="img" src={post.coverImageUrl} sx={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 1 }} />
                       ) : (
                         <Box sx={{ width: 72, height: 52, bgcolor: '#eee', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa' }}></Box>
                       )}
@@ -380,7 +380,7 @@ const BlogManagement: React.FC = () => {
                           '&:hover': { borderColor: '#ff1955' }
                         }}
                       >
-                        <Box component="img" src={img.imageBase64} sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} />
+                        <Box component="img" src={img.imageUrl} sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 1 }} />
                         <IconButton size="small" onClick={() => handleDeleteExistingImage(img.imageId)}
                           sx={{ position: 'absolute', top: -6, right: -6, bgcolor: '#ff1955', color: '#fff', width: 20, height: 20, p: 0, '&:hover': { bgcolor: '#c0003a' } }}>
                           ×
@@ -473,7 +473,7 @@ const BlogManagement: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ mt: 3, mb: 1 }}>Images</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {selectedPost.images.map((img: any, i: number) => (
-                    <Box key={i} component="img" src={img.imageBase64} 
+                    <Box key={i} component="img" src={img.imageUrl} 
                          sx={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 1, border: '1px solid #ddd' }} />
                   ))}
                   {selectedPost.images.length === 0 && <Typography variant="caption">No images.</Typography>}

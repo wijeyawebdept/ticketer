@@ -40,7 +40,7 @@ const PostDetail: React.FC = () => {
         setPost(data);
         setLiked(data.likedByCurrentUser);
         setLikeCount(data.likeCount);
-        if (data.images.length > 0) setSelectedImage(data.images[0].imageBase64);
+        if (data.images.length > 0) setSelectedImage(data.images[0].imageUrl);
       })
       .catch(() => setError('Failed to load post.'))
       .finally(() => setLoading(false));
@@ -172,7 +172,7 @@ const PostDetail: React.FC = () => {
                 {/* Main large image */}
                 <Box
                   component="img"
-                  src={selectedImage || post.images[0].imageBase64}
+                  src={selectedImage || post.images[0].imageUrl}
                   alt={post.title}
                   sx={{
                     width: '100%',
@@ -195,9 +195,9 @@ const PostDetail: React.FC = () => {
                       <Box
                         key={img.imageId}
                         component="img"
-                        src={img.imageBase64}
+                        src={img.imageUrl}
                         alt=""
-                        onClick={() => setSelectedImage(img.imageBase64)}
+                        onClick={() => setSelectedImage(img.imageUrl)}
                         sx={{
                           width: 100,
                           height: 70,
@@ -205,10 +205,10 @@ const PostDetail: React.FC = () => {
                           borderRadius: 1.5,
                           flexShrink: 0,
                           cursor: 'pointer',
-                          border: selectedImage === img.imageBase64
+                          border: selectedImage === img.imageUrl
                             ? '2px solid #ff1955'
                             : '2px solid transparent',
-                          opacity: selectedImage === img.imageBase64 ? 1 : 0.6,
+                          opacity: selectedImage === img.imageUrl ? 1 : 0.6,
                           transition: 'all 0.2s ease',
                           '&:hover': { opacity: 1, border: '2px solid rgba(255,25,85,0.6)' },
                         }}

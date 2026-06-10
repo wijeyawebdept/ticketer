@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.service.impl;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -36,6 +35,8 @@ import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.BlogService;
 import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.RecycleBinService;
+import com.ticket.ticket_booking_system.service.FileUploadService;
+import com.ticket.ticket_booking_system.service.FileUploadService.CloudinaryUploadResult;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,7 @@ public class BlogServiceImpl implements BlogService {
     private final EmailService emailService;
     private final RecycleBinService recycleBinService;
     private final AdminAuditService auditService;
+    private final FileUploadService fileUploadService;
 
     // ---- Admin Operations ----
 
@@ -74,12 +76,11 @@ public class BlogServiceImpl implements BlogService {
             for (MultipartFile file : images) {
                 if (!file.isEmpty()) {
                     try {
+                        CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(file);
                         BlogPostImage img = BlogPostImage.builder()
                                 .post(post)
-                                .imageData(file.getBytes())
-                                .imageFileName(file.getOriginalFilename())
-                                .imageContentType(file.getContentType())
-                                .imageSize(file.getSize())
+                                .imageUrl(uploadResult.url())
+                                .publicId(uploadResult.publicId())
                                 .displayOrder(order++)
                                 .build();
                         imageRepo.save(img);
@@ -110,12 +111,11 @@ public class BlogServiceImpl implements BlogService {
             for (MultipartFile file : newImages) {
                 if (!file.isEmpty()) {
                     try {
+                        CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(file);
                         BlogPostImage img = BlogPostImage.builder()
                                 .post(post)
-                                .imageData(file.getBytes())
-                                .imageFileName(file.getOriginalFilename())
-                                .imageContentType(file.getContentType())
-                                .imageSize(file.getSize())
+                                .imageUrl(uploadResult.url())
+                                .publicId(uploadResult.publicId())
                                 .displayOrder(order++)
                                 .build();
                         imageRepo.save(img);
@@ -202,7 +202,16 @@ public class BlogServiceImpl implements BlogService {
         BlogPostImage img = imageRepo.findById(imageId)
                 .orElseThrow(() -> new RuntimeException("Image not found: " + imageId));
         BlogPost post = img.getPost();
-        auditService.logAction(getCurrentUserId(), "DELETE_BLOG_IMAGE", "BLOG", post.getPostId(), "Deleted blog image " + img.getImageFileName() + " from post: " + post.getTitle());
+        
+        if (img.getPublicId() != null) {
+            try {
+                fileUploadService.deleteImage(img.getPublicId());
+            } catch (Exception e) {
+                log.error("Failed to delete blog image from Cloudinary", e);
+            }
+        }
+        
+        auditService.logAction(getCurrentUserId(), "DELETE_BLOG_IMAGE", "BLOG", post.getPostId(), "Deleted blog image from post: " + post.getTitle());
         imageRepo.deleteById(imageId);
     }
 
@@ -341,15 +350,9 @@ public class BlogServiceImpl implements BlogService {
 
     private BlogPostSummaryResponse toSummary(BlogPost post) {
         List<BlogPostImage> images = imageRepo.findByPost_PostIdOrderByDisplayOrderAsc(post.getPostId());
-        String coverBase64 = null;
-        String coverContentType = null;
+        String coverImageUrl = null;
         if (!images.isEmpty()) {
-            byte[] imageData = images.get(0).getImageData();
-            if (imageData != null && imageData.length > 0) {
-                coverBase64 = "data:" + images.get(0).getImageContentType() + ";base64,"
-                        + Base64.getEncoder().encodeToString(imageData);
-                coverContentType = images.get(0).getImageContentType();
-            }
+            coverImageUrl = images.get(0).getImageUrl();
         }
         return new BlogPostSummaryResponse(
                 post.getPostId().toString(),
@@ -358,21 +361,16 @@ public class BlogServiceImpl implements BlogService {
                 post.isPublished(),
                 post.getLikeCount(),
                 post.getCommentCount(),
-                coverBase64,
-                coverContentType,
+                coverImageUrl,
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
     }
 
     private BlogImageResponse toImageResponse(BlogPostImage img) {
-        byte[] data = img.getImageData();
-        String base64 = (data != null && data.length > 0) ? "data:" + img.getImageContentType() + ";base64,"
-                + Base64.getEncoder().encodeToString(data) : null;
         return new BlogImageResponse(
                 img.getImageId().toString(),
-                base64,
-                img.getImageContentType(),
+                img.getImageUrl(),
                 img.getDisplayOrder()
         );
     }

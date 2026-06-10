@@ -5,10 +5,7 @@ export interface GalleryImage {
   title?: string;
   description?: string;
   category: string;
-  imageBase64?: string;
-  imageFileName: string;
-  imageContentType: string;
-  imageSize: number;
+  imageUrl?: string;
   displayOrder: number;
   active: boolean;
   createdAt: string;

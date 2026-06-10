@@ -1,65 +1,74 @@
 package com.ticket.ticket_booking_system.service;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.ticket.ticket_booking_system.exception.BadRequestException;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class FileUploadService {
     
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
+    private final Cloudinary cloudinary;
+    
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     
-    @Value("${app.upload.profile-pictures:uploads/profile-pictures}")
-    private String uploadDir;
+    // Simple record to hold the upload result
+    public record CloudinaryUploadResult(String url, String publicId) {}
     
     public String uploadProfilePicture(MultipartFile file) throws IOException {
-        validateFile(file);
-        
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-        
-        // Generate unique filename
-        String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        String fileExtension = getFileExtension(originalFilename);
-        String newFilename = UUID.randomUUID().toString() + "." + fileExtension;
-        
-        // Save file
-        Path filePath = uploadPath.resolve(newFilename);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        
-        // Return relative path for storage in database
-        return uploadDir + "/" + newFilename;
+        CloudinaryUploadResult result = uploadImage(file);
+        return result.url();
     }
     
-    public void deleteProfilePicture(String profilePicturePath) throws IOException {
-    if (profilePicturePath == null || profilePicturePath.isBlank()) return;
+    public void deleteProfilePicture(String profilePictureUrl) throws IOException {
+        if (profilePictureUrl == null || profilePictureUrl.isBlank()) return;
 
-    // If stored value is a URL (google avatar etc.), don't treat it as a local file path
-    String lower = profilePicturePath.toLowerCase();
-    if (lower.startsWith("http://") || lower.startsWith("https://")) {
-        return;
+        // If it's a Cloudinary URL, we can extract the public ID to delete it
+        if (profilePictureUrl.contains("res.cloudinary.com")) {
+            try {
+                // Example URL: http://res.cloudinary.com/dstam7xm9/image/upload/v1234567/sample.jpg
+                String[] parts = profilePictureUrl.split("/");
+                String fileWithExtension = parts[parts.length - 1];
+                String publicId = fileWithExtension.split("\\.")[0];
+                deleteImage(publicId);
+            } catch (Exception e) {
+                log.error("Failed to delete Cloudinary profile picture: " + profilePictureUrl, e);
+            }
+        }
     }
-
-    Path filePath = Paths.get(profilePicturePath);
-    if (Files.exists(filePath)) {
-        Files.delete(filePath);
+    
+    public CloudinaryUploadResult uploadImage(MultipartFile file) throws IOException {
+        validateFile(file);
+        
+        // Upload to Cloudinary
+        @SuppressWarnings("rawtypes")
+        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+        
+        String url = uploadResult.get("secure_url").toString();
+        String publicId = uploadResult.get("public_id").toString();
+        
+        return new CloudinaryUploadResult(url, publicId);
     }
+    
+    public void deleteImage(String publicId) throws IOException {
+        if (publicId == null || publicId.isBlank()) return;
+        
+        @SuppressWarnings("rawtypes")
+        Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        log.info("Cloudinary delete result for {}: {}", publicId, result.get("result"));
     }
     
     private void validateFile(MultipartFile file) {
@@ -78,7 +87,7 @@ public class FileUploadService {
         
         String fileExtension = getFileExtension(originalFilename).toLowerCase();
         if (!ALLOWED_EXTENSIONS.contains(fileExtension)) {
-            throw new BadRequestException("Only JPG, JPEG, PNG, and GIF files are allowed");
+            throw new BadRequestException("Only JPG, JPEG, PNG, WEBP, and GIF files are allowed");
         }
     }
     

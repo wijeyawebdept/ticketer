@@ -17,10 +17,7 @@ public class GalleryResponse {
     private String title;
     private String description;
     private String category;
-    private String imageBase64;
-    private String imageFileName;
-    private String imageContentType;
-    private Long imageSize;
+    private String imageUrl;
     private Integer displayOrder;
     private boolean active;
     private LocalDateTime createdAt;

@@ -95,11 +95,11 @@ const Blog: React.FC = () => {
                     },
                   }}
                 >
-                  {post.coverImageBase64 ? (
+                  {post.coverImageUrl ? (
                     <CardMedia
                       component="img"
                       height="200"
-                      image={post.coverImageBase64}
+                      image={post.coverImageUrl}
                       alt={post.title}
                       sx={{ objectFit: 'cover', borderRadius: '12px 12px 0 0' }}
                     />

@@ -167,7 +167,7 @@ export default function BannersPage() {
   const fetchFullBannerForPreview = async (bannerId: string) => {
     try {
       const fullBanner = await BannerService.getBannerById(bannerId);
-      setImagePreview(fullBanner.imageBase64);
+      setImagePreview(fullBanner.imageUrl);
     } catch (err) {
       setImagePreview(null);
     }
@@ -359,9 +359,9 @@ export default function BannersPage() {
                 banners.map((banner) => (
                   <TableRow key={banner.bannerId} hover>
                     <TableCell>
-                      {banner.imageBase64 ? (
+                      {banner.imageUrl ? (
                         <img
-                          src={banner.imageBase64}
+                          src={banner.imageUrl}
                           alt={banner.title}
                           style={{
                             width: '80px',
@@ -717,7 +717,7 @@ export default function BannersPage() {
                     />
                   </Box>
                   <Box sx={{ mb: 1 }}>
-                    <strong>Size:</strong> {currentBanner?.imageSize} bytes
+
                   </Box>
                   <Box>
                     <strong>Updated:</strong> {formatDate(currentBanner?.updatedAt || '')}

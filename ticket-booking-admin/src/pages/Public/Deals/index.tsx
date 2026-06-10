@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import dealService from '../../../services/deal.service';
+import { getAssetUrl } from '../../../utils/formatters';
 import { TicketCategoryDeal } from '../../../types';
 
 // Group deals by eventId
@@ -249,7 +250,7 @@ const Deals: React.FC = () => {
                       height="210"
                       image={
                         firstDeal.eventImageUrl
-                          ? `http://localhost:8081/${firstDeal.eventImageUrl}`
+                          ? getAssetUrl(firstDeal.eventImageUrl)
                           : '/images/default-event.jpg'
                       }
                       alt={firstDeal.eventName}

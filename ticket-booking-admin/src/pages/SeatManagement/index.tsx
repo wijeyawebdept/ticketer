@@ -934,45 +934,6 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
         </CardContent>
       </Card>
 
-      {/* Live Monitoring Banner (when schedule is selected) */}
-      {selectedSchedule && (
-        <Alert
-          severity="info"
-          icon={<NotificationsActive />}
-          sx={{
-            mb: 3,
-            backgroundColor: '#e3f2fd',
-            border: '2px solid #2196f3',
-            '& .MuiAlert-message': {
-              width: '100%'
-            }
-          }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              startIcon={<Refresh />}
-              onClick={() => {
-                if (selectedSchedule) {
-                  loadSeatAvailability(selectedSchedule.scheduleId);
-                  setSuccess('Refreshed seat availability');
-                }
-              }}
-            >
-              Refresh
-            </Button>
-          }
-        >
-          <Typography variant="body2" fontWeight="bold" gutterBottom>
-            LIVE MONITORING: Real-time Customer Seat Selection
-          </Typography>
-          <Typography variant="body2">
-            You are viewing live seat availability for this schedule. Orange seats with  icon are being held by customers during their booking process.
-            Red seats ✓ are confirmed bookings (sold tickets).
-          </Typography>
-        </Alert>
-      )}
-
       {/* Venue Information */}
       {selectedEvent && selectedEvent.venue && (
         <Card sx={{ mb: 3 }}>

@@ -256,7 +256,7 @@ const Home: React.FC = () => {
 
   // Get carousel images - use banners if available, fallback to default images
   const carouselImages = banners.length > 0 
-    ? banners.map(banner => banner.imageBase64)
+    ? banners.map(banner => banner.imageUrl)
     : ['/images/1.jpg', '/images/2.jpg', '/images/3.jpg'];
 
   // Load banners on component mount - always fetch fresh data without cache
@@ -282,7 +282,7 @@ const Home: React.FC = () => {
           // Filter out any banners that failed to load (e.g., deactivated)
           // and only keep banners with image data
           const validBanners = fullBannersWithImages.filter(
-            (banner): banner is BannerResponse => banner !== null && banner.imageBase64 !== undefined
+            (banner): banner is BannerResponse => banner !== null && banner.imageUrl !== undefined
           );
           
           setBanners(validBanners);

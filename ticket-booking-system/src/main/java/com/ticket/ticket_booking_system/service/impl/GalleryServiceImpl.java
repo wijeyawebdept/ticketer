@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.service.impl;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -19,6 +18,8 @@ import com.ticket.ticket_booking_system.service.AdminAuditService;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.service.FileUploadService;
+import com.ticket.ticket_booking_system.service.FileUploadService.CloudinaryUploadResult;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -38,6 +39,7 @@ public class GalleryServiceImpl implements GalleryService {
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
+    private final FileUploadService fileUploadService;
     private static final long MAX_FILE_SIZE = 5_242_880; // 5MB
 
     @Override
@@ -49,7 +51,7 @@ public class GalleryServiceImpl implements GalleryService {
             
             validateImageFile(imageFile);
 
-            byte[] imageData = imageFile.getBytes();
+            CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(imageFile);
             Integer displayOrder = request.getDisplayOrder() != null ? request.getDisplayOrder() : 0;
             String category = request.getCategory() != null ? request.getCategory().trim() : "Uncategorized";
 
@@ -57,10 +59,8 @@ public class GalleryServiceImpl implements GalleryService {
                     .title(request.getTitle())
                     .description(request.getDescription())
                     .category(category)
-                    .imageData(imageData)
-                    .imageFileName(imageFile.getOriginalFilename())
-                    .imageContentType(imageFile.getContentType())
-                    .imageSize(imageFile.getSize())
+                    .imageUrl(uploadResult.url())
+                    .publicId(uploadResult.publicId())
                     .displayOrder(displayOrder)
                     .active(true)
                     .build();
@@ -97,10 +97,12 @@ public class GalleryServiceImpl implements GalleryService {
 
             if (imageFile != null && !imageFile.isEmpty()) {
                 validateImageFile(imageFile);
-                galleryImage.setImageData(imageFile.getBytes());
-                galleryImage.setImageFileName(imageFile.getOriginalFilename());
-                galleryImage.setImageContentType(imageFile.getContentType());
-                galleryImage.setImageSize(imageFile.getSize());
+                if (galleryImage.getPublicId() != null) {
+                    fileUploadService.deleteImage(galleryImage.getPublicId());
+                }
+                CloudinaryUploadResult uploadResult = fileUploadService.uploadImage(imageFile);
+                galleryImage.setImageUrl(uploadResult.url());
+                galleryImage.setPublicId(uploadResult.publicId());
             }
 
             galleryImage = galleryImageRepository.save(galleryImage);
@@ -130,10 +132,7 @@ public class GalleryServiceImpl implements GalleryService {
                         .title(item.getTitle())
                         .description(item.getDescription())
                         .category(item.getCategory())
-                        .imageBase64(null) // Omit base64 data for admin list view to save memory
-                        .imageFileName(item.getImageFileName())
-                        .imageContentType(item.getImageContentType())
-                        .imageSize(item.getImageSize())
+                        .imageUrl(item.getImageUrl())
                         .displayOrder(item.getDisplayOrder())
                         .active(item.isActive())
                         .createdAt(item.getCreatedAt())
@@ -152,6 +151,13 @@ public class GalleryServiceImpl implements GalleryService {
     public void deleteGalleryImage(UUID galleryId) {
         GalleryImage galleryImage = galleryImageRepository.findById(galleryId)
                 .orElseThrow(() -> new RuntimeException("Gallery image not found"));
+        if (galleryImage.getPublicId() != null) {
+            try {
+                fileUploadService.deleteImage(galleryImage.getPublicId());
+            } catch (Exception e) {
+                log.error("Failed to delete gallery image from Cloudinary", e);
+            }
+        }
         galleryImageRepository.delete(galleryImage);
         log.info("Gallery image deleted: {}", galleryId);
         auditService.logAction(getCurrentUserId(), "DELETE_GALLERY_IMAGE", "GALLERY", galleryId, "Deleted gallery image: " + galleryImage.getTitle());
@@ -183,19 +189,12 @@ public class GalleryServiceImpl implements GalleryService {
     }
 
     private GalleryResponse convertToResponse(GalleryImage galleryImage) {
-        String imageBase64 = (galleryImage.getImageData() != null && galleryImage.getImageData().length > 0)
-            ? "data:" + galleryImage.getImageContentType() + ";base64," + Base64.getEncoder().encodeToString(galleryImage.getImageData())
-            : null;
-
         return GalleryResponse.builder()
                 .galleryId(galleryImage.getGalleryId())
                 .title(galleryImage.getTitle())
                 .description(galleryImage.getDescription())
                 .category(galleryImage.getCategory())
-                .imageBase64(imageBase64)
-                .imageFileName(galleryImage.getImageFileName())
-                .imageContentType(galleryImage.getImageContentType())
-                .imageSize(galleryImage.getImageSize())
+                .imageUrl(galleryImage.getImageUrl())
                 .displayOrder(galleryImage.getDisplayOrder())
                 .active(galleryImage.isActive())
                 .createdAt(galleryImage.getCreatedAt())

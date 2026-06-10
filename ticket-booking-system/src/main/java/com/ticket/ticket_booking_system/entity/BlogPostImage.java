@@ -37,17 +37,13 @@ public class BlogPostImage {
     @JoinColumn(name = "post_id", nullable = false)
     private BlogPost post;
 
-    @Column(columnDefinition = "bytea")
-    private byte[] imageData;
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
 
-    @Column(nullable = false)
-    private String imageFileName;
+    @Column(name = "public_id")
+    private String publicId;
 
-    @Column(nullable = false)
-    private String imageContentType;
 
-    @Column(nullable = false)
-    private Long imageSize;
 
     @Column(nullable = false)
     @Builder.Default

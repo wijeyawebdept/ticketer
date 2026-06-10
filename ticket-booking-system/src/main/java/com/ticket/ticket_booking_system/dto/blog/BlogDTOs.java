@@ -17,8 +17,7 @@ public class BlogDTOs {
 
     public record BlogImageResponse(
         String imageId,
-        String imageBase64,
-        String imageContentType,
+        String imageUrl,
         int displayOrder
     ) {}
 
@@ -37,8 +36,7 @@ public class BlogDTOs {
         boolean published,
         int likeCount,
         int commentCount,
-        String coverImageBase64,
-        String coverImageContentType,
+        String coverImageUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
     ) {}

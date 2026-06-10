@@ -4,10 +4,8 @@ export interface BannerResponse {
   bannerId: string;
   title: string;
   description: string;
-  imageBase64: string;
-  imageFileName: string;
-  imageContentType: string;
-  imageSize: number;
+  imageUrl: string;
+
   displayOrder: number;
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
   createdAt: string;
