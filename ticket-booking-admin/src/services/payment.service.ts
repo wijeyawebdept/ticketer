@@ -24,6 +24,7 @@ export interface InitiatePaymentRequest {
   sharedAreaTickets?: SharedAreaTicketRequest[];
   totalAmount: number;
   discountAmount?: number;
+  discountInfo?: string;
   currency: string;
   customerInfo: CustomerInfo;
 
@@ -52,6 +53,8 @@ export interface PaymentVerificationResponse {
   bookingReference?: string;
   message: string;
   amount?: number;
+  discountAmount?: number;
+  discountInfo?: string;
   paymentMethod?: string;
   // Receipt fields
   eventName?: string;

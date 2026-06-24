@@ -223,6 +223,8 @@ export interface Booking {
   bookingDate?: string; // Keep for backward compatibility
   status: BookingStatus;
   totalAmount: number;
+  discountAmount?: number;
+  discountInfo?: string;
   ticketCount: number;
   attended?: boolean;
   

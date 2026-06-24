@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -165,10 +165,27 @@
         </div>
 
         <div class="amount-box">
-            <span class="amount-label">Total Amount Paid</span>
-            <span class="amount-value">
-                <span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">0.00</span>
-            </span>
+            <div th:if="${discountAmount != null && discountAmount > 0}" style="margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #666; font-size: 14px;">Subtotal</span>
+                    <span style="color: #666; font-size: 14px;">
+                        <span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(totalAmount + discountAmount, 1, 2)}">0.00</span>
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span style="color: #198754; font-size: 14px;" th:text="${discountInfo != null ? 'Discount (' + discountInfo + ')' : 'Discount'}">Discount</span>
+                    <span style="color: #198754; font-size: 14px;">
+                        -<span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(discountAmount, 1, 2)}">0.00</span>
+                    </span>
+                </div>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 8px 0;" />
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="amount-label">Total Amount Paid</span>
+                <span class="amount-value">
+                    <span th:text="${currency}">LKR</span>&nbsp;<span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">0.00</span>
+                </span>
+            </div>
         </div>
 
         <div class="section">

@@ -284,10 +284,12 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   const [totalDiscount, setTotalDiscount] = useState(0);
+  const [discountInfoString, setDiscountInfoString] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let newTotal = 0;
     let newTotalDiscount = 0;
+    const dealDescriptions = new Set<string>();
 
     // Group selected seats by category using a Map to prevent CWE-94 Prototype Pollution
     const seatsByCategory = new Map<string, any[]>();
@@ -312,12 +314,14 @@ const SeatSelectionPage: React.FC = () => {
           const discountPerTicket = basePrice * (sample.dealDiscountPercentage / 100);
           newTotalDiscount += discountPerTicket * count;
           newTotal += (basePrice - discountPerTicket) * count;
+          dealDescriptions.add(sample.dealLabel || `${sample.dealDiscountPercentage}% Off`);
         } else if (sample.dealType === 'BUY_X_GET_Y_FREE' && sample.dealBuyQuantity && sample.dealFreeQuantity) {
           const groupSize = sample.dealBuyQuantity + sample.dealFreeQuantity;
           const freeItems = Math.floor(count / groupSize) * sample.dealFreeQuantity;
           newTotalDiscount += basePrice * freeItems;
           const payableItems = count - freeItems;
           newTotal += basePrice * payableItems;
+          dealDescriptions.add(sample.dealLabel || `Buy ${sample.dealBuyQuantity} Get ${sample.dealFreeQuantity} Free`);
         } else {
           newTotal += basePrice * count;
         }
@@ -337,12 +341,14 @@ const SeatSelectionPage: React.FC = () => {
           const discountPerTicket = basePrice * (deal.dealDiscountPercentage / 100);
           newTotalDiscount += discountPerTicket * count;
           newTotal += (basePrice - discountPerTicket) * count;
+          dealDescriptions.add(deal.dealLabel || `${deal.dealDiscountPercentage}% Off`);
         } else if (deal.dealType === 'BUY_X_GET_Y_FREE' && deal.dealBuyQuantity && deal.dealFreeQuantity) {
           const groupSize = deal.dealBuyQuantity + deal.dealFreeQuantity;
           const freeItems = Math.floor(count / groupSize) * deal.dealFreeQuantity;
           newTotalDiscount += basePrice * freeItems;
           const payableItems = count - freeItems;
           newTotal += basePrice * payableItems;
+          dealDescriptions.add(deal.dealLabel || `Buy ${deal.dealBuyQuantity} Get ${deal.dealFreeQuantity} Free`);
         } else {
           newTotal += basePrice * count;
         }
@@ -353,6 +359,7 @@ const SeatSelectionPage: React.FC = () => {
 
     setTotalPrice(newTotal);
     setTotalDiscount(newTotalDiscount);
+    setDiscountInfoString(dealDescriptions.size > 0 ? Array.from(dealDescriptions).join(', ') : undefined);
   }, [sharedAreaSelections, selectedSeatDetails]);
 
   const calculateTotalPrice = async (seatIds: string[]) => {
@@ -459,6 +466,7 @@ const SeatSelectionPage: React.FC = () => {
         })),
         totalAmount: finalAmount,
         discountAmount: totalDiscount,
+        discountInfo: discountInfoString,
         currency: 'LKR',
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -579,7 +587,7 @@ const SeatSelectionPage: React.FC = () => {
         <VenueSeatMap
           venueId={venueId}
           eventScheduleId={eventScheduleId!}
-          onSeatSelect={setSelectedSeats}
+          onSeatSelect={handleSeatSelect}
           onSharedAreaSelect={handleSharedAreaSelect}
           selectedSeats={selectedSeats}
           bookedSeats={[]}
@@ -631,6 +639,19 @@ const SeatSelectionPage: React.FC = () => {
                     </React.Fragment>
                   ))}
 
+                  {totalDiscount > 0 && (
+                    <>
+                      <div className="summary-row">
+                        <span style={{ color: '#aaa' }}>{t('subtotalLabel', 'Subtotal:')}</span>
+                        <strong style={{ color: '#aaa' }}>{(totalPrice + totalDiscount).toLocaleString()} LKR</strong>
+                      </div>
+                      <div className="summary-row" style={{ color: '#4caf50' }}>
+                        <span>{discountInfoString ? `Discount (${discountInfoString}):` : t('discountLabel', 'Discount:')}</span>
+                        <strong>-{totalDiscount.toLocaleString()} LKR</strong>
+                      </div>
+                      <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '10px 0' }} />
+                    </>
+                  )}
                   <div className="summary-row total">
                     <span>{t('totalPriceLabel', 'Total Price:')}</span>
                     <strong>{totalPrice.toLocaleString()} LKR</strong>
@@ -892,8 +913,20 @@ const SeatSelectionPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2">{t('subTotal', 'Sub Total')}</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{totalPrice.toLocaleString()} LKR</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice).toLocaleString()} LKR
+                  </Typography>
                 </Box>
+                {totalDiscount > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#4caf50' }}>
+                      {discountInfoString ? `Discount (${discountInfoString})` : t('discount', 'Discount')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
+                      -{totalDiscount.toLocaleString()} LKR
+                    </Typography>
+                  </Box>
+                )}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="body2">{t('handlingFee', 'Handling fee')}</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>100 LKR</Typography>

@@ -40,6 +40,8 @@ public class InitiatePaymentRequest {
 
     private BigDecimal discountAmount;
 
+    private String discountInfo;
+
     @Builder.Default
     private String currency = "LKR";
 

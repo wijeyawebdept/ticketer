@@ -134,6 +134,8 @@ public class EmailService {
             ctx.setVariable("seatDetails", seatDetails);
             ctx.setVariable("currency", "LKR");
             ctx.setVariable("totalAmount", booking.getTotalAmount());
+            ctx.setVariable("discountAmount", booking.getDiscountAmount());
+            ctx.setVariable("discountInfo", booking.getDiscountInfo());
             // Payment receipt fields — null here so the receipt section is hidden
             ctx.setVariable("transactionId", null);
             ctx.setVariable("paymentMethod", null);

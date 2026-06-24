@@ -40,6 +40,8 @@ public class ConfirmBookingRequest {
     private BigDecimal totalAmount;
 
     private BigDecimal discountAmount;
+
+    private String discountInfo;
     
     /**
      * Request for shared area tickets

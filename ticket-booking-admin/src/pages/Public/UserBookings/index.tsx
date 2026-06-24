@@ -296,6 +296,16 @@ const UserBookings: React.FC = () => {
                   <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Tickets</Typography>
                   <Typography sx={{ color: '#fff', fontSize: '0.9rem' }}>{receiptBooking.ticketCount}</Typography>
                 </Box>
+                {receiptBooking.discountAmount && receiptBooking.discountAmount > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                      Discount {receiptBooking.discountInfo ? `(${receiptBooking.discountInfo})` : ''}
+                    </Typography>
+                    <Typography sx={{ color: '#4caf50', fontSize: '0.9rem' }}>
+                      - LKR {receiptBooking.discountAmount.toLocaleString()}
+                    </Typography>
+                  </Box>
+                )}
                 <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 1 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Total Paid</Typography>

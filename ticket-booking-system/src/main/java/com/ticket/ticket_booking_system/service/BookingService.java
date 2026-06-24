@@ -397,6 +397,7 @@ public class BookingService {
                 .bookingReference(generateBookingReference())
                 .attended(false)
                 .discountAmount(request.getDiscountAmount())
+                .discountInfo(request.getDiscountInfo())
                 .build();
         
         // Add seat bookings if any

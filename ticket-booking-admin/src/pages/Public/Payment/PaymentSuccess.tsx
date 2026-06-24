@@ -184,6 +184,12 @@ const PaymentSuccess: React.FC = () => {
                     </Typography>
                     <Box sx={{ mb: 1 }}>
                       <ReceiptRow label="Amount Paid" value={`LKR ${r.amount?.toLocaleString()}`} bold />
+                      {r.discountAmount && r.discountAmount > 0 && (
+                        <ReceiptRow 
+                          label={`Discount${r.discountInfo ? ` (${r.discountInfo})` : ''}`} 
+                          value={`- LKR ${r.discountAmount.toLocaleString()}`} 
+                        />
+                      )}
                       <ReceiptRow label="Status" value="✓ PAID" />
                       {r.transactionId && <ReceiptRow label="Transaction ID" value={r.transactionId} />}
                       {r.paymentDate && <ReceiptRow label="Payment Date" value={r.paymentDate} />}
