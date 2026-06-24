@@ -308,7 +308,8 @@ const Home: React.FC = () => {
     const loadUpcomingEvents = async () => {
       try {
         setLoading(true);
-        const response = await EventService.getUpcomingPublishedEvents(0, 6);
+        // Fetch more events so we don't miss deals that might be further down the list
+        const response = await EventService.getUpcomingPublishedEvents(0, 50);
         
         // Separate deal events from regular events
         const allEvents = response.content || [];
@@ -348,7 +349,8 @@ const Home: React.FC = () => {
           });
         }
         
-        setEvents(filteredEvents);
+        // Limit the "What's happening" section to 6 events so it doesn't get too long
+        setEvents(filteredEvents.slice(0, 6));
       } catch (error) {
       } finally {
         setLoading(false);
@@ -719,7 +721,7 @@ const Home: React.FC = () => {
                             navigate(`/event/${event.slug || event.id || event.eventId}`);
                           }}
                         >
-                          {event.dealDescription || 'Book Now • 1+ Deals'}
+                          {event.dealDescription || 'Book Now •'}
                         </Button>
                       </Box>
                     </CardContent>
