@@ -355,9 +355,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     // Selected by the current user
     if (localSelectedSeats.has(seat.seatId)) return isHolding ? '#FFD700' : '#FF0000';
 
-    // Available seats: admin/organizer = category colour, customers = white
-    if (isRestrictedUser()) return seat.colorCode || '#4CAF50';
-    return '#FFFFFF';
+    // Available seats: category colour for everyone
+    return seat.colorCode || '#4CAF50';
   }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser, isHolding]);
 
   // Zoom handlers
@@ -444,56 +443,31 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
           {/* Legend */}
           <div className="venue-legend">
-            {isRestrictedUser() ? (
-              // Admin / Organizer – seat category colours + status indicators
-              <>
-                {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
-                  const seat = venueSeats.find(s => s.categoryName === categoryName);
-                  return (
-                    <div key={`cat-${index}`} className="legend-item">
-                      <span className="legend-color" style={{ backgroundColor: seat?.colorCode || '#4CAF50' }} />
-                      <span>{categoryName}</span>
-                    </div>
-                  );
-                })}
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
-                  <span>{t('soldSelected', 'Sold / Selected')}</span>
+            {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
+              const seat = venueSeats.find(s => s.categoryName === categoryName);
+              const status = seat ? seatStatuses.get(seat.seatId) : null;
+              const priceStr = status?.currentPrice ? ` - ${status.currentPrice.toLocaleString()} LKR` : '';
+              return (
+                <div key={`cat-${index}`} className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: seat?.colorCode || '#4CAF50' }} />
+                  <span>{categoryName}{priceStr}</span>
                 </div>
-                {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
-                  <div className="legend-item">
-                    <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                    <span>{t('locked', 'Locked')}</span>
-                  </div>
-                )}
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
-                  <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
-                </div>
-              </>
-            ) : (
-              // Customer – simplified status legend
-              <>
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(255,255,255,0.4)' }} />
-                  <span>{t('available', 'Available')}</span>
-                </div>
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
-                  <span>{t('soldSelected', 'Sold / Selected')}</span>
-                </div>
-                {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
-                  <div className="legend-item">
-                    <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                    <span>{t('locked', 'Locked')}</span>
-                  </div>
-                )}
-                <div className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
-                  <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
-                </div>
-              </>
+              );
+            })}
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
+              <span>{t('soldSelected', 'Sold / Selected')}</span>
+            </div>
+            {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                <span>{t('locked', 'Locked')}</span>
+              </div>
             )}
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
+              <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
+            </div>
           </div>
 
           {/* SVG Seat Map */}
