@@ -504,22 +504,6 @@ const EventDetails: React.FC = () => {
                 {event.name}
               </Typography>
 
-              <Typography
-                component="p"
-                sx={{
-                  marginTop: 0,
-                  marginBottom: '1rem',
-                  color: '#fff',
-                  fontFamily: 'Raleway, sans-serif',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  wordBreak: 'break-word',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {event.description || 'No description available for this event.'}
-              </Typography>
-
               {event.imageUrl && (
                 <Typography
                   component="p"
@@ -543,6 +527,22 @@ const EventDetails: React.FC = () => {
                   />
                 </Typography>
               )}
+
+              <Typography
+                component="p"
+                sx={{
+                  marginTop: 0,
+                  marginBottom: '1rem',
+                  color: '#fff',
+                  fontFamily: 'Raleway, sans-serif',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {event.description || 'No description available for this event.'}
+              </Typography>
 
               <Box sx={{ mt: 2 }}>
                 <Typography sx={{ color: '#fcd0a5', fontWeight: 600, mb: 1 }}>

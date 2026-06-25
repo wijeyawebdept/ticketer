@@ -349,8 +349,8 @@ const Home: React.FC = () => {
           });
         }
         
-        // Limit the "What's happening" section to 6 events so it doesn't get too long
-        setEvents(filteredEvents.slice(0, 6));
+        // Limit the "What's happening" section to 10 events so it doesn't get too long
+        setEvents(filteredEvents.slice(0, 10));
       } catch (error) {
       } finally {
         setLoading(false);

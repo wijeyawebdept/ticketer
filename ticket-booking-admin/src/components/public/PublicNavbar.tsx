@@ -24,7 +24,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
 //import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services/profile.service';
 import { EventCategoryService } from '../../services';
@@ -39,9 +39,15 @@ const PublicNavbar: React.FC = () => {
   const [categories, setCategories] = useState<EventCategory[]>([]);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isCustomerUser, logout } = useAuth();
+
+  const isActive = (path: string) => {
+    if (path === '/events' && location.pathname.startsWith('/event')) return true;
+    return location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+  };
 
   // Fetch event categories
   useEffect(() => {
@@ -161,17 +167,18 @@ const PublicNavbar: React.FC = () => {
                   onClick={(e) => setEventsAnchor(e.currentTarget)}
                   endIcon={<ArrowDropDownIcon />}
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.55)',
+                    color: isActive('/events') ? '#ff1955' : 'rgba(255, 255, 255, 0.55)',
+                    backgroundColor: isActive('/events') ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
                     fontFamily: 'Raleway, sans-serif',
-                    fontWeight: 400,
+                    fontWeight: isActive('/events') ? 600 : 400,
                     fontSize: '1rem',
                     lineHeight: 1.5,
                     textTransform: 'none',
                     padding: '0.5rem 1rem',
                     minWidth: 'auto',
                     '&:hover': {
-                      color: '#fff',
-                      backgroundColor: 'transparent',
+                      color: isActive('/events') ? '#ff1955' : '#fff',
+                      backgroundColor: isActive('/events') ? 'rgba(255, 25, 85, 0.12)' : 'rgba(255, 255, 255, 0.1)',
                     },
                   }}
                 >
@@ -237,17 +244,18 @@ const PublicNavbar: React.FC = () => {
                   key={item.label}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.55)',
+                    color: isActive(item.path) ? '#ff1955' : 'rgba(255, 255, 255, 0.55)',
+                    backgroundColor: isActive(item.path) ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
                     fontFamily: 'Raleway, sans-serif',
-                    fontWeight: 400,
+                    fontWeight: isActive(item.path) ? 600 : 400,
                     fontSize: '1rem',
                     lineHeight: 1.5,
                     textTransform: 'none',
                     padding: '0.5rem 1rem',
                     minWidth: 'auto',
                     '&:hover': {
-                      color: '#fff',
-                      backgroundColor: 'transparent',
+                      color: isActive(item.path) ? '#ff1955' : '#fff',
+                      backgroundColor: isActive(item.path) ? 'rgba(255, 25, 85, 0.12)' : 'rgba(255, 255, 255, 0.1)',
                     },
                   }}
                 >
@@ -259,7 +267,8 @@ const PublicNavbar: React.FC = () => {
               <Button
                 onClick={() => navigate('/deals')}
                 sx={{
-                  color: '#00c853',
+                  color: isActive('/deals') ? '#00e676' : '#00c853',
+                  backgroundColor: isActive('/deals') ? 'rgba(0, 200, 83, 0.1)' : 'transparent',
                   fontFamily: 'Raleway, sans-serif',
                   fontWeight: 700,
                   fontSize: '1rem',
@@ -269,7 +278,7 @@ const PublicNavbar: React.FC = () => {
                   minWidth: 'auto',
                   '&:hover': {
                     color: '#00e676',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(0, 200, 83, 0.15)',
                   },
                 }}
               >
@@ -280,17 +289,18 @@ const PublicNavbar: React.FC = () => {
               <Button
                 onClick={() => navigate('/gallery')}
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.55)',
+                  color: isActive('/gallery') ? '#ff1955' : 'rgba(255, 255, 255, 0.55)',
+                  backgroundColor: isActive('/gallery') ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
                   fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 400,
+                  fontWeight: isActive('/gallery') ? 600 : 400,
                   fontSize: '1rem',
                   lineHeight: 1.5,
                   textTransform: 'none',
                   padding: '0.5rem 1rem',
                   minWidth: 'auto',
                   '&:hover': {
-                    color: '#fff',
-                    backgroundColor: 'transparent',
+                    color: isActive('/gallery') ? '#ff1955' : '#fff',
+                    backgroundColor: isActive('/gallery') ? 'rgba(255, 25, 85, 0.12)' : 'rgba(255, 255, 255, 0.1)',
                   },
                 }}
               >
@@ -301,17 +311,18 @@ const PublicNavbar: React.FC = () => {
               <Button
                 onClick={() => navigate('/blog')}
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.55)',
+                  color: isActive('/blog') ? '#ff1955' : 'rgba(255, 255, 255, 0.55)',
+                  backgroundColor: isActive('/blog') ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
                   fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 400,
+                  fontWeight: isActive('/blog') ? 600 : 400,
                   fontSize: '1rem',
                   lineHeight: 1.5,
                   textTransform: 'none',
                   padding: '0.5rem 1rem',
                   minWidth: 'auto',
                   '&:hover': {
-                    color: '#fff',
-                    backgroundColor: 'transparent',
+                    color: isActive('/blog') ? '#ff1955' : '#fff',
+                    backgroundColor: isActive('/blog') ? 'rgba(255, 25, 85, 0.12)' : 'rgba(255, 255, 255, 0.1)',
                   },
                 }}
               >
