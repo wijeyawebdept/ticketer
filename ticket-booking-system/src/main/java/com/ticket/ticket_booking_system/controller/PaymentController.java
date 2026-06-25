@@ -168,6 +168,10 @@ public class PaymentController {
                         transaction.getTransactionId().toString(),
                         result.getCardType());
 
+                if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
+                    emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                }
+
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)
                         .status("SUCCESS")
@@ -362,6 +366,10 @@ public class PaymentController {
                         customerEmail,
                         transaction.getTransactionId().toString(),
                         null);
+
+                if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
+                    emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                }
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(true)

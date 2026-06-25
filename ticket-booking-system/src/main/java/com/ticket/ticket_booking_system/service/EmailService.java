@@ -454,6 +454,42 @@ public class EmailService {
         }
     }
 
+    // ── Organizer ticket purchase email (notifies organizer when a customer buys a ticket) ──
+
+    @Async
+    public void sendOrganizerTicketPurchaseEmail(Booking booking, Organizer organizer) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("organizerFirstName", organizer.getFirstName());
+            ctx.setVariable("eventName", booking.getEvent().getName());
+            
+            String shortBookingId = booking.getBookingId() != null ? 
+                booking.getBookingId().toString().substring(0, 8).toUpperCase() : "UNKNOWN";
+            ctx.setVariable("bookingId", shortBookingId);
+            
+            String customerName = booking.getUser() != null ? 
+                booking.getUser().getFirstName() + " " + booking.getUser().getLastName() : "Guest User";
+            ctx.setVariable("customerName", customerName);
+            
+            String customerEmail = booking.getUser() != null ? booking.getUser().getEmail() : "Not provided";
+            ctx.setVariable("customerEmail", customerEmail);
+            
+            ctx.setVariable("ticketCount", booking.getBookingSeats() != null ? booking.getBookingSeats().size() : 0);
+            
+            String formattedAmount = "LKR " + (booking.getTotalAmount() != null ? String.format("%.2f", booking.getTotalAmount()) : "0.00");
+            ctx.setVariable("totalAmount", formattedAmount);
+            
+            ctx.setVariable("loginUrl", frontendBaseUrl + "/organizer/login");
+
+            String html = templateEngine.process("emails/organizer-ticket-purchase", ctx);
+            String subject = "New Ticket Purchase: " + booking.getEvent().getName();
+            sendHtml(organizer.getEmail(), subject, html);
+            log.info("Organizer ticket purchase email sent to: {}", organizer.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send organizer ticket purchase email to {}: {}", organizer.getEmail(), e.getMessage());
+        }
+    }
+
     @Async
     public void sendDealNotificationEmail(String customerEmail, String firstName, String eventName, TicketCategory tc) {
         try {
