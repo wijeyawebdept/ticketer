@@ -435,6 +435,7 @@ public class EmailService {
 
     // ── Organizer event assignment email (admin assigns an event to an organizer) ──
 
+    @Async
     public void sendOrganizerEventAssignmentEmail(Organizer organizer, Event event) {
         try {
             Context ctx = new Context();
