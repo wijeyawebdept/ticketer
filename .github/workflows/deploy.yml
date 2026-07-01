@@ -54,7 +54,13 @@ jobs:
             ./mvnw clean package -DskipTests
             
             # Restart the Java backend service
-            # NOTE: If your service is named differently, change 'ticket-booking-system' below
-            sudo systemctl restart ticket-booking-system
+            echo "Stopping ticketer service..."
+            sudo systemctl stop ticketer
+            
+            echo "Copying new jar file..."
+            sudo cp target/*.jar /home/ubuntu/ticketer.jar
+            
+            echo "Starting ticketer service..."
+            sudo systemctl start ticketer
             
             echo "Backend Deployment Complete!"
