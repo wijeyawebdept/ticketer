@@ -44,5 +44,17 @@ jobs:
             
             # Restart Nginx
             sudo systemctl restart nginx
-            
             echo "Frontend Deployment Complete!"
+
+            echo "Deploying Backend..."
+            cd /home/ubuntu/Ticket-Booking-System/ticket-booking-system
+            
+            # Make sure maven wrapper is executable and build the backend
+            chmod +x mvnw
+            ./mvnw clean package -DskipTests
+            
+            # Restart the Java backend service
+            # NOTE: If your service is named differently, change 'ticket-booking-system' below
+            sudo systemctl restart ticket-booking-system
+            
+            echo "Backend Deployment Complete!"
