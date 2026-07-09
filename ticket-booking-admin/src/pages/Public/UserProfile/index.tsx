@@ -212,7 +212,7 @@ const UserProfile: React.FC = () => {
     } catch (error: any) {
       setSnackbar({
         open: true,
-        message: error.response?.data?.message || 'Failed to update profile',
+        message: error.response?.status === 413 ? 'Profile picture is too large. Maximum allowed size is 1MB.' : (error.response?.data?.message || 'Failed to update profile'),
         severity: 'error'
       });
     } finally {

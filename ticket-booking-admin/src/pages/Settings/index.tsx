@@ -277,8 +277,8 @@ const Settings: React.FC = () => {
       // Reload profile to get updated picture URL
       await loadProfile();
       showSnackbar('Profile picture updated successfully', 'success');
-    } catch (error) {
-      showSnackbar('Failed to upload profile picture', 'error');
+    } catch (error: any) {
+      showSnackbar(error.response?.status === 413 ? 'Profile picture is too large. Maximum allowed size is 1MB.' : 'Failed to upload profile picture', 'error');
     } finally {
       setUploading(false);
     }

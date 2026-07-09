@@ -91,7 +91,7 @@ const Profile: React.FC = () => {
   const handlePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     try { setUploading(true); await profileService.uploadProfilePicture(file); await loadProfile(); showSnackbar('Profile picture updated', 'success'); }
-    catch { showSnackbar('Failed to upload picture', 'error'); }
+    catch (error: any) { showSnackbar(error.response?.status === 413 ? 'Profile picture is too large. Maximum allowed size is 1MB.' : 'Failed to upload picture', 'error'); }
     finally { setUploading(false); }
   };
 
