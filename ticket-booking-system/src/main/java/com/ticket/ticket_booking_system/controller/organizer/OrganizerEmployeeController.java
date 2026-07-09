@@ -360,7 +360,7 @@ public class OrganizerEmployeeController {
         if (email != null && !email.isEmpty()) {
             // Try organizer repository first
             UUID organizerId = organizerRepository.findByEmail(email)
-                    .map(Organizer::getOrganizerId)
+                    .map(o -> o.getOrganizerId())
                     .orElse(null);
             if (organizerId != null) {
                 return organizerId;

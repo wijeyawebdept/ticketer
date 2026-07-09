@@ -135,7 +135,7 @@ public class RecycleBinService {
         // Get all employee IDs for this organizer
         List<UUID> employeeIds = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId)
                 .stream()
-                .map(OrganizerEmployee::getEmployeeId)
+                .map(emp -> emp.getEmployeeId())
                 .collect(Collectors.toList());
         
         // Verify organizer exists
@@ -166,7 +166,7 @@ public class RecycleBinService {
         // Get all employee IDs for this organizer
         List<UUID> employeeIds = organizerEmployeeRepository.findByOrganizer_OrganizerId(organizerId)
                 .stream()
-                .map(OrganizerEmployee::getEmployeeId)
+                .map(emp -> emp != null ? emp.getEmployeeId() : null)
                 .collect(Collectors.toList());
         
         return recycleBinRepository.findByEntityTypeOrderByDeletedAtDesc(entityType).stream()

@@ -148,7 +148,7 @@ public class BookingFlowController {
             int sharedAreaTicketCount = 0;
             if (request.getSharedAreaTickets() != null) {
                 sharedAreaTicketCount = request.getSharedAreaTickets().stream()
-                        .mapToInt(ConfirmBookingRequest.SharedAreaTicketRequest::getTicketCount)
+                        .mapToInt(req -> req.getTicketCount())
                         .sum();
             }
 

@@ -78,7 +78,7 @@ public class BlogPublicController {
                 return null;
             }
             String email = auth.getName();
-            return userRepo.findByEmail(email).map(User::getId).orElse(null);
+            return userRepo.findByEmail(email).map(u -> u.getId()).orElse(null);
         } catch (Exception e) {
             return null;
         }

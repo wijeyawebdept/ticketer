@@ -71,8 +71,8 @@ public class TicketCategoryDealResponse {
         BigDecimal minPrice = tc.getPrice();
         if (tc.getEvent() != null && tc.getEvent().getTicketCategories() != null && !tc.getEvent().getTicketCategories().isEmpty()) {
             minPrice = tc.getEvent().getTicketCategories().stream()
-                .map(TicketCategory::getPrice)
-                .min(BigDecimal::compareTo)
+                .map(category -> category.getPrice())
+                .min((p1, p2) -> p1.compareTo(p2))
                 .orElse(tc.getPrice());
         }
 

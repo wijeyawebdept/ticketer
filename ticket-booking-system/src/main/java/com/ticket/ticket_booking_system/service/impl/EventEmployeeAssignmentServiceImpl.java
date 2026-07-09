@@ -259,7 +259,7 @@ public class EventEmployeeAssignmentServiceImpl implements EventEmployeeAssignme
     public List<EventEmployeeAssignmentDTO> getAllAssignments() {
         List<EventEmployeeAssignment> assignments = assignmentRepository.findAll();
         return assignments.stream()
-                .filter(EventEmployeeAssignment::getIsActive)
+                .filter(assignment -> assignment.getIsActive())
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

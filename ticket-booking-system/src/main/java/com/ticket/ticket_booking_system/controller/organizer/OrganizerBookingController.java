@@ -352,7 +352,7 @@ public class OrganizerBookingController {
         if (email != null && !email.isEmpty()) {
             // Try organizer repository first
             UUID organizerId = organizerRepository.findByEmail(email)
-                    .map(Organizer::getOrganizerId)
+                    .map(org -> org.getOrganizerId())
                     .orElse(null);
             if (organizerId != null) {
                 return organizerId;

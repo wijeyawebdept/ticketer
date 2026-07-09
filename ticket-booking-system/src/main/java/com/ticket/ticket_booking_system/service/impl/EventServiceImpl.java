@@ -693,19 +693,19 @@ public class EventServiceImpl implements EventService {
         // This is used by public pages to show "From LKR X" without requiring admin input
         java.math.BigDecimal computedBasePrice = ticketCategoryResponses.stream()
                 .filter(tc -> !Boolean.TRUE.equals(tc.getIsSharedArea()))
-                .map(TicketCategoryResponse::getPrice)
+                .map(tc -> tc != null ? tc.getPrice() : null)
                 .filter(p -> p != null)
-                .min(java.math.BigDecimal::compareTo)
+                .min((p1, p2) -> p1.compareTo(p2))
                 .orElse(java.math.BigDecimal.ZERO);
 
         // Calculate true total capacity and available seats from schedules
         int trueTotalCapacity = schedules.isEmpty() ? event.getTotalCapacity() : 
-            schedules.stream().mapToInt(com.ticket.ticket_booking_system.entity.EventSchedule::getCapacity).sum();
+            schedules.stream().mapToInt(s -> s != null ? s.getCapacity() : 0).sum();
             
         int trueAvailableSeats = schedules.isEmpty() ? event.getAvailableSeats() : 
             schedules.stream()
-                .filter(s -> s.getStatus() == com.ticket.ticket_booking_system.entity.EventSchedule.ScheduleStatus.ACTIVE)
-                .mapToInt(com.ticket.ticket_booking_system.entity.EventSchedule::getAvailableSeats).sum();
+                .filter(s -> s != null && s.getStatus() == com.ticket.ticket_booking_system.entity.EventSchedule.ScheduleStatus.ACTIVE)
+                .mapToInt(s -> s != null ? s.getAvailableSeats() : 0).sum();
 
         return EventResponse.builder()
                 .id(event.getId())

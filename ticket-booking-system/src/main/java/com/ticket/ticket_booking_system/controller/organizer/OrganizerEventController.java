@@ -311,7 +311,7 @@ public class OrganizerEventController {
         if (email != null && !email.isEmpty()) {
             // Try to find as organizer first
             UUID organizerId = organizerRepository.findByEmail(email)
-                    .map(Organizer::getOrganizerId)
+                    .map(organizer -> organizer.getOrganizerId())
                     .orElse(null);
             
             if (organizerId != null) {
