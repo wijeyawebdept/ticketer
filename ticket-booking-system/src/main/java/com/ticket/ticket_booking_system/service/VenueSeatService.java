@@ -84,7 +84,7 @@ public class VenueSeatService {
             result.add(com.ticket.ticket_booking_system.dto.VenueSeatCategoryDTO.builder()
                     .categoryName((String) row[0])
                     .colorCode((String) row[1])
-                    .seatCount(((Long) row[2]).intValue())
+                    .seatCount(((Number) row[2]).intValue())
                     .build());
         }
         return result;
@@ -165,7 +165,7 @@ public class VenueSeatService {
                     .section(seat.getSection())
                     .rowLabel(seat.getRowLabel())
                     .seatNumber(seat.getSeatNumber())
-                    .categoryName(seat.getCategory().getCategoryName())
+                    .categoryName(eventCategory != null ? eventCategory.getCategoryName() : seat.getCategory().getCategoryName())
                     .colorCode(seat.getCategory().getColorCode())
                     .xPosition(seat.getXPosition())
                     .yPosition(seat.getYPosition())

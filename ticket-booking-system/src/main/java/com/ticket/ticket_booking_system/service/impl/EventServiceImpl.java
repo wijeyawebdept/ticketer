@@ -364,6 +364,7 @@ public class EventServiceImpl implements EventService {
                                 .description(ticketCategoryRequest.getDescription())
                                 .isSharedArea(ticketCategoryRequest.getIsSharedArea() != null ? ticketCategoryRequest.getIsSharedArea() : false)
                                 .sharedAreaNumber(ticketCategoryRequest.getSharedAreaNumber())
+                                .venueSeatCategoryName(ticketCategoryRequest.getVenueSeatCategoryName())
                                 .event(savedEvent)
                                 .build();
                     })
@@ -619,6 +620,7 @@ public class EventServiceImpl implements EventService {
                             .description(ticketCategory.getDescription())
                             .isSharedArea(ticketCategory.getIsSharedArea())
                             .sharedAreaNumber(ticketCategory.getSharedAreaNumber())
+                            .venueSeatCategoryName(ticketCategory.getVenueSeatCategoryName())
                             .dealActive(ticketCategory.getDealActive())
                             .dealType(ticketCategory.getDealType())
                             .dealDiscountPercentage(ticketCategory.getDealDiscountPercentage())

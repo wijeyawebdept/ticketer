@@ -25,6 +25,9 @@ public class TicketCategoryResponse {
     // Shared area support
     private Boolean isSharedArea;
     private Integer sharedAreaNumber;
+    
+    // Explicit mapping to venue seat zone
+    private String venueSeatCategoryName;
 
     // Deal fields
     private Boolean dealActive;
