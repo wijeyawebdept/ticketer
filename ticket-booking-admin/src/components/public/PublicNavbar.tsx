@@ -30,6 +30,7 @@ import { profileService } from '../../services/profile.service';
 import { EventCategoryService } from '../../services';
 import { getProfilePictureUrl } from '../../utils/formatters';
 import { ProfileDTO, EventCategory } from '../../types';
+import EventsMegaMenu from './EventsMegaMenu';
 
 const PublicNavbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -37,12 +38,36 @@ const PublicNavbar: React.FC = () => {
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [categories, setCategories] = useState<EventCategory[]>([]);
-  
+  const menuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isCustomerUser, logout } = useAuth();
+
+  const handleEventsMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+    if (menuTimeoutRef.current) {
+      clearTimeout(menuTimeoutRef.current);
+      menuTimeoutRef.current = null;
+    }
+    if (!eventsAnchor) {
+      setEventsAnchor(e.currentTarget);
+    }
+  };
+
+  const handleMenuMouseEnter = () => {
+    if (menuTimeoutRef.current) {
+      clearTimeout(menuTimeoutRef.current);
+      menuTimeoutRef.current = null;
+    }
+  };
+
+  const handleEventsMouseLeave = () => {
+    menuTimeoutRef.current = setTimeout(() => {
+      setEventsAnchor(null);
+    }, 150);
+  };
 
   const isActive = (path: string) => {
     if (path === '/events' && location.pathname.startsWith('/event')) return true;
@@ -164,7 +189,9 @@ const PublicNavbar: React.FC = () => {
               {/* Events Dropdown */}
               <Box>
                 <Button
-                  onClick={(e) => setEventsAnchor(e.currentTarget)}
+                  onClick={(e) => handleEventsMouseEnter(e)}
+                  onMouseEnter={handleEventsMouseEnter}
+                  onMouseLeave={handleEventsMouseLeave}
                   endIcon={<ArrowDropDownIcon />}
                   sx={{
                     color: isActive('/events') ? '#ff1955' : 'rgba(255, 255, 255, 0.55)',
@@ -184,59 +211,14 @@ const PublicNavbar: React.FC = () => {
                 >
                   Events
                 </Button>
-                <Menu
+                <EventsMegaMenu
                   anchorEl={eventsAnchor}
-                  open={Boolean(eventsAnchor)}
+                  isOpen={Boolean(eventsAnchor)}
                   onClose={() => setEventsAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 200,
-                      maxHeight: 400,
-                    }
-                  }}
-                >
-                  {categories.length === 0 ? (
-                    <MenuItem disabled sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.95rem' }}>
-                      Loading categories...
-                    </MenuItem>
-                  ) : (
-                    categories.map((category) => (
-                      <MenuItem 
-                        key={category.id} 
-                        onClick={() => {
-                          navigate(`/events?category=${category.id}`);
-                          setEventsAnchor(null);
-                        }}
-                        sx={{ 
-                          fontFamily: 'Raleway, sans-serif',
-                          fontSize: '0.95rem',
-                          py: 1,
-                        }}
-                      >
-                        {category.categoryName}
-                      </MenuItem>
-                    ))
-                  )}
-                  <Divider sx={{ my: 0.5 }} />
-                  <MenuItem 
-                    onClick={() => {
-                      navigate('/events');
-                      setEventsAnchor(null);
-                    }}
-                    sx={{ 
-                      fontFamily: 'Raleway, sans-serif',
-                      fontSize: '0.95rem',
-                      fontWeight: 600,
-                      color: '#ff1955',
-                      py: 1,
-                    }}
-                  >
-                    All Events
-                  </MenuItem>
-                </Menu>
+                  categories={categories}
+                  onMouseEnter={handleMenuMouseEnter}
+                  onMouseLeave={handleEventsMouseLeave}
+                />
               </Box>
 
               {navItems.map((item) => (

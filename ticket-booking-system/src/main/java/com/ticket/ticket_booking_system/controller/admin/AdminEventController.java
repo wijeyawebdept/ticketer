@@ -50,8 +50,8 @@ public class AdminEventController {
             EventResponse createdEvent = eventService.createEvent(request);
             return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
         } catch (Exception e) {
-            System.err.println("❌ ERROR creating event: " + e.getClass().getName());
-            System.err.println("❌ ERROR message: " + e.getMessage());
+            System.err.println(" ERROR creating event: " + e.getClass().getName());
+            System.err.println(" ERROR message: " + e.getMessage());
             e.printStackTrace();
             throw e;
         }
