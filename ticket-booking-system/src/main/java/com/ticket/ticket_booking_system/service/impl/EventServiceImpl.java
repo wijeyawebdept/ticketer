@@ -510,11 +510,16 @@ public class EventServiceImpl implements EventService {
         event.setIsDeleted(true);
         eventRepository.save(event);
 
-        // Deactivate deals for this event
+        // Clear all deal data for this event permanently
         List<TicketCategory> categories = ticketCategoryRepository.findByEventId(event.getEventId());
         for (TicketCategory category : categories) {
-            if (Boolean.TRUE.equals(category.getDealActive())) {
+            if (category.getDealType() != null || Boolean.TRUE.equals(category.getDealActive())) {
                 category.setDealActive(false);
+                category.setDealType(null);
+                category.setDealDiscountPercentage(null);
+                category.setDealBuyQuantity(null);
+                category.setDealFreeQuantity(null);
+                category.setDealLabel(null);
                 ticketCategoryRepository.save(category);
             }
         }
