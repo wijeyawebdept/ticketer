@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Notification – Ticketer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 24px 12px;
+        }
+        .wrapper { max-width: 600px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #ff1955 0%, #d81b60 100%);
+            border-radius: 12px 12px 0 0;
+            padding: 28px 24px;
+            text-align: center;
+            color: #fff;
+        }
+        .header h1 { font-size: 24px; font-weight: 700; }
+        .card {
+            background: #ffffff;
+            border-radius: 0 0 12px 12px;
+            padding: 28px 24px 32px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .greeting { font-size: 16px; margin-bottom: 18px; color: #333; }
+        .greeting strong { color: #ff1955; }
+        .message { font-size: 15px; margin-bottom: 22px; line-height: 1.6; color: #444; }
+        .event-banner {
+            background: linear-gradient(135deg, #fff0f4 0%, #ffe6eb 100%);
+            border-left: 4px solid #ff1955;
+            border-radius: 0 8px 8px 0;
+            padding: 16px 18px;
+            margin-bottom: 22px;
+        }
+        .event-banner .event-label { font-size: 11px; color: #d81b60; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        .event-banner .event-name { font-size: 20px; font-weight: 800; color: #880e4f; margin-top: 4px; }
+        .feedback-box {
+            background: #fffde7;
+            border-left: 4px solid #ffc107;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 14px;
+            color: #555;
+        }
+        .feedback-box .feedback-label { font-size: 11px; color: #f57f17; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1 th:text="${title}">Event Notification</h1>
+        </div>
+        <div class="card">
+            <div class="greeting">
+                Hello <strong th:text="${recipientName}">User</strong>,
+            </div>
+            <div class="message" th:text="${message}">
+                We have an update regarding your event.
+            </div>
+            <div class="event-banner">
+                <div class="event-label">Event Name</div>
+                <div class="event-name" th:text="${eventName}">My Event</div>
+            </div>
+            <div class="feedback-box" th:if="${feedback != null and !feedback.isEmpty()}">
+                <div class="feedback-label">Feedback / Reason</div>
+                <div th:text="${feedback}"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

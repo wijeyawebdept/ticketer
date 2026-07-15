@@ -236,6 +236,65 @@ public class EmailService {
         }
     }
 
+    // ── Event Notifications ───────────────────────────────────────────────────
+
+    public void sendEventRequestAdminNotificationEmail(String adminEmail, String organizerName, String eventName) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("title", "New Event Request");
+            ctx.setVariable("recipientName", "Admin");
+            ctx.setVariable("message", organizerName + " has submitted a new event request and it is awaiting your approval.");
+            ctx.setVariable("eventName", eventName);
+            ctx.setVariable("feedback", null);
+
+            String htmlBody = templateEngine.process("emails/event-notification", ctx);
+            String subject = "New Event Request - " + eventName;
+
+            sendHtml(adminEmail, subject, htmlBody);
+            log.info("Event request admin notification sent to: {}", adminEmail);
+        } catch (Exception e) {
+            log.error("Failed to send event request admin notification to {}: {}", adminEmail, e.getMessage());
+        }
+    }
+
+    public void sendEventApprovedEmail(String organizerEmail, String organizerName, String eventName) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("title", "Event Request Approved");
+            ctx.setVariable("recipientName", organizerName);
+            ctx.setVariable("message", "Great news! Your event request has been approved by the admin. It is now in DRAFT status and ready to be published when you are ready.");
+            ctx.setVariable("eventName", eventName);
+            ctx.setVariable("feedback", null);
+
+            String htmlBody = templateEngine.process("emails/event-notification", ctx);
+            String subject = "Event Request Approved - " + eventName;
+
+            sendHtml(organizerEmail, subject, htmlBody);
+            log.info("Event approved notification sent to: {}", organizerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send event approved notification to {}: {}", organizerEmail, e.getMessage());
+        }
+    }
+
+    public void sendEventRejectedEmail(String organizerEmail, String organizerName, String eventName, String feedback) {
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("title", "Event Request Rejected");
+            ctx.setVariable("recipientName", organizerName);
+            ctx.setVariable("message", "Unfortunately, your event request has been rejected by the admin. Please review the feedback below.");
+            ctx.setVariable("eventName", eventName);
+            ctx.setVariable("feedback", feedback);
+
+            String htmlBody = templateEngine.process("emails/event-notification", ctx);
+            String subject = "Event Request Rejected - " + eventName;
+
+            sendHtml(organizerEmail, subject, htmlBody);
+            log.info("Event rejected notification sent to: {}", organizerEmail);
+        } catch (Exception e) {
+            log.error("Failed to send event rejected notification to {}: {}", organizerEmail, e.getMessage());
+        }
+    }
+
     // ── QR Code helper ────────────────────────────────────────────────────────
 
     private String generateQrCodeBase64(String content) {

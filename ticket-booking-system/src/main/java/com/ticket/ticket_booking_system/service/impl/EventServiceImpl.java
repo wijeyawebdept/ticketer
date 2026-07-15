@@ -246,6 +246,16 @@ public class EventServiceImpl implements EventService {
             }
         }
 
+        // Send email to admins if created by organizer/employee
+        if ("ORGANIZER".equals(createdByType) || "ORGANIZER_EMPLOYEE".equals(createdByType)) {
+            String orgName = eventOrganizer != null ? eventOrganizer.getOrganizationName() : "An Organizer";
+            adminRepository.findAll().forEach(admin -> {
+                if (admin.getEmail() != null) {
+                    emailService.sendEventRequestAdminNotificationEmail(admin.getEmail(), orgName, savedEvent.getName());
+                }
+            });
+        }
+
         System.out.println("CREATE EVENT COMPLETE");
         return mapEventToResponse(savedEvent);
     }
@@ -974,6 +984,35 @@ public class EventServiceImpl implements EventService {
             auditService.logAction(adminId, "APPROVE_EVENT", "EVENT", savedEvent.getEventId(), "Approved event request: " + event.getName());
         }
         
+        // Send email to organizer if applicable
+        if ("ORGANIZER".equals(event.getCreatedByType()) || "ORGANIZER_EMPLOYEE".equals(event.getCreatedByType())) {
+            UUID orgId = null;
+            if ("ORGANIZER".equals(event.getCreatedByType())) {
+                orgId = event.getCreatedByUserId();
+            } else {
+                organizerEmployeeRepository.findById(event.getCreatedByUserId())
+                        .ifPresent(emp -> {
+                            if (emp.getOrganizer() != null) {
+                                emailService.sendEventApprovedEmail(
+                                    emp.getEmail(),
+                                    emp.getOrganizer().getOrganizationName(),
+                                    savedEvent.getName()
+                                );
+                            }
+                        });
+            }
+            
+            if (orgId != null) {
+                organizerRepository.findById(orgId).ifPresent(organizer -> {
+                    emailService.sendEventApprovedEmail(
+                        organizer.getEmail(),
+                        organizer.getOrganizationName(),
+                        savedEvent.getName()
+                    );
+                });
+            }
+        }
+        
         return mapEventToResponse(savedEvent);
     }
 
@@ -999,6 +1038,37 @@ public class EventServiceImpl implements EventService {
         UUID adminId = admin != null ? admin.getAdminId() : null;
         if (adminId != null) {
             auditService.logAction(adminId, "REJECT_EVENT", "EVENT", savedEvent.getEventId(), "Rejected event request: " + event.getName() + " with reason: " + feedback);
+        }
+        
+        // Send email to organizer if applicable
+        if ("ORGANIZER".equals(event.getCreatedByType()) || "ORGANIZER_EMPLOYEE".equals(event.getCreatedByType())) {
+            UUID orgId = null;
+            if ("ORGANIZER".equals(event.getCreatedByType())) {
+                orgId = event.getCreatedByUserId();
+            } else {
+                organizerEmployeeRepository.findById(event.getCreatedByUserId())
+                        .ifPresent(emp -> {
+                            if (emp.getOrganizer() != null) {
+                                emailService.sendEventRejectedEmail(
+                                    emp.getEmail(),
+                                    emp.getOrganizer().getOrganizationName(),
+                                    savedEvent.getName(),
+                                    feedback
+                                );
+                            }
+                        });
+            }
+            
+            if (orgId != null) {
+                organizerRepository.findById(orgId).ifPresent(organizer -> {
+                    emailService.sendEventRejectedEmail(
+                        organizer.getEmail(),
+                        organizer.getOrganizationName(),
+                        savedEvent.getName(),
+                        feedback
+                    );
+                });
+            }
         }
         
         return mapEventToResponse(savedEvent);
