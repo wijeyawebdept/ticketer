@@ -410,40 +410,51 @@ const Home: React.FC = () => {
     >
       <PublicNavbar />
 
-      {/* Carousel */}
+      {/* Carousel Wrapper / Frame */}
       <Box
         sx={{
-          position: 'relative',
-          width: '100%',
-          overflow: 'hidden',
-          height: { xs: '200px', sm: '280px', md: '350px', lg: '420px' },
+          maxWidth: '1400px',
+          margin: '0 auto',
+          padding: { xs: '15px', md: '40px 20px' },
         }}
       >
         <Box
           sx={{
-            display: 'flex',
-            transition: 'transform 0.5s ease-in-out',
-            transform: `translateX(-${activeSlide * 100}%)`,
-            height: '100%',
+            position: 'relative',
+            width: '100%',
+            overflow: 'hidden',
+            height: { xs: '200px', sm: '280px', md: '350px', lg: '450px' },
+            borderRadius: '20px',
+            border: '2px solid rgba(255, 25, 85, 0.5)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 25, 85, 0.15)',
+            backgroundColor: '#1a1e24',
           }}
         >
-          {carouselImages.map((image, index) => (
-            <Box
-              key={index}
-              component="img"
-              src={image}
-              alt={`Slide ${index + 1}`}
-              sx={{
-                width: '100%',
-                height: '100%',
-                flexShrink: 0,
-                display: 'block',
-                objectFit: 'contain',
-                objectPosition: 'center',
-              }}
-            />
-          ))}
-        </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              transition: 'transform 0.5s ease-in-out',
+              transform: `translateX(-${activeSlide * 100}%)`,
+              height: '100%',
+            }}
+          >
+            {carouselImages.map((image, index) => (
+              <Box
+                key={index}
+                component="img"
+                src={image}
+                alt={`Slide ${index + 1}`}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  flexShrink: 0,
+                  display: 'block',
+                  objectFit: 'cover', // cover fills the frame perfectly
+                  objectPosition: 'center',
+                }}
+              />
+            ))}
+          </Box>
 
         {/* Carousel Indicators */}
         <Box
@@ -474,6 +485,7 @@ const Home: React.FC = () => {
           ))}
         </Box>
       </Box>
+    </Box>
 
       {/* My Tickets Deals Section */}
       {dealEvents.length > 0 && (
