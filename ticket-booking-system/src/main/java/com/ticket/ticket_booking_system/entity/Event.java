@@ -100,10 +100,10 @@ public class Event {
 
     // Creator reference - can be User, Admin, or Organizer
     // Store the UUID and type separately since creator can be from different tables
-    @Column(name = "created_by_user_id", nullable = false)
+    @Column(name = "created_by_user_id")
     private java.util.UUID createdByUserId;
     
-    @Column(name = "created_by_type", nullable = false, length = 20)
+    @Column(name = "created_by_type", length = 20)
     private String createdByType; // "USER", "ADMIN", "SUPER_ADMIN", "ORGANIZER"
 
     // Added ticket categories relationship
