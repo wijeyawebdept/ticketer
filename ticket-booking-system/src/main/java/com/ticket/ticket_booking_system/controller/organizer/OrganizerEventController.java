@@ -52,8 +52,8 @@ public class OrganizerEventController {
     private final OrganizerEmployeeRepository employeeRepository;
     private final BookingRepository bookingRepository;
 
-    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository, 
-                                   OrganizerEmployeeRepository employeeRepository, BookingRepository bookingRepository) {
+    public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository,
+            OrganizerEmployeeRepository employeeRepository, BookingRepository bookingRepository) {
         this.eventService = eventService;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
@@ -195,7 +195,7 @@ public class OrganizerEventController {
             @PathVariable UUID eventId,
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws IOException {
-        
+
         String imageUrl = eventService.uploadEventImage(eventId, file);
         Map<String, String> response = new HashMap<>();
         response.put("imageUrl", imageUrl);
@@ -209,9 +209,9 @@ public class OrganizerEventController {
     public ResponseEntity<Map<String, Object>> getEventStatistics(
             @PathVariable UUID eventId,
             Authentication authentication) {
-        
+
         EventResponse eventResponse = eventService.getEventById(eventId);
-        
+
         // Get bookings count for this specific event
         long totalBookings = bookingRepository.count(
                 (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("event").get("eventId"), eventId));
@@ -223,11 +223,11 @@ public class OrganizerEventController {
                 (root, query, criteriaBuilder) -> criteriaBuilder.and(
                         criteriaBuilder.equal(root.get("event").get("eventId"), eventId),
                         criteriaBuilder.equal(root.get("status"), Booking.BookingStatus.CANCELLED)));
-        
+
         int totalCapacity = eventResponse.getTotalCapacity() != null ? eventResponse.getTotalCapacity() : 0;
         int availableSeats = eventResponse.getAvailableSeats() != null ? eventResponse.getAvailableSeats() : 0;
         int bookedSeats = totalCapacity - availableSeats;
-        
+
         Map<String, Object> statistics = new HashMap<>();
         statistics.put("eventId", eventId.toString());
         statistics.put("eventName", eventResponse.getName());
@@ -237,9 +237,9 @@ public class OrganizerEventController {
         statistics.put("availableSeats", availableSeats);
         statistics.put("totalCapacity", totalCapacity);
         statistics.put("bookedSeats", bookedSeats);
-        statistics.put("occupancyRate", totalCapacity > 0 ? 
-                String.format("%.2f%%", (bookedSeats * 100.0 / totalCapacity)) : "0.00%");
-        
+        statistics.put("occupancyRate",
+                totalCapacity > 0 ? String.format("%.2f%%", (bookedSeats * 100.0 / totalCapacity)) : "0.00%");
+
         return ResponseEntity.ok(statistics);
     }
 
@@ -252,14 +252,14 @@ public class OrganizerEventController {
             @PathVariable UUID venueId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
             Authentication authentication) {
-        
+
         // Get organizer ID from authentication
         UUID organizerId = getOrganizerIdFromAuth(authentication);
         if (organizerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Page.empty());
         }
-        
+
         // Return only this organizer's events
         Page<EventResponse> events = eventService.getEventsByOrganizer(organizerId, pageable);
         return ResponseEntity.ok(events);
@@ -273,14 +273,14 @@ public class OrganizerEventController {
     public ResponseEntity<Page<EventResponse>> getActiveEvents(
             @PageableDefault(size = 20, sort = "startDate") Pageable pageable,
             Authentication authentication) {
-        
+
         // Get organizer ID from authentication
         UUID organizerId = getOrganizerIdFromAuth(authentication);
         if (organizerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Page.empty());
         }
-        
+
         // Return only this organizer's events
         Page<EventResponse> events = eventService.getEventsByOrganizer(organizerId, pageable);
         return ResponseEntity.ok(events);
@@ -294,14 +294,14 @@ public class OrganizerEventController {
     public ResponseEntity<Page<EventResponse>> getUpcomingEvents(
             @PageableDefault(size = 20, sort = "startDate") Pageable pageable,
             Authentication authentication) {
-        
+
         // Get organizer ID from authentication
         UUID organizerId = getOrganizerIdFromAuth(authentication);
         if (organizerId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Page.empty());
         }
-        
+
         // Return only this organizer's events
         Page<EventResponse> events = eventService.getEventsByOrganizer(organizerId, pageable);
         return ResponseEntity.ok(events);
@@ -314,19 +314,19 @@ public class OrganizerEventController {
         if (authentication == null) {
             return null;
         }
-        
+
         // Try to get from Organizer principal
         if (authentication.getPrincipal() instanceof Organizer) {
             Organizer organizer = (Organizer) authentication.getPrincipal();
             return organizer.getOrganizerId();
         }
-        
+
         // Try to get from OrganizerEmployee principal
         if (authentication.getPrincipal() instanceof OrganizerEmployee) {
             OrganizerEmployee employee = (OrganizerEmployee) authentication.getPrincipal();
             return employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null;
         }
-        
+
         // Extract email from authentication principal (JWT token)
         String email = authentication.getName();
         if (email != null && !email.isEmpty()) {
@@ -334,17 +334,17 @@ public class OrganizerEventController {
             UUID organizerId = organizerRepository.findByEmail(email)
                     .map(organizer -> organizer.getOrganizerId())
                     .orElse(null);
-            
+
             if (organizerId != null) {
                 return organizerId;
             }
-            
+
             // Try to find as organizer employee
             return employeeRepository.findByEmail(email)
                     .map(employee -> employee.getOrganizer() != null ? employee.getOrganizer().getOrganizerId() : null)
                     .orElse(null);
         }
-        
+
         return null;
     }
 

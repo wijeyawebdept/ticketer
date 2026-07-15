@@ -20,75 +20,81 @@ import com.ticket.ticket_booking_system.entity.Venue;
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
 
-    Page<Event> findByStatus(Event.EventStatus status, Pageable pageable);
-    
-    java.util.Optional<Event> findBySlug(String slug);
-    
-    List<Event> findByStatusAndNotificationSentFalse(Event.EventStatus status);
+       Page<Event> findByStatus(Event.EventStatus status, Pageable pageable);
 
-    Page<Event> findByOrganizer(User organizer, Pageable pageable);
+       java.util.Optional<Event> findBySlug(String slug);
 
-    Page<Event> findByVenue(Venue venue, Pageable pageable);
+       List<Event> findByStatusAndNotificationSentFalse(Event.EventStatus status);
 
-    Page<Event> findByNameContainingIgnoreCase(String name, Pageable pageable);
+       Page<Event> findByOrganizer(User organizer, Pageable pageable);
 
-    @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e GROUP BY e ORDER BY COUNT(b) DESC")
-    List<Event> findTopSellingEvents(Pageable pageable);
+       Page<Event> findByVenue(Venue venue, Pageable pageable);
 
-    @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e WHERE e.organizer.organizerId = :organizerId GROUP BY e ORDER BY COUNT(b) DESC")
-    List<Event> findTopSellingEventsByOrganizer(UUID organizerId, Pageable pageable);
+       Page<Event> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-    long countByStatus(Event.EventStatus status);
+       @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e GROUP BY e ORDER BY COUNT(b) DESC")
+       List<Event> findTopSellingEvents(Pageable pageable);
 
-    // Add JOIN FETCH queries to avoid LazyInitializationException
-    // Changed to LEFT JOIN FETCH for organizer to include events created by ADMIN/SUPER_ADMIN (organizer_id = NULL)
-    // Filter out soft-deleted events (is_deleted = false)
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.isDeleted = false")
-    Page<Event> findAllWithVenueAndOrganizerAndTicketCategories(Pageable pageable);
+       @Query("SELECT e FROM Event e JOIN Booking b ON b.event = e WHERE e.organizer.organizerId = :organizerId GROUP BY e ORDER BY COUNT(b) DESC")
+       List<Event> findTopSellingEventsByOrganizer(UUID organizerId, Pageable pageable);
 
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer AND e.isDeleted = false")
-    Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(Organizer organizer, Pageable pageable);
-    
-    // Organizer-specific count queries
-    long countByOrganizer_OrganizerId(UUID organizerId);
-    
-    long countByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status);
+       long countByStatus(Event.EventStatus status);
 
-    Page<Event> findByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status, Pageable pageable);
-    
-    // Find all events by organizer ID
-    List<Event> findByOrganizer_OrganizerId(UUID organizerId);
-    
-    // Delete all events of a specific organizer
-    void deleteByOrganizer_OrganizerId(UUID organizerId);
-    
-    // Public event queries (no authentication required)
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
-           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
-           "ORDER BY e.createdAt DESC")
-    Page<Event> findAllPublishedEvents(Pageable pageable);
-    
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
-           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
-           "ORDER BY e.createdAt DESC")
-    Page<Event> findUpcomingPublishedEvents(Pageable pageable);
+       // Add JOIN FETCH queries to avoid LazyInitializationException
+       // Changed to LEFT JOIN FETCH for organizer to include events created by
+       // ADMIN/SUPER_ADMIN (organizer_id = NULL)
+       // Filter out soft-deleted events (is_deleted = false)
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.isDeleted = false")
+       Page<Event> findAllWithVenueAndOrganizerAndTicketCategories(Pageable pageable);
 
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
-           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
-           "AND e.category.id = :categoryId " +
-           "ORDER BY e.createdAt DESC")
-    Page<Event> findPublishedEventsByCategory(UUID categoryId, Pageable pageable);
-    
-    @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc " +
-           "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
-           "AND (LOWER(e.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
-           "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-           "ORDER BY e.createdAt DESC")
-    Page<Event> searchPublishedEvents(String query, Pageable pageable);
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v JOIN FETCH e.organizer u LEFT JOIN FETCH e.ticketCategories tc WHERE e.organizer = :organizer AND e.isDeleted = false")
+       Page<Event> findByOrganizerWithVenueAndOrganizerAndTicketCategories(Organizer organizer, Pageable pageable);
 
-    @Query("SELECT e FROM Event e WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
-           "AND EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false) " +
-           "AND NOT EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false " +
-           "AND (es.scheduleDate > :currentDate OR (es.scheduleDate = :currentDate AND es.endTime >= :currentTime)))")
-    List<Event> findExpiredEvents(@Param("currentDate") LocalDate currentDate, @Param("currentTime") LocalTime currentTime);
+       // Organizer-specific count queries
+       long countByOrganizer_OrganizerId(UUID organizerId);
+
+       long countByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status);
+
+       Page<Event> findByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status, Pageable pageable);
+
+       // Find all events by organizer ID
+       List<Event> findByOrganizer_OrganizerId(UUID organizerId);
+
+       // Delete all events of a specific organizer
+       void deleteByOrganizer_OrganizerId(UUID organizerId);
+
+       // Public event queries (no authentication required)
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc "
+                     +
+                     "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+                     "ORDER BY e.createdAt DESC")
+       Page<Event> findAllPublishedEvents(Pageable pageable);
+
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc "
+                     +
+                     "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+                     "ORDER BY e.createdAt DESC")
+       Page<Event> findUpcomingPublishedEvents(Pageable pageable);
+
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc "
+                     +
+                     "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+                     "AND e.category.id = :categoryId " +
+                     "ORDER BY e.createdAt DESC")
+       Page<Event> findPublishedEventsByCategory(UUID categoryId, Pageable pageable);
+
+       @Query("SELECT e FROM Event e JOIN FETCH e.venue v LEFT JOIN FETCH e.organizer o LEFT JOIN FETCH e.ticketCategories tc "
+                     +
+                     "WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+                     "AND (LOWER(e.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                     "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+                     "ORDER BY e.createdAt DESC")
+       Page<Event> searchPublishedEvents(String query, Pageable pageable);
+
+       @Query("SELECT e FROM Event e WHERE e.status = 'PUBLISHED' AND e.isDeleted = false " +
+                     "AND EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false) " +
+                     "AND NOT EXISTS (SELECT es FROM EventSchedule es WHERE es.event = e AND es.isDeleted = false " +
+                     "AND (es.scheduleDate > :currentDate OR (es.scheduleDate = :currentDate AND es.endTime >= :currentTime)))")
+       List<Event> findExpiredEvents(@Param("currentDate") LocalDate currentDate,
+                     @Param("currentTime") LocalTime currentTime);
 }
