@@ -229,7 +229,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
       fullWidth
       PaperProps={{ sx: { borderRadius: 2 } }}
     >
-      <DialogTitle sx={{ fontWeight: 700, color: '#1976d2' }}>
+      <DialogTitle sx={{ fontWeight: 700, color: mode === 'admin' ? '#d32f2f' : '#ed6c02' }}>
         Reset Password
       </DialogTitle>
       <DialogContent>
@@ -274,7 +274,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
             onClick={handleForgotSubmit}
             disabled={forgotLoading}
             variant="contained"
-            color="primary"
+            color={mode === 'admin' ? "error" : "warning"}
           >
             {forgotLoading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send Reset Link'}
           </Button>
@@ -288,7 +288,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
         sx={{ 
           marginTop: 8, 
           padding: 4,
-          border: '2px solid #1976d2',
+          border: `2px solid ${mode === 'admin' ? '#d32f2f' : '#ed6c02'}`,
           borderRadius: 2
         }}
       >
@@ -305,7 +305,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
           
           <Chip 
             label={mode === 'admin' ? "Admin Access" : "Organizer Access"} 
-            color="primary" 
+            color={mode === 'admin' ? "error" : "warning"} 
             sx={{ mb: 2, fontWeight: 'bold' }}
           />
           
@@ -380,7 +380,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
                   type="submit"
                   fullWidth
                   variant="contained"
-                  color="primary"
+                  color={mode === 'admin' ? "error" : "warning"}
                   disabled={isSubmitting}
                   sx={{ py: 1.5 }}
                 >
