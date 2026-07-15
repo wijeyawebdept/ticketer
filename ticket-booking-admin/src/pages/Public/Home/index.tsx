@@ -366,7 +366,7 @@ const Home: React.FC = () => {
       setActiveSlide((prev) => (prev + 1) % carouselImages.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [carouselImages.length]);
 
   const handleSlideChange = (index: number) => {
     setActiveSlide(index);
