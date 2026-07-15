@@ -33,6 +33,10 @@ const PendingRequests: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewEvent, setViewEvent] = useState<Event | null>(null);
 
+  // Approve Dialog State
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveEventId, setApproveEventId] = useState<string>('');
+
   useEffect(() => {
     fetchPendingEvents();
   }, []);
@@ -50,12 +54,16 @@ const PendingRequests: React.FC = () => {
     }
   };
 
-  const handleApprove = async (eventId: string) => {
-    if (!window.confirm('Are you sure you want to approve and publish this event?')) return;
-    
+  const handleApprove = (eventId: string) => {
+    setApproveEventId(eventId);
+    setApproveDialogOpen(true);
+  };
+
+  const confirmApprove = async () => {
     try {
-      await EventService.approveEventRequest(eventId);
+      await EventService.approveEventRequest(approveEventId);
       toast.success('Event approved and published');
+      setApproveDialogOpen(false);
       fetchPendingEvents();
     } catch (error: any) {
       toast.error(error.message || 'Failed to approve event');
@@ -163,6 +171,22 @@ const PendingRequests: React.FC = () => {
           disableRowSelectionOnClick
         />
       </Paper>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onClose={() => setApproveDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Approve Event</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            Are you sure you want to approve and publish this event?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmApprove} color="success" variant="contained">
+            Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
