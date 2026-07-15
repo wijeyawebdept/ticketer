@@ -30,6 +30,9 @@ public class EventCreateRequest {
     // Ticket categories for multiple pricing options
     private List<TicketCategoryRequest> ticketCategories;
 
+    // Schedules for the event
+    private List<EventScheduleRequest> schedules;
+
     // Getters and Setters
     public String getName() {
         return name;
@@ -86,5 +89,13 @@ public class EventCreateRequest {
 
     public void setCategoryId(UUID categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public List<EventScheduleRequest> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<EventScheduleRequest> schedules) {
+        this.schedules = schedules;
     }
 }

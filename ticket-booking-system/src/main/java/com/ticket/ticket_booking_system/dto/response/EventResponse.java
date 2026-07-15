@@ -31,6 +31,9 @@ public class EventResponse {
     // Added ticket categories field
     private List<TicketCategoryResponse> ticketCategories;
 
+    // Added schedules field
+    private List<EventScheduleResponse> schedules;
+
     // Derived: true if any ticket category has dealActive = true
     private boolean hasDeal;
 
@@ -185,6 +188,14 @@ public class EventResponse {
         this.ticketCategories = ticketCategories;
     }
 
+    public List<EventScheduleResponse> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<EventScheduleResponse> schedules) {
+        this.schedules = schedules;
+    }
+
     public boolean isHasDeal() {
         return hasDeal;
     }
@@ -298,6 +309,11 @@ public class EventResponse {
 
         public Builder hasDeal(boolean hasDeal) {
             eventResponse.setHasDeal(hasDeal);
+            return this;
+        }
+
+        public Builder schedules(List<EventScheduleResponse> schedules) {
+            eventResponse.setSchedules(schedules);
             return this;
         }
 

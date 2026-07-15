@@ -82,6 +82,27 @@ public class OrganizerEventController {
     }
 
     /**
+     * Request event creation - Organizer perspective
+     * Creates an event with PENDING_APPROVAL status
+     */
+    @PostMapping("/request")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<EventResponse> requestEventCreation(
+            @Valid @RequestBody EventCreateRequest request,
+            Authentication authentication) {
+        try {
+            System.out.println("OrganizerEventController: Requesting event creation");
+            EventResponse createdEvent = eventService.requestEventCreation(request);
+            return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
+        } catch (Exception e) {
+            System.err.println("ERROR requesting event creation: " + e.getClass().getName());
+            System.err.println("ERROR message: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    /**
      * Get all events - Organizer perspective
      * Returns only events created by the current organizer
      */
@@ -89,7 +110,7 @@ public class OrganizerEventController {
     public ResponseEntity<Page<EventResponse>> getAllEvents(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String query,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
+            @PageableDefault(size = 100, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable,
             Authentication authentication) {
 
         // Get organizer ID from authentication

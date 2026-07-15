@@ -219,6 +219,33 @@ public class EventServiceImpl implements EventService {
             }
         }
 
+        // Handle schedules if provided
+        if (request.getSchedules() != null && !request.getSchedules().isEmpty()) {
+            final Event finalSavedEvent = savedEvent;
+            try {
+                List<EventSchedule> schedules = request.getSchedules().stream()
+                        .map(scheduleRequest -> EventSchedule.builder()
+                                .event(finalSavedEvent)
+                                .scheduleDate(scheduleRequest.getScheduleDate())
+                                .startTime(scheduleRequest.getStartTime())
+                                .endTime(scheduleRequest.getEndTime())
+                                .capacity(scheduleRequest.getCapacity())
+                                .availableSeats(scheduleRequest.getCapacity()) // Initially all available
+                                .priceAdjustment(scheduleRequest.getPriceAdjustment() != null ? scheduleRequest.getPriceAdjustment() : java.math.BigDecimal.ZERO)
+                                .status(EventSchedule.ScheduleStatus.ACTIVE)
+                                .notes(scheduleRequest.getNotes())
+                                .build())
+                        .collect(Collectors.toList());
+                
+                eventScheduleRepository.saveAll(schedules);
+                System.out.println("Saved " + schedules.size() + " schedules");
+            } catch (Exception e) {
+                System.err.println("ERROR saving schedules: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Failed to save schedules: " + e.getMessage(), e);
+            }
+        }
+
         System.out.println("CREATE EVENT COMPLETE");
         return mapEventToResponse(savedEvent);
     }
@@ -701,13 +728,25 @@ public class EventServiceImpl implements EventService {
                 .orElse(java.math.BigDecimal.ZERO);
 
         // Calculate true total capacity and available seats from schedules
-        int trueTotalCapacity = schedules.isEmpty() ? event.getTotalCapacity() : 
-            schedules.stream().mapToInt(s -> s != null ? s.getCapacity() : 0).sum();
-            
-        int trueAvailableSeats = schedules.isEmpty() ? event.getAvailableSeats() : 
-            schedules.stream()
-                .filter(s -> s != null && s.getStatus() == com.ticket.ticket_booking_system.entity.EventSchedule.ScheduleStatus.ACTIVE)
-                .mapToInt(s -> s != null ? s.getAvailableSeats() : 0).sum();
+        // The user doesn't want the capacity multiplied across multiple schedules (e.g. if it's the same venue capacity each day)
+        int trueTotalCapacity = event.getTotalCapacity();
+        int trueAvailableSeats = event.getAvailableSeats();
+
+        // Map all schedules to responses
+        List<com.ticket.ticket_booking_system.dto.response.EventScheduleResponse> scheduleResponses = schedules.stream()
+                .map(schedule -> com.ticket.ticket_booking_system.dto.response.EventScheduleResponse.builder()
+                        .scheduleId(schedule.getScheduleId())
+                        .eventId(event.getEventId())
+                        .eventName(event.getName())
+                        .scheduleDate(schedule.getScheduleDate())
+                        .startTime(schedule.getStartTime())
+                        .endTime(schedule.getEndTime())
+                        .capacity(schedule.getCapacity())
+                        .availableSeats(schedule.getAvailableSeats())
+                        .priceAdjustment(schedule.getPriceAdjustment())
+                        .status(schedule.getStatus())
+                        .build())
+                .collect(Collectors.toList());
 
         return EventResponse.builder()
                 .id(event.getId())
@@ -729,6 +768,7 @@ public class EventServiceImpl implements EventService {
                 .category(categoryResponse) // Include category object
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .hasDeal(hasDeal) // Derived from ticket categories
+                .schedules(scheduleResponses) // All schedules
                 .slug(event.getSlug()) // Include slug
                 .build();
     }
@@ -880,6 +920,86 @@ public class EventServiceImpl implements EventService {
 
         // Log event deactivation
         auditService.logAction(event.getCreatedByUserId(), "DEACTIVATE_EVENT", "EVENT", savedEvent.getEventId(), "Deactivated event: " + event.getName());
+        
+        return mapEventToResponse(savedEvent);
+    }
+    
+    @Override
+    @Transactional
+    public EventResponse requestEventCreation(EventCreateRequest request) {
+        // We reuse createEvent to handle the complex creation logic
+        EventResponse response = createEvent(request);
+        
+        // Then we fetch it and change its status
+        Event event = eventRepository.findById(response.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", response.getId().toString()));
+                
+        event.setStatus(Event.EventStatus.PENDING_APPROVAL);
+        Event savedEvent = eventRepository.save(event);
+        
+        // Log event request
+        auditService.logAction(event.getCreatedByUserId(), "REQUEST_EVENT_CREATION", "EVENT", savedEvent.getEventId(), "Requested event creation: " + event.getName());
+        
+        return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<EventResponse> getPendingEvents(Pageable pageable) {
+        return eventRepository.findByStatus(Event.EventStatus.PENDING_APPROVAL, pageable)
+                .map(this::mapEventToResponse);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse approveEventRequest(UUID eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+                
+        if (event.getStatus() != Event.EventStatus.PENDING_APPROVAL) {
+            throw new IllegalStateException("Only pending events can be approved.");
+        }
+        
+        event.setStatus(Event.EventStatus.DRAFT);
+        event.setAdminFeedback(null); // Clear any previous feedback
+        
+        Event savedEvent = eventRepository.save(event);
+        
+        // Log
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth != null ? auth.getName() : "System";
+        Admin admin = adminRepository.findByEmail(adminEmail).orElse(null);
+        UUID adminId = admin != null ? admin.getAdminId() : null;
+        if (adminId != null) {
+            auditService.logAction(adminId, "APPROVE_EVENT", "EVENT", savedEvent.getEventId(), "Approved event request: " + event.getName());
+        }
+        
+        return mapEventToResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse rejectEventRequest(UUID eventId, String feedback) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId.toString()));
+                
+        if (event.getStatus() != Event.EventStatus.PENDING_APPROVAL) {
+            throw new IllegalStateException("Only pending events can be rejected.");
+        }
+        
+        event.setStatus(Event.EventStatus.REJECTED);
+        event.setAdminFeedback(feedback);
+        
+        Event savedEvent = eventRepository.save(event);
+        
+        // Log
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth != null ? auth.getName() : "System";
+        Admin admin = adminRepository.findByEmail(adminEmail).orElse(null);
+        UUID adminId = admin != null ? admin.getAdminId() : null;
+        if (adminId != null) {
+            auditService.logAction(adminId, "REJECT_EVENT", "EVENT", savedEvent.getEventId(), "Rejected event request: " + event.getName() + " with reason: " + feedback);
+        }
         
         return mapEventToResponse(savedEvent);
     }

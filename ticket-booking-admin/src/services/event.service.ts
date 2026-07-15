@@ -5,12 +5,11 @@ import { Event, TicketCategory, UserRole } from '../types';
 interface EventCreateRequest {
   name: string;
   description: string;
-  startDateTime: string;
-  endDateTime: string;
   venueId: string;
   totalCapacity: number;
   imageUrl?: string;
   ticketCategories?: TicketCategory[]; // Added ticket categories
+  schedules?: any[]; // Added schedules
 }
 
 interface EventUpdateRequest {
@@ -64,6 +63,27 @@ class EventService {
   async createEvent(eventData: EventCreateRequest): Promise<Event> {
     const basePath = this.getBasePath();
     const response = await api.post<Event>(`${basePath}/events`, eventData);
+    return response.data;
+  }
+
+  async requestEventCreation(eventData: EventCreateRequest): Promise<Event> {
+    const basePath = this.getBasePath();
+    const response = await api.post<Event>(`${basePath}/events/request`, eventData);
+    return response.data;
+  }
+
+  async getPendingEvents(page: number = 0, size: number = 20): Promise<any> {
+    const response = await api.get<any>(`/api/admin/events/pending?page=${page}&size=${size}`);
+    return response.data;
+  }
+
+  async approveEventRequest(eventId: string): Promise<Event> {
+    const response = await api.patch<Event>(`/api/admin/events/${eventId}/approve`);
+    return response.data;
+  }
+
+  async rejectEventRequest(eventId: string, feedback: string): Promise<Event> {
+    const response = await api.patch<Event>(`/api/admin/events/${eventId}/reject`, { feedback });
     return response.data;
   }
 

@@ -136,6 +136,7 @@ export interface Event {
   status: EventStatus;
   active?: number; // 1=active, 0=inactive, -1=deleted
   createdBy: User;
+  organizer?: User;
   createdAt: string;
   updatedAt: string | null;
   imageUrl?: string;
@@ -145,6 +146,7 @@ export interface Event {
   availableSeats: number; // Current available seats for the event
   ticketPrice: number;
   ticketCategories?: TicketCategory[]; // Added ticket categories
+  schedules?: EventSchedule[]; // Added schedules
   hasDeal?: boolean; // Indicates if event has special deals
   dealType?: string; // e.g., 'DISCOUNT', 'BUY_X_GET_Y', 'CREDIT_CARD', 'EARLY_BIRD'
   dealDescription?: string; // e.g., "Buy 11 Get 1 Off", "20% Off with Visa"

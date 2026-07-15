@@ -31,6 +31,14 @@ public interface EventService {
 
     EventResponse changeEventStatus(UUID id, String status);
 
+    EventResponse requestEventCreation(EventCreateRequest request);
+
+    Page<EventResponse> getPendingEvents(Pageable pageable);
+
+    EventResponse approveEventRequest(UUID eventId);
+
+    EventResponse rejectEventRequest(UUID eventId, String feedback);
+
     Page<EventResponse> getEventsByOrganizer(UUID organizerId, Pageable pageable);
 
     Page<EventResponse> getUpcomingEvents(Pageable pageable);

@@ -150,12 +150,15 @@ public class Event {
     }
 
     public enum EventStatus {
-        DRAFT, PUBLISHED, CANCELLED, COMPLETED, POSTPONED
+        DRAFT, PUBLISHED, CANCELLED, COMPLETED, POSTPONED, PENDING_APPROVAL, REJECTED
     }
 
     @Builder.Default
     @Column(name = "notification_sent", nullable = false, columnDefinition = "boolean default false")
     private Boolean notificationSent = false;
+
+    @Column(name = "admin_feedback", columnDefinition = "TEXT")
+    private String adminFeedback;
 
     // Add compatibility methods to support existing code
     public java.util.UUID getId() {

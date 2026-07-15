@@ -61,7 +61,7 @@ public class AdminEventController {
     public ResponseEntity<Page<EventResponse>> getAllEvents(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String query,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+            @PageableDefault(size = 100, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
 
         Page<EventResponse> events;
 
@@ -118,6 +118,28 @@ public class AdminEventController {
             @RequestParam String status) {
 
         EventResponse event = eventService.changeEventStatus(eventId, status);
+        return ResponseEntity.ok(event);
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<Page<EventResponse>> getPendingEvents(
+            @PageableDefault(size = 100, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        Page<EventResponse> events = eventService.getPendingEvents(pageable);
+        return ResponseEntity.ok(events);
+    }
+
+    @PatchMapping("/{eventId}/approve")
+    public ResponseEntity<EventResponse> approveEventRequest(@PathVariable UUID eventId) {
+        EventResponse event = eventService.approveEventRequest(eventId);
+        return ResponseEntity.ok(event);
+    }
+
+    @PatchMapping("/{eventId}/reject")
+    public ResponseEntity<EventResponse> rejectEventRequest(
+            @PathVariable UUID eventId,
+            @RequestBody java.util.Map<String, String> body) {
+        String feedback = body.get("feedback");
+        EventResponse event = eventService.rejectEventRequest(eventId, feedback);
         return ResponseEntity.ok(event);
     }
 

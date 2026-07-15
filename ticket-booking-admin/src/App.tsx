@@ -42,6 +42,8 @@ import OrganizerAssignment from './pages/OrganizerAssignment';
 import EventCategories from './pages/EventCategories';
 import Banners from './pages/Banners';
 import GalleryManagement from './pages/GalleryManagement';
+import RequestEvent from './pages/Events/RequestEvent';
+import PendingRequests from './pages/Events/PendingRequests';
 import BlogManagement from './pages/BlogManagement';
 import PageContentManager from './pages/PageContentManager';
 import AuditLogs from './pages/AuditLogs';
@@ -234,6 +236,7 @@ function App() {
                   <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                   <Route path="/admin/dashboard" element={<Dashboard />} />
                   <Route path="/admin/events" element={<Events />} />
+                  <Route path="/admin/events/pending" element={<PendingRequests />} />
                   <Route path="/admin/events/:eventId/schedules" element={<EventSchedules />} />
                   <Route path="/admin/event-categories" element={<EventCategories />} />
                   <Route path="/admin/gallery" element={<GalleryManagement />} />
@@ -265,6 +268,7 @@ function App() {
                 <Route path="/organizer/*" element={<Navigate to="/organizer/dashboard" replace />} />
                 <Route path="/organizer/dashboard" element={<Dashboard />} />
                 <Route path="/organizer/events" element={<Events />} />
+                <Route path="/organizer/events/request" element={<RequestEvent />} />
                 <Route path="/organizer/events/:eventId/schedules" element={<EventSchedules />} />
                 <Route path="/organizer/venues" element={<Venues />} />
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />

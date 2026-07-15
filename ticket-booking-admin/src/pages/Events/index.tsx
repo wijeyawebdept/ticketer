@@ -59,6 +59,13 @@ const Events: React.FC = () => {
     severity: 'info' 
   });
 
+  const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === 'ROLE_ORGANIZER' || 
+                      user?.role === UserRole.ORGANIZER_EMPLOYEE || user?.role === 'ROLE_ORGANIZER_EMPLOYEE';
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === 'ROLE_ADMIN' ||
+                  user?.role === UserRole.SUPER_ADMIN || user?.role === 'ROLE_SUPER_ADMIN';
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -463,6 +470,36 @@ const Events: React.FC = () => {
             <IconButton onClick={fetchEvents} sx={{ mr: 1 }}>
               <RefreshIcon />
             </IconButton>
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() => navigate('/admin/events/pending')}
+                sx={{
+                  mr: 1,
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                }}
+              >
+                Pending Requests
+              </Button>
+            )}
+            {isOrganizer && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => navigate('/organizer/events/request')}
+                sx={{
+                  mr: 1,
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  fontWeight: 600,
+                }}
+              >
+                Request Event
+              </Button>
+            )}
             <Button
               variant="contained"
               color="primary"
