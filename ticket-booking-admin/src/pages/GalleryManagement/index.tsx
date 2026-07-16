@@ -215,10 +215,14 @@ const GalleryManagement: React.FC = () => {
                           backgroundColor: '#e0e0e0', borderRadius: '4px',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '0.75rem', color: '#888',
+                          overflow: 'hidden'
                         }}
                       >
-                        {/* Image thumbnails require a fetch-by-id call, show placeholder */}
-                        IMG
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.title || 'Gallery'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          'IMG'
+                        )}
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 500 }}>{item.title || '—'}</TableCell>
