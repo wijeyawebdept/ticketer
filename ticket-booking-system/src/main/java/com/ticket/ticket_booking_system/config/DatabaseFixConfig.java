@@ -37,8 +37,10 @@ public class DatabaseFixConfig {
                     "created_at timestamp without time zone NOT NULL" +
                     ");");
             
-            // 6. Add author_avatar to blog_posts
-            jdbcTemplate.execute("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS author_avatar varchar(255);");
+            // 6. Add missing author fields to blog_posts
+            jdbcTemplate.execute("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS author_id uuid;");
+            jdbcTemplate.execute("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS author_name varchar(255);");
+            jdbcTemplate.execute("ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS author_avatar varchar(500);");
             
             log.info("Successfully applied all database schema fixes");
         } catch (Exception e) {
