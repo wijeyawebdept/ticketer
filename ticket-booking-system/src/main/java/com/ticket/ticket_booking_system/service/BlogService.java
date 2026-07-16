@@ -32,6 +32,7 @@ public interface BlogService {
     BlogPostDetailResponse getPostDetail(UUID postId, UUID currentUserId);
     BlogCommentResponse addComment(UUID postId, UUID userId, String userName, BlogCommentRequest request);
     boolean toggleLike(UUID postId, UUID userId);
+    boolean toggleCommentLike(UUID commentId, UUID userId);
 
     // Email digest
     void sendBlogDigestEmail(String subject, String customMessage);

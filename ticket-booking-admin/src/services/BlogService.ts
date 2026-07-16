@@ -11,7 +11,11 @@ export interface BlogComment {
   commentId: string;
   userId: string;
   userName: string;
+  isAdmin: boolean;
   content: string;
+  likeCount: number;
+  likedByCurrentUser: boolean;
+  replies: BlogComment[];
   createdAt: string;
 }
 
@@ -23,6 +27,9 @@ export interface BlogPostSummary {
   likeCount: number;
   commentCount: number;
   coverImageUrl?: string;
+  authorId?: string;
+  authorName?: string;
+  authorAvatar?: string;
 
   createdAt: string;
   updatedAt: string;
@@ -113,8 +120,13 @@ const BlogService = {
     return res.data;
   },
 
-  addComment: async (postId: string, content: string): Promise<BlogComment> => {
-    const res = await api.post<BlogComment>(`/api/public/blog/posts/${postId}/comments`, { content });
+  addComment: async (postId: string, content: string, parentCommentId?: string): Promise<BlogComment> => {
+    const res = await api.post<BlogComment>(`/api/public/blog/posts/${postId}/comments`, { content, parentCommentId });
+    return res.data;
+  },
+
+  toggleCommentLike: async (commentId: string): Promise<boolean> => {
+    const res = await api.post<boolean>(`/api/public/blog/comments/${commentId}/like`);
     return res.data;
   },
 };

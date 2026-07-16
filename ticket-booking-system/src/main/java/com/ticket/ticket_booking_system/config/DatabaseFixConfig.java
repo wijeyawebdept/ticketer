@@ -22,8 +22,24 @@ public class DatabaseFixConfig {
             // 2. Add the updated constraint that includes all enum values
             jdbcTemplate.execute("ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status::text IN ('DRAFT', 'PUBLISHED', 'CANCELLED', 'COMPLETED', 'POSTPONED', 'PENDING_APPROVAL', 'REJECTED'));");
             log.info("Successfully added updated events_status_check constraint");
+            // 3. Add like_count and parent_comment_id to blog_comments if they don't exist
+            jdbcTemplate.execute("ALTER TABLE blog_comments ADD COLUMN IF NOT EXISTS like_count integer NOT NULL DEFAULT 0;");
+            jdbcTemplate.execute("ALTER TABLE blog_comments ADD COLUMN IF NOT EXISTS parent_comment_id uuid;");
+            
+            // 4. Add foreign key for parent_comment_id if it doesn't exist
+            jdbcTemplate.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_blog_comments_parent') THEN ALTER TABLE blog_comments ADD CONSTRAINT fk_blog_comments_parent FOREIGN KEY (parent_comment_id) REFERENCES blog_comments (comment_id); END IF; END; $$;");
+
+            // 5. Create blog_comment_likes table
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS blog_comment_likes (" +
+                    "like_id uuid PRIMARY KEY, " +
+                    "comment_id uuid NOT NULL REFERENCES blog_comments(comment_id), " +
+                    "user_id uuid NOT NULL, " +
+                    "created_at timestamp without time zone NOT NULL" +
+                    ");");
+            
+            log.info("Successfully added missing columns to blog_comments");
         } catch (Exception e) {
-            log.error("Failed to update check constraints", e);
+            log.error("Failed to update database schema", e);
         }
     }
 }

@@ -60,6 +60,15 @@ public class BlogPost {
     @Builder.Default
     private boolean digestSent = false;
 
+    @Column(name = "author_id")
+    private UUID authorId;
+
+    @Column(name = "author_name", length = 255)
+    private String authorName;
+
+    @Column(name = "author_avatar", length = 500)
+    private String authorAvatar;
+
     @Builder.Default
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;

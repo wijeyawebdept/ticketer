@@ -49,6 +49,7 @@ public class BlogServiceImpl implements BlogService {
     private final BlogPostRepository postRepo;
     private final BlogCommentRepository commentRepo;
     private final BlogLikeRepository likeRepo;
+    private final com.ticket.ticket_booking_system.repository.BlogCommentLikeRepository commentLikeRepo;
     private final BlogPostImageRepository imageRepo;
     private final UserRepository userRepo;
     private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepo;
@@ -69,6 +70,48 @@ public class BlogServiceImpl implements BlogService {
                 .content(request.content())
                 .published(false)
                 .build();
+                
+        // Set author details
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            String email = auth.getName();
+            
+            java.util.Optional<com.ticket.ticket_booking_system.entity.Admin> adminOpt = adminRepo.findByEmail(email);
+            if (adminOpt.isPresent()) {
+                com.ticket.ticket_booking_system.entity.Admin admin = adminOpt.get();
+                post.setAuthorId(admin.getAdminId());
+                post.setAuthorName(admin.getFirstName() + " " + admin.getLastName());
+                if (admin.getProfilePicture() != null && !admin.getProfilePicture().trim().isEmpty()) {
+                    post.setAuthorAvatar(admin.getProfilePicture());
+                } else {
+                    post.setAuthorAvatar("https://ui-avatars.com/api/?name=" + admin.getFirstName() + "+" + admin.getLastName() + "&background=ff1955&color=fff");
+                }
+            } else {
+                java.util.Optional<User> userOpt = userRepo.findByEmail(email);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    post.setAuthorId(user.getUserId());
+                    post.setAuthorName(user.getFirstName() + " " + user.getLastName());
+                    if (user.getProfilePicture() != null && !user.getProfilePicture().trim().isEmpty()) {
+                        post.setAuthorAvatar(user.getProfilePicture());
+                    } else {
+                        post.setAuthorAvatar("https://ui-avatars.com/api/?name=" + user.getFirstName() + "+" + user.getLastName() + "&background=ff1955&color=fff");
+                    }
+                } else {
+                    java.util.Optional<Organizer> orgOpt = organizerRepo.findByEmail(email);
+                    if (orgOpt.isPresent()) {
+                        Organizer org = orgOpt.get();
+                        post.setAuthorId(org.getOrganizerId());
+                        post.setAuthorName(org.getFirstName() + " " + org.getLastName());
+                        if (org.getProfilePicture() != null && !org.getProfilePicture().trim().isEmpty()) {
+                            post.setAuthorAvatar(org.getProfilePicture());
+                        } else {
+                            post.setAuthorAvatar("https://ui-avatars.com/api/?name=" + org.getFirstName() + "+" + org.getLastName() + "&background=ff1955&color=fff");
+                        }
+                    }
+                }
+            }
+        }
         post = postRepo.save(post);
 
         if (images != null) {
@@ -251,8 +294,10 @@ public class BlogServiceImpl implements BlogService {
         List<BlogImageResponse> images = imageRepo.findByPost_PostIdOrderByDisplayOrderAsc(postId)
                 .stream().map(this::toImageResponse).collect(Collectors.toList());
 
-        List<BlogCommentResponse> comments = commentRepo.findByPost_PostIdOrderByCreatedAtAsc(postId)
-                .stream().map(this::toCommentResponse).collect(Collectors.toList());
+        List<BlogCommentResponse> comments = post.getComments().stream()
+                .filter(c -> c.getParentComment() == null)
+                .map(c -> toCommentResponse(c, currentUserId))
+                .collect(Collectors.toList());
 
         boolean liked = currentUserId != null && likeRepo.existsByPost_PostIdAndUserId(postId, currentUserId);
 
@@ -265,6 +310,9 @@ public class BlogServiceImpl implements BlogService {
                 post.getLikeCount(),
                 post.getCommentCount(),
                 liked,
+                post.getAuthorId() != null ? post.getAuthorId().toString() : null,
+                post.getAuthorName(),
+                post.getAuthorAvatar(),
                 images,
                 comments,
                 post.getCreatedAt(),
@@ -276,18 +324,28 @@ public class BlogServiceImpl implements BlogService {
     @Override
     @Transactional
     public BlogCommentResponse addComment(UUID postId, UUID userId, String userName, BlogCommentRequest request) {
-        BlogPost post = postRepo.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+        BlogPost post = postRepo.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
         BlogComment comment = BlogComment.builder()
                 .post(post)
                 .userId(userId)
                 .userName(userName)
                 .content(request.content())
                 .build();
+
+        if (request.parentCommentId() != null && !request.parentCommentId().trim().isEmpty()) {
+            BlogComment parent = commentRepo.findById(UUID.fromString(request.parentCommentId()))
+                    .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+            comment.setParentComment(parent);
+        }
+
         comment = commentRepo.save(comment);
-        post.setCommentCount(post.getCommentCount() + 1);
-        postRepo.save(post);
-        return toCommentResponse(comment);
+
+        if (comment.getParentComment() == null) {
+            post.setCommentCount(post.getCommentCount() + 1);
+            postRepo.save(post);
+        }
+
+        return toCommentResponse(comment, getCurrentUserId());
     }
 
     @Override
@@ -306,6 +364,25 @@ public class BlogServiceImpl implements BlogService {
             likeRepo.save(like);
             post.setLikeCount(post.getLikeCount() + 1);
             postRepo.save(post);
+            return true;
+        }
+    }
+
+    @Override
+    @Transactional
+    public boolean toggleCommentLike(UUID commentId, UUID userId) {
+        BlogComment comment = commentRepo.findById(commentId).orElseThrow(() -> new RuntimeException("Comment not found"));
+        var existing = commentLikeRepo.findByComment_CommentIdAndUserId(commentId, userId);
+        if (existing.isPresent()) {
+            commentLikeRepo.delete(existing.get());
+            comment.setLikeCount(comment.getLikeCount() - 1);
+            commentRepo.save(comment);
+            return false;
+        } else {
+            com.ticket.ticket_booking_system.entity.BlogCommentLike like = com.ticket.ticket_booking_system.entity.BlogCommentLike.builder().comment(comment).userId(userId).build();
+            commentLikeRepo.save(like);
+            comment.setLikeCount(comment.getLikeCount() + 1);
+            commentRepo.save(comment);
             return true;
         }
     }
@@ -362,6 +439,9 @@ public class BlogServiceImpl implements BlogService {
                 post.getLikeCount(),
                 post.getCommentCount(),
                 coverImageUrl,
+                post.getAuthorId() != null ? post.getAuthorId().toString() : null,
+                post.getAuthorName(),
+                post.getAuthorAvatar(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
@@ -375,12 +455,26 @@ public class BlogServiceImpl implements BlogService {
         );
     }
 
-    private BlogCommentResponse toCommentResponse(BlogComment c) {
+    private BlogCommentResponse toCommentResponse(BlogComment c, UUID currentUserId) {
+        boolean isAdmin = false;
+        if (c.getUserId() != null) {
+            isAdmin = adminRepo.findById(c.getUserId()).isPresent();
+        }
+        boolean likedByCurrentUser = currentUserId != null && commentLikeRepo.existsByComment_CommentIdAndUserId(c.getCommentId(), currentUserId);
+        
+        List<BlogCommentResponse> mappedReplies = c.getReplies() != null ? 
+            c.getReplies().stream().map(r -> toCommentResponse(r, currentUserId)).collect(Collectors.toList()) : 
+            new java.util.ArrayList<>();
+            
         return new BlogCommentResponse(
                 c.getCommentId().toString(),
-                c.getUserId().toString(),
+                c.getUserId() != null ? c.getUserId().toString() : null,
                 c.getUserName(),
+                isAdmin,
                 c.getContent(),
+                c.getLikeCount(),
+                likedByCurrentUser,
+                mappedReplies,
                 c.getCreatedAt()
         );
     }

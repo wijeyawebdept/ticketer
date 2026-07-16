@@ -34,6 +34,7 @@ public class BlogPublicController {
 
     private final BlogService blogService;
     private final UserRepository userRepo;
+    private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepo;
 
     @GetMapping("/posts")
     public ResponseEntity<Page<BlogPostSummaryResponse>> getPosts(
@@ -57,15 +58,34 @@ public class BlogPublicController {
         return ResponseEntity.ok(liked);
     }
 
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<Boolean> toggleCommentLike(@PathVariable UUID commentId) {
+        UUID userId = requireAuth();
+        boolean liked = blogService.toggleCommentLike(commentId, userId);
+        return ResponseEntity.ok(liked);
+    }
+
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<BlogCommentResponse> addComment(
             @PathVariable UUID postId,
             @RequestBody BlogCommentRequest request) {
         UUID userId = requireAuth();
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String name = (user.getFirstName() != null ? user.getFirstName() : "") +
-                      (user.getLastName() != null ? " " + user.getLastName() : "");
+        String name = "";
+        java.util.Optional<User> userOpt = userRepo.findById(userId);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            name = (user.getFirstName() != null ? user.getFirstName() : "") +
+                   (user.getLastName() != null ? " " + user.getLastName() : "");
+        } else {
+            java.util.Optional<com.ticket.ticket_booking_system.entity.Admin> adminOpt = adminRepo.findById(userId);
+            if (adminOpt.isPresent()) {
+                com.ticket.ticket_booking_system.entity.Admin admin = adminOpt.get();
+                name = (admin.getFirstName() != null ? admin.getFirstName() : "") +
+                       (admin.getLastName() != null ? " " + admin.getLastName() : "");
+            } else {
+                throw new RuntimeException("User not found");
+            }
+        }
         return ResponseEntity.ok(blogService.addComment(postId, userId, name.trim(), request));
     }
 
@@ -78,7 +98,14 @@ public class BlogPublicController {
                 return null;
             }
             String email = auth.getName();
-            return userRepo.findByEmail(email).map(u -> u.getId()).orElse(null);
+            
+            java.util.Optional<User> u = userRepo.findByEmail(email);
+            if (u.isPresent()) return u.get().getUserId();
+            
+            java.util.Optional<com.ticket.ticket_booking_system.entity.Admin> a = adminRepo.findByEmail(email);
+            if (a.isPresent()) return a.get().getAdminId();
+            
+            return null;
         } catch (Exception e) {
             return null;
         }

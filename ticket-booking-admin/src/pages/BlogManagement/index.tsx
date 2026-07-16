@@ -14,8 +14,99 @@ import PublicIcon from '@mui/icons-material/Public';
 import PublicOffIcon from '@mui/icons-material/PublicOff';
 import SendIcon from '@mui/icons-material/Send';
 import EditIcon from '@mui/icons-material/Edit';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useNavigate } from 'react-router-dom';
 import BlogService, { BlogPostSummary, BlogImage } from '../../services/BlogService';
+
+const AdminCommentItem = ({
+  comment,
+  formatDate,
+  onDelete,
+  onReplyClick,
+  replyingToId,
+  replyText,
+  setReplyText,
+  onSubmitReply,
+  submittingReply,
+  onCancelReply,
+  onLike,
+}: any) => {
+  return (
+    <Box sx={{ mb: 2, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #eee' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{comment.userName}</Typography>
+          {comment.isAdmin && <Chip label="Admin" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: '#ff1955', color: '#fff', fontWeight: 'bold' }} />}
+        </Box>
+        <Typography variant="caption" color="text.secondary">{formatDate(comment.createdAt)}</Typography>
+      </Box>
+      <Typography variant="body2" sx={{ color: '#444', mb: 1 }}>{comment.content}</Typography>
+      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => onLike(comment.commentId)}>
+            {comment.likedByCurrentUser ? (
+              <FavoriteIcon sx={{ fontSize: 16, color: '#ff1955' }} />
+            ) : (
+              <FavoriteBorderIcon sx={{ fontSize: 16, color: '#777' }} />
+            )}
+            <Typography variant="caption" sx={{ color: '#777' }}>{comment.likeCount}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => onReplyClick(comment.commentId)}>
+            <ChatBubbleOutlineIcon sx={{ fontSize: 16, color: '#777' }} />
+            <Typography variant="caption" sx={{ color: '#777' }}>Reply</Typography>
+          </Box>
+        </Box>
+        <Button size="small" color="error" startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
+                onClick={() => onDelete(comment.commentId)} sx={{ fontSize: '0.7rem', py: 0 }}>
+          Delete
+        </Button>
+      </Box>
+
+      {replyingToId === comment.commentId && (
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column' }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Add a reply..."
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Button onClick={onCancelReply} size="small">Cancel</Button>
+            <Button onClick={() => onSubmitReply(comment.commentId)} disabled={submittingReply || !replyText.trim()} size="small" variant="contained" sx={{ ml: 1, bgcolor: '#ff1955' }}>
+              {submittingReply ? <CircularProgress size={16} /> : 'Reply'}
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      {comment.replies && comment.replies.length > 0 && (
+        <Box sx={{ mt: 2, pl: 2, borderLeft: '2px solid #eee' }}>
+          {comment.replies.map((reply: any) => (
+            <AdminCommentItem
+              key={reply.commentId}
+              comment={reply}
+              formatDate={formatDate}
+              onDelete={onDelete}
+              onReplyClick={onReplyClick}
+              replyingToId={replyingToId}
+              replyText={replyText}
+              setReplyText={setReplyText}
+              onSubmitReply={onSubmitReply}
+              submittingReply={submittingReply}
+              onCancelReply={onCancelReply}
+              onLike={onLike}
+            />
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
 
 const BlogManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +119,12 @@ const BlogManagement: React.FC = () => {
   const [digestDialogOpen, setDigestDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -235,6 +332,55 @@ const BlogManagement: React.FC = () => {
     }
   };
 
+  const handleToggleLike = async (commentId: string) => {
+    try {
+      await BlogService.toggleCommentLike(commentId);
+      if (selectedPost) handleViewDetails(selectedPost.postId);
+    } catch {
+      setError('Failed to toggle like');
+    }
+  };
+
+  const handleReplyClick = (commentId: string) => {
+    setReplyingToId(commentId);
+    setReplyText('');
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToId(null);
+    setReplyText('');
+  };
+
+  const handleSubmitReply = async (parentCommentId: string) => {
+    if (!replyText.trim() || !selectedPost) return;
+    setSubmittingReply(true);
+    try {
+      await BlogService.addComment(selectedPost.postId, replyText.trim(), parentCommentId);
+      setReplyingToId(null);
+      setReplyText('');
+      handleViewDetails(selectedPost.postId); // Refresh
+    } catch {
+      setError('Failed to submit reply');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !selectedPost) return;
+    setSubmittingComment(true);
+    try {
+      await BlogService.addComment(selectedPost.postId, commentText.trim());
+      setCommentText('');
+      handleViewDetails(selectedPost.postId); // Refresh
+      fetchPosts();
+    } catch {
+      setError('Failed to submit comment');
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
   const handleSendDigest = async () => {
     setSendingDigest(true);
     try {
@@ -301,7 +447,6 @@ const BlogManagement: React.FC = () => {
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, maxWidth: 220 }}>
                       <Typography noWrap>{post.title}</Typography>
-                      {post.summary && <Typography variant="caption" sx={{ color: '#888' }} noWrap>{post.summary}</Typography>}
                     </TableCell>
                     <TableCell align="center">
                       <Chip label={post.published ? 'Published' : 'Draft'}
@@ -494,21 +639,39 @@ const BlogManagement: React.FC = () => {
                     </Typography>
                   ) : (
                     selectedPost.comments.map((comment: any) => (
-                      <Box key={comment.commentId} sx={{ mb: 2, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #eee' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{comment.userName}</Typography>
-                          <Typography variant="caption" color="text.secondary">{formatDate(comment.createdAt)}</Typography>
-                        </Box>
-                        <Typography variant="body2" sx={{ color: '#444', mb: 1 }}>{comment.content}</Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <Button size="small" color="error" startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-                                  onClick={() => handleDeleteComment(comment.commentId)} sx={{ fontSize: '0.7rem', py: 0 }}>
-                            Delete
-                          </Button>
-                        </Box>
-                      </Box>
+                      <AdminCommentItem
+                        key={comment.commentId}
+                        comment={comment}
+                        formatDate={formatDate}
+                        onDelete={handleDeleteComment}
+                        onReplyClick={handleReplyClick}
+                        replyingToId={replyingToId}
+                        replyText={replyText}
+                        setReplyText={setReplyText}
+                        onSubmitReply={handleSubmitReply}
+                        submittingReply={submittingReply}
+                        onCancelReply={handleCancelReply}
+                        onLike={handleToggleLike}
+                      />
                     ))
                   )}
+
+                  <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Add a Comment as Admin</Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Write your comment..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      multiline rows={2}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                      <Button onClick={handleSubmitComment} disabled={submittingComment || !commentText.trim()} variant="contained" sx={{ bgcolor: '#ff1955' }}>
+                        {submittingComment ? <CircularProgress size={16} /> : 'Post Comment'}
+                      </Button>
+                    </Box>
+                  </Box>
                 </Box>
               </Grid>
             </Grid>
