@@ -20,14 +20,13 @@ import {
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  AdminPanelSettings as AdminIcon
+  VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
 import { Formik, Form, Field, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserRole } from '../../types';
+// import { UserRole } from '../../types';
 import AuthService from '../../services/auth.service';
 
 // Add this for better type checking
@@ -57,7 +56,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  // const { login } = useAuth();
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -95,22 +94,18 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
       
       // Choose login strategy based on mode
       let loginResponse = null;
-      let userRole = '';
       
       if (mode === 'admin') {
         // Mode: ADMIN - Only try admin login
         loginResponse = await AuthService.adminLogin({ email: values.email, password: values.password });
-        userRole = loginResponse.user?.role || loginResponse.role || '';
       } else {
         // Mode: ORGANIZER - Try organizer, then employee
         try {
           loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
-          userRole = loginResponse.user?.role || loginResponse.role || '';
         } catch (organizerError: any) {
           if (organizerError.response?.status === 403) {
             // Not an organizer, try organizer employee
             loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
-            userRole = loginResponse.user?.role || loginResponse.role || '';
           } else {
             throw organizerError;
           }

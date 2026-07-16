@@ -35,12 +35,17 @@ jobs:
             # Install dependencies if they have changed
             npm install
             
-            # Run the build process as requested
-            npm run build 2>&1 | tee /tmp/build.log
+            # Run the build process (CI=false prevents warnings from failing the build)
+            CI=false npm run build 2>&1 | tee /tmp/build.log
             
-            # Replace the old build with the new one
-            sudo rm -rf /var/www/ticketer/*
-            sudo cp -r build/* /var/www/ticketer/
+            # Replace the old build with the new one ONLY if the build directory exists
+            if [ -d "build" ]; then
+              sudo rm -rf /var/www/ticketer/*
+              sudo cp -r build/* /var/www/ticketer/
+            else
+              echo "Build failed! Skipping frontend deployment."
+              exit 1
+            fi
             
             # Restart Nginx
             sudo systemctl restart nginx

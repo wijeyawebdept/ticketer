@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Container, Typography, Grid, Card, CardMedia, CardContent,
-  Chip, Button, CircularProgress, Alert, Pagination, Drawer, IconButton, Divider, TextField, Avatar
+  Box, Container, Typography, Card, CardMedia,
+  Chip, Button, CircularProgress, Alert, Pagination, Drawer, IconButton, TextField, Avatar
 } from '@mui/material';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CloseIcon from '@mui/icons-material/Close';
-import SendIcon from '@mui/icons-material/Send';
+
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import BlogService, { BlogPostSummary, BlogComment } from '../../../services/BlogService';
@@ -111,7 +111,7 @@ const CommentItem = ({
 
 
 const Blog: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [page, setPage] = useState(0);

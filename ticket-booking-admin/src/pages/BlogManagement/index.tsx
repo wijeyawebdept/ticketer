@@ -3,7 +3,7 @@ import {
   Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
   Grid, IconButton, TextField, Typography, Alert, Chip, CircularProgress,
   Tooltip, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, FormControl, InputLabel, Select, MenuItem,
+  TableHead, TableRow,
   Divider,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -109,7 +109,7 @@ const AdminCommentItem = ({
 
 
 const BlogManagement: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
