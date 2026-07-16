@@ -80,11 +80,16 @@ const PostDetail: React.FC = () => {
     }
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatDate = (d: string) => {
+    let dStr = d;
+    if (dStr && !dStr.endsWith('Z')) dStr += 'Z';
+    return new Date(dStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
 
   const timeAgo = (d: string) => {
-    const diff = Date.now() - new Date(d).getTime();
+    let dStr = d;
+    if (dStr && !dStr.endsWith('Z')) dStr += 'Z';
+    const diff = Date.now() - new Date(dStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;

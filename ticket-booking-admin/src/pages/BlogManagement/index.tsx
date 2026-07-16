@@ -17,7 +17,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import { useNavigate } from 'react-router-dom';
+
 import BlogService, { BlogPostSummary, BlogImage } from '../../services/BlogService';
 
 const AdminCommentItem = ({

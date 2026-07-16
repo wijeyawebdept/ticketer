@@ -7,7 +7,7 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 
-import { useNavigate } from 'react-router-dom';
+
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import BlogService, { BlogPostSummary, BlogComment } from '../../../services/BlogService';
 import { useAuth } from '../../../context/AuthContext';
@@ -265,7 +265,9 @@ const Blog: React.FC = () => {
 
 
   const timeAgo = (dateStr: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
+    let dStr = dateStr;
+    if (dStr && !dStr.endsWith('Z')) dStr += 'Z';
+    const seconds = Math.floor((new Date().getTime() - new Date(dStr).getTime()) / 1000);
     let interval = seconds / 31536000;
     if (interval > 1) return Math.floor(interval) + 'y ago';
     interval = seconds / 2592000;
