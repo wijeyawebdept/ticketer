@@ -205,6 +205,7 @@ const BlogManagement: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('Title is required'); return; }
+    if (summary && summary.length > 500) { setError('Summary must be 500 characters or less'); return; }
     setLoading(true);
     try {
       const form = new FormData();
@@ -223,8 +224,8 @@ const BlogManagement: React.FC = () => {
       
       setOpenDialog(false);
       fetchPosts();
-    } catch {
-      setError(editMode ? 'Failed to update post' : 'Failed to create post');
+    } catch (err: any) {
+      setError(err.response?.data?.message || (editMode ? 'Failed to update post' : 'Failed to create post'));
     } finally {
       setLoading(false);
     }
@@ -501,7 +502,7 @@ const BlogManagement: React.FC = () => {
           <Grid container spacing={3} sx={{ mt: 0 }}>
             <Grid item xs={12} md={6}>
               <TextField fullWidth label="Title *" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
-              <TextField fullWidth label="Summary (teaser text)" value={summary} onChange={(e) => setSummary(e.target.value)} margin="normal" multiline rows={2} />
+              <TextField fullWidth label="Summary (teaser text)" value={summary} onChange={(e) => setSummary(e.target.value)} margin="normal" multiline rows={2} inputProps={{ maxLength: 500 }} helperText={`${(summary || '').length}/500 characters`} />
               <TextField fullWidth label="Full Content" value={content} onChange={(e) => setContent(e.target.value)} margin="normal" multiline rows={6} placeholder="Write the full article content here..." />
             </Grid>
             <Grid item xs={12} md={6}>
