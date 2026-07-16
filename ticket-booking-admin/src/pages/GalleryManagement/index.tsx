@@ -43,6 +43,10 @@ const GalleryManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [eventCategories, setEventCategories] = useState<EventCategory[]>([]);
+  
+  // Delete Dialog State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -130,15 +134,23 @@ const GalleryManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this image?')) {
+  const handleDelete = (id: string) => {
+    setImageToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (imageToDelete) {
       try {
         setError(null);
-        await GalleryService.deleteGalleryImage(id);
+        await GalleryService.deleteGalleryImage(imageToDelete);
         setSuccess('Image deleted successfully');
+        setDeleteDialogOpen(false);
+        setImageToDelete(null);
         fetchImages();
       } catch (err) {
         setError('Failed to delete image');
+        setDeleteDialogOpen(false);
       }
     }
   };
@@ -357,6 +369,22 @@ const GalleryManagement: React.FC = () => {
             disabled={loading || !selectedFile || !category.trim()}
           >
             {loading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Delete Image</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            Are you sure you want to delete this image? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
