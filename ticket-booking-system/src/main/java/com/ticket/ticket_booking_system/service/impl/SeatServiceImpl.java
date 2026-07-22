@@ -181,7 +181,31 @@ public class SeatServiceImpl implements SeatService {
     @Override
     @Transactional
     public void holdSeats(List<UUID> seatIds, UUID userId, int holdDurationMinutes) {
+        if (seatIds == null || seatIds.isEmpty()) return;
         List<Seat> seats = seatRepository.findAllById(seatIds);
+        if (seats.isEmpty()) return;
+        
+        Event event = seats.get(0).getEvent();
+        LocalDateTime cutoffTime = event.getTicketCutoffTime();
+        
+        // If cutoff is null, compute 12 hours before the first schedule
+        if (cutoffTime == null && event.getSchedules() != null && !event.getSchedules().isEmpty()) {
+            com.ticket.ticket_booking_system.entity.EventSchedule firstSchedule = event.getSchedules().stream()
+                .min(java.util.Comparator.comparing(s -> LocalDateTime.of(s.getScheduleDate(), s.getStartTime())))
+                .orElse(null);
+            if (firstSchedule != null) {
+                cutoffTime = LocalDateTime.of(firstSchedule.getScheduleDate(), firstSchedule.getStartTime()).minusHours(12);
+            }
+        }
+        
+        // Enforce Sri Lankan Time (Asia/Colombo) for current time check
+        java.time.ZoneId lkZone = java.time.ZoneId.of("Asia/Colombo");
+        LocalDateTime nowLK = LocalDateTime.now(lkZone);
+        
+        if (cutoffTime != null && nowLK.isAfter(cutoffTime)) {
+            throw new IllegalStateException("Online ticket sales for this event have closed.");
+        }
+
         LocalDateTime holdExpiry = LocalDateTime.now().plusMinutes(holdDurationMinutes);
 
         for (Seat seat : seats) {

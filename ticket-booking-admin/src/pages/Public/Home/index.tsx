@@ -65,168 +65,155 @@ const EventCard: React.FC<EventCardProps> = ({
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   return (
-    <Box
-      sx={{
-        minHeight: '325px',
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center center',
-        backgroundSize: 'cover',
-        marginBottom: '30px',
-        padding: '0 15px',
-        borderRadius: '14px',
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <Grid container>
-        <Grid item xs={12} sm={12} md={8} lg={8} xl={8}>
-          <Typography
-            sx={{
-              paddingTop: '15px',
-              paddingBottom: '10px',
-              paddingLeft: '15px',
-              fontWeight: 900,
-              fontFamily: 'Raleway, sans-serif',
-              color: '#fcd0a5',
-              fontSize: isMobile ? '30px' : '50px',
-              lineHeight: 1.1,
-              letterSpacing: 0,
-              cursor: 'pointer',
-              transition: 'color 0.3s',
-              '&:hover': {
-                color: '#ff1955',
-              },
-            }}
-          >
-            {title}
-          </Typography>
-          <Typography
-            sx={{
-              paddingBottom: '25px',
-              paddingLeft: '15px',
-              fontWeight: 700,
-              fontFamily: 'Raleway, sans-serif',
-              color: '#fff',
-              fontSize: '19px',
-              lineHeight: 1.2,
-              letterSpacing: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              wordBreak: 'break-word',
-            }}
-          >
-            {artists}
-          </Typography>
-          <Typography
-            sx={{
-              paddingTop: '10px',
-              paddingBottom: '15px',
-              paddingLeft: '15px',
-              fontWeight: 300,
-              fontFamily: 'Raleway, sans-serif',
-              color: '#fcd0a5',
-              fontSize: '19px',
-              lineHeight: 1.2,
-              letterSpacing: 0,
-            }}
-          >
-            {venue}
-          </Typography>
-          <Typography
-            sx={{
-              paddingTop: '10px',
-              paddingBottom: '15px',
-              paddingLeft: '15px',
-              fontWeight: 300,
-              fontFamily: 'Raleway, sans-serif',
-              color: '#fcd0a5',
-              fontSize: '19px',
-              lineHeight: 1.2,
-              letterSpacing: 0,
-            }}
-          >
-            {tickets}
-          </Typography>
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          sm={12}
-          md={4}
-          lg={4}
-          xl={4}
-          sx={{ textAlign: { xs: 'left', md: 'right' } }}
-        >
-          <Typography
-            sx={{
-              paddingTop: '15px',
-              paddingBottom: '10px',
-              paddingRight: { xs: '15px', md: '15px' },
-              paddingLeft: { xs: '15px', md: 0 },
-              fontWeight: 300,
-              fontFamily: 'Raleway, sans-serif',
-              color: '#fff',
-              fontSize: '25px',
-              lineHeight: 1.2,
-              letterSpacing: 0,
-            }}
-          >
-            {day}
-          </Typography>
-          <Typography
-            sx={{
-              paddingTop: '5px',
-              paddingBottom: '20px',
-              paddingRight: { xs: '15px', md: '15px' },
-              paddingLeft: { xs: '15px', md: 0 },
-              fontWeight: 300,
-              fontFamily: 'Raleway, sans-serif',
+    <Box sx={{ marginBottom: '40px' }}>
+      {/* Details above the image */}
+      <Box sx={{ padding: '0 15px', marginBottom: '15px' }}>
+        <Typography
+          onClick={() => navigate(`/event/${slug || eventId}`)}
+          sx={{
+            fontWeight: 900,
+            fontFamily: 'Raleway, sans-serif',
+            color: '#fff',
+            fontSize: isMobile ? '24px' : '36px',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            cursor: 'pointer',
+            transition: 'color 0.3s',
+            '&:hover': {
               color: '#ff1955',
-              fontSize: '40px',
-              lineHeight: 1,
-              letterSpacing: 0,
-              '& strong': {
-                fontWeight: 700,
-              },
-            }}
-            dangerouslySetInnerHTML={{ __html: date }}
-          />
-          <Box
-            sx={{
-              paddingRight: { xs: '15px', md: '15px' },
-              paddingLeft: { xs: '15px', md: 0 },
-              paddingBottom: '25px',
-            }}
+            },
+          }}
+        >
+          {title}
+        </Typography>
+      </Box>
+
+      {/* Image with right-side details */}
+      <Box
+        sx={{
+          minHeight: '325px',
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center center',
+          backgroundSize: 'cover',
+          padding: '0 15px',
+          borderRadius: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          position: 'relative',
+        }}
+      >
+        <Grid container>
+          {/* Left side empty to show image */}
+          <Grid item xs={12} sm={12} md={8} lg={8} xl={8}></Grid>
+          
+          {/* Right side content */}
+          <Grid
+            item
+            xs={12}
+            sm={12}
+            md={4}
+            lg={4}
+            xl={4}
+            sx={{ textAlign: { xs: 'left', md: 'right' } }}
           >
-            <Button
-              onClick={() => navigate(`/event/${slug || eventId}`)}
+            <Typography
               sx={{
+                paddingTop: '15px',
+                paddingBottom: '10px',
+                paddingRight: { xs: '15px', md: '15px' },
+                paddingLeft: { xs: '15px', md: 0 },
+                fontWeight: 300,
                 fontFamily: 'Raleway, sans-serif',
-                fontWeight: 700,
-                color: '#fcd0a5 !important',
-                padding: '1px 27px',
-                lineHeight: '48px',
-                border: '1px solid #fcd0a5',
-                borderRadius: '25px',
-                letterSpacing: '3.6px',
-                backgroundColor: 'transparent',
-                transition: 'all .3s',
-                '&:hover': {
-                  color: '#ffffff !important',
-                  backgroundColor: '#ff1955',
-                  borderColor: '#ff1955',
-                },
+                color: '#fff',
+                fontSize: '25px',
+                lineHeight: 1.2,
+                letterSpacing: 0,
               }}
             >
-              TICKETS
-            </Button>
-          </Box>
+              {day}
+            </Typography>
+            <Typography
+              sx={{
+                paddingTop: '5px',
+                paddingBottom: '20px',
+                paddingRight: { xs: '15px', md: '15px' },
+                paddingLeft: { xs: '15px', md: 0 },
+                fontWeight: 300,
+                fontFamily: 'Raleway, sans-serif',
+                color: '#ff1955',
+                fontSize: '40px',
+                lineHeight: 1,
+                letterSpacing: 0,
+                '& strong': {
+                  fontWeight: 700,
+                },
+              }}
+              dangerouslySetInnerHTML={{ __html: date }}
+            />
+            {/* Venue and tickets above button */}
+            <Typography
+              sx={{
+                paddingBottom: '5px',
+                paddingRight: { xs: '15px', md: '15px' },
+                paddingLeft: { xs: '15px', md: 0 },
+                fontWeight: 500,
+                fontFamily: 'Raleway, sans-serif',
+                color: '#fcd0a5',
+                fontSize: '16px',
+                lineHeight: 1.2,
+              }}
+            >
+              {venue}
+            </Typography>
+            <Typography
+              sx={{
+                paddingBottom: '15px',
+                paddingRight: { xs: '15px', md: '15px' },
+                paddingLeft: { xs: '15px', md: 0 },
+                fontWeight: 500,
+                fontFamily: 'Raleway, sans-serif',
+                color: '#fcd0a5',
+                fontSize: '16px',
+                lineHeight: 1.2,
+              }}
+            >
+              {tickets}
+            </Typography>
+            
+            <Box
+              sx={{
+                paddingRight: { xs: '15px', md: '15px' },
+                paddingLeft: { xs: '15px', md: 0 },
+                paddingBottom: '15px',
+              }}
+            >
+              <Button
+                onClick={() => navigate(`/event/${slug || eventId}`)}
+                sx={{
+                  fontFamily: 'Raleway, sans-serif',
+                  fontWeight: 700,
+                  color: '#fcd0a5 !important',
+                  padding: '1px 27px',
+                  lineHeight: '48px',
+                  border: '1px solid #fcd0a5',
+                  borderRadius: '25px',
+                  letterSpacing: '3.6px',
+                  backgroundColor: 'transparent',
+                  transition: 'all .3s',
+                  '&:hover': {
+                    color: '#ffffff !important',
+                    backgroundColor: '#ff1955',
+                    borderColor: '#ff1955',
+                  },
+                }}
+              >
+                Book Your Seat
+              </Button>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
     </Box>
   );
 };
@@ -894,7 +881,7 @@ const Home: React.FC = () => {
                     artists={event.description?.substring(0, 100) || ''}
                     venue={event.venue?.name || 'TBA'}
                     tickets={`From ${formatPrice(lowestCurrentPrice)}`}
-                    date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : 'TBA'}
+                    date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
                     day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
                     backgroundImage={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
                     eventId={event.id || event.eventId}

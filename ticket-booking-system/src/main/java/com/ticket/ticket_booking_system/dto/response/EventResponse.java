@@ -22,6 +22,7 @@ public class EventResponse {
     private UserBasicResponse organizer;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime ticketCutoffTime;
     private String createdByType; // "ADMIN", "SUPER_ADMIN", "ORGANIZER", etc.
     private String slug;
 
@@ -155,6 +156,14 @@ public class EventResponse {
         this.updatedAt = updatedAt;
     }
 
+    public LocalDateTime getTicketCutoffTime() {
+        return ticketCutoffTime;
+    }
+
+    public void setTicketCutoffTime(LocalDateTime ticketCutoffTime) {
+        this.ticketCutoffTime = ticketCutoffTime;
+    }
+
     public String getCreatedByType() {
         return createdByType;
     }
@@ -283,6 +292,11 @@ public class EventResponse {
 
         public Builder updatedAt(LocalDateTime updatedAt) {
             eventResponse.setUpdatedAt(updatedAt);
+            return this;
+        }
+
+        public Builder ticketCutoffTime(LocalDateTime ticketCutoffTime) {
+            eventResponse.setTicketCutoffTime(ticketCutoffTime);
             return this;
         }
 

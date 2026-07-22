@@ -376,6 +376,14 @@ public class EventScheduleServiceImpl implements EventScheduleService {
         BigDecimal basePrice = BigDecimal.ZERO;
         BigDecimal finalPrice = schedule.calculateFinalPrice(basePrice);
 
+        java.time.LocalDateTime cutoffTime = event.getTicketCutoffTime();
+        if (cutoffTime == null) {
+            com.ticket.ticket_booking_system.entity.EventSchedule firstSchedule = event.getSchedules() != null ? event.getSchedules().stream()
+                .min(java.util.Comparator.comparing(s -> java.time.LocalDateTime.of(s.getScheduleDate(), s.getStartTime())))
+                .orElse(schedule) : schedule;
+            cutoffTime = java.time.LocalDateTime.of(firstSchedule.getScheduleDate(), firstSchedule.getStartTime()).minusHours(12);
+        }
+
         return EventScheduleResponse.builder()
             .scheduleId(schedule.getScheduleId())
             .eventId(event.getEventId())
@@ -392,6 +400,7 @@ public class EventScheduleServiceImpl implements EventScheduleService {
             .priceAdjustment(schedule.getPriceAdjustment())
             .finalPrice(finalPrice)
             .status(schedule.getStatus())
+            .ticketCutoffTime(cutoffTime)
             .notes(schedule.getNotes())
             .isBookable(schedule.isBookable())
             .createdAt(schedule.getCreatedAt())

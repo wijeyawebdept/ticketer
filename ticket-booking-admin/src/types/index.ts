@@ -139,6 +139,7 @@ export interface Event {
   organizer?: User;
   createdAt: string;
   updatedAt: string | null;
+  ticketCutoffTime?: string;
   imageUrl?: string;
   basePrice?: number; // Auto-computed from min ticket category price; no longer set by form
   ticketsAvailable: number;

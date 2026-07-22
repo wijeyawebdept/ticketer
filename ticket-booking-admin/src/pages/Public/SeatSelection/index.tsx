@@ -30,10 +30,11 @@ interface EventDetails {
   id: number;
   title: string;
   venue: string;
-  venueAddress: string;
+  venueAddress?: string;
   date: string;
   time: string;
   eventId?: string;
+  ticketCutoffTime?: string;
 }
 
 const SeatSelectionPage: React.FC = () => {
@@ -49,6 +50,7 @@ const SeatSelectionPage: React.FC = () => {
   const [holdTimer, setHoldTimer] = useState<number>(0);
   const [isHolding, setIsHolding] = useState(false);
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
+  const [isSalesClosed, setIsSalesClosed] = useState(false);
   const [venueId, setVenueId] = useState<string | undefined>(undefined);
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -110,6 +112,7 @@ const SeatSelectionPage: React.FC = () => {
         startTime?: string;
         endTime?: string;
         eventId?: string;
+        ticketCutoffTime?: string;
       }>(`/api/public/events/schedules/${scheduleId}`);
 
       if (response.data) {
@@ -125,7 +128,16 @@ const SeatSelectionPage: React.FC = () => {
             ? `${response.data.startTime}${response.data.endTime ? ` - ${response.data.endTime}` : ''}`
             : eventDetailsFromState?.eventTime || '',
           eventId: response.data.eventId || eventDetailsFromState?.eventId,
+          ticketCutoffTime: response.data.ticketCutoffTime,
         });
+        
+        if (response.data.ticketCutoffTime) {
+          const cutoff = new Date(response.data.ticketCutoffTime);
+          if (new Date() > cutoff) {
+            setIsSalesClosed(true);
+            showMessage('error', 'Online ticket sales for this event have closed.');
+          }
+        }
         return;
       }
     } catch (error) {
@@ -142,6 +154,7 @@ const SeatSelectionPage: React.FC = () => {
         date: eventDetailsFromState.eventDate || '',
         time: eventDetailsFromState.eventTime || '',
         eventId: eventDetailsFromState.eventId,
+        ticketCutoffTime: undefined,
       });
     } else {
       setEventDetails({
@@ -174,7 +187,7 @@ const SeatSelectionPage: React.FC = () => {
         (seatMapRef.current && seatMapRef.current.contains(target))
       ) return;
 
-      setShowBookingSummary(false);
+      setIsCollapsed(true);
     };
 
     if (showBookingSummary) document.addEventListener('mousedown', handleClickOutside);
@@ -184,6 +197,12 @@ const SeatSelectionPage: React.FC = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (selectedSeats.length > 0 || sharedAreaSelections.length > 0) {
+      setIsCollapsed(false);
+    }
+  }, [selectedSeats, sharedAreaSelections]);
+
   useEffect(() => {
     if (holdTimer > 0) {
       const interval = setInterval(() => {
@@ -256,8 +275,14 @@ const SeatSelectionPage: React.FC = () => {
   }, [eventDetails, showCountdown]);
 
   const handleSeatSelect = async (seats: string[]) => {
+    if (isSalesClosed) return;
     setSelectedSeats(seats);
     await calculateTotalPrice(seats);
+  };
+
+  const handleRemoveSeat = (seatIdToRemove: string) => {
+    const updatedSeats = selectedSeats.filter(id => id !== seatIdToRemove);
+    handleSeatSelect(updatedSeats);
   };
 
   const handleSharedAreaSelect = (
@@ -267,6 +292,7 @@ const SeatSelectionPage: React.FC = () => {
     categoryName: string,
     dealProperties?: any
   ) => {
+    if (isSalesClosed) return;
     setSharedAreaSelections(prev => {
       const existingIndex = prev.findIndex(s => s.areaNumber === areaNumber);
 
@@ -372,6 +398,7 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   const handleHoldSeats = async () => {
+    if (isSalesClosed) return;
     if (selectedSeats.length === 0) {
       showMessage('error', 'Please select at least one seat');
       return;
@@ -580,6 +607,11 @@ const SeatSelectionPage: React.FC = () => {
               </span>
             </div>
           )}
+          {isSalesClosed && (
+            <div className="sales-closed-banner" style={{ background: '#ff4d4f', color: 'white', padding: '10px 20px', borderRadius: '4px', marginTop: '15px', fontWeight: 'bold' }}>
+              Online ticket sales for this event have closed.
+            </div>
+          )}
         </div>
       </div>
 
@@ -591,20 +623,37 @@ const SeatSelectionPage: React.FC = () => {
           onSharedAreaSelect={handleSharedAreaSelect}
           selectedSeats={selectedSeats}
           bookedSeats={[]}
-          maxSelection={10}
           isHolding={isHolding}
         />
       </div>
 
       {showBookingSummary && (selectedSeats.length > 0 || sharedAreaSelections.length > 0) && (
-        <div className={`booking-summary ${isCollapsed ? 'collapsed' : ''}`} ref={summaryRef}>
-          <div className="summary-content">
-            <div className="summary-header">
-              <h3>{t('bookingSummary', 'Booking Summary')}</h3>
-              <button className="collapse-btn" onClick={() => setIsCollapsed(!isCollapsed)}>
-                {isCollapsed ? '▲' : '▼'}
-              </button>
-            </div>
+        <>
+          {isCollapsed && (
+            <button 
+              className="floating-summary-btn"
+              onClick={() => setIsCollapsed(false)}
+            >
+              <span>{t('viewSummary', 'View Summary')}</span>
+              <div className="badge">{selectedSeats.length + sharedAreaSelections.length}</div>
+            </button>
+          )}
+          
+          <div 
+            className={`booking-summary ${isCollapsed ? 'collapsed' : ''}`} 
+            ref={summaryRef}
+          >
+            <div className="summary-content">
+              <div className="summary-header">
+                <h3>{t('bookingSummary', 'Booking Summary')}</h3>
+                <button 
+                  className="close-panel-btn"
+                  onClick={(e) => { e.stopPropagation(); setIsCollapsed(true); }}
+                  style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', padding: '0 8px' }}
+                >
+                  ×
+                </button>
+              </div>
 
             {!isCollapsed && (
               <>
@@ -615,11 +664,18 @@ const SeatSelectionPage: React.FC = () => {
                         <span>{t('selectedSeatsLabelSummary', 'Selected Seats:')}</span>
                         <strong>{selectedSeats.length}</strong>
                       </div>
-                      <div className="summary-row">
-                        <span>{t('seatIdsLabel', 'Seat IDs:')}</span>
+                      <div className="summary-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ marginBottom: '8px' }}>{t('seatIdsLabel', 'Seat IDs:')}</span>
                         <div className="seat-badges">
                           {selectedSeats.map(seatId => (
-                            <span key={seatId} className="seat-badge">{seatId}</span>
+                            <span 
+                              key={seatId} 
+                              className="seat-badge clickable"
+                              onClick={() => handleRemoveSeat(seatId)}
+                              title={t('clickToRemove', 'Click to remove')}
+                            >
+                              {seatId} <span className="remove-icon">×</span>
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -661,10 +717,10 @@ const SeatSelectionPage: React.FC = () => {
                 <div className="summary-actions">
                   {!isHolding ? (
                     <>
-                      <button onClick={handleHoldSeats} className="btn btn-primary" disabled={loading || selectedSeats.length === 0}>
+                      <button onClick={handleHoldSeats} className="btn btn-primary" disabled={loading || selectedSeats.length === 0 || isSalesClosed}>
                         {loading ? t('processing', 'Processing...') : t('holdSeats', 'Hold Seats (5 min)')}
                       </button>
-                      <button onClick={handleProceedToPayment} className="btn btn-success" disabled={selectedSeats.length === 0 && sharedAreaSelections.length === 0}>
+                      <button onClick={handleProceedToPayment} className="btn btn-success" disabled={(selectedSeats.length === 0 && sharedAreaSelections.length === 0) || isSalesClosed}>
                         {t('proceedToPayment', 'Proceed to Payment')}
                       </button>
                       <button onClick={() => { setSelectedSeats([]); setSharedAreaSelections([]); setTotalPrice(0); }} className="btn btn-secondary">
@@ -689,6 +745,7 @@ const SeatSelectionPage: React.FC = () => {
             )}
           </div>
         </div>
+        </>
       )}
 
       <Dialog

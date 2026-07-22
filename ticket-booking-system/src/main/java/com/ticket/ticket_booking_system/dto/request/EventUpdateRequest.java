@@ -2,6 +2,7 @@ package com.ticket.ticket_booking_system.dto.request;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.Positive;
 
@@ -19,6 +20,8 @@ public class EventUpdateRequest {
     private String status;
     private String imageUrl;
     private UUID categoryId;
+    
+    private LocalDateTime ticketCutoffTime;
     
     // Ticket categories for updates
     private List<TicketCategoryRequest> ticketCategories;
@@ -87,5 +90,13 @@ public class EventUpdateRequest {
     
     public void setTicketCategories(List<TicketCategoryRequest> ticketCategories) {
         this.ticketCategories = ticketCategories;
+    }
+    
+    public LocalDateTime getTicketCutoffTime() {
+        return ticketCutoffTime;
+    }
+    
+    public void setTicketCutoffTime(LocalDateTime ticketCutoffTime) {
+        this.ticketCutoffTime = ticketCutoffTime;
     }
 }

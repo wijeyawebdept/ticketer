@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.dto.SeatDTO;
+import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat.SeatStatus;
 import com.ticket.ticket_booking_system.entity.SeatHold;
@@ -276,6 +277,23 @@ public class VenueSeatService {
     public boolean holdSeats(UUID eventScheduleId, List<String> seatIds, UUID userId) {
         EventSchedule eventSchedule = eventScheduleRepository.findById(eventScheduleId)
                 .orElseThrow(() -> new RuntimeException("Event schedule not found"));
+
+        Event event = eventSchedule.getEvent();
+        LocalDateTime cutoffTime = event.getTicketCutoffTime();
+        if (cutoffTime == null) {
+            EventSchedule firstSchedule = event.getSchedules().stream()
+                .min(java.util.Comparator.comparing(s -> LocalDateTime.of(s.getScheduleDate(), s.getStartTime())))
+                .orElse(eventSchedule);
+            cutoffTime = LocalDateTime.of(firstSchedule.getScheduleDate(), firstSchedule.getStartTime()).minusHours(12);
+        }
+        
+        // Enforce Sri Lankan Time (Asia/Colombo) for current time check
+        java.time.ZoneId lkZone = java.time.ZoneId.of("Asia/Colombo");
+        LocalDateTime nowLK = LocalDateTime.now(lkZone);
+        
+        if (nowLK.isAfter(cutoffTime)) {
+            throw new RuntimeException("Online ticket sales for this event have closed.");
+        }
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = now.plusMinutes(defaultHoldDurationMinutes);

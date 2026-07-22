@@ -2,6 +2,7 @@ package com.ticket.ticket_booking_system.dto.request;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,8 @@ public class EventCreateRequest {
     private String imageUrl;
 
     private UUID categoryId;
+
+    private LocalDateTime ticketCutoffTime;
 
     // Ticket categories for multiple pricing options
     private List<TicketCategoryRequest> ticketCategories;
@@ -97,5 +100,13 @@ public class EventCreateRequest {
 
     public void setSchedules(List<EventScheduleRequest> schedules) {
         this.schedules = schedules;
+    }
+
+    public LocalDateTime getTicketCutoffTime() {
+        return ticketCutoffTime;
+    }
+
+    public void setTicketCutoffTime(LocalDateTime ticketCutoffTime) {
+        this.ticketCutoffTime = ticketCutoffTime;
     }
 }

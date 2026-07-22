@@ -50,6 +50,7 @@ interface FormValues {
   categoryId: string;
   totalCapacity: number | '';
   status: EventStatus;
+  ticketCutoffTime: string;
   imageFile: File | null;
   ticketCategories: TicketCategory[];
 }
@@ -371,6 +372,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         categoryId: event?.category?.id || '',
         totalCapacity: event?.totalCapacity || '',
         status: event?.status || EventStatus.DRAFT,
+        ticketCutoffTime: event?.ticketCutoffTime ? event.ticketCutoffTime.slice(0, 16) : '',
         imageFile: null,
         ticketCategories: event?.ticketCategories && event.ticketCategories.length > 0 
           ? event.ticketCategories 
@@ -558,6 +560,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
             ...eventData,
             availableSeats: Number(eventData.totalCapacity),
             totalCapacity: selectedVenue?.capacity || Number(eventData.totalCapacity),
+            ticketCutoffTime: eventData.ticketCutoffTime ? new Date(eventData.ticketCutoffTime).toISOString().slice(0, 19) : null,
             ticketCategories: eventData.ticketCategories.map((category: TicketCategory) => ({
               categoryName: category.categoryName.trim(),
               description: category.description?.trim() || '',
@@ -762,6 +765,29 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                         <FormHelperText>{errors.status as string}</FormHelperText>
                       )}
                     </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="ticketCutoffTime"
+                      name="ticketCutoffTime"
+                      label="Ticket Cutoff Time (Optional)"
+                      type="datetime-local"
+                      variant="outlined"
+                      margin="normal"
+                      value={values.ticketCutoffTime}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      helperText={
+                        (touched.ticketCutoffTime && errors.ticketCutoffTime) ? (errors.ticketCutoffTime as string)
+                        : "Leave empty to use 12 hours before the event starts as the cutoff time"
+                      }
+                      error={touched.ticketCutoffTime && Boolean(errors.ticketCutoffTime)}
+                    />
                   </Grid>
                 </Grid>
               );

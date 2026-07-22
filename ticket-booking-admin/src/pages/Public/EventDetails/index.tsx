@@ -67,6 +67,40 @@ const EventDetails: React.FC = () => {
   const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
   const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // Cutoff countdown state
+  const [cutoffCountdownText, setCutoffCountdownText] = useState<string>('');
+  const [showCutoffCountdown, setShowCutoffCountdown] = useState<boolean>(false);
+  const cutoffIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cutoff Countdown effect
+  useEffect(() => {
+    if (!event?.ticketCutoffTime) {
+      setShowCutoffCountdown(false);
+      return;
+    }
+
+    const cutoffTimeMs = new Date(event.ticketCutoffTime).getTime();
+
+    const updateCutoffCountdown = () => {
+      const now = new Date().getTime();
+      const remaining = cutoffTimeMs - now;
+      if (remaining > 0) {
+        setCutoffCountdownText(formatCountdown(remaining));
+        setShowCutoffCountdown(true);
+      } else {
+        setShowCutoffCountdown(false);
+        if (cutoffIntervalRef.current) clearInterval(cutoffIntervalRef.current);
+      }
+    };
+
+    updateCutoffCountdown();
+    cutoffIntervalRef.current = setInterval(updateCutoffCountdown, 1000);
+
+    return () => {
+      if (cutoffIntervalRef.current) clearInterval(cutoffIntervalRef.current);
+    };
+  }, [event?.ticketCutoffTime]);
+
   // Check if venue has seating layout
   useEffect(() => {
     const checkVenueSeating = async () => {
@@ -597,6 +631,7 @@ const EventDetails: React.FC = () => {
                 <Typography sx={{ color: '#fff', mb: 0.5, mt: 2 }}>
                   <strong>Venue:</strong> {event.venue?.name || 'TBA'}
                 </Typography>
+
                 {event.venue?.address && (
                   <Typography sx={{ color: '#fff', mb: 0.5 }}>
                     <strong>Address:</strong> {event.venue.address}, {event.venue.city}
@@ -626,17 +661,36 @@ const EventDetails: React.FC = () => {
             </Typography>
 
             <Box
-              className="row tk-price"
+              className="tk-price"
               sx={{
                 marginTop: '10px',
                 backgroundColor: '#ffffff',
                 borderRadius: '13px',
-                paddingTop: '0px',
+                paddingTop: '20px',
                 paddingBottom: '26px',
                 paddingLeft: '30px',
                 paddingRight: '30px',
               }}
             >
+              {event.ticketCutoffTime && (
+                <Box sx={{ 
+                  mb: 3, 
+                  p: 2, 
+                  backgroundColor: 'rgba(255, 25, 85, 0.1)', 
+                  borderLeft: '4px solid #ff1955',
+                  borderRadius: '8px'
+                }}>
+                  <Typography sx={{ color: '#333', fontWeight: 600, fontSize: '16px', fontFamily: 'Raleway, sans-serif' }}>
+                    <strong>Ticket Sales Close:</strong> {formatDate(event.ticketCutoffTime)} at {formatTime(event.ticketCutoffTime)}
+                  </Typography>
+                  {showCutoffCountdown && cutoffCountdownText && (
+                    <Typography sx={{ color: '#ff1955', fontWeight: 700, fontSize: '15px', mt: 1, fontFamily: 'Raleway, sans-serif' }}>
+                      Closes in: {cutoffCountdownText}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
               {/* Showtime Selection */}
               {schedules.length > 0 ? (
                 <Box>

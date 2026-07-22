@@ -81,6 +81,9 @@ public class Event {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    @Column(name = "ticket_cutoff_time")
+    private LocalDateTime ticketCutoffTime;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;

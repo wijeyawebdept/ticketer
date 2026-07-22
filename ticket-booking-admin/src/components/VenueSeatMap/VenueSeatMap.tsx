@@ -123,7 +123,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   venueId,
   onSeatSelect,
   onSharedAreaSelect,
-  maxSelection = 10,
+  maxSelection,
   selectedSeats = [],
   bookedSeats = [],
   isHolding = false,
@@ -269,7 +269,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
 
     const newSelected = new Set(localSelectedSeats);
-    if (newSelected.size >= maxSelection) {
+    if (maxSelection !== undefined && newSelected.size >= maxSelection) {
       alert(`You can only select up to ${maxSelection} seats`);
       return;
     }

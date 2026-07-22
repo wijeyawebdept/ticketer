@@ -168,6 +168,7 @@ public class EventServiceImpl implements EventService {
                 .organizer(eventOrganizer) // Only set for ORGANIZER role
                 .createdByUserId(createdByUserId) // Track creator ID
                 .createdByType(createdByType) // Track creator type (USER/ADMIN/SUPER_ADMIN/ORGANIZER)
+                .ticketCutoffTime(request.getTicketCutoffTime())
                 .build();
 
         Event savedEvent;
@@ -373,6 +374,10 @@ public class EventServiceImpl implements EventService {
             EventCategory category = eventCategoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Event Category", "id", request.getCategoryId().toString()));
             event.setCategory(category);
+        }
+
+        if (request.getTicketCutoffTime() != null) {
+            event.setTicketCutoffTime(request.getTicketCutoffTime());
         }
 
         Event savedEvent = eventRepository.save(event);
@@ -763,6 +768,12 @@ public class EventServiceImpl implements EventService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Compute fallback ticket cutoff time if null (12 hours before startDateTime)
+        java.time.LocalDateTime cutoffTime = event.getTicketCutoffTime();
+        if (cutoffTime == null && startDateTime != null) {
+            cutoffTime = startDateTime.minusHours(12);
+        }
+
         return EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -783,6 +794,7 @@ public class EventServiceImpl implements EventService {
                 .category(categoryResponse) // Include category object
                 .ticketCategories(ticketCategoryResponses) // Added ticket categories
                 .hasDeal(hasDeal) // Derived from ticket categories
+                .ticketCutoffTime(cutoffTime) // Added cutoff time
                 .schedules(scheduleResponses) // All schedules
                 .slug(event.getSlug()) // Include slug
                 .build();

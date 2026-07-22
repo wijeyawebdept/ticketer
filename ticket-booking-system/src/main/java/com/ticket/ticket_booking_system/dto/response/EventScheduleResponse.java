@@ -33,6 +33,7 @@ public class EventScheduleResponse {
     private BigDecimal priceAdjustment;
     private BigDecimal finalPrice; // base price + adjustment
     private ScheduleStatus status;
+    private LocalDateTime ticketCutoffTime;
     private String notes;
     private Boolean isBookable;
     private LocalDateTime createdAt;

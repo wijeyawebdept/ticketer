@@ -179,25 +179,28 @@
 /* Booking summary */
 .booking-summary {
   position: fixed;
-  bottom: 0;
-  left: 0;
+  top: 0;
   right: 0;
+  bottom: 0;
+  width: 350px;
   background: rgba(36, 42, 51, 0.98);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  border-top: 2px solid rgba(255, 25, 85, 0.5);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  border-left: 2px solid rgba(255, 25, 85, 0.5);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
   z-index: 1000;
-  animation: slideUp 0.4s ease;
+  animation: slideLeft 0.4s ease;
+  transition: transform 0.3s ease;
+  overflow-y: auto;
 }
 
-@keyframes slideUp {
+@keyframes slideLeft {
   from {
-    transform: translateY(100%);
+    transform: translateX(100%);
   }
 
   to {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
@@ -205,6 +208,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .summary-header {
@@ -226,45 +232,50 @@
   flex: 1;
 }
 
-/* Collapse button */
-.collapse-btn {
-  background: rgba(255, 25, 85, 0.2);
-  border: 1px solid rgba(255, 25, 85, 0.5);
-  color: #fcd0a5;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'Raleway', sans-serif;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 45px;
-  height: 35px;
-  margin-left: 10px;
-}
-
-.collapse-btn:hover {
-  background: rgba(255, 25, 85, 0.4);
-  border-color: #ff1955;
-  transform: scale(1.1);
-}
+/* Removed collapse-btn */
 
 /* Collapsed state */
 .booking-summary.collapsed {
-  padding-bottom: 0;
+  transform: translateX(100%);
 }
 
-.booking-summary.collapsed .summary-content {
-  padding: 15px 20px;
+.floating-summary-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #ff1955;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 12px 24px;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(255, 25, 85, 0.4);
+  cursor: pointer;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  animation: slideUp 0.3s ease;
 }
 
-.booking-summary.collapsed .summary-header {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
+.floating-summary-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 25, 85, 0.6);
+}
+
+.floating-summary-btn .badge {
+  background: white;
+  color: #ff1955;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
 }
 
 .hold-timer {
@@ -292,6 +303,7 @@
 
 .summary-details {
   margin-bottom: 20px;
+  flex: 1;
 }
 
 .summary-row {
@@ -326,8 +338,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-width: 400px;
-  justify-content: flex-end;
+  max-width: 100%;
+  justify-content: flex-start;
+  margin-top: 5px;
 }
 
 .seat-badge {
@@ -339,26 +352,51 @@
   font-size: 12px;
   font-family: 'Raleway', sans-serif;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seat-badge.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.seat-badge.clickable:hover {
+  background: rgba(255, 25, 85, 0.4);
+  border-color: #ff1955;
+}
+
+.remove-icon {
+  font-size: 14px;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.seat-badge.clickable:hover .remove-icon {
+  opacity: 1;
 }
 
 /* Action buttons */
 .summary-actions {
   display: flex;
+  flex-direction: column;
   gap: 15px;
   justify-content: center;
+  margin-top: auto;
 }
 
 .btn {
-  padding: 12px 32px;
+  padding: 10px 20px;
   border: none;
   border-radius: 25px;
-  font-size: 16px;
+  font-size: 14px;
   font-family: 'Raleway', sans-serif;
   font-weight: 700;
   letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 180px;
+  min-width: 150px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-transform: uppercase;
 }

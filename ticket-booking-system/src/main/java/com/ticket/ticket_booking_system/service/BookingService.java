@@ -76,6 +76,22 @@ public class BookingService {
         EventSchedule schedule = eventScheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + request.getScheduleId()));
 
+        LocalDateTime cutoffTime = event.getTicketCutoffTime();
+        if (cutoffTime == null) {
+            EventSchedule firstSchedule = event.getSchedules().stream()
+                .min(java.util.Comparator.comparing(s -> LocalDateTime.of(s.getScheduleDate(), s.getStartTime())))
+                .orElse(schedule);
+            cutoffTime = LocalDateTime.of(firstSchedule.getScheduleDate(), firstSchedule.getStartTime()).minusHours(12);
+        }
+        
+        // Enforce Sri Lankan Time (Asia/Colombo) for current time check
+        java.time.ZoneId lkZone = java.time.ZoneId.of("Asia/Colombo");
+        LocalDateTime nowLK = LocalDateTime.now(lkZone);
+        
+        if (nowLK.isAfter(cutoffTime)) {
+            throw new RuntimeException("Online ticket sales for this event have closed.");
+        }
+
         // Create PENDING booking (not confirmed yet)
         Booking booking = Booking.builder()
                 .user(user)
