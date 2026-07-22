@@ -24,6 +24,7 @@ import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
 import { useAuth } from '../../../context/AuthContext';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
+import CheckoutModal from '../../../components/CheckoutModal';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -79,19 +80,6 @@ const SeatSelectionPage: React.FC = () => {
     };
   }
   const [sharedAreaSelections, setSharedAreaSelections] = useState<SharedAreaSelection[]>([]);
-
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
-  const [deliveryMethod, setDeliveryMethod] = useState('online');
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState({
-    firstName: '',
-    lastName: '',
-    nic: '',
-    phone: '',
-    email: '',
-  });
 
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -309,8 +297,10 @@ const SeatSelectionPage: React.FC = () => {
     });
   };
 
+
   const [totalDiscount, setTotalDiscount] = useState(0);
   const [discountInfoString, setDiscountInfoString] = useState<string | undefined>(undefined);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     let newTotal = 0;
@@ -454,12 +444,10 @@ const SeatSelectionPage: React.FC = () => {
   };
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
 
-  const handleCustomerInfoChange = (field: string, value: string) => {
-    setCustomerInfo(prev => ({ ...prev, [field]: value }));
-  };
+  const handleConfirmBooking = async (paymentData: any) => {
+    const { paymentMethod, deliveryMethod, customerInfo, acceptTerms, bookingForSomeoneElse } = paymentData;
 
-  const handleConfirmBooking = async () => {
-    if (!selectedPaymentMethod) return showMessage('error', 'Please select a payment method');
+    if (!paymentMethod) return showMessage('error', 'Please select a payment method');
     if (!acceptTerms) return showMessage('error', 'Please accept terms and conditions');
     if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
       return showMessage('error', 'Please fill all required fields');
@@ -747,257 +735,20 @@ const SeatSelectionPage: React.FC = () => {
         </>
       )}
 
-      <Dialog
-        open={paymentModalOpen}
+      <CheckoutModal
+        isOpen={paymentModalOpen}
         onClose={handleClosePaymentModal}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2, maxHeight: '90vh' } }}
-      >
-        <DialogTitle sx={{ position: 'relative', pb: 2, borderBottom: '1px solid #f0f0f0' }}>
-          <IconButton onClick={handleClosePaymentModal} sx={{ position: 'absolute', right: 8, top: 8, color: 'grey.500' }}>
-            ×
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 0 }}>
-          <Grid container>
-            <Grid item xs={12} md={7} sx={{ p: 4, borderRight: { md: '1px solid #f0f0f0' } }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, fontFamily: 'Raleway, sans-serif' }}>
-                {t('checkout', 'Checkout')}
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  {t('deliveryMethod', 'Delivery method')}
-                </Typography>
-                <FormControl fullWidth>
-                  <Select value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)} size="small">
-                    <MenuItem value="online">{t('online', 'Online')}</MenuItem>
-                    <MenuItem value="pickup">{t('pickup', 'Pick up')}</MenuItem>
-                  </Select>
-                </FormControl>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
-                  {t('handlingFeeNotice', "Ha. Ha. Ha. we're gonna charge u more 100/=")}
-                </Typography>
-              </Box>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  {t('paymentMethodSelect', 'Payment Method')} <span style={{ color: '#d32f2f' }}>({t('selectOne', 'Select one')})</span>
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {[
-                    { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
-                    { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
-                    { value: 'amex', img: '/images/amex.jpg', alt: 'American Express' },
-                    { value: 'ezcash', img: '/images/ezcash.jpg', alt: 'EZ Cash' },
-                    { value: 'hnb', img: '/images/hnb.jpg', alt: 'HNB' },
-                    { value: 'koko', img: '/images/koko.jpeg', alt: 'Koko' },
-                  ].map((method) => (
-                    <Box
-                      key={method.value}
-                      onClick={() => setSelectedPaymentMethod(method.value)}
-                      sx={{
-                        width: '80px',
-                        height: '50px',
-                        border: selectedPaymentMethod === method.value ? '3px solid #ff1955' : '2px solid #ddd',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Box component="img" src={method.img} alt={method.alt} sx={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }} />
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              <Box sx={{ mb: 3 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField fullWidth label="First Name" value={customerInfo.firstName} onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)} size="small" required />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField fullWidth label="Last Name" value={customerInfo.lastName} onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)} size="small" required />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField fullWidth label="NIC/Passport" value={customerInfo.nic} onChange={(e) => handleCustomerInfoChange('nic', e.target.value)} size="small" required />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField fullWidth label="Contact Number" value={customerInfo.phone} onChange={(e) => handleCustomerInfoChange('phone', e.target.value)} size="small" required />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField fullWidth label="Email" type="email" value={customerInfo.email} onChange={(e) => handleCustomerInfoChange('email', e.target.value)} size="small" required />
-                  </Grid>
-                </Grid>
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <FormControlLabel
-                  control={<input type="checkbox" checked={bookingForSomeoneElse} onChange={(e) => setBookingForSomeoneElse(e.target.checked)} style={{ marginRight: '8px' }} />}
-                  label={<Typography variant="body2">{t('bookingForSomeoneElse', 'I am booking for someone else')}</Typography>}
-                />
-                <Box sx={{ mt: 1 }}>
-                  <FormControlLabel
-                    control={<input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} style={{ marginRight: '8px' }} />}
-                    label={<Typography variant="body2">{t('acceptTerms', 'I accept and agree to Terms and Conditions')}</Typography>}
-                  />
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-                <Button variant="outlined" onClick={handleClosePaymentModal} sx={{ borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600 }}>
-                  {t('backToSelection', 'Back to selection')}
-                </Button>
-                <Button variant="contained" fullWidth onClick={handleConfirmBooking} disabled={loading} sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700 }}>
-                  {loading ? t('processing', 'Processing...') : t('confirmBooking', 'Confirm booking')}
-                </Button>
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {t('ticketSummary', 'Ticket Summary')}
-                </Typography>
-                <Button 
-                  size="small" 
-                  onClick={handleClosePaymentModal}
-                  sx={{ color: '#ff1955', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
-                >
-                  {t('changeSeats', 'Change Seats')}
-                </Button>
-              </Box>
-
-              {/* Event Details Section */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: '#ff1955' }}>
-                  {eventDetails?.title}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
-                  <Typography variant="body2">{eventDetails?.date}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
-                  <Typography variant="body2">{eventDetails?.time}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5, gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}></Typography>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{eventDetails?.venue}</Typography>
-                    {eventDetails?.venueAddress && (
-                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        {eventDetails.venueAddress}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-
-              {/* Selected Tickets Section */}
-              <Box sx={{ mb: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  {t('selectedTickets', 'Selected Tickets')}
-                </Typography>
-
-                {/* Seated Tickets */}
-                {selectedSeatDetails.length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>{t('seatsLabelShort', 'Seats')} ({selectedSeatDetails.length})</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                      {selectedSeatDetails.map((seat, index) => (
-                        <Box
-                          key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)}
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            backgroundColor: '#fff',
-                            border: '1px solid #ddd',
-                            borderRadius: 1,
-                            fontSize: '0.75rem',
-                            fontWeight: 500
-                          }}
-                        >
-                          {seat?.seatId || selectedSeats.find((_, i) => i === index)}
-                        </Box>
-                      ))}
-                    </Box>
-                    {selectedSeatDetails.map((seat, index) => (
-                      <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {(seat?.seatId || selectedSeats.find((_, i) => i === index))} - {seat?.categoryName || t('standard', 'Standard')}
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          {(seat?.currentPrice || 0).toLocaleString()} LKR
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-
-                {/* Shared Area Tickets */}
-                {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => (
-                  <Box key={`shared-${selection.areaNumber}`} sx={{ mb: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">
-                        {selection.categoryName} × {selection.ticketCount}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-
-                {/* Show message if no tickets selected */}
-                {selectedSeatDetails.length === 0 && sharedAreaSelections.length === 0 && (
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                    {t('noTicketsSelected', 'No tickets selected')}
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Amount Section */}
-              <Box sx={{ pt: 2, borderTop: '2px solid #e0e0e0' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  {t('amount', 'Amount')}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">{t('subTotal', 'Sub Total')}</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice).toLocaleString()} LKR
-                  </Typography>
-                </Box>
-                {totalDiscount > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#4caf50' }}>
-                      {discountInfoString ? `Discount (${discountInfoString})` : t('discount', 'Discount')}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
-                      -{totalDiscount.toLocaleString()} LKR
-                    </Typography>
-                  </Box>
-                )}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="body2">{t('handlingFee', 'Handling fee')}</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>100 LKR</Typography>
-                </Box>
-                <Box sx={{ borderTop: '2px solid #e0e0e0', pt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('total', 'Total')}</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{(totalPrice + 100).toLocaleString()} LKR</Typography>
-                </Box>
-              </Box>
-            </Grid>
-          </Grid>
-        </DialogContent>
-
-        <DialogActions />
-      </Dialog>
+        loading={loading}
+        onConfirmBooking={handleConfirmBooking}
+        eventDetails={eventDetails}
+        selectedSeatDetails={selectedSeatDetails}
+        selectedSeats={selectedSeats}
+        sharedAreaSelections={sharedAreaSelections}
+        totalPrice={totalPrice}
+        totalDiscount={totalDiscount}
+        discountInfoString={discountInfoString}
+        handlingFee={100}
+      />
 
       {/* (Terms dialog unchanged) */}
         </>

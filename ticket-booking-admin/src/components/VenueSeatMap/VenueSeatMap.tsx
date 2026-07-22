@@ -444,12 +444,17 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           {/* Legend */}
           <div className="venue-legend">
             {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
-              const seat = venueSeats.find(s => s.categoryName === categoryName);
-              const status = seat ? seatStatuses.get(seat.seatId) : null;
+              const seatsInCategory = venueSeats.filter(s => s.categoryName === categoryName);
+              const seatWithPrice = seatsInCategory.find(s => {
+                const status = seatStatuses.get(s.seatId);
+                return status && status.currentPrice > 0;
+              });
+              const representativeSeat = seatsInCategory[0];
+              const status = seatWithPrice ? seatStatuses.get(seatWithPrice.seatId) : null;
               const priceStr = status?.currentPrice ? ` - ${status.currentPrice.toLocaleString()} LKR` : '';
               return (
                 <div key={`cat-${index}`} className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: seat?.colorCode || '#4CAF50' }} />
+                  <span className="legend-color" style={{ backgroundColor: representativeSeat?.colorCode || '#4CAF50' }} />
                   <span>{categoryName}{priceStr}</span>
                 </div>
               );

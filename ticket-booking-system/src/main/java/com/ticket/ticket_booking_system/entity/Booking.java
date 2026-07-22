@@ -88,6 +88,9 @@ public class Booking {
     @Column(name = "customer_phone", length = 20)
     private String customerPhone;
 
+    @Column(name = "customer_nic", length = 50)
+    private String customerNic;
+
     @Column(name = "final_amount")
     private BigDecimal finalAmount;
 

@@ -21,6 +21,7 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  Snackbar,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -32,7 +33,11 @@ import EventScheduleService from '../../../services/eventSchedule.service';
 import { Event, EventSchedule } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import axiosInstance from '../../../services/api';
+import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
+import '../SeatSelection/SeatSelection.css';
+import { useTranslation } from 'react-i18next';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
+import CheckoutModal from '../../../components/CheckoutModal';
 import './EventDetails.css';
 
 const EventDetails: React.FC = () => {
@@ -48,20 +53,12 @@ const EventDetails: React.FC = () => {
   const [selectedShowtime, setSelectedShowtime] = useState('');
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
-  const [deliveryMethod, setDeliveryMethod] = useState('online');
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    nic: '',
-  });
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
-  const [showSeatingMessage, setShowSeatingMessage] = useState(false);
+
   const [validationModalOpen, setValidationModalOpen] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
   const [showCountdown, setShowCountdown] = useState<boolean>(false);
   const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
@@ -113,7 +110,7 @@ const EventDetails: React.FC = () => {
         // Try multiple approaches to check for seating
         try {
           // First try: Use authenticated axios instance
-          const response = await axiosInstance.get<any[]>('/api/venue-seats/layout');
+          const response = await axiosInstance.get<any[]>(`/api/venue-seats/layout/${event.venue.id}`);
           const seats = response.data;
           
           const venueHasSeats: boolean = seats && Array.isArray(seats) && seats.length > 0;
@@ -123,7 +120,7 @@ const EventDetails: React.FC = () => {
           
           // Second try: Direct fetch without auth (for CORS enabled endpoints)
           try {
-            const response = await fetch('http://localhost:8081/api/venue-seats/layout', {
+            const response = await fetch(`http://localhost:8081/api/venue-seats/layout/${event.venue.id}`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
@@ -216,9 +213,6 @@ const EventDetails: React.FC = () => {
           }
           if (bookingData.ticketQuantities) {
             setTicketQuantities(bookingData.ticketQuantities);
-          }
-          if (bookingData.customerInfo) {
-            setCustomerInfo(bookingData.customerInfo);
           }
           
           // Auto-open checkout modal
@@ -322,8 +316,8 @@ const EventDetails: React.FC = () => {
       return;
     }
 
-    // If showtime is selected, redirect to seat selection page
-    if (selectedShowtime) {
+    // If it's a seated event, redirect to seat selection page
+    if (hasSeatingLayout) {
       // Find the selected schedule details
       const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
       
@@ -340,7 +334,15 @@ const EventDetails: React.FC = () => {
       return;
     }
 
-    // If no showtime selected, open checkout modal (for venues without seating)
+    // For seatless events, ensure at least one ticket is selected
+    const totalTicketsSelected = Object.values(ticketQuantities).reduce((total: number, count: number) => total + (count || 0), 0);
+    if (!hasSeatingLayout && totalTicketsSelected === 0) {
+      setSnackbarMessage('Please select at least one ticket to proceed.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // If it's a seatless event, open checkout modal directly
     setCheckoutModalOpen(true);
   };
 
@@ -358,13 +360,79 @@ const EventDetails: React.FC = () => {
     return total;
   };
 
+  const handleConfirmBooking = async (paymentData: any) => {
+    const { paymentMethod, deliveryMethod, customerInfo, acceptTerms, bookingForSomeoneElse } = paymentData;
 
+    if (!paymentMethod) return alert('Please select a payment method');
+    if (!acceptTerms) return alert('Please accept terms and conditions');
+    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
+      return alert('Please fill all required fields');
+    }
 
-  const handleCustomerInfoChange = (field: string, value: string) => {
-    setCustomerInfo({
-      ...customerInfo,
-      [field]: value,
-    });
+    if (!event?.id) {
+      return alert('Event details are missing');
+    }
+
+    let targetScheduleId = selectedShowtime || (schedules.length > 0 ? schedules[0].scheduleId : '');
+
+    const HANDLING_FEE = 100;
+    const finalAmount = calculateTotal() + HANDLING_FEE;
+
+    setIsRedirecting(true);
+    setCheckoutModalOpen(false);
+
+    try {
+      const returnUrl = `${window.location.origin}/booking/payment-success`;
+      const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
+
+      const sharedAreaTickets = ticketCategories
+        .filter((cat: any) => (ticketQuantities[cat.categoryName || cat.name] || 0) > 0)
+        .map((cat: any) => ({
+          categoryId: cat.id,
+          categoryName: cat.categoryName || cat.name,
+          sharedAreaNumber: 1,
+          ticketCount: ticketQuantities[cat.categoryName || cat.name],
+          pricePerTicket: cat.price || 0
+        }));
+
+      if (sharedAreaTickets.length === 0) {
+        setIsRedirecting(false);
+        setCheckoutModalOpen(true);
+        return alert('Please select at least one ticket');
+      }
+
+      const paymentRequest: InitiatePaymentRequest = {
+        eventId: event.id,
+        scheduleId: targetScheduleId,
+        seatIds: [],
+        sharedAreaTickets,
+        totalAmount: finalAmount,
+        currency: 'LKR',
+        customerInfo: {
+          firstName: customerInfo.firstName,
+          lastName: customerInfo.lastName,
+          email: customerInfo.email,
+          phone: customerInfo.phone,
+          nic: customerInfo.nic,
+        },
+        returnUrl,
+        cancelUrl,
+      };
+
+      const sessionResponse = await paymentService.initiatePayment(paymentRequest);
+
+      localStorage.setItem('mpgs_sessionId', sessionResponse.sessionId);
+
+      await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
+
+      paymentService.startCheckout(sessionResponse);
+
+    } catch (error: any) {
+      const detail = error.response?.data?.details || error.response?.data?.message || error.message || 'Failed to initiate payment.';
+      alert(`Payment initiation failed: ${detail}`);
+      setIsRedirecting(false);
+      setCheckoutModalOpen(true);
+    }
   };
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -417,6 +485,53 @@ const EventDetails: React.FC = () => {
     scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     return scheduleDate < new Date();
   };
+
+  if (isRedirecting) {
+    const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
+    
+    return (
+      <div className="seat-selection-page">
+        <div className="payment-redirection-view">
+          <div className="redirection-content">
+            <div className="secure-badge">
+              <span className="lock-icon"></span>
+              SECURE CHECKOUT
+            </div>
+            <h1>Initializing Secure Payment</h1>
+            <p>Please do not refresh the page or click the back button.</p>
+            <div className="loading-container">
+              <div className="loading-text">Connecting to Payment Gateway...</div>
+            </div>
+            <div className="order-summary-mini">
+              <div className="summary-item">
+                <span>Event:</span>
+                <strong>{event?.name}</strong>
+              </div>
+              {selectedSchedule && (
+                <div className="summary-item">
+                  <span>Time Slot:</span>
+                  <strong>{formatDate(selectedSchedule.scheduleDate)} • {formatTime(selectedSchedule.startTime)}</strong>
+                </div>
+              )}
+              <div className="summary-item">
+                <span>Total Amount:</span>
+                <strong>{(calculateTotal() + 100).toLocaleString()} LKR</strong>
+              </div>
+            </div>
+            <button 
+              className="redirection-back-btn" 
+              onClick={() => {
+                setIsRedirecting(false);
+                setCheckoutModalOpen(true);
+              }}
+            >
+              Cancel & Return
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {
@@ -808,25 +923,43 @@ const EventDetails: React.FC = () => {
                 </Box>
               )}
 
-              {/* Table Header */}
-              <Grid
-                container
+              <Box
                 sx={{
-                  borderBottom: '2px solid #444',
-                  pb: 1,
-                  mb: 2,
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '12px',
+                  p: { xs: 2, md: 3 },
+                  mb: 3,
+                  border: '1px solid #eaeaea',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                 }}
               >
-                <Grid item xs={4}>
-                  <Typography fontWeight="bold">SEAT TYPE</Typography>
+                {/* Table Header */}
+                <Grid
+                  container
+                  sx={{
+                    borderBottom: '2px solid #ff1955',
+                    pb: 1.5,
+                    mb: 2,
+                  }}
+                >
+                  <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                      SEAT TYPE
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                      PRICE (RS.)
+                    </Typography>
+                  </Grid>
+                  {!hasSeatingLayout && (
+                    <Grid item xs={4}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                        TICKETS
+                      </Typography>
+                    </Grid>
+                  )}
                 </Grid>
-                <Grid item xs={4}>
-                  <Typography fontWeight="bold">PRICE (RS.)</Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography fontWeight="bold">Tickets</Typography>
-                </Grid>
-              </Grid>
 
               {/* Ticket Categories */}
               {ticketCategories.length > 0 ? (
@@ -852,13 +985,12 @@ const EventDetails: React.FC = () => {
                       key={index}
                       container
                       sx={{
-                        borderBottom: '1px solid #444',
-                        pb: 2,
-                        mb: 2,
+                        borderBottom: index !== ticketCategories.length - 1 ? '1px dashed #ccc' : 'none',
+                        py: 2,
                         alignItems: 'center',
                       }}
                     >
-                      <Grid item xs={4}>
+                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
                         <Typography variant="body2" fontWeight={600}>{categoryName}</Typography>
                         {hasActiveDeal && (
                           <Box
@@ -881,7 +1013,7 @@ const EventDetails: React.FC = () => {
                           </Box>
                         )}
                       </Grid>
-                      <Grid item xs={4}>
+                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
                         {isPctDeal ? (
                           <Box>
                             <Typography
@@ -905,85 +1037,39 @@ const EventDetails: React.FC = () => {
                           <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
                         )}
                       </Grid>
-                      <Grid item xs={4}>
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={ticketQuantities[categoryName]?.toString() || '0'}
-                            onChange={(e: SelectChangeEvent) => {
-                              if (hasSeatingLayout) {
-                                setShowSeatingMessage(true);
-                                setTimeout(() => setShowSeatingMessage(false), 3000);
-                                return;
-                              }
-                              handleQuantityChange(categoryName, e.target.value);
-                            }}
-                            disabled={hasSeatingLayout}
-                            sx={{
-                              opacity: hasSeatingLayout ? 0.6 : 1,
-                              cursor: hasSeatingLayout ? 'not-allowed' : 'pointer',
-                              '& .MuiSelect-select': {
-                                backgroundColor: hasSeatingLayout ? '#f5f5f5' : 'white'
-                              }
-                            }}
-                          >
-                            {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
-                              <MenuItem key={num} value={num.toString()}>
-                                {num}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
+                      {!hasSeatingLayout && (
+                        <Grid item xs={4}>
+                          <FormControl fullWidth size="small">
+                            <Select
+                              value={ticketQuantities[categoryName]?.toString() || '0'}
+                              onChange={(e: SelectChangeEvent) => {
+                                handleQuantityChange(categoryName, e.target.value);
+                              }}
+                              sx={{
+                                '& .MuiSelect-select': {
+                                  backgroundColor: 'white'
+                                }
+                              }}
+                            >
+                              {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
+                                <MenuItem key={num} value={num.toString()}>
+                                  {num}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      )}
                     </Grid>
                   );
                 })
               ) : (
-                <Typography variant="body2" sx={{ textAlign: 'center', py: 2, color: '#666' }}>
-                  No ticket categories available for this event
-                </Typography>
-              )}
-
-              {/* Seating Layout Message */}
-              {hasSeatingLayout && showSeatingMessage && (
-                <Box
-                  sx={{
-                    backgroundColor: '#e3f2fd',
-                    border: '2px solid #2196f3',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    mb: 2,
-                    animation: 'pulse 0.5s ease-in-out',
-                    '@keyframes pulse': {
-                      '0%': { transform: 'scale(1)' },
-                      '50%': { transform: 'scale(1.02)' },
-                      '100%': { transform: 'scale(1)' }
-                    }
-                  }}
-                >
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: '#1565c0',
-                      fontWeight: 600,
-                      textAlign: 'center',
-                      mb: 1,
-                      fontFamily: 'Raleway, sans-serif'
-                    }}
-                  >
-                    This event uses seat-based booking
+                  <Typography variant="body2" sx={{ textAlign: 'center', py: 3, color: '#666', fontStyle: 'italic' }}>
+                    No ticket categories available for this event
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#1976d2',
-                      textAlign: 'center',
-                      fontFamily: 'Raleway, sans-serif'
-                    }}
-                  >
-                    Click "NEXT" to select your preferred seats from the venue
-                  </Typography>
-                </Box>
-              )}
+                )
+              }
+              </Box>
 
               {/* Total Summary */}
               {!hasSeatingLayout && (
@@ -1046,507 +1132,29 @@ const EventDetails: React.FC = () => {
       </Container>
 
       {/* Checkout Modal */}
-      <Dialog
-        open={checkoutModalOpen}
+      <CheckoutModal
+        isOpen={checkoutModalOpen}
         onClose={handleCloseModal}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: '90vh',
-          },
+        loading={loading}
+        onConfirmBooking={handleConfirmBooking}
+        eventDetails={{
+          title: event?.name || 'Event',
+          date: formatDate(event?.startDateTime),
+          time: formatTime(event?.startDateTime),
+          venue: event?.venue?.name || 'Venue',
+          venueAddress: event?.venue?.address || ''
         }}
-      >
-        <DialogTitle sx={{ position: 'relative', pb: 2, borderBottom: '1px solid #f0f0f0' }}>
-          <IconButton
-            onClick={handleCloseModal}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: 'grey.500',
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 0 }}>
-          <Grid container>
-            {/* Left Side - Checkout Form */}
-            <Grid item xs={12} md={7} sx={{ p: 4, borderRight: { md: '1px solid #f0f0f0' } }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, fontFamily: 'Raleway, sans-serif' }}>
-                Checkout
-              </Typography>
-
-              {/* Delivery Method */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Delivery method
-                </Typography>
-                <FormControl fullWidth>
-                  <Select
-                    value={deliveryMethod}
-                    onChange={(e) => setDeliveryMethod(e.target.value)}
-                    size="small"
-                  >
-                    <MenuItem value="online">Online</MenuItem>
-                    <MenuItem value="pickup">Pick up</MenuItem>
-                  </Select>
-                </FormControl>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
-                  Only the ticket prices will be charged. No any extra charges
-                </Typography>
-              </Box>
-
-              {/* Payment Method */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Payment Method <span style={{ color: '#d32f2f' }}>(Select one)</span>
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {[
-                    { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
-                    { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
-                    { value: 'amex', img: '/images/amex.jpg', alt: 'American Express' },
-                    { value: 'ezcash', img: '/images/ezcash.jpg', alt: 'EZ Cash' },
-                    { value: 'hnb', img: '/images/hnb.jpg', alt: 'HNB' },
-                    { value: 'koko', img: '/images/koko.jpg', alt: 'Koko' },
-                  ].map((method) => (
-                    <Box
-                      key={method.value}
-                      onClick={() => setSelectedPaymentMethod(method.value)}
-                      sx={{
-                        width: '80px',
-                        height: '50px',
-                        border: selectedPaymentMethod === method.value ? '3px solid #ff1955' : '2px solid #ddd',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          borderColor: '#ff1955',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                        },
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={method.img}
-                        alt={method.alt}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          padding: '8px',
-                        }}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              {/* Customer Information */}
-              <Box sx={{ mb: 3 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="First Name"
-                      placeholder="First Name *"
-                      value={customerInfo.firstName}
-                      onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)}
-                      size="small"
-                      required
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Last Name"
-                      placeholder="Last Name *"
-                      value={customerInfo.lastName}
-                      onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)}
-                      size="small"
-                      required
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="NIC/Passport"
-                      placeholder="NIC/Passport *"
-                      value={customerInfo.nic}
-                      onChange={(e) => handleCustomerInfoChange('nic', e.target.value)}
-                      size="small"
-                      required
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Contact Number"
-                      placeholder="Contact Number *"
-                      value={customerInfo.phone}
-                      onChange={(e) => handleCustomerInfoChange('phone', e.target.value)}
-                      size="small"
-                      required
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      placeholder="Email *"
-                      type="email"
-                      value={customerInfo.email}
-                      onChange={(e) => handleCustomerInfoChange('email', e.target.value)}
-                      size="small"
-                      required
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-
-              {/* Terms and Conditions */}
-              <Box sx={{ mb: 2 }}>
-                <FormControlLabel
-                  control={
-                    <input
-                      type="checkbox"
-                      checked={bookingForSomeoneElse}
-                      onChange={(e) => setBookingForSomeoneElse(e.target.checked)}
-                      style={{ marginRight: '8px' }}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2">
-                      I am booking for someone else
-                    </Typography>
-                  }
-                />
-                <Box sx={{ mt: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <input
-                        type="checkbox"
-                        checked={acceptTerms}
-                        onChange={(e) => setAcceptTerms(e.target.checked)}
-                        style={{ marginRight: '8px' }}
-                      />
-                    }
-                    label={
-                      <Typography variant="body2">
-                        I accept and agree to{' '}
-                        <Typography
-                          component="a"
-                          href="#"
-                          sx={{
-                            color: '#ff1955',
-                            textDecoration: 'none',
-                            '&:hover': { textDecoration: 'underline' },
-                          }}
-                        >
-                          Terms and Conditions
-                        </Typography>
-                      </Typography>
-                    }
-                  />
-                </Box>
-              </Box>
-
-              {/* Action Buttons */}
-              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleCloseModal}
-                  sx={{
-                    borderColor: '#ff1955',
-                    color: '#ff1955',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      borderColor: '#e01545',
-                      backgroundColor: 'rgba(255, 25, 85, 0.04)',
-                    },
-                  }}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => alert('Confirming booking...')}
-                  sx={{
-                    backgroundColor: '#ff1955',
-                    color: '#ffffff',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    py: 1.5,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(255, 25, 85, 0.3)',
-                    '&:hover': {
-                      backgroundColor: '#e01545',
-                      boxShadow: '0 6px 16px rgba(255, 25, 85, 0.4)',
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Confirm booking
-                </Button>
-              </Box>
-            </Grid>
-
-            {/* Right Side - Ticket Summary */}
-            <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
-                Ticket Summary
-              </Typography>
-
-              {/* Selected Tickets */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  Ticket
-                </Typography>
-                {ticketCategories.map((category: any) => {
-                  const categoryName = category.categoryName || category.name;
-                  const categoryPrice = category.price || 0;
-                  const qty = ticketQuantities[categoryName] || 0;
-                  if (qty > 0) {
-                    return (
-                      <Box key={categoryName} sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {Number(categoryPrice).toFixed(0)} LKR {categoryName.toUpperCase()} SEATING
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                          Seat: {qty > 0 ? `${qty} ticket${qty > 1 ? 's' : ''}` : 'B10'}
-                        </Typography>
-                      </Box>
-                    );
-                  }
-                  return null;
-                })}
-                {calculateTotal() === 0 && (
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                    No tickets selected
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Pricing Summary */}
-              <Box sx={{ mt: 3, pt: 2, borderTop: '2px solid #e0e0e0' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                  Amount
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Sub Total</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {calculateTotal().toLocaleString()} LKR
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="body2">Handeling fee</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>
-                    100 LKR
-                  </Typography>
-                </Box>
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Total
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {(calculateTotal() + 100).toLocaleString()} LKR
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Show Time Selection */}
-              {schedules.length > 0 && (
-                <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                    Select Show Time:
-                  </Typography>
-                  <RadioGroup
-                    value={selectedShowtime}
-                    onChange={handleShowtimeChange}
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                  >
-                    {schedules.map((schedule) => {
-                      const isPast = isSchedulePast(schedule);
-                      return (
-                        <FormControlLabel
-                          key={schedule.scheduleId}
-                          value={schedule.scheduleId}
-                          control={<Radio size="small" />}
-                          label={formatScheduleDisplay(schedule) + (isPast ? ' (Past)' : '')}
-                          disabled={isPast}
-                          sx={{ 
-                            '& .MuiFormControlLabel-label': { 
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              textDecoration: isPast ? 'line-through' : 'none',
-                              color: isPast ? 'rgba(0, 0, 0, 0.4)' : 'inherit',
-                              fontStyle: isPast ? 'italic' : 'normal'
-                            },
-                            opacity: isPast ? 0.5 : 1
-                          }}
-                        />
-                      );
-                    })}
-                  </RadioGroup>
-                </Box>
-              )}
-
-            </Grid>
-          </Grid>
-        </DialogContent>
-      </Dialog>
-
-      {/* Old Payment Modal - Keep for backward compatibility if needed */}
-      <Dialog
-        open={false}
-        onClose={handleCloseModal}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            border: '4px solid #ff688f',
-            borderRadius: 0,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            fontFamily: 'Raleway, sans-serif',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          Payment Details
-          <IconButton onClick={handleCloseModal} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          {/* Customer Information Form */}
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              fullWidth
-              label="First Name"
-              placeholder="First Name"
-              value={customerInfo.firstName}
-              onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Last Name"
-              placeholder="Last Name"
-              value={customerInfo.lastName}
-              onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Phone No"
-              placeholder="phone number"
-              value={customerInfo.phone}
-              onChange={(e) => handleCustomerInfoChange('phone', e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Email"
-              placeholder="email"
-              type="email"
-              value={customerInfo.email}
-              onChange={(e) => handleCustomerInfoChange('email', e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="NIC No"
-              placeholder="NIC No"
-              value={customerInfo.nic}
-              onChange={(e) => handleCustomerInfoChange('nic', e.target.value)}
-            />
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* Payment Method Selection */}
-          <Typography
-            variant="h6"
-            sx={{
-              textAlign: 'center',
-              fontFamily: 'Raleway, sans-serif',
-              fontWeight: 600,
-              mb: 2,
-            }}
-          >
-            Select Your Payment Method
-          </Typography>
-
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0, maxWidth: '800px', margin: 'auto', p: 2.5 }}>
-            {[
-              { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
-              { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
-              { value: 'amex', img: '/images/amex.jpg', alt: 'Amex' },
-              { value: 'hnb', img: '/images/hnb.jpg', alt: 'HNB' },
-              { value: 'ezcash', img: '/images/ezcash.jpg', alt: 'eZ Cash' },
-            ].map((method) => (
-              <Box
-                key={method.value}
-                onClick={() => setSelectedPaymentMethod(method.value)}
-                sx={{
-                  flex: 1,
-                  padding: '40px',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  boxShadow: 'none',
-                }}
-              >
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    right: '3px',
-                    top: '3px',
-                    bottom: '3px',
-                    left: '3px',
-                    backgroundImage: `url(${method.img})`,
-                    backgroundSize: 'contain',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    border: selectedPaymentMethod === method.value ? '2px solid #ff1955' : '2px solid transparent',
-                    boxShadow: selectedPaymentMethod === method.value ? '0px 3px 22px 0px #7b7b7b' : 'none',
-                    transition: 'all 0.5s',
-                    '&:hover': {
-                      borderColor: '#ff1955',
-                    },
-                  }}
-                />
-              </Box>
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseModal} variant="outlined">
-            Back
-          </Button>
-          <Button variant="contained" onClick={() => alert('Payment Processing...')}>
-            Payment
-          </Button>
-        </DialogActions>
-      </Dialog>
+        sharedAreaSelections={ticketCategories
+          .filter((cat: any) => (ticketQuantities[cat.categoryName || cat.name] || 0) > 0)
+          .map((cat: any) => ({
+            categoryName: cat.categoryName || cat.name,
+            ticketCount: ticketQuantities[cat.categoryName || cat.name],
+            pricePerTicket: cat.price || 0
+          }))}
+        totalPrice={calculateTotal()}
+        handlingFee={100}
+        hideChangeSeats={true}
+      />
 
       {/* Validation Modal */}
       <Dialog
@@ -1586,6 +1194,17 @@ const EventDetails: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbarOpen(false)} severity="error" sx={{ width: '100%', borderRadius: 2 }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

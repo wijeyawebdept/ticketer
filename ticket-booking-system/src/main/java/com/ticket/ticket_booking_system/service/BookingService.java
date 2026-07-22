@@ -159,8 +159,15 @@ public class BookingService {
         // NOTE: Do NOT update schedule availability yet - only after payment confirmation
 
         // Set customer details and booking details
-        booking.setCustomerEmail(user.getEmail());
-        booking.setCustomerPhone(user.getPhoneNumber());
+        if (request.getCustomerInfo() != null) {
+            booking.setCustomerEmail(request.getCustomerInfo().getEmail());
+            booking.setCustomerPhone(request.getCustomerInfo().getPhone());
+            booking.setCustomerNic(request.getCustomerInfo().getNic());
+        } else {
+            booking.setCustomerEmail(user.getEmail());
+            booking.setCustomerPhone(user.getPhoneNumber());
+        }
+        
         booking.setNumberOfTickets(booking.getBookingSeats().size());
         booking.setFinalAmount(request.getTotalAmount());
         booking.setDiscountAmount(request.getDiscountAmount());
