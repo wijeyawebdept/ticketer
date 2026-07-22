@@ -164,6 +164,7 @@ const Bookings: React.FC = () => {
       'Booking Reference': b.bookingReference,
       'Event Name': b.eventName || b.event?.name || 'N/A',
       'Customer Name': b.userFirstName && b.userLastName ? `${b.userFirstName} ${b.userLastName}` : (b.user ? `${b.user.firstName} ${b.user.lastName}` : 'N/A'),
+      'NIC / ID': b.customerNic || b.user?.nic || 'N/A',
       'Tickets': b.ticketCount || 0,
       'Total Amount (Rs.)': b.totalAmount || 0,
       'Booking Date': b.bookingTime ? new Date(b.bookingTime).toLocaleDateString() : 'N/A',
@@ -219,6 +220,14 @@ const Bookings: React.FC = () => {
         }
         const user = params.row.user;
         return user ? `${user.firstName} ${user.lastName}` : 'N/A';
+      }
+    },
+    {
+      field: 'customerNic',
+      headerName: 'ID / NIC',
+      width: 130,
+      valueGetter: (params) => {
+        return params.row.customerNic || params.row.user?.nic || 'N/A';
       }
     },
     { 

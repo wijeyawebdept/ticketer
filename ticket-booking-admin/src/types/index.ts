@@ -10,6 +10,7 @@ export interface User {
   emailVerified: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+  nic?: string;
 }
 
 export enum UserRole {
@@ -236,6 +237,7 @@ export interface Booking {
   userFirstName?: string;
   userLastName?: string;
   userEmail?: string;
+  customerNic?: string;
   user?: User; // Keep for backward compatibility
   
   // Event information
