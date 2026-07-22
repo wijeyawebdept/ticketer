@@ -16,7 +16,7 @@ jobs:
       - name: Build Frontend
         run: |
           cd ticket-booking-admin
-          npm install
+          npm install --legacy-peer-deps
           CI=false npm run build
 
       - name: Copy files to server (SCP)
