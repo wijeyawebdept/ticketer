@@ -160,17 +160,25 @@ const Bookings: React.FC = () => {
   };
 
   const prepareExportData = () => {
-    return bookings.map(b => ({
-      'Booking Reference': b.bookingReference,
-      'Event Name': b.eventName || b.event?.name || 'N/A',
-      'Customer Name': b.userFirstName && b.userLastName ? `${b.userFirstName} ${b.userLastName}` : (b.user ? `${b.user.firstName} ${b.user.lastName}` : 'N/A'),
-      'NIC / ID': b.customerNic || b.user?.nic || 'N/A',
-      'Tickets': b.ticketCount || 0,
-      'Total Amount (Rs.)': b.totalAmount || 0,
-      'Booking Date': b.bookingTime ? new Date(b.bookingTime).toLocaleDateString() : 'N/A',
-      'Booking Time': b.bookingTime ? new Date(b.bookingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      'Status': b.status
-    }));
+    return bookings.map(b => {
+      const sched = b.eventSchedule || b.event?.eventSchedules?.find((s: any) => s.scheduleId === b.scheduleId);
+      const showtimeStr = sched && sched.scheduleDate 
+        ? `${sched.scheduleDate} (${sched.startTime?.substring(0, 5) || ''} - ${sched.endTime?.substring(0, 5) || ''})`
+        : (b.scheduleDate ? `${b.scheduleDate} (${b.scheduleStartTime || ''})` : 'N/A');
+
+      return {
+        'Booking Reference': b.bookingReference,
+        'Event Name': b.eventName || b.event?.name || 'N/A',
+        'Showtime Slot': showtimeStr,
+        'Customer Name': b.userFirstName && b.userLastName ? `${b.userFirstName} ${b.userLastName}` : (b.user ? `${b.user.firstName} ${b.user.lastName}` : 'N/A'),
+        'NIC / ID': b.customerNic || b.user?.nic || 'N/A',
+        'Tickets': b.ticketCount || b.numberOfTickets || 0,
+        'Total Amount (Rs.)': b.totalAmount || 0,
+        'Booking Date': b.bookingTime ? new Date(b.bookingTime).toLocaleDateString() : 'N/A',
+        'Booking Time': b.bookingTime ? new Date(b.bookingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Status': b.status
+      };
+    });
   };
 
   const handleExportExcel = () => {
@@ -209,6 +217,28 @@ const Bookings: React.FC = () => {
       headerName: 'Event', 
       flex: 1, 
       valueGetter: (params) => params.row.eventName || params.row.event?.name || 'N/A' 
+    },
+    {
+      field: 'showtimeSlot',
+      headerName: 'Showtime Slot',
+      flex: 1.2,
+      valueGetter: (params) => {
+        const b = params.row;
+        const sched = b.eventSchedule || b.event?.eventSchedules?.find((s: any) => s.scheduleId === b.scheduleId);
+        if (sched && sched.scheduleDate) {
+          const dateStr = new Date(sched.scheduleDate).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          const timeStr = sched.startTime ? `${sched.startTime.substring(0, 5)} - ${sched.endTime?.substring(0, 5) || ''}` : '';
+          return `${dateStr} (${timeStr})`;
+        }
+        if (b.scheduleDate) {
+          return `${b.scheduleDate} (${b.scheduleStartTime || ''})`;
+        }
+        return 'Default Showtime';
+      }
     },
     { 
       field: 'userName', 

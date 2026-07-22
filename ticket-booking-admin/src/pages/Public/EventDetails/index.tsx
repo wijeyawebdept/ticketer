@@ -22,6 +22,7 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  Chip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -30,7 +31,7 @@ import PublicFooter from '../../../components/public/PublicFooter';
 import { getAssetUrl } from '../../../utils/formatters';
 import EventService from '../../../services/event.service';
 import EventScheduleService from '../../../services/eventSchedule.service';
-import { Event, EventSchedule } from '../../../types';
+import { Event, EventSchedule, ScheduleStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
@@ -486,6 +487,22 @@ const EventDetails: React.FC = () => {
     return scheduleDate < new Date();
   };
 
+  const getScheduleAvailability = (schedule: EventSchedule) => {
+    const isPast = isSchedulePast(schedule);
+    const isSoldOut = (schedule.availableSeats !== undefined && schedule.availableSeats <= 0) ||
+                      schedule.status === ScheduleStatus.SOLD_OUT ||
+                      (schedule.capacity > 0 && schedule.bookedSeats >= schedule.capacity);
+    const isInactive = schedule.status === ScheduleStatus.CANCELLED || 
+                       schedule.status === ScheduleStatus.COMPLETED ||
+                       (schedule.status as string) === 'INACTIVE' || 
+                       schedule.isBookable === false;
+
+    if (isPast) return { isAvailable: false, label: 'PAST', color: '#666', bg: '#e0e0e0' };
+    if (isSoldOut || isInactive) return { isAvailable: false, label: 'UNAVAILABLE', color: '#c62828', bg: '#ffebee' };
+
+    return { isAvailable: true, label: 'AVAILABLE', color: '#2e7d32', bg: '#e8f5e9' };
+  };
+
   if (isRedirecting) {
     const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
     
@@ -868,33 +885,65 @@ const EventDetails: React.FC = () => {
                       Select Show Time:
                     </Typography>
                     <RadioGroup
-                    value={selectedShowtime}
-                    onChange={handleShowtimeChange}
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                  >
-                    {schedules.map((schedule) => {
-                      const isPast = isSchedulePast(schedule);
-                      return (
-                        <FormControlLabel
-                          key={schedule.scheduleId}
-                          value={schedule.scheduleId}
-                          control={<Radio size="small" />}
-                          label={formatScheduleDisplay(schedule) + (isPast ? ' (Past)' : '')}
-                          disabled={isPast}
-                          sx={{ 
-                            '& .MuiFormControlLabel-label': { 
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              textDecoration: isPast ? 'line-through' : 'none',
-                              color: isPast ? 'rgba(0, 0, 0, 0.4)' : 'inherit',
-                              fontStyle: isPast ? 'italic' : 'normal'
-                            },
-                            opacity: isPast ? 0.5 : 1
-                          }}
-                        />
-                      );
-                    })}
-                  </RadioGroup>
+                      value={selectedShowtime}
+                      onChange={handleShowtimeChange}
+                      sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
+                    >
+                      {schedules.map((schedule) => {
+                        const { isAvailable, label, color, bg } = getScheduleAvailability(schedule);
+                        const isSelected = selectedShowtime === schedule.scheduleId;
+
+                        return (
+                          <Box
+                            key={schedule.scheduleId}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              backgroundColor: '#ffffff',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              border: isSelected ? '2px solid #ff1955' : '1px solid #e0e0e0',
+                              opacity: isAvailable ? 1 : 0.55,
+                              transition: 'all 0.2s ease',
+                              boxShadow: isSelected ? '0 2px 8px rgba(255, 25, 85, 0.15)' : 'none',
+                            }}
+                          >
+                            <FormControlLabel
+                              value={schedule.scheduleId}
+                              control={<Radio size="small" disabled={!isAvailable} />}
+                              label={formatScheduleDisplay(schedule)}
+                              disabled={!isAvailable}
+                              sx={{ 
+                                flexGrow: 1,
+                                margin: 0,
+                                '& .MuiFormControlLabel-label': { 
+                                  fontSize: '14px',
+                                  fontWeight: isSelected ? 600 : 500,
+                                  textDecoration: !isAvailable ? 'line-through' : 'none',
+                                  color: !isAvailable ? 'rgba(0, 0, 0, 0.45)' : '#222',
+                                  fontStyle: !isAvailable ? 'italic' : 'normal'
+                                },
+                              }}
+                            />
+                            <Chip 
+                              label={label} 
+                              size="small" 
+                              sx={{ 
+                                bgcolor: bg, 
+                                color: color, 
+                                fontSize: '11px', 
+                                fontWeight: 800, 
+                                height: 22,
+                                borderRadius: '4px',
+                                letterSpacing: '0.5px',
+                                ml: 1
+                              }} 
+                            />
+                          </Box>
+                        );
+                      })}
+                    </RadioGroup>
                   </Box>
                 </Box>
               ) : (

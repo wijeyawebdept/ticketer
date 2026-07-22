@@ -39,10 +39,11 @@ public class AdminBookingController {
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String scheduleId,
             Pageable pageable) {
         
         try {
-            Page<Booking> bookings = bookingService.getAllBookingsForAdmin(eventId, userId, status, search, pageable);
+            Page<Booking> bookings = bookingService.getAllBookingsForAdmin(eventId, userId, status, search, scheduleId, pageable);
             return ResponseEntity.ok(bookings);
         } catch (Exception e) {
             log.error("Error fetching bookings", e);
