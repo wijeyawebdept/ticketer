@@ -99,7 +99,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   return (
     <Dialog
       open={isOpen}
-      onClose={onClose}
+      onClose={(event, reason) => {
+        if (reason && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+          return;
+        }
+        onClose();
+      }}
       maxWidth="lg"
       fullWidth
       PaperProps={{ sx: { borderRadius: 2, maxHeight: '90vh' } }}
