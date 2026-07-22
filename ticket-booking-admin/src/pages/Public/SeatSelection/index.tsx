@@ -546,7 +546,6 @@ const SeatSelectionPage: React.FC = () => {
             <h1>{t('initializingSecurePayment', 'Initializing Secure Payment')}</h1>
             <p>{t('doNotRefresh', 'Please do not refresh the page or click the back button.')}</p>
             <div className="loading-container">
-              <CircularProgress sx={{ color: '#ff1955', mb: 2 }} />
               <div className="loading-text">{t('connectingToPayment', 'Connecting to Payment Gateway...')}</div>
             </div>
             <div className="order-summary-mini">

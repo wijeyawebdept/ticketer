@@ -1099,7 +1099,10 @@ const SeatingArrangement: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            p: 2
+            p: 2,
+            backgroundColor: '#1a1e24',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 25, 85, 0.3)',
           }
         }}
       >
@@ -1110,7 +1113,8 @@ const SeatingArrangement: React.FC = () => {
               position: 'absolute',
               right: 8,
               top: 8,
-              color: 'grey.500'
+              color: 'rgba(255, 255, 255, 0.5)',
+              '&:hover': { color: '#ff1955' }
             }}
           >
             <Close />
@@ -1118,11 +1122,11 @@ const SeatingArrangement: React.FC = () => {
         </DialogTitle>
 
         <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-            This section is a <strong>*Shared Space*</strong> and does not have any allocated seats.
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#ffffff' }}>
+            This section is a <strong style={{ color: '#ff1955' }}>*Shared Space*</strong> and does not have any allocated seats.
           </Typography>
 
-          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+          <Typography variant="body1" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
             How many tickets do you want?
           </Typography>
 
@@ -1138,9 +1142,12 @@ const SeatingArrangement: React.FC = () => {
                   fontSize: '18px',
                   fontWeight: 600,
                   borderRadius: 2,
-                  border: balconyTicketCount === count ? 'none' : '2px solid #ddd',
+                  border: balconyTicketCount === count ? 'none' : '2px solid rgba(255, 255, 255, 0.2)',
+                  color: balconyTicketCount === count ? '#ffffff' : '#fcd0a5',
+                  backgroundColor: balconyTicketCount === count ? '#ff1955' : 'transparent',
                   '&:hover': {
-                    backgroundColor: balconyTicketCount === count ? 'primary.dark' : 'grey.100'
+                    backgroundColor: balconyTicketCount === count ? '#e0164b' : 'rgba(255, 25, 85, 0.1)',
+                    borderColor: 'rgba(255, 25, 85, 0.5)'
                   }
                 }}
               >
@@ -1161,9 +1168,14 @@ const SeatingArrangement: React.FC = () => {
                 fontWeight: 600,
                 textTransform: 'none',
                 borderRadius: 2,
-                backgroundColor: '#6B8CFF',
+                backgroundColor: '#ff1955',
+                color: '#ffffff',
                 '&:hover': {
-                  backgroundColor: '#5a7ae6'
+                  backgroundColor: '#e0164b'
+                },
+                '&:disabled': {
+                  backgroundColor: 'rgba(255, 25, 85, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.3)'
                 }
               }}
             >
@@ -1175,9 +1187,12 @@ const SeatingArrangement: React.FC = () => {
             onClick={handleCloseBalconyDialog}
             sx={{
               mt: 2,
-              color: 'text.secondary',
+              color: 'rgba(255, 255, 255, 0.5)',
               textTransform: 'none',
-              fontWeight: 500
+              fontWeight: 500,
+              '&:hover': {
+                color: '#ffffff'
+              }
             }}
           >
             Cancel

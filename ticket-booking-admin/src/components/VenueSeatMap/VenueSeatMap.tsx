@@ -764,7 +764,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             PaperProps={{
               sx: {
                 borderRadius: 2,
-                p: 2
+                p: 2,
+                backgroundColor: '#1a1e24',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 25, 85, 0.3)',
               }
             }}
           >
@@ -775,7 +778,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   position: 'absolute',
                   right: 8,
                   top: 8,
-                  color: 'grey.500'
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  '&:hover': { color: '#ff1955' }
                 }}
               >
                 <Close />
@@ -783,23 +787,23 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             </DialogTitle>
 
             <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#ffffff' }}>
                 {selectedSharedArea?.categoryName || t('standingArea', 'Standing Area')}
               </Typography>
 
-              <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
-                {t('sharedSpaceNoticeStart', 'This section is a')} <strong>{t('sharedSpaceNoticeStrong', '*Shared Space*')}</strong> {t('sharedSpaceNoticeEnd', 'and does not have any allocated seats.')}
+              <Typography variant="body1" sx={{ mb: 1, fontWeight: 500, color: 'rgba(255, 255, 255, 0.7)' }}>
+                {t('sharedSpaceNoticeStart', 'This section is a')} <strong style={{ color: '#ff1955' }}>{t('sharedSpaceNoticeStrong', '*Shared Space*')}</strong> {t('sharedSpaceNoticeEnd', 'and does not have any allocated seats.')}
               </Typography>
 
-              <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                {t('pricePerTicket', 'Price per ticket:')} <strong>{t('lkr', 'LKR')} {selectedSharedArea?.price.toLocaleString()}</strong>
+              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+                {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{t('lkr', 'LKR')} {selectedSharedArea?.price.toLocaleString()}</strong>
               </Typography>
 
-              <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-                {t('availableLabel', 'Available:')} <strong>{selectedSharedArea?.availableTickets}</strong> {t('tickets', 'tickets')}
+              <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
+                {t('availableLabel', 'Available:')} <strong style={{ color: '#ffffff' }}>{selectedSharedArea?.availableTickets}</strong> {t('tickets', 'tickets')}
               </Typography>
 
-              <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+              <Typography variant="body1" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
                 {t('howManyTickets', 'How many tickets do you want?')}
               </Typography>
 
@@ -815,9 +819,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                       fontSize: '18px',
                       fontWeight: 600,
                       borderRadius: 2,
-                      border: sharedAreaTicketCount === count ? 'none' : '2px solid #ddd',
+                      border: sharedAreaTicketCount === count ? 'none' : '2px solid rgba(255, 255, 255, 0.2)',
+                      color: sharedAreaTicketCount === count ? '#ffffff' : '#fcd0a5',
+                      backgroundColor: sharedAreaTicketCount === count ? '#ff1955' : 'transparent',
                       '&:hover': {
-                        backgroundColor: sharedAreaTicketCount === count ? 'primary.dark' : 'grey.100'
+                        backgroundColor: sharedAreaTicketCount === count ? '#e0164b' : 'rgba(255, 25, 85, 0.1)',
+                        borderColor: 'rgba(255, 25, 85, 0.5)'
                       }
                     }}
                   >
@@ -827,7 +834,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </Box>
 
               {sharedAreaTicketCount && selectedSharedArea && (
-                <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
+                <Typography variant="h6" sx={{ mb: 3, color: '#ff1955' }}>
                   {t('totalLabel', 'Total:')} {t('lkr', 'LKR')} {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
                 </Typography>
               )}
@@ -844,9 +851,14 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                     fontWeight: 600,
                     textTransform: 'none',
                     borderRadius: 2,
-                    backgroundColor: '#6B8CFF',
+                    backgroundColor: '#ff1955',
+                    color: '#ffffff',
                     '&:hover': {
-                      backgroundColor: '#5a7ae6'
+                      backgroundColor: '#e0164b'
+                    },
+                    '&:disabled': {
+                      backgroundColor: 'rgba(255, 25, 85, 0.3)',
+                      color: 'rgba(255, 255, 255, 0.3)'
                     }
                   }}
                 >
@@ -858,9 +870,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                 onClick={handleSharedAreaDialogClose}
                 sx={{
                   mt: 2,
-                  color: 'text.secondary',
+                  color: 'rgba(255, 255, 255, 0.5)',
                   textTransform: 'none',
-                  fontWeight: 500
+                  fontWeight: 500,
+                  '&:hover': {
+                    color: '#ffffff'
+                  }
                 }}
               >
                 {t('cancel', 'Cancel')}
