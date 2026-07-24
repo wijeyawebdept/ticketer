@@ -394,7 +394,35 @@ const PublicNavbar: React.FC = () => {
                     PaperProps={{
                       sx: {
                         minWidth: 200,
-                        mt: 1,
+                        mt: 1.5,
+                        backgroundColor: '#1b222c',
+                        color: '#fff',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 25, 85, 0.3)',
+                        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.8)',
+                        backdropFilter: 'blur(16px)',
+                        overflow: 'hidden',
+                        py: 0.5,
+                        '& .MuiMenuItem-root': {
+                          fontFamily: 'Raleway, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          py: 1.2,
+                          px: 2,
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 25, 85, 0.15)',
+                            color: '#ff1955',
+                            '& .MuiListItemIcon-root': {
+                              color: '#ff1955',
+                            },
+                          },
+                        },
+                        '& .MuiListItemIcon-root': {
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          minWidth: '36px !important',
+                        },
                       }
                     }}
                   >
@@ -403,33 +431,29 @@ const PublicNavbar: React.FC = () => {
                         navigate('/profile');
                         setUserMenuAnchor(null);
                       }}
-                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
                     >
                       <ListItemIcon>
                         <PersonIcon fontSize="small" />
                       </ListItemIcon>
-                      View profile
+                      View Profile
                     </MenuItem>
-                    <MenuItem 
-                      onClick={() => {
-                        navigate('/bookings');
-                        setUserMenuAnchor(null);
-                      }}
-                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
-                    >
-                      <ListItemIcon>
-                        <HistoryIcon fontSize="small" />
-                      </ListItemIcon>
-                      Booking history
-                    </MenuItem>
+                    <Divider sx={{ my: 0.5, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                     <MenuItem 
                       onClick={handleLogout}
-                      sx={{ fontFamily: 'Raleway, sans-serif', py: 1.5 }}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'rgba(244, 67, 54, 0.15) !important',
+                          color: '#ff4d4d !important',
+                          '& .MuiListItemIcon-root': {
+                            color: '#ff4d4d !important',
+                          },
+                        }
+                      }}
                     >
                       <ListItemIcon>
                         <LogoutIcon fontSize="small" />
                       </ListItemIcon>
-                      Log out
+                      Log Out
                     </MenuItem>
                   </Menu>
                 </Box>

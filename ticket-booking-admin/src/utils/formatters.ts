@@ -86,20 +86,14 @@ export const getProfilePictureUrl = (path: string | null | undefined): string | 
   if (!path) return undefined;
   
   // If it's already a full URL (google avatar etc.), return as is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
     return path;
   }
   
-  // Prepend backend URL for local development if it's a relative path
-  // This ensures images load even if the proxy has issues
-  const backendUrl = 'http://localhost:8081';
+  // Prepend backend URL for relative paths so images always resolve correctly
+  const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:8081';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  
-  if (process.env.NODE_ENV === 'development') {
-    return `${backendUrl}${normalizedPath}`;
-  }
-  
-  return normalizedPath;
+  return `${backendUrl}${normalizedPath}`;
 };
 
 /**
@@ -116,4 +110,36 @@ export const getAssetUrl = (path?: string | null): string | undefined => {
   }
   
   return normalizedPath;
+};
+
+/**
+ * Formats a 24-hour time string (e.g., "17:00:00" or "17:00:00 - 22:00:00") into 12-hour AM/PM format (e.g., "05:00 PM - 10:00 PM")
+ */
+export const formatTimeString = (timeString: string | null | undefined): string => {
+  if (!timeString) return '';
+
+  const convertSingleTime = (tStr: string): string => {
+    const trimmed = tStr.trim();
+    // Match HH:mm:ss or HH:mm
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) return trimmed;
+
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+
+    const formattedHours = hours < 10 ? `0${hours}` : `${hours}`;
+    return `${formattedHours}:${minutes} ${ampm}`;
+  };
+
+  if (timeString.includes(' - ')) {
+    return timeString
+      .split(' - ')
+      .map(part => convertSingleTime(part))
+      .join(' - ');
+  }
+
+  return convertSingleTime(timeString);
 };

@@ -20,7 +20,10 @@ import {
   Badge,
   Switch,
   FormControlLabel,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material';
 import { 
   PhotoCamera, 
@@ -40,11 +43,20 @@ import {
 } from '@mui/icons-material';
 import { Formik, Form, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { 
+  ReceiptLong as ReceiptIcon, 
+  Refresh as RefreshIcon, 
+  Print as PrintIcon, 
+  Close as CloseIcon 
+} from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
-import { ProfileDTO, ProfileUpdateDTO } from '../../../types';
+import { ProfileDTO, ProfileUpdateDTO, Booking, BookingStatus } from '../../../types';
 import { profileService } from '../../../services/profile.service';
+import { BookingService } from '../../../services';
 import { useAuth } from '../../../context/AuthContext';
+import { getProfilePictureUrl } from '../../../utils/formatters';
 
 interface ProfileFormValues {
   firstName: string;
@@ -74,6 +86,7 @@ const validationSchema = Yup.object().shape({
 const UserProfile: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +104,184 @@ const UserProfile: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Booking history states
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState<boolean>(false);
+  const [receiptBooking, setReceiptBooking] = useState<Booking | null>(null);
+  const receiptRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (location.search.includes('tab=1') || location.search.includes('booking') || location.state?.tab === 1) {
+      setCurrentTab(1);
+    }
+  }, [location]);
+
+  useEffect(() => {
+    if (currentTab === 1) {
+      fetchBookings();
+    }
+  }, [currentTab]);
+
+  const fetchBookings = async () => {
+    setBookingsLoading(true);
+    try {
+      const data = await BookingService.getAllBookings();
+      setBookings(Array.isArray(data) ? data : data?.content ?? []);
+    } catch (error) {
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const renderStatusChip = (status: BookingStatus | string) => {
+    const statusUpper = (status || '').toUpperCase();
+    switch (statusUpper) {
+      case 'CONFIRMED':
+        return (
+          <Chip
+            label="CONFIRMED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(46, 125, 50, 0.25)',
+              color: '#4caf50',
+              border: '1px solid #4caf50',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'PENDING':
+        return (
+          <Chip
+            label="PENDING"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(237, 108, 2, 0.25)',
+              color: '#ff9800',
+              border: '1px solid #ff9800',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'REFUNDED':
+        return (
+          <Chip
+            label="REFUNDED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(171, 71, 188, 0.25)',
+              color: '#ce93d8',
+              border: '1px solid #ab47bc',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              boxShadow: '0 0 10px rgba(171, 71, 188, 0.4)',
+            }}
+          />
+        );
+      case 'CANCELLED':
+        return (
+          <Chip
+            label="CANCELLED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(211, 47, 47, 0.25)',
+              color: '#ef5350',
+              border: '1px solid #ef5350',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'COMPLETED':
+        return (
+          <Chip
+            label="COMPLETED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(2, 136, 209, 0.25)',
+              color: '#29b6f6',
+              border: '1px solid #29b6f6',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      default:
+        return (
+          <Chip
+            label={statusUpper || 'N/A'}
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(120, 144, 156, 0.25)',
+              color: '#b0bec5',
+              border: '1px solid #78909c',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!receiptRef.current) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Booking Receipt</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+        h2 { color: #cc0033; } table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 13px; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .label { color: #555; font-size: 12px; } .value { font-weight: 600; }
+        .total { font-size: 16px; font-weight: 700; color: #cc0033; }
+      </style></head><body>
+      ${receiptRef.current.innerHTML}
+      </body></html>`);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const bookingColumns: GridColDef[] = [
+    { field: 'bookingReference', headerName: 'Booking Ref', width: 160 },
+    {
+      field: 'eventName', headerName: 'Event', flex: 1,
+      valueGetter: (params: any) => params.row.eventName || params.row.event?.name || 'N/A'
+    },
+    { field: 'ticketCount', headerName: 'Tickets', width: 90 },
+    {
+      field: 'totalAmount', headerName: 'Amount', width: 130,
+      valueFormatter: (params: any) => `LKR ${params.value?.toLocaleString() ?? 0}`
+    },
+    {
+      field: 'bookingTime', headerName: 'Booking Date', width: 160,
+      valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A'
+    },
+    {
+      field: 'status', headerName: 'Status', width: 140,
+      renderCell: (params: any) => renderStatusChip(params.value)
+    },
+    {
+      field: 'actions', headerName: 'Receipt', width: 120, sortable: false,
+      renderCell: (params: any) => (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ReceiptIcon sx={{ fontSize: '14px !important' }} />}
+          onClick={() => setReceiptBooking(params.row as Booking)}
+          sx={{
+            borderColor: '#ff1955', color: '#ff1955', fontSize: '0.75rem',
+            '&:hover': { bgcolor: 'rgba(255,25,85,0.08)', borderColor: '#ff1955' }
+          }}
+        >
+          Receipt
+        </Button>
+      )
+    },
+  ];
 
   // Notification settings
   const [notificationSettings, setNotificationSettings] = useState({
@@ -564,6 +755,7 @@ const UserProfile: React.FC = () => {
             }}
           >
             <Tab label="PROFILE" />
+            <Tab label="BOOKING HISTORY" />
             <Tab label="NOTIFICATIONS" />
             <Tab label="SECURITY" />
             <Tab label="SYSTEM" />
@@ -604,7 +796,7 @@ const UserProfile: React.FC = () => {
                       }
                     >
                       <Avatar
-                        src={previewUrl || (profile.profilePicture ? `http://localhost:8081${profile.profilePicture.startsWith('/') ? profile.profilePicture : '/' + profile.profilePicture}` : undefined)}
+                        src={previewUrl || getProfilePictureUrl(profile.profilePicture)}
                         sx={{ 
                           width: 150, 
                           height: 150,
@@ -905,8 +1097,59 @@ const UserProfile: React.FC = () => {
           </Grid>
         )}
 
-        {/* Notification Settings Tab */}
+        {/* Booking History Tab */}
         {currentTab === 1 && (
+          <Box sx={{ width: '100%' }}>
+            <Card sx={{
+              backgroundColor: '#1a1f28',
+              border: '1px solid rgba(255, 25, 85, 0.2)',
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)',
+              borderRadius: 2
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h6" sx={{ color: '#fcd0a5', fontWeight: 600 }}>
+                    My Booking History
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchBookings}
+                    sx={{ backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' }, fontWeight: 600 }}
+                  >
+                    Refresh
+                  </Button>
+                </Box>
+
+                <Box sx={{
+                  height: 550, width: '100%',
+                  '& .MuiDataGrid-root': { border: 'none', color: '#fff', backgroundColor: 'transparent' },
+                  '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.8)' },
+                  '& .MuiDataGrid-columnHeaders': { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' },
+                  '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 600, color: '#fcd0a5' },
+                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' },
+                  '& .MuiTablePagination-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                  '& .MuiDataGrid-virtualScroller': { backgroundColor: 'transparent' },
+                  '& .MuiIconButton-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                  '& .MuiDataGrid-row:hover': { backgroundColor: 'rgba(255, 255, 255, 0.03)' },
+                }}>
+                  <DataGrid
+                    rows={bookings}
+                    columns={bookingColumns}
+                    loading={bookingsLoading}
+                    getRowId={(row) => row.bookingId}
+                    pageSizeOptions={[5, 10, 25]}
+                    initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+                    disableRowSelectionOnClick
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        )}
+
+        {/* Notification Settings Tab */}
+        {currentTab === 2 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <CardContent>
@@ -1042,7 +1285,7 @@ const UserProfile: React.FC = () => {
         )}
 
         {/* Security Settings Tab */}
-        {currentTab === 2 && (
+        {currentTab === 3 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             {showSecurityNotice && (
               <Alert 
@@ -1494,7 +1737,7 @@ const UserProfile: React.FC = () => {
         )}
 
         {/* System Settings Tab */}
-        {currentTab === 3 && (
+        {currentTab === 4 && (
           <Box sx={{ maxWidth: 900, mx: 'auto' }}>
             <Card sx={{ backgroundColor: '#1a1f28', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <CardContent>
@@ -1582,6 +1825,93 @@ const UserProfile: React.FC = () => {
           </Box>
         )}
       </Container>
+
+      {/* Receipt Dialog */}
+      <Dialog
+        open={!!receiptBooking}
+        onClose={() => setReceiptBooking(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a1f28', color: '#fff', borderRadius: 3,
+            border: '1px solid rgba(255,25,85,0.3)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.8)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ReceiptIcon sx={{ color: '#ff1955' }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff' }}>Booking Receipt</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <IconButton onClick={handlePrintReceipt} size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff' } }}>
+              <PrintIcon fontSize="small" />
+            </IconButton>
+            <IconButton onClick={() => setReceiptBooking(null)} size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff' } }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2 }}>
+          {receiptBooking && (
+            <Box ref={receiptRef}>
+              <Box sx={{
+                background: 'linear-gradient(135deg, #ff1955 0%, #c8002f 100%)',
+                borderRadius: 2, p: 2.5, mb: 3, textAlign: 'center'
+              }}>
+                <Typography sx={{ fontWeight: 900, fontSize: '1.4rem', color: '#fff', letterSpacing: 1 }}>
+                  Ticketer.lk
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                  Official Booking Confirmation
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Booking Reference
+                  </Typography>
+                  <Typography sx={{ color: '#fcd0a5', fontWeight: 700, fontSize: '1.1rem', fontFamily: 'monospace' }}>
+                    {receiptBooking.bookingReference || receiptBooking.bookingId?.slice(0, 8).toUpperCase()}
+                  </Typography>
+                </Box>
+                {renderStatusChip(receiptBooking.status)}
+              </Box>
+
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
+
+              <Typography sx={{ color: '#ff1955', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
+                Event Details
+              </Typography>
+              <Box sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: 2, p: 2, mb: 3 }}>
+                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem', mb: 0.5 }}>
+                  {receiptBooking.eventName || 'N/A'}
+                </Typography>
+                {receiptBooking.bookingTime && (
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
+                    Date: {new Date(receiptBooking.bookingTime).toLocaleDateString()}
+                  </Typography>
+                )}
+              </Box>
+
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Tickets ({receiptBooking.ticketCount || 1})</Typography>
+                <Typography sx={{ color: '#fff', fontWeight: 600 }}>LKR {receiptBooking.totalAmount?.toLocaleString() ?? 0}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 2, mt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>Total Amount</Typography>
+                <Typography sx={{ color: '#ff1955', fontWeight: 800, fontSize: '1.2rem' }}>LKR {receiptBooking.totalAmount?.toLocaleString() ?? 0}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

@@ -7,6 +7,7 @@ import {
   DialogActions,
   Grid,
   Box,
+  Container,
   Typography,
   FormControl,
   Select,
@@ -16,14 +17,23 @@ import {
   Button,
   IconButton,
   CircularProgress,
+  Chip,
 } from '@mui/material';
+import { 
+  ArrowBack as ArrowBackIcon,
+  Event as EventIcon,
+  LocationOn as LocationOnIcon,
+  AccessTime as AccessTimeIcon
+} from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import PublicNavbar from '../../../components/public/PublicNavbar';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
 import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
 import { useAuth } from '../../../context/AuthContext';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
+import { formatTimeString } from '../../../utils/formatters';
 import CheckoutModal from '../../../components/CheckoutModal';
 import './SeatSelection.css';
 
@@ -519,11 +529,21 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   if (!eventDetails) {
-    return <div className="loading">{t('loadingEventDetails', 'Loading event details...')}</div>;
+    return (
+      <Box sx={{ backgroundColor: '#242a33', minHeight: '100vh' }}>
+        <PublicNavbar />
+        <Container maxWidth="xl" sx={{ pt: 16, pb: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <CircularProgress sx={{ color: '#ff1955' }} />
+        </Container>
+      </Box>
+    );
   }
 
   return (
-    <div className="seat-selection-page">
+    <Box sx={{ backgroundColor: '#242a33', minHeight: '100vh' }}>
+      <PublicNavbar />
+      <Container maxWidth="xl" sx={{ pt: 12, pb: 6 }}>
+        <div className="seat-selection-page">
       {isRedirecting ? (
         <div className="payment-redirection-view">
           <div className="redirection-content">
@@ -577,30 +597,174 @@ const SeatSelectionPage: React.FC = () => {
       ) : (
         <>
           {message && <div className={`message-notification ${message.type}`}>{message.text}</div>}
+          {/* Single-Line Event Details Strip */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: '#1b222c',
+              border: '1px solid rgba(255, 25, 85, 0.25)',
+              borderRadius: '12px',
+              px: { xs: 2, md: 3 },
+              py: 1.5,
+              mb: 3,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(12px)',
+              width: '85%',
+              maxWidth: '1100px',
+              mx: 'auto',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 1.5, md: 3 },
+                flexWrap: 'wrap',
+                flex: 1,
+              }}
+            >
+              {/* Back Arrow Button */}
+              <IconButton
+                onClick={() => navigate(-1)}
+                size="small"
+                sx={{
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  p: 0.8,
+                  '&:hover': {
+                    backgroundColor: '#ff1955',
+                    color: '#ffffff',
+                    transform: 'translateX(-2px)',
+                  },
+                  transition: 'all 0.2s ease',
+                }}
+                title="Back to Event"
+              >
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
 
-          <div className="event-header">
-        <button onClick={() => navigate(-1)} className="back-btn">{t('back', '← Back')}</button>
-        <div className="event-info">
-          <h1>{eventDetails.title}</h1>
-          <p className="event-meta">
-            <span>{eventDetails.venue}</span>
-            <span>{eventDetails.date}</span>
-            <span>{eventDetails.time}</span>
-          </p>
-          {showCountdown && countdownText && (
-            <div className={`event-countdown countdown-${countdownStatus}`}>
-              <span className="countdown-text">
-                <strong>{t('eventStartsIn', 'Event starts in:')}</strong> {countdownText}
-              </span>
-            </div>
-          )}
-          {isSalesClosed && (
-            <div className="sales-closed-banner" style={{ background: '#ff4d4f', color: 'white', padding: '10px 20px', borderRadius: '4px', marginTop: '15px', fontWeight: 'bold' }}>
-              Online ticket sales for this event have closed.
-            </div>
-          )}
-        </div>
-      </div>
+              {/* Event Title */}
+              <Typography
+                variant="h6"
+                sx={{
+                  fontFamily: 'Raleway, sans-serif',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  fontSize: { xs: '1.05rem', md: '1.2rem' },
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {eventDetails.title}
+              </Typography>
+
+              {/* Date & Time */}
+              {(eventDetails.date || eventDetails.time) && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.6,
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 500,
+                  }}
+                >
+                  <EventIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                  <span>
+                    {eventDetails.date}
+                    {eventDetails.date && eventDetails.time ? ' • ' : ''}
+                    {formatTimeString(eventDetails.time)}
+                  </span>
+                </Box>
+              )}
+
+              {/* Venue */}
+              {eventDetails.venue && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.6,
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 500,
+                  }}
+                >
+                  <LocationOnIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                  <span>{eventDetails.venue}</span>
+                </Box>
+              )}
+            </Box>
+
+            {/* Countdown Badge on the Far Right */}
+            {showCountdown && countdownText && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 0.5,
+                  borderRadius: '20px',
+                  backgroundColor:
+                    countdownStatus === 'urgent'
+                      ? 'rgba(244, 67, 54, 0.15)'
+                      : countdownStatus === 'warning'
+                      ? 'rgba(255, 193, 7, 0.15)'
+                      : 'rgba(76, 175, 80, 0.15)',
+                  border:
+                    countdownStatus === 'urgent'
+                      ? '1px solid rgba(244, 67, 54, 0.4)'
+                      : countdownStatus === 'warning'
+                      ? '1px solid rgba(255, 193, 7, 0.4)'
+                      : '1px solid rgba(76, 175, 80, 0.4)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 800,
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    letterSpacing: '0.5px',
+                    fontSize: '0.65rem',
+                  }}
+                >
+                  STARTS IN:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    color:
+                      countdownStatus === 'urgent'
+                        ? '#ef5350'
+                        : countdownStatus === 'warning'
+                        ? '#ffb74d'
+                        : '#66bb6a',
+                  }}
+                >
+                  {countdownText}
+                </Typography>
+              </Box>
+            )}
+
+            {isSalesClosed && (
+              <Chip
+                label="Sales Closed"
+                color="error"
+                size="small"
+                sx={{ fontWeight: 700, fontFamily: 'Raleway, sans-serif' }}
+              />
+            )}
+          </Box>
 
       <div className="seat-map-section" ref={seatMapRef}>
         <VenueSeatMap
@@ -753,7 +917,9 @@ const SeatSelectionPage: React.FC = () => {
       {/* (Terms dialog unchanged) */}
         </>
       )}
-    </div>
+        </div>
+      </Container>
+    </Box>
   );
 };
 

@@ -319,7 +319,7 @@ function App() {
             {/* Simple user routes without layout - for public-facing user access */}
             <Route element={<ProtectedRoute requiredRole={UserRole.USER} />}>
               <Route path="/profile" element={<UserProfile />} />
-              <Route path="/bookings" element={<UserBookings />} />
+              <Route path="/bookings" element={<Navigate to="/profile?tab=booking-history" replace />} />
             </Route>
 
             {/* Public routes - wrapped in PublicRoute to block admin/organizer/employee access

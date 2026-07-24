@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, Button, Box, Typography, IconButton } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { 
+  Close, 
+  ChevronLeft, ChevronRight, 
+  KeyboardArrowUp as ChevronUp, KeyboardArrowDown as ChevronDown,
+  Add, Remove, CenterFocusStrong
+} from '@mui/icons-material';
 import axiosInstance from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -143,6 +148,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [sharedAreas, setSharedAreas] = useState<SharedAreaCategory[]>([]);
   const [totalOccupiedSeats, setTotalOccupiedSeats] = useState(0);
   const [customerFacingTotal, setCustomerFacingTotal] = useState(0);
+  const [showControls, setShowControls] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
@@ -367,6 +373,13 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     setPanOffset({ x: 0, y: 0 });
   };
 
+  // Directional pan button handlers (step pan)
+  const PAN_STEP = 80;
+  const handlePanLeft = () => setPanOffset(prev => ({ x: prev.x + PAN_STEP, y: prev.y }));
+  const handlePanRight = () => setPanOffset(prev => ({ x: prev.x - PAN_STEP, y: prev.y }));
+  const handlePanUp = () => setPanOffset(prev => ({ x: prev.x, y: prev.y + PAN_STEP }));
+  const handlePanDown = () => setPanOffset(prev => ({ x: prev.x, y: prev.y - PAN_STEP }));
+
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     // Don't start panning if clicking on seats
@@ -374,6 +387,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     if (target.tagName === 'circle') {
       return;
     }
+    e.preventDefault();
     isPanning.current = true;
     lastPanPosition.current = { x: e.clientX, y: e.clientY };
   };
@@ -422,60 +436,71 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   };
 
   return (
-    <div className="venue-seat-map-container">
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          {t('loadingVenueLayout', 'Loading venue layout...')}
-        </div>
-      )}
+    <div className="venue-map-section">
+      {/* Row: fixed-width controls col | map (always same size) */}
+      <div className="venue-map-row">
 
-      {!loading && (
-        <>
-          {/* Controls */}
-          <div className="venue-controls">
-            <button onClick={handleZoomIn} className="control-btn">+</button>
-            <button onClick={handleZoomOut} className="control-btn">-</button>
-            <button onClick={handleResetView} className="control-btn">{t('reset', 'Reset')}</button>
-            <span className="selected-count">
-              {t('selectedLabel', 'Selected:')} {totalOccupiedSeats} / {customerFacingTotal || venueSeats.length}
-            </span>
-          </div>
+        {/* Fixed-width left column – toggle + optional panel */}
+        {!loading && (
+          <div className="venue-controls-col">
+            {/* Toggle button */}
+            <button
+              className="ctrl-toggle-btn"
+              onClick={() => setShowControls(prev => !prev)}
+              title={showControls ? 'Hide controls' : 'Show controls'}
+            >
+              {showControls
+                ? <ChevronLeft fontSize="small" />
+                : <ChevronRight fontSize="small" />}
+            </button>
 
-          {/* Legend */}
-          <div className="venue-legend">
-            {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
-              const seatsInCategory = venueSeats.filter(s => s.categoryName === categoryName);
-              const seatWithPrice = seatsInCategory.find(s => {
-                const status = seatStatuses.get(s.seatId);
-                return status && status.currentPrice > 0;
-              });
-              const representativeSeat = seatsInCategory[0];
-              const status = seatWithPrice ? seatStatuses.get(seatWithPrice.seatId) : null;
-              const priceStr = status?.currentPrice ? ` - ${status.currentPrice.toLocaleString()} LKR` : '';
-              return (
-                <div key={`cat-${index}`} className="legend-item">
-                  <span className="legend-color" style={{ backgroundColor: representativeSeat?.colorCode || '#4CAF50' }} />
-                  <span>{categoryName}{priceStr}</span>
+            {/* Controls panel – shows/hides inside the fixed column */}
+            {showControls && (
+              <div className="venue-controls-vertical">
+                {/* Pan group */}
+                <div className="ctrl-group">
+                  <button className="ctrl-icon-btn" onClick={handlePanUp} title="Pan Up">
+                    <ChevronUp fontSize="small" />
+                  </button>
+                  <div className="ctrl-row">
+                    <button className="ctrl-icon-btn" onClick={handlePanLeft} title="Pan Left">
+                      <ChevronLeft fontSize="small" />
+                    </button>
+                    <button className="ctrl-icon-btn center-btn" onClick={handleResetView} title="Reset View">
+                      <CenterFocusStrong fontSize="small" />
+                    </button>
+                    <button className="ctrl-icon-btn" onClick={handlePanRight} title="Pan Right">
+                      <ChevronRight fontSize="small" />
+                    </button>
+                  </div>
+                  <button className="ctrl-icon-btn" onClick={handlePanDown} title="Pan Down">
+                    <ChevronDown fontSize="small" />
+                  </button>
                 </div>
-              );
-            })}
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
-              <span>{t('soldSelected', 'Sold / Selected')}</span>
-            </div>
-            {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
-              <div className="legend-item">
-                <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
-                <span>{t('locked', 'Locked')}</span>
+                {/* Zoom group */}
+                <div className="ctrl-divider" />
+                <div className="ctrl-group">
+                  <button className="ctrl-icon-btn" onClick={handleZoomIn} title="Zoom In">
+                    <Add fontSize="small" />
+                  </button>
+                  <button className="ctrl-icon-btn" onClick={handleZoomOut} title="Zoom Out">
+                    <Remove fontSize="small" />
+                  </button>
+                </div>
               </div>
             )}
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
-              <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
-            </div>
           </div>
+        )}
 
-          {/* SVG Seat Map */}
+      {/* Dark map box – always same width */}
+      <div className="venue-seat-map-container">
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            {t('loadingVenueLayout', 'Loading venue layout...')}
+          </div>
+        )}
+
+        {!loading && (
           <div className="venue-svg-container">
             {(() => {
               const xPos = venueSeats.length > 0 ? venueSeats.map(s => s.xPosition).filter(x => !isNaN(x)) : [0, 1800];
@@ -554,7 +579,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                                   filter 0.15s cubic-bezier(0.4, 0, 0.2, 1);
                     }
                     .seat-circle:hover {
-                      r: 9.5px !important;
+                      r: 11.5px !important;
                       stroke: #ffffff !important;
                       stroke-width: 2px !important;
                       filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4)) !important;
@@ -619,7 +644,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           data-seat-id={seat.seatId}
                           cx={seat.xPosition}
                           cy={seat.yPosition}
-                          r="6"
+                          r="9"
                           fill={getSeatColor(seat)}
                           stroke={
                             localSelectedSeats.has(seat.seatId)
@@ -636,6 +661,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           }}
                           onMouseDown={(e) => {
                             e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSeatClick(seat, e);
                           }}
                         />
                       );
@@ -740,9 +769,48 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               );
             })()}
           </div>
+        )}
+      </div>
+      </div> {/* end venue-map-row */}
 
-          {/* Hover tooltip - hide locked seat details from customers */}
-          {hoveredSeat && (() => {
+      {/* Legend – full width below the row */}
+      {!loading && (
+        <div className="venue-legend">
+            {Array.from(new Set(venueSeats.map(s => s.categoryName))).map((categoryName, index) => {
+              const seatsInCategory = venueSeats.filter(s => s.categoryName === categoryName);
+              const seatWithPrice = seatsInCategory.find(s => {
+                const status = seatStatuses.get(s.seatId);
+                return status && status.currentPrice > 0;
+              });
+              const representativeSeat = seatsInCategory[0];
+              const status = seatWithPrice ? seatStatuses.get(seatWithPrice.seatId) : null;
+              const priceStr = status?.currentPrice ? ` - ${status.currentPrice.toLocaleString()} LKR` : '';
+              return (
+                <div key={`cat-${index}`} className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: representativeSeat?.colorCode || '#4CAF50' }} />
+                  <span>{categoryName}{priceStr}</span>
+                </div>
+              );
+            })}
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FF0000' }} />
+              <span>{t('soldSelected', 'Sold / Selected')}</span>
+            </div>
+            {venueId !== 'f2ca9b05-b1c6-4cf5-9083-1194543d5898' && (
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: '#6c757d' }} />
+                <span>{t('locked', 'Locked')}</span>
+              </div>
+            )}
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#FFD700' }} />
+              <span>{t('temporarilyHold', 'Temporarily Hold')}</span>
+            </div>
+          </div>
+      )}
+
+      {/* Hover tooltip */}
+      {!loading && hoveredSeat && (() => {
             const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
             // Customers and unauthenticated users should not see details of locked seats
             if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
@@ -758,9 +826,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                 <div>{t('statusLabel', 'Status:')} {hoveredStatus || t('availableUpper', 'AVAILABLE')}</div>
               </div>
             );
-          })()}
+      })()}
 
-          {/* Dynamic Shared Area Dialog */}
+      {/* Dynamic Shared Area Dialog */}
           <Dialog
             open={showSharedAreaDialog && selectedSharedArea !== null}
             onClose={handleSharedAreaDialogClose}
@@ -887,8 +955,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </Button>
             </DialogContent>
           </Dialog>
-        </>
-      )}
     </div>
   );
 };

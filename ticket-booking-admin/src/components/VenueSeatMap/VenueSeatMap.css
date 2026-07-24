@@ -1,9 +1,38 @@
+.venue-map-section {
+  width: 85%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.venue-map-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Fixed-width left column – absolutely positioned on the left edge of the page container */
+.venue-controls-col {
+  position: absolute;
+  left: 0;
+  top: 100px;
+  width: 60px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
 .venue-seat-map-container {
   position: relative;
-  width: 100%;
-  max-width: 1400px;
+  flex: 1;
+  min-width: 0;
   height: auto;
-  margin: 0 auto;
   background: #242a33;
   border-radius: 12px;
   padding: 20px;
@@ -12,60 +41,136 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Controls */
-.venue-controls {
+/* Controls wrapper – kept for structure */
+.venue-controls-wrapper {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Standalone toggle sits above the row, left-aligned */
+.ctrl-toggle-standalone {
+  align-self: flex-start;
+  margin-bottom: 2px;
+}
+
+/* Toggle button (always visible, sits above or alone) */
+.ctrl-toggle-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(26, 31, 40, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
   align-items: center;
-  margin-bottom: 15px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  padding: 0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+}
+
+.ctrl-toggle-btn svg {
+  font-size: 11px !important;
+  width: 11px;
+  height: 11px;
+}
+
+.ctrl-toggle-btn:hover {
+  background: #ff1955;
+  border-color: #ff1955;
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(255, 25, 85, 0.45);
+}
+
+/* Vertical Icon Controls overlay on Left Side */
+.venue-controls-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(26, 31, 40, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 5px;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+}
+
+.ctrl-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.ctrl-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1px;
+}
+
+.ctrl-icon-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.control-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: #fcd0a5;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 700;
+  transition: all 0.18s ease;
+  padding: 0;
 }
 
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  border-color: #fcd0a5;
+.ctrl-icon-btn svg {
+  font-size: 12px !important;
+  width: 12px;
+  height: 12px;
 }
 
-.selected-count {
-  margin-left: auto;
-  color: white;
-  font-weight: 800;
-  font-size: 16px;
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  border: 1.5px solid #fcd0a5;
-  letter-spacing: 1px;
+.ctrl-icon-btn:hover {
+  background: #ff1955;
+  border-color: #ff1955;
+  color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(255, 25, 85, 0.45);
+}
+
+.ctrl-icon-btn.center-btn {
+  background: rgba(255, 25, 85, 0.15);
+  border-color: rgba(255, 25, 85, 0.4);
+  color: #ff1955;
+}
+
+.ctrl-icon-btn.center-btn:hover {
+  background: #ff1955;
+  color: #ffffff;
+}
+
+.ctrl-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 3px 0;
 }
 
 /* Legend */
 .venue-legend {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 15px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 16px;
+  padding: 12px 0;
 }
 
 .legend-item {
@@ -92,13 +197,16 @@
 .venue-svg-container {
   position: relative;
   width: 100%;
-  height: 800px;
+  height: 540px;
   background: #1a1f26;
   border-radius: 8px;
   overflow: hidden;
-  cursor: grab;
   box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.03);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .venue-svg {
