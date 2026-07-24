@@ -57,6 +57,7 @@ const EventDetails: React.FC = () => {
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
 
   const [validationModalOpen, setValidationModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -103,47 +104,33 @@ const EventDetails: React.FC = () => {
   useEffect(() => {
     const checkVenueSeating = async () => {
       if (!event?.venue?.id) {
+        setHasSeatingLayout(false);
+        return;
+      }
+
+      // Check if seatingLayout is attached directly to venue object
+      if (event.venue.seatingLayout && Object.keys(event.venue.seatingLayout).length > 0) {
+        setHasSeatingLayout(true);
         return;
       }
 
       try {
-        
-        // Try multiple approaches to check for seating
+        const response = await axiosInstance.get<any[]>(`/api/venue-seats/layout/${event.venue.id}`);
+        const seats = response.data;
+        const venueHasSeats: boolean = Boolean(seats && Array.isArray(seats) && seats.length > 0);
+        setHasSeatingLayout(venueHasSeats);
+      } catch (error: any) {
+        // Secondary check: categories layout endpoint
         try {
-          // First try: Use authenticated axios instance
-          const response = await axiosInstance.get<any[]>(`/api/venue-seats/layout/${event.venue.id}`);
-          const seats = response.data;
-          
-          const venueHasSeats: boolean = seats && Array.isArray(seats) && seats.length > 0;
-          setHasSeatingLayout(venueHasSeats);
-          return;
-        } catch (authError: any) {
-          
-          // Second try: Direct fetch without auth (for CORS enabled endpoints)
-          try {
-            const response = await fetch(`http://localhost:8081/api/venue-seats/layout/${event.venue.id}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (response.ok) {
-              const seats: any = await response.json();
-              
-              const venueHasSeats: boolean = seats && Array.isArray(seats) && seats.length > 0;
-              setHasSeatingLayout(venueHasSeats);
-              return;
-            }
-          } catch (fetchError) {
-            // Silent fallback
+          const catResponse = await axiosInstance.get<any[]>(`/api/venue-seats/layout/${event.venue.id}/categories`);
+          const categoriesData = catResponse.data;
+          if (categoriesData && Array.isArray(categoriesData) && categoriesData.length > 0) {
+            setHasSeatingLayout(true);
+            return;
           }
-          
-          // Third approach: Assume seating exists if venue has certain properties
-          // This is a fallback - you might want to add a 'hasSeating' flag to the venue object
-          setHasSeatingLayout(false);
+        } catch (catError) {
+          // Ignore
         }
-      } catch (error) {
         setHasSeatingLayout(false);
       }
     };
@@ -317,6 +304,20 @@ const EventDetails: React.FC = () => {
       return;
     }
 
+    // For seatless events, ensure at least one ticket is selected
+    const totalTicketsSelected = Object.values(ticketQuantities).reduce((total: number, count: number) => total + (count || 0), 0);
+    if (!hasSeatingLayout && totalTicketsSelected === 0) {
+      setSnackbarMessage('Please select at least one ticket to proceed.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Check if customer is logged in
+    if (!isAuthenticated()) {
+      setLoginModalOpen(true);
+      return;
+    }
+
     // If it's a seated event, redirect to seat selection page
     if (hasSeatingLayout) {
       // Find the selected schedule details
@@ -332,14 +333,6 @@ const EventDetails: React.FC = () => {
           eventId: id, // Pass the event ID
         }
       });
-      return;
-    }
-
-    // For seatless events, ensure at least one ticket is selected
-    const totalTicketsSelected = Object.values(ticketQuantities).reduce((total: number, count: number) => total + (count || 0), 0);
-    if (!hasSeatingLayout && totalTicketsSelected === 0) {
-      setSnackbarMessage('Please select at least one ticket to proceed.');
-      setSnackbarOpen(true);
       return;
     }
 
@@ -1163,7 +1156,7 @@ const EventDetails: React.FC = () => {
                   lineHeight: '48px',
                   border: '1px solid',
                   borderRadius: '25px',
-                  letterSpacing: '3.6px',
+                  letterSpacing: '2px',
                   minWidth: '154px',
                   textTransform: 'uppercase',
                   '&:hover': {
@@ -1173,7 +1166,7 @@ const EventDetails: React.FC = () => {
                   },
                 }}
               >
-                NEXT
+                {hasSeatingLayout ? 'NEXT' : 'PROCEED TO PAYMENT'}
               </Button>
             </Box>
           </Grid>
@@ -1240,6 +1233,65 @@ const EventDetails: React.FC = () => {
             }}
           >
             OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Login Required Modal */}
+      <Dialog
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 1.5,
+            textAlign: 'center'
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ff1955', fontSize: '1.25rem' }}>
+          Sign In Required
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ fontFamily: 'Raleway, sans-serif', color: '#4a5568', mt: 0.5 }}>
+            Please sign in to your account before proceeding to ticket booking and payment.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', gap: 1.5, pb: 2, px: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setLoginModalOpen(false)}
+            sx={{
+              borderRadius: '25px',
+              px: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 600,
+              color: '#4a5568',
+              borderColor: '#cbd5e0',
+              textTransform: 'none',
+              '&:hover': { borderColor: '#a0aec0', backgroundColor: '#f7fafc' },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/login', { state: { from: window.location.pathname } })}
+            sx={{
+              backgroundColor: '#ff1955',
+              color: '#ffffff',
+              borderRadius: '25px',
+              px: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 700,
+              textTransform: 'none',
+              boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+              '&:hover': { backgroundColor: '#e01545' },
+            }}
+          >
+            Sign In
           </Button>
         </DialogActions>
       </Dialog>
