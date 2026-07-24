@@ -123,7 +123,7 @@
   backdrop-filter: blur(20px);
   border-left: 2px solid rgba(255, 25, 85, 0.5);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 2000;
   animation: slideLeft 0.4s ease;
   transition: transform 0.3s ease;
   overflow-y: auto;
@@ -316,22 +316,23 @@
 .summary-actions {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
   justify-content: center;
+  align-items: center;
   margin-top: auto;
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: none;
   border-radius: 25px;
-  font-size: 14px;
+  font-size: 12px;
   font-family: 'Raleway', sans-serif;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 150px;
+  width: 220px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-transform: uppercase;
 }

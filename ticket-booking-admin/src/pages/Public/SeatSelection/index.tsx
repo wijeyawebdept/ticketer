@@ -180,10 +180,16 @@ const SeatSelectionPage: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        (summaryRef.current && summaryRef.current.contains(target)) ||
-        (seatMapRef.current && seatMapRef.current.contains(target))
-      ) return;
+      
+      // Do not collapse if clicking inside the summary panel itself
+      if (summaryRef.current && summaryRef.current.contains(target)) {
+        return;
+      }
+      
+      // Do not collapse if clicking inside the actual seat map container (the dark box)
+      if (target instanceof Element && target.closest('.venue-seat-map-container')) {
+        return;
+      }
 
       setIsCollapsed(true);
     };
@@ -274,6 +280,25 @@ const SeatSelectionPage: React.FC = () => {
 
   const handleSeatSelect = async (seats: string[]) => {
     if (isSalesClosed) return;
+
+    if (isHolding) {
+      const deselectedSeat = selectedSeats.find(id => !seats.includes(id));
+      if (deselectedSeat) {
+        try {
+          await venueSeatService.releaseHolds(eventScheduleId!, [deselectedSeat]);
+          showMessage('success', `Released seat ${deselectedSeat}`);
+        } catch {
+          showMessage('error', `Failed to release seat ${deselectedSeat}`);
+          return;
+        }
+      }
+
+      if (seats.length === 0) {
+        setIsHolding(false);
+        setHoldTimer(0);
+      }
+    }
+
     setSelectedSeats(seats);
     await calculateTotalPrice(seats);
   };
