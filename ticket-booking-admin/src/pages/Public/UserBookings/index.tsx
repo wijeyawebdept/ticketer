@@ -45,13 +45,94 @@ const UserBookings: React.FC = () => {
     }
   };
 
-  const getStatusChipColor = (status: BookingStatus) => {
-    switch (status) {
-      case BookingStatus.CONFIRMED: return 'success';
-      case BookingStatus.PENDING: return 'warning';
-      case BookingStatus.CANCELLED: return 'error';
-      case BookingStatus.COMPLETED: return 'info';
-      default: return 'default';
+  const renderStatusChip = (status: BookingStatus | string) => {
+    const statusUpper = (status || '').toUpperCase();
+    switch (statusUpper) {
+      case 'CONFIRMED':
+        return (
+          <Chip
+            label="CONFIRMED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(46, 125, 50, 0.25)',
+              color: '#4caf50',
+              border: '1px solid #4caf50',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'PENDING':
+        return (
+          <Chip
+            label="PENDING"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(237, 108, 2, 0.25)',
+              color: '#ff9800',
+              border: '1px solid #ff9800',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'REFUNDED':
+        return (
+          <Chip
+            label="REFUNDED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(171, 71, 188, 0.25)',
+              color: '#ce93d8',
+              border: '1px solid #ab47bc',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              boxShadow: '0 0 10px rgba(171, 71, 188, 0.4)',
+            }}
+          />
+        );
+      case 'CANCELLED':
+        return (
+          <Chip
+            label="CANCELLED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(211, 47, 47, 0.25)',
+              color: '#ef5350',
+              border: '1px solid #ef5350',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      case 'COMPLETED':
+        return (
+          <Chip
+            label="COMPLETED"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(2, 136, 209, 0.25)',
+              color: '#29b6f6',
+              border: '1px solid #29b6f6',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
+      default:
+        return (
+          <Chip
+            label={statusUpper || 'N/A'}
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(120, 144, 156, 0.25)',
+              color: '#b0bec5',
+              border: '1px solid #78909c',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            }}
+          />
+        );
     }
   };
 
@@ -95,10 +176,8 @@ const UserBookings: React.FC = () => {
       valueFormatter: (params: any) => new Date(params.value).toLocaleDateString()
     },
     {
-      field: 'status', headerName: 'Status', width: 130,
-      renderCell: (params: any) => (
-        <Chip label={params.value} color={getStatusChipColor(params.value)} size="small" />
-      )
+      field: 'status', headerName: 'Status', width: 140,
+      renderCell: (params: any) => renderStatusChip(params.value)
     },
     {
       field: 'actions', headerName: 'Receipt', width: 120, sortable: false,
@@ -229,11 +308,7 @@ const UserBookings: React.FC = () => {
                     {receiptBooking.bookingReference || receiptBooking.bookingId?.slice(0, 8).toUpperCase()}
                   </Typography>
                 </Box>
-                <Chip
-                  label={receiptBooking.status}
-                  color={getStatusChipColor(receiptBooking.status)}
-                  sx={{ fontWeight: 700, fontSize: '0.85rem' }}
-                />
+                {renderStatusChip(receiptBooking.status)}
               </Box>
 
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
