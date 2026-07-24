@@ -1278,7 +1278,12 @@ const EventDetails: React.FC = () => {
           </Button>
           <Button
             variant="contained"
-            onClick={() => navigate('/login', { state: { from: window.location.pathname } })}
+            onClick={() => {
+              const redirectPath = (hasSeatingLayout && selectedShowtime)
+                ? `/seat-selection/${selectedShowtime}`
+                : window.location.pathname;
+              navigate('/login', { state: { from: redirectPath } });
+            }}
             sx={{
               backgroundColor: '#ff1955',
               color: '#ffffff',

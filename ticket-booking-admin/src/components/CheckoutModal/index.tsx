@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +16,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../context/AuthContext';
+import { AuthService, profileService } from '../../services';
 
 export interface CheckoutModalProps {
   isOpen: boolean;
@@ -70,6 +72,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 }) => {
   const { t } = useTranslation();
   
+  const { user } = useAuth();
+  
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
   const [deliveryMethod, setDeliveryMethod] = useState('online');
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -81,6 +85,45 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     phone: '',
     email: '',
   });
+
+  useEffect(() => {
+    const loadProfileData = async () => {
+      // First try to auto-fill using stored user as a synchronous fallback
+      const storedUserStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (storedUserStr) {
+        try {
+          const storedUser = JSON.parse(storedUserStr);
+          setCustomerInfo(prev => ({
+            firstName: prev.firstName || storedUser.firstName || '',
+            lastName: prev.lastName || storedUser.lastName || '',
+            nic: prev.nic || storedUser.nic || '',
+            phone: prev.phone || storedUser.phoneNumber || '',
+            email: prev.email || storedUser.email || '',
+          }));
+        } catch {}
+      }
+
+      // Then fetch the fresh profile details asynchronously from backend
+      try {
+        const profile = await profileService.getProfile() as any;
+        if (profile) {
+          setCustomerInfo({
+            firstName: profile.firstName || '',
+            lastName: profile.lastName || '',
+            nic: profile.nic || '',
+            phone: profile.phoneNumber || '',
+            email: profile.email || '',
+          });
+        }
+      } catch (err) {
+        // Ignored, fallback is already in place
+      }
+    };
+
+    if (isOpen) {
+      loadProfileData();
+    }
+  }, [isOpen]);
 
   const handleCustomerInfoChange = (field: keyof typeof customerInfo, value: string) => {
     setCustomerInfo(prev => ({ ...prev, [field]: value }));
