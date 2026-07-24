@@ -475,6 +475,7 @@ const SeatSelectionPage: React.FC = () => {
       });
     } else {
       setPaymentModalOpen(true);
+      setIsCollapsed(true);
     }
   };
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
