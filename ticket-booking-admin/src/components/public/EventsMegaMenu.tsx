@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { EventCategory, Event } from '../../types';
 import eventService from '../../services/event.service';
 import { format } from 'date-fns';
+import { getAssetUrl } from '../../utils/formatters';
 
 interface EventsMegaMenuProps {
   anchorEl: HTMLElement | null;
@@ -122,26 +123,31 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
           onMouseLeave: onMouseLeave,
           sx: {
             pointerEvents: 'auto',
-            mt: 1,
+            mt: 1.5,
             display: 'flex',
-            width: '750px',
+            width: '780px',
             minHeight: '400px',
             maxHeight: '550px',
             overflow: 'hidden',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            borderRadius: '8px',
+            backgroundColor: '#1b222c',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.65)',
+            borderRadius: '16px',
           },
         }
       }}
     >
-      {/* Left Column: Categories */}
+      {/* Left Column: Categories Sidebar */}
       <Box
         sx={{
-          width: '250px',
-          bgcolor: '#f8f9fa',
-          borderRight: '1px solid #eee',
+          width: '240px',
+          bgcolor: '#151a22',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
           overflowY: 'auto',
           py: 2,
+          '&::-webkit-scrollbar': { width: '4px' },
+          '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px' },
         }}
       >
         <List disablePadding>
@@ -150,9 +156,15 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
             onClick={() => handleCategoryClick('all')}
             onMouseEnter={() => handleCategoryHover('all')}
             sx={{
-              bgcolor: activeCategoryId === 'all' ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
+              bgcolor: activeCategoryId === 'all' ? 'rgba(255, 25, 85, 0.12)' : 'transparent',
               borderRight: activeCategoryId === 'all' ? '3px solid #ff1955' : '3px solid transparent',
-              mb: 1,
+              mb: 0.5,
+              py: 1.2,
+              px: 2.5,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: activeCategoryId === 'all' ? 'rgba(255, 25, 85, 0.16)' : 'rgba(255, 255, 255, 0.05)',
+              },
             }}
           >
             <ListItemText
@@ -161,13 +173,14 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
                 '& .MuiTypography-root': {
                   fontFamily: 'Raleway, sans-serif',
                   fontWeight: activeCategoryId === 'all' ? 700 : 600,
-                  color: activeCategoryId === 'all' ? '#ff1955' : '#333',
+                  color: activeCategoryId === 'all' ? '#ff1955' : 'rgba(255, 255, 255, 0.85)',
+                  fontSize: '0.95rem',
                 },
               }}
             />
           </ListItem>
           
-          <Divider sx={{ mb: 1, mx: 2 }} />
+          <Divider sx={{ mb: 1, my: 1, mx: 2, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
 
           {categories.map((category) => (
             <ListItem
@@ -176,8 +189,14 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
               onClick={() => handleCategoryClick(category.id)}
               onMouseEnter={() => handleCategoryHover(category.id)}
               sx={{
-                bgcolor: activeCategoryId === category.id ? 'rgba(255, 25, 85, 0.08)' : 'transparent',
+                bgcolor: activeCategoryId === category.id ? 'rgba(255, 25, 85, 0.12)' : 'transparent',
                 borderRight: activeCategoryId === category.id ? '3px solid #ff1955' : '3px solid transparent',
+                py: 1,
+                px: 2.5,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: activeCategoryId === category.id ? 'rgba(255, 25, 85, 0.16)' : 'rgba(255, 255, 255, 0.05)',
+                },
               }}
             >
               <ListItemText
@@ -185,9 +204,9 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
                 sx={{
                   '& .MuiTypography-root': {
                     fontFamily: 'Raleway, sans-serif',
-                    fontWeight: activeCategoryId === category.id ? 600 : 400,
-                    color: activeCategoryId === category.id ? '#ff1955' : '#555',
-                    fontSize: '0.95rem',
+                    fontWeight: activeCategoryId === category.id ? 700 : 500,
+                    color: activeCategoryId === category.id ? '#ff1955' : 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '0.92rem',
                   },
                 }}
               />
@@ -197,14 +216,16 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
       </Box>
 
       {/* Right Column: Events Grid */}
-      <Box sx={{ flex: 1, p: 3, bgcolor: '#fff', overflowY: 'auto' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ flex: 1, p: 3, bgcolor: '#1b222c', overflowY: 'auto' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
           <Typography
-            variant="h5"
+            variant="h6"
             sx={{
               fontFamily: 'Raleway, sans-serif',
-              fontWeight: 700,
-              color: '#333',
+              fontWeight: 800,
+              color: '#fff',
+              fontSize: '1.1rem',
+              letterSpacing: '0.5px',
             }}
           >
             {activeCategoryId === 'all'
@@ -218,7 +239,7 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
             <CircularProgress sx={{ color: '#ff1955' }} />
           </Box>
         ) : displayedEvents.length === 0 ? (
-          <Typography sx={{ color: '#777', fontFamily: 'Raleway, sans-serif' }}>
+          <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontFamily: 'Raleway, sans-serif', py: 4, textAlign: 'center' }}>
             No events found for this category.
           </Typography>
         ) : (
@@ -232,37 +253,41 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
                     alignItems: 'center',
                     cursor: 'pointer',
                     boxShadow: 'none',
-                    bgcolor: 'transparent',
-                    transition: 'all 0.2s',
+                    bgcolor: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
+                    p: 1,
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      bgcolor: 'rgba(0,0,0,0.02)',
+                      bgcolor: 'rgba(255, 25, 85, 0.08)',
+                      borderColor: 'rgba(255, 25, 85, 0.35)',
+                      transform: 'translateY(-2px)',
                     },
                   }}
                 >
                   <CardMedia
                     component="img"
-                    sx={{ width: 70, height: 70, objectFit: 'cover', borderRadius: '8px' }}
-                    image={event.imageUrl || 'https://via.placeholder.com/80?text=No+Image'}
+                    sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '8px' }}
+                    image={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
                     alt={event.name}
                   />
-                  <CardContent sx={{ flex: 1, p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                  <CardContent sx={{ flex: 1, p: '8px 12px !important' }}>
                     <Typography
                       variant="subtitle2"
                       noWrap
                       sx={{
                         fontFamily: 'Raleway, sans-serif',
                         fontWeight: 700,
-                        color: '#333',
+                        color: '#fff',
                         mb: 0.5,
-                        textTransform: 'uppercase'
+                        fontSize: '0.85rem',
                       }}
                     >
                       {event.name}
                     </Typography>
                     <Typography
                       variant="body2"
-                      color="text.secondary"
-                      sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.8rem', mb: 0.5 }}
+                      sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.78rem', color: '#fcd0a5' }}
                     >
                       {event.startDateTime ? format(new Date(event.startDateTime), 'EEE dd MMM') : 'TBA'} 
                       {event.basePrice ? ` • ${event.basePrice} LKR` : ''}
