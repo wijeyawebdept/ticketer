@@ -23,7 +23,8 @@ import {
   ArrowBack as ArrowBackIcon,
   Event as EventIcon,
   LocationOn as LocationOnIcon,
-  AccessTime as AccessTimeIcon
+  AccessTime as AccessTimeIcon,
+  ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import PublicNavbar from '../../../components/public/PublicNavbar';
@@ -808,10 +809,11 @@ const SeatSelectionPage: React.FC = () => {
         <>
           {isCollapsed && (
             <button 
-              className="floating-summary-btn"
+              className="floating-summary-btn floating-cart-btn"
               onClick={() => setIsCollapsed(false)}
+              title={t('viewSummary', 'View Summary')}
             >
-              <span>{t('viewSummary', 'View Summary')}</span>
+              <ShoppingCartIcon sx={{ fontSize: 24, color: '#ffffff' }} />
               <div className="badge">{selectedSeats.length + sharedAreaSelections.length}</div>
             </button>
           )}

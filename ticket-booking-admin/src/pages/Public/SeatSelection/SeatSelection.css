@@ -213,6 +213,24 @@
   font-size: 12px;
 }
 
+.floating-cart-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+}
+
+.floating-cart-btn .badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
 .hold-timer {
   color: #ff1955;
   font-size: 16px;

@@ -359,11 +359,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
 
     // Selected by the current user
-    if (localSelectedSeats.has(seat.seatId)) return isHolding ? '#FFD700' : '#FF0000';
+    if (localSelectedSeats.has(seat.seatId)) return seat.colorCode || '#4CAF50';
 
     // Available seats: category colour for everyone
     return seat.colorCode || '#4CAF50';
-  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser, isHolding]);
+  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -638,35 +638,48 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                         return null;
                       }
 
+                      const isSelected = localSelectedSeats.has(seat.seatId);
+
                       return (
-                        <circle
+                        <g 
                           key={seat.seatId}
-                          data-seat-id={seat.seatId}
-                          cx={seat.xPosition}
-                          cy={seat.yPosition}
-                          r="9"
-                          fill={getSeatColor(seat)}
-                          stroke={
-                            localSelectedSeats.has(seat.seatId)
-                              ? '#cc0000'
-                              : (!isRestrictedUser() && (!seatStatuses.get(seat.seatId) || seatStatuses.get(seat.seatId)?.status === 'AVAILABLE')
-                                ? 'rgba(255,255,255,0.35)'
-                                : 'none')
-                          }
-                          strokeWidth="1.5"
-                          className="seat-circle"
-                          style={{
-                            cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer',
-                            pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto'
-                          }}
-                          onMouseDown={(e) => {
-                            e.stopPropagation();
-                          }}
+                          style={{ cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSeatClick(seat, e);
                           }}
-                        />
+                        >
+                          <circle
+                            data-seat-id={seat.seatId}
+                            cx={seat.xPosition}
+                            cy={seat.yPosition}
+                            r="9"
+                            fill={isSelected ? '#ffffff' : getSeatColor(seat)}
+                            stroke={
+                              isSelected
+                                ? '#ff1955'
+                                : (!isRestrictedUser() && (!seatStatuses.get(seat.seatId) || seatStatuses.get(seat.seatId)?.status === 'AVAILABLE')
+                                  ? 'rgba(255,255,255,0.35)'
+                                  : 'none')
+                            }
+                            strokeWidth={isSelected ? '2.5' : '1.5'}
+                            className="seat-circle"
+                            style={{
+                              pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto'
+                            }}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                          />
+                          {isSelected && (
+                            <path
+                              d="M22 10V6c0-1.11-.9-2-2-2H4c-1.1 0-1.99.89-1.99 2v4c1.1 0 1.99.9 1.99 2s-.89 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-9 7.5h-2v-2h2v2zm0-4.5h-2v-2h2v2zm0-4.5h-2v-2h2v2z"
+                              fill="#ff1955"
+                              transform={`translate(${seat.xPosition}, ${seat.yPosition}) scale(0.5) translate(-12, -12) rotate(-10)`}
+                              style={{ pointerEvents: 'none' }}
+                            />
+                          )}
+                        </g>
                       );
                     })}
                   </g>
