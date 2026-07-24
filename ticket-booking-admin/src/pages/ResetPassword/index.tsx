@@ -82,7 +82,8 @@ const ResetPassword: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        py: 4,
+        pt: 10,
+        pb: 4,
       }}
     >
       <PublicNavbar />

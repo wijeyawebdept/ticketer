@@ -8,6 +8,7 @@ import {
   YouTube,
   WhatsApp,
   MailOutline,
+  ConfirmationNumber as TicketIcon,
 } from '@mui/icons-material';
 import { FaTiktok } from 'react-icons/fa';
 
@@ -30,9 +31,12 @@ const PublicFooter: React.FC = () => {
           <Grid container spacing={4}>
             {/* Column 1: About */}
             <Grid item xs={12} md={4}>
-              <Typography variant="h5" sx={{ color: '#fcd0a5', fontWeight: 700, mb: 2, fontFamily: 'Raleway, sans-serif' }}>
-                Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TicketIcon sx={{ color: '#ff1955', fontSize: '1.75rem', transform: 'rotate(-10deg)', mr: 1 }} />
+                <Typography variant="h5" sx={{ color: '#fcd0a5', fontWeight: 700, fontFamily: 'Raleway, sans-serif' }}>
+                  Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+                </Typography>
+              </Box>
               <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.7, fontFamily: 'Raleway, sans-serif' }}>
                 Experience Sri Lanka's vibrant entertainment scene with Ticketer.lk. Browse thousands of events, secure your tickets instantly, and never miss out on the moments that matter most.
               </Typography>

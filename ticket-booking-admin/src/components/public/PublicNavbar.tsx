@@ -23,6 +23,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import PersonIcon from '@mui/icons-material/Person';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 //import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -146,34 +147,61 @@ const PublicNavbar: React.FC = () => {
     <>
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
-          backgroundColor: '#343a40',
-          boxShadow: '0 0.125rem 0.25rem rgba(0,0,0,0.075)',
+          top: { xs: 0, sm: 12 },
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: { xs: '100%', sm: 'calc(100% - 32px)' },
+          maxWidth: '1200px',
+          backgroundColor: 'rgba(36, 42, 51, 0.92)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: { xs: 0, sm: '16px' },
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.1)',
+          transition: 'all 0.3s ease',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar sx={{ maxWidth: '1140px', width: '100%', margin: '0 auto', px: { xs: 2, sm: 2 }, py: 1 }}>
-          <Typography
-            variant="h6"
-            component="div"
+        <Toolbar sx={{ maxWidth: '1140px', width: '100%', margin: '0 auto', px: { xs: 2, sm: 3 }, py: 0.5 }}>
+          <Box
             onClick={() => navigate('/')}
             sx={{
-              flexGrow: 1,
-              fontFamily: 'Raleway, sans-serif',
-              fontWeight: 700,
-              color: '#fcd0a5',
+              display: 'inline-flex',
+              alignItems: 'center',
               cursor: 'pointer',
-              fontSize: '1.25rem',
-              lineHeight: 'inherit',
-              paddingTop: '0.3125rem',
-              paddingBottom: '0.3125rem',
-              marginRight: '1rem',
+              userSelect: 'none',
+              transition: 'opacity 0.2s ease',
               '&:hover': {
                 opacity: 0.9,
               },
             }}
           >
-            Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
-          </Typography>
+            <ConfirmationNumberIcon
+              sx={{
+                color: '#ff1955',
+                fontSize: '1.6rem',
+                transform: 'rotate(-10deg)',
+                mr: 1,
+              }}
+            />
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                fontFamily: 'Raleway, sans-serif',
+                fontWeight: 700,
+                color: '#fcd0a5',
+                fontSize: '1.25rem',
+                lineHeight: 'inherit',
+                paddingTop: '0.3125rem',
+                paddingBottom: '0.3125rem',
+              }}
+            >
+              Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+            </Typography>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
 
           {isMobile ? (
             <IconButton
@@ -406,21 +434,24 @@ const PublicNavbar: React.FC = () => {
                   </Menu>
                 </Box>
               ) : (
-                <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1.5, ml: 2 }}>
                   <Button
                     onClick={() => navigate('/register')}
                     variant="outlined"
                     sx={{
                       color: '#fff',
-                      borderColor: 'rgba(255, 255, 255, 0.55)',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      borderRadius: '20px',
                       fontFamily: 'Raleway, sans-serif',
-                      fontWeight: 400,
-                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
                       textTransform: 'none',
-                      padding: '0.375rem 1rem',
+                      padding: '0.4rem 1.2rem',
+                      transition: 'all 0.2s ease-in-out',
                       '&:hover': {
-                        borderColor: '#fff',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderColor: '#ff1955',
+                        color: '#ff1955',
+                        backgroundColor: 'rgba(255, 25, 85, 0.08)',
                       },
                     }}
                   >
@@ -432,15 +463,18 @@ const PublicNavbar: React.FC = () => {
                     sx={{
                       backgroundColor: '#ff1955',
                       color: '#fff',
+                      borderRadius: '20px',
                       fontFamily: 'Raleway, sans-serif',
-                      fontWeight: 400,
-                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
                       textTransform: 'none',
-                      padding: '0.375rem 1rem',
-                      boxShadow: 'none',
+                      padding: '0.4rem 1.3rem',
+                      boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                      transition: 'all 0.2s ease-in-out',
                       '&:hover': {
                         backgroundColor: '#e01545',
-                        boxShadow: 'none',
+                        boxShadow: '0 6px 18px rgba(255, 25, 85, 0.6)',
+                        transform: 'translateY(-1px)',
                       },
                     }}
                   >

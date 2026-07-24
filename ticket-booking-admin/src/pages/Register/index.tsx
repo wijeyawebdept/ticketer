@@ -17,7 +17,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  ConfirmationNumber as TicketIcon
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { Formik, Form, FormikHelpers } from 'formik';
@@ -55,20 +56,6 @@ const validationSchema = Yup.object({
     ),
   phoneNumber: Yup.string()
     .matches(/^\d{10}$/, 'Phone number must be 10 digits'),
-  dateOfBirth: Yup.date()
-    .nullable()
-    .max(new Date(), 'Date of birth cannot be in the future')
-    .test('age', 'You must be at least 13 years old', function(value) {
-      if (!value) return true; // Allow empty values
-      const today = new Date();
-      const birthDate = new Date(value);
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        return age - 1 >= 13;
-      }
-      return age >= 13;
-    }),
 });
 
 const Register: React.FC = () => {
@@ -181,30 +168,30 @@ const Register: React.FC = () => {
   ) => {
     try {
       setError(null);
-      
+
       // Ensure role is set to USER by default
       const formData = {
         ...values,
         role: UserRole.USER // Set default role to USER
       };
-      
+
       await AuthService.register(formData);
       setRegisteredEmail(values.email);
       setVerificationStep(true);
     } catch (err: any) {
       if (err.response?.data?.errors) {
       }
-      
+
       let errorMessage = 'Registration failed. Please check your information and try again.';
       const responseMessage = err.response?.data?.message?.toLowerCase() || '';
-      
+
       // Check if error is due to email already exists
       if (responseMessage.includes('email already') || responseMessage.includes('already exists') || responseMessage.includes('already registered')) {
         errorMessage = 'This email is already registered. Please sign in instead.';
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -219,347 +206,342 @@ const Register: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        py: 4,
+        pt: 10,
+        pb: 4,
       }}
     >
       <PublicNavbar />
       <Container component="main" maxWidth="sm">
         <Paper elevation={6} sx={{ padding: 4, backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 2 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
 
-          {/* ── Email Verification Step ────────────────────────── */}
-          {verificationStep ? (
-            <>
-              <Typography component="h1" variant="h5" sx={{ mb: 1, fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#2c3e50' }}>
-                Verify Your Email
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
-                We sent a 6-digit verification code to <strong>{registeredEmail}</strong>.<br />
-                Please enter it below to activate your account.
-              </Typography>
-
-              {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
-              {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
-
-              <TextField
-                fullWidth
-                label="6-digit Verification Code"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '22px', textAlign: 'center', fontWeight: 700 } }}
-                placeholder="------"
-                sx={{ mb: 2 }}
-              />
-
-              <Button
-                fullWidth
-                variant="contained"
-                disabled={verifyLoading || verificationCode.length !== 6}
-                onClick={handleVerify}
-                sx={{ py: 1.5, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
-              >
-                {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
-              </Button>
-
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" sx={{ color: '#666' }}>
-                  Didn\'t receive a code?{' '}
-                  <span
-                    onClick={resendLoading ? undefined : handleResendCode}
-                    style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
-                  >
-                    {resendLoading ? 'Sending...' : 'Resend Code'}
-                  </span>
+            {/* ── Email Verification Step ────────────────────────── */}
+            {verificationStep ? (
+              <>
+                <Typography component="h1" variant="h5" sx={{ mb: 1, fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#2c3e50' }}>
+                  Verify Your Email
                 </Typography>
-              </Box>
-            </>
-          ) : (
-            <>
-          <Typography 
-            component="h1" 
-            variant="h5" 
-            sx={{ 
-              mb: 1,
-              fontFamily: 'Raleway, sans-serif',
-              fontWeight: 700,
-              color: '#2c3e50',
-            }}
-          >
-            Welcome to Ticketer.lk
-          </Typography>
-          <Typography 
-            component="h2" 
-            variant="h6" 
-            sx={{ 
-              mb: 3,
-              fontFamily: 'Raleway, sans-serif',
-              fontWeight: 600,
-              color: '#2c3e50',
-            }}
-          >
-            Join Us Today
-          </Typography>
-          
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-              {error.includes('already registered') && (
-                <Box sx={{ mt: 1 }}>
-                  <Link to="/login" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
-                    Sign in here
-                  </Link>
-                </Box>
-              )}
-            </Alert>
-          )}
-          
-          <Formik
-            initialValues={{
-              firstName: '',
-              lastName: '',
-              email: '',
-              password: '',
-              phoneNumber: '',
-              dateOfBirth: '',
-              role: UserRole.USER,
-            }}
-            validationSchema={validationSchema}
-            onSubmit={handleSubmit}
-          >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
-              <Form style={{ width: '100%' }} onSubmit={handleSubmit}>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      fullWidth
-                      id="firstName"
-                      name="firstName"
-                      label="First Name"
-                      value={values.firstName}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.firstName && Boolean(errors.firstName)}
-                      helperText={touched.firstName && errors.firstName as string}
-                      margin="normal"
-                      required
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      fullWidth
-                      id="lastName"
-                      name="lastName"
-                      label="Last Name"
-                      value={values.lastName}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.lastName && Boolean(errors.lastName)}
-                      helperText={touched.lastName && errors.lastName as string}
-                      margin="normal"
-                      required
-                    />
-                  </Box>
-                </Box>
+                <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
+                  We sent a 6-digit verification code to <strong>{registeredEmail}</strong>.<br />
+                  Please enter it below to activate your account.
+                </Typography>
+
+                {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
+                {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
 
                 <TextField
                   fullWidth
-                  id="email"
-                  name="email"
-                  label="Email Address"
-                  value={values.email}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.email && Boolean(errors.email)}
-                  helperText={touched.email && errors.email as string}
-                  margin="normal"
-                  required
+                  label="6-digit Verification Code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '22px', textAlign: 'center', fontWeight: 700 } }}
+                  placeholder="------"
+                  sx={{ mb: 2 }}
                 />
 
-                <TextField
-                  fullWidth
-                  id="password"
-                  name="password"
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={values.password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePasswordChange(e, handleChange)}
-                  onBlur={handleBlur}
-                  error={touched.password && Boolean(errors.password)}
-                  helperText={touched.password && errors.password as string}
-                  margin="normal"
-                  required
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={handleClickShowPassword}
-                          onMouseDown={handleMouseDownPassword}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-
-                {/* Password Requirements */}
-                {values.password && (
-                  <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
-                      Password Requirements:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {passwordValidation.minLength ? (
-                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        ) : (
-                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                        )}
-                        <Typography variant="caption" sx={{ color: passwordValidation.minLength ? 'success.main' : 'text.secondary' }}>
-                          Minimum 8 characters
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {passwordValidation.hasUppercase ? (
-                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        ) : (
-                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                        )}
-                        <Typography variant="caption" sx={{ color: passwordValidation.hasUppercase ? 'success.main' : 'text.secondary' }}>
-                          At least 1 uppercase letter
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {passwordValidation.hasLowercase ? (
-                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        ) : (
-                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                        )}
-                        <Typography variant="caption" sx={{ color: passwordValidation.hasLowercase ? 'success.main' : 'text.secondary' }}>
-                          At least 1 lowercase letter
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {passwordValidation.hasNumber ? (
-                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        ) : (
-                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                        )}
-                        <Typography variant="caption" sx={{ color: passwordValidation.hasNumber ? 'success.main' : 'text.secondary' }}>
-                          At least 1 number
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {passwordValidation.hasSymbol ? (
-                          <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        ) : (
-                          <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                        )}
-                        <Typography variant="caption" sx={{ color: passwordValidation.hasSymbol ? 'success.main' : 'text.secondary' }}>
-                          At least 1 special character (!@#$%^&*...)
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                )}
-
-                <TextField
-                  fullWidth
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  label="Phone Number (10 digits)"
-                  value={values.phoneNumber}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.phoneNumber && Boolean(errors.phoneNumber)}
-                  helperText={touched.phoneNumber && errors.phoneNumber as string}
-                  margin="normal"
-                />
-
-                <TextField
-                  fullWidth
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  label="Date of Birth"
-                  type="date"
-                  value={values.dateOfBirth}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.dateOfBirth && Boolean(errors.dateOfBirth)}
-                  helperText={touched.dateOfBirth && errors.dateOfBirth as string}
-                  margin="normal"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                />
-                
                 <Button
-                  type="submit"
                   fullWidth
                   variant="contained"
-                  disabled={isSubmitting}
-                  sx={{ 
-                    mt: 3, 
-                    mb: 2, 
-                    py: 1.5,
-                    fontFamily: 'Raleway, sans-serif',
-                    fontWeight: 700,
-                    backgroundColor: '#ff1955',
-                    color: '#fff',
-                    fontSize: '1rem',
-                    letterSpacing: '1px',
-                    '&:hover': {
-                      backgroundColor: '#e01545',
-                    },
-                  }}
+                  disabled={verifyLoading || verificationCode.length !== 6}
+                  onClick={handleVerify}
+                  sx={{ py: 1.5, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
                 >
-                  {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Register'}
+                  {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
                 </Button>
 
-                <Divider sx={{ my: 2 }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
-                    OR
-                  </Typography>
-                </Divider>
-
-                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
-                    <GoogleLogin
-                      onSuccess={handleGoogleCredentialSuccess}
-                      onError={() => {
-                        setError('Google sign-in failed. Please try again.');
-                        setIsGoogleLoading(false);
-                      }}
-                      text="continue_with"
-                    />
-                  </Box>
-                  {isGoogleLoading && <CircularProgress size={24} />}
-                </Box>
-
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>
-                    Already have an account?{' '}
-                    <Link to="/login" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
-                      Sign in
-                    </Link>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Didn\'t receive a code?{' '}
+                    <span
+                      onClick={resendLoading ? undefined : handleResendCode}
+                      style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
+                    >
+                      {resendLoading ? 'Sending...' : 'Resend Code'}
+                    </span>
                   </Typography>
                 </Box>
-              </Form>
+              </>
+            ) : (
+              <>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: 1.5,
+                    userSelect: 'none',
+                  }}
+                >
+                  <TicketIcon sx={{ fontSize: 32, color: '#ff1955', transform: 'rotate(-10deg)', mr: 1 }} />
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontFamily: 'Raleway, sans-serif',
+                      fontWeight: 800,
+                      color: '#2c3e50',
+                      letterSpacing: '-0.5px',
+                      fontSize: '1.75rem',
+                    }}
+                  >
+                    Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+                  </Typography>
+                </Box>
+
+                <Typography
+                  component="h1"
+                  variant="h6"
+                  sx={{
+                    mb: 3,
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 600,
+                    color: '#2c3e50',
+                  }}
+                >
+                  Join Us Today
+                </Typography>
+
+                {error && (
+                  <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                    {error}
+                    {error.includes('already registered') && (
+                      <Box sx={{ mt: 1 }}>
+                        <Link to="/login" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
+                          Sign in here
+                        </Link>
+                      </Box>
+                    )}
+                  </Alert>
+                )}
+
+                <Formik
+                  initialValues={{
+                    firstName: '',
+                    lastName: '',
+                    email: '',
+                    password: '',
+                    phoneNumber: '',
+                    role: UserRole.USER,
+                  }}
+                  validationSchema={validationSchema}
+                  onSubmit={handleSubmit}
+                >
+                  {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
+                    <Form style={{ width: '100%' }} onSubmit={handleSubmit}>
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+                        <Box sx={{ flex: 1 }}>
+                          <TextField
+                            fullWidth
+                            id="firstName"
+                            name="firstName"
+                            label="First Name"
+                            value={values.firstName}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            error={touched.firstName && Boolean(errors.firstName)}
+                            helperText={touched.firstName && errors.firstName as string}
+                            margin="normal"
+                            required
+                          />
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <TextField
+                            fullWidth
+                            id="lastName"
+                            name="lastName"
+                            label="Last Name"
+                            value={values.lastName}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            error={touched.lastName && Boolean(errors.lastName)}
+                            helperText={touched.lastName && errors.lastName as string}
+                            margin="normal"
+                            required
+                          />
+                        </Box>
+                      </Box>
+
+                      <TextField
+                        fullWidth
+                        id="email"
+                        name="email"
+                        label="Email Address"
+                        value={values.email}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.email && Boolean(errors.email)}
+                        helperText={touched.email && errors.email as string}
+                        margin="normal"
+                        required
+                      />
+
+                      <TextField
+                        fullWidth
+                        id="password"
+                        name="password"
+                        label="Password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={values.password}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePasswordChange(e, handleChange)}
+                        onBlur={handleBlur}
+                        error={touched.password && Boolean(errors.password)}
+                        helperText={touched.password && errors.password as string}
+                        margin="normal"
+                        required
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={handleClickShowPassword}
+                                onMouseDown={handleMouseDownPassword}
+                                edge="end"
+                              >
+                                {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+
+                      {/* Password Requirements */}
+                      {values.password && (
+                        <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
+                            Password Requirements:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {passwordValidation.minLength ? (
+                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              ) : (
+                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                              )}
+                              <Typography variant="caption" sx={{ color: passwordValidation.minLength ? 'success.main' : 'text.secondary' }}>
+                                Minimum 8 characters
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {passwordValidation.hasUppercase ? (
+                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              ) : (
+                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                              )}
+                              <Typography variant="caption" sx={{ color: passwordValidation.hasUppercase ? 'success.main' : 'text.secondary' }}>
+                                At least 1 uppercase letter
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {passwordValidation.hasLowercase ? (
+                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              ) : (
+                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                              )}
+                              <Typography variant="caption" sx={{ color: passwordValidation.hasLowercase ? 'success.main' : 'text.secondary' }}>
+                                At least 1 lowercase letter
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {passwordValidation.hasNumber ? (
+                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              ) : (
+                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                              )}
+                              <Typography variant="caption" sx={{ color: passwordValidation.hasNumber ? 'success.main' : 'text.secondary' }}>
+                                At least 1 number
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {passwordValidation.hasSymbol ? (
+                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                              ) : (
+                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                              )}
+                              <Typography variant="caption" sx={{ color: passwordValidation.hasSymbol ? 'success.main' : 'text.secondary' }}>
+                                At least 1 special character (!@#$%^&*...)
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+
+                      <TextField
+                        fullWidth
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        label="Phone Number (10 digits)"
+                        value={values.phoneNumber}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.phoneNumber && Boolean(errors.phoneNumber)}
+                        helperText={touched.phoneNumber && errors.phoneNumber as string}
+                        margin="normal"
+                      />
+
+                      <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        disabled={isSubmitting}
+                        sx={{
+                          mt: 3,
+                          mb: 2,
+                          py: 1.5,
+                          fontFamily: 'Raleway, sans-serif',
+                          fontWeight: 700,
+                          backgroundColor: '#ff1955',
+                          color: '#fff',
+                          fontSize: '1rem',
+                          letterSpacing: '1px',
+                          '&:hover': {
+                            backgroundColor: '#e01545',
+                          },
+                        }}
+                      >
+                        {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Register'}
+                      </Button>
+
+                      <Divider sx={{ my: 2 }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
+                          OR
+                        </Typography>
+                      </Divider>
+
+                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
+                          <GoogleLogin
+                            onSuccess={handleGoogleCredentialSuccess}
+                            onError={() => {
+                              setError('Google sign-in failed. Please try again.');
+                              setIsGoogleLoading(false);
+                            }}
+                            text="continue_with"
+                          />
+                        </Box>
+                        {isGoogleLoading && <CircularProgress size={24} />}
+                      </Box>
+
+                      <Box sx={{ textAlign: 'center', mt: 2 }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>
+                          Already have an account?{' '}
+                          <Link to="/login" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
+                            Sign in
+                          </Link>
+                        </Typography>
+                      </Box>
+                    </Form>
+                  )}
+                </Formik>
+              </>
             )}
-          </Formik>
-        </>
-        )}
-        </Box>
-      </Paper>
-    </Container>
+          </Box>
+        </Paper>
+      </Container>
     </Box>
   );
 };
