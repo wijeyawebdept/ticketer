@@ -115,14 +115,6 @@ const getBorderColor = (index: number): string => {
   return '#7B1FA2';
 };
 
-const getTextColor = (index: number): string => {
-  const mod = index % 5;
-  if (mod === 0) return '#FF6F00';
-  if (mod === 1) return '#01579B';
-  if (mod === 2) return '#1B5E20';
-  if (mod === 3) return '#880E4F';
-  return '#4A148C';
-};
 
 export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   eventScheduleId,
@@ -148,7 +140,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [selectedSharedArea, setSelectedSharedArea] = useState<SharedAreaCategory | null>(null);
   const [sharedAreaTicketCount, setSharedAreaTicketCount] = useState<number | null>(null);
   const [sharedAreas, setSharedAreas] = useState<SharedAreaCategory[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [totalOccupiedSeats, setTotalOccupiedSeats] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [customerFacingTotal, setCustomerFacingTotal] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -252,6 +246,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     setLocalSelectedSeats(new Set(selectedSeats));
   }, [selectedSeats]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleSeatClick = useCallback((seat: VenueSeatData, e?: React.MouseEvent) => {
     // Stop event propagation to prevent panning
     if (e) {
@@ -285,7 +280,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
     setLocalSelectedSeats(newSelected);
     onSeatSelect?.(Array.from(newSelected));
-  }, [seatStatuses, localSelectedSeats, maxSelection, onSeatSelect]);
+  }, [seatStatuses, localSelectedSeats, maxSelection, onSeatSelect, user?.id]);
 
   // Pan handlers - Define handleMouseMove first since handleSVGMouseMove depends on it
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -339,6 +334,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
   }, [venueSeats, handleMouseMove]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getSeatColor = useCallback((seat: VenueSeatData): string => {
     const status = seatStatuses.get(seat.seatId);
 
@@ -365,7 +361,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
     // Available seats: category colour for everyone
     return seat.colorCode || '#4CAF50';
-  }, [seatStatuses, localSelectedSeats, venueId, isRestrictedUser]);
+  }, [seatStatuses, localSelectedSeats, venueId]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));

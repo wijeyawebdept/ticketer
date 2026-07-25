@@ -154,4 +154,5 @@ class BannerService {
   }
 }
 
-export default new BannerService();
+const bannerService = new BannerService();
+export default bannerService;

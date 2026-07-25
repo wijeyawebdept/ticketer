@@ -21,7 +21,6 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import PersonIcon from '@mui/icons-material/Person';
-import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 //import AccountCircleIcon from '@mui/icons-material/AccountCircle';

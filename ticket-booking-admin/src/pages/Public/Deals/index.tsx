@@ -13,7 +13,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { CalendarToday, LocationOn, LocalOffer } from '@mui/icons-material';
+import { LocationOn, LocalOffer } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
@@ -55,8 +55,6 @@ const Deals: React.FC = () => {
 
   const formatPrice = (price: number) => formatCurrency(price);
 
-  const formatSavings = (original: number, discounted: number) =>
-    `Save ${formatPrice(original - discounted)}`;
 
   const eventGroups = groupByEvent(deals);
   const eventIds = Object.keys(eventGroups);

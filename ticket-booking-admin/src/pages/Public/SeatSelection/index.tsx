@@ -1,20 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid,
   Box,
   Container,
   Typography,
-  FormControl,
-  Select,
-  MenuItem,
-  TextField,
-  FormControlLabel,
-  Button,
   IconButton,
   CircularProgress,
   Chip,
@@ -23,7 +12,6 @@ import {
   ArrowBack as ArrowBackIcon,
   Event as EventIcon,
   LocationOn as LocationOnIcon,
-  AccessTime as AccessTimeIcon,
   ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
@@ -484,7 +472,7 @@ const SeatSelectionPage: React.FC = () => {
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
 
   const handleConfirmBooking = async (paymentData: any) => {
-    const { paymentMethod, deliveryMethod, customerInfo, acceptTerms, bookingForSomeoneElse } = paymentData;
+    const { paymentMethod, customerInfo, acceptTerms } = paymentData;
 
     if (!paymentMethod) return showMessage('error', 'Please select a payment method');
     if (!acceptTerms) return showMessage('error', 'Please accept terms and conditions');

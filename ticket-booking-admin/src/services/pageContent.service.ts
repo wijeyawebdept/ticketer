@@ -44,4 +44,5 @@ class PageContentService {
   }
 }
 
-export default new PageContentService();
+const pageContentService = new PageContentService();
+export default pageContentService;

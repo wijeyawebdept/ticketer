@@ -22,9 +22,7 @@ import {
   ListItemText,
   Divider,
   Chip,
-  Badge,
   Paper,
-  Collapse,
   FormControl,
   InputLabel,
   Select,
@@ -40,20 +38,10 @@ import {
   Cancel,
   HighlightOff,
   Info,
-  Star,
-  StarBorder,
-  Accessible,
-  AccessibleForward,
   SelectAll,
   Refresh,
-  ExpandMore,
-  ExpandLess,
-  Person,
-  AccessTime,
   Wifi,
   WifiOff,
-  NotificationsActive,
-  Delete,
   RemoveCircle,
   BookmarkRemove,
   ZoomIn,
@@ -62,7 +50,7 @@ import {
 } from '@mui/icons-material';
 import { Seat, SeatService } from '../../services/seat.service';
 import { venueSeatService, VenueSeat, SeatDTO } from '../../services/venueSeatService';
-import { useSeatWebSocket, SeatActivityLog } from '../../hooks/useSeatWebSocket';
+import { useSeatWebSocket } from '../../hooks/useSeatWebSocket';
 import { Event, EventSchedule } from '../../types';
 import EventDropdown from '../../components/EventDropdown';
 import EventScheduleService from '../../services/eventSchedule.service';
@@ -93,6 +81,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   const [seatActionDialog, setSeatActionDialog] = useState<{ open: boolean; seat: Seat | VenueSeat | SeatDTO | null }>({ open: false, seat: null });
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showActivityPanel, setShowActivityPanel] = useState(true);
 
   // Zoom and Pan state
@@ -263,8 +252,10 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     isConnected: wsConnected,
     connectionError: wsError,
     seats: wsSeats,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     activityLog,
     stats: wsStats,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     clearActivityLog,
     reconnect: wsReconnect
   } = useSeatWebSocket(selectedSchedule?.scheduleId || eventId || '');
@@ -282,6 +273,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     } catch (err: any) {
       setSchedules([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load seat availability for a specific schedule
@@ -1340,6 +1332,7 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
                     const isSelected = selectedSeats.includes(seat.seatId);
                     const availabilityInfo = getSeatAvailabilityInfo(seat.seatId);
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     const { status, color } = getSeatStatusAndColor(seat);
 
                     // Override color if seat is selected

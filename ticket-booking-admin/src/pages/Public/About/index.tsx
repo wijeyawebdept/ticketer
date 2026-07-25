@@ -6,18 +6,7 @@ import {
   Grid,
   Card,
   CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
 } from '@mui/material';
-import {
-  CheckCircle as CheckCircleIcon,
-  Security as SecurityIcon,
-  Group as GroupIcon,
-  TrendingUp as TrendingUpIcon,
-} from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 

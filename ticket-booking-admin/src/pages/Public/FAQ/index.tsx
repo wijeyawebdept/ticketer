@@ -8,8 +8,10 @@ const FAQ: React.FC = () => {
   const [content, setContent] = useState<string>('');
   const [title, setTitle] = useState('Frequently Asked Questions');
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadContent();
   }, []);

@@ -66,6 +66,7 @@ import TermsAndConditions from './pages/Public/TermsAndConditions';
 import FAQ from './pages/Public/FAQ';
 import RefundPolicy from './pages/Public/RefundPolicy';
 import UserProfile from './pages/Public/UserProfile';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import UserBookings from './pages/Public/UserBookings';
 import SeatSelectionPage from './pages/Public/SeatSelection';
 import { PaymentSuccess, PaymentCancel, PaymentError } from './pages/Public/Payment';

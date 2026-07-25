@@ -16,18 +16,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  IconButton,
-  Divider,
   CircularProgress,
   Alert,
   Snackbar,
   Chip,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
-import PublicFooter from '../../../components/public/PublicFooter';
 import { getAssetUrl } from '../../../utils/formatters';
 import EventService from '../../../services/event.service';
 import EventScheduleService from '../../../services/eventSchedule.service';
@@ -36,7 +31,6 @@ import { useAuth } from '../../../context/AuthContext';
 import axiosInstance from '../../../services/api';
 import paymentService, { InitiatePaymentRequest } from '../../../services/payment.service';
 import '../SeatSelection/SeatSelection.css';
-import { useTranslation } from 'react-i18next';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import CheckoutModal from '../../../components/CheckoutModal';
 import { useCurrency } from '../../../context/CurrencyContext';
@@ -46,7 +40,7 @@ const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { formatCurrency, getCurrencySymbol, currency, convertAmount } = useCurrency();
+  const { formatCurrency, currency, convertAmount } = useCurrency();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
@@ -357,7 +351,7 @@ const EventDetails: React.FC = () => {
   };
 
   const handleConfirmBooking = async (paymentData: any) => {
-    const { paymentMethod, deliveryMethod, customerInfo, acceptTerms, bookingForSomeoneElse } = paymentData;
+    const { paymentMethod, customerInfo, acceptTerms } = paymentData;
 
     if (!paymentMethod) return alert('Please select a payment method');
     if (!acceptTerms) return alert('Please accept terms and conditions');

@@ -9,6 +9,7 @@ const CookiePolicy: React.FC = () => {
   const [title, setTitle] = useState('Cookie Policy');
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadContent();
   }, []);

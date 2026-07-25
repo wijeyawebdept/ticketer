@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Box, Container, Typography, Chip, Avatar, IconButton,
+  Box, Container, Typography, Avatar, IconButton,
   TextField, Button, Divider, CircularProgress, Alert,
-  ImageList, ImageListItem, Tooltip,
+  Tooltip,
 } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
@@ -11,6 +11,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import { useNavigate, useParams } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import BlogService, { BlogPostDetail, BlogComment } from '../../../services/BlogService';
 import { useAuth } from '../../../context/AuthContext';
 

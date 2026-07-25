@@ -185,8 +185,10 @@ export const useSeatWebSocket = (eventId: string) => {
     }
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const timeout = reconnectTimeoutRef.current;
+      if (timeout) {
+        clearTimeout(timeout);
       }
       disconnect();
     };

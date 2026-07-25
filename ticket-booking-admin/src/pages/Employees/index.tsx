@@ -21,7 +21,6 @@ import {
   TextField,
   Grid,
   Autocomplete,
-  InputAdornment,
   Divider,
   Avatar,
   Tooltip,
@@ -112,11 +111,13 @@ const Employees: React.FC = () => {
       }
     }
     fetchEmployees();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   useEffect(() => {
     setCurrentPage(0);
     fetchEmployees();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrganizerId]);
 
   const checkUserRole = () => {

@@ -18,10 +18,8 @@ import {
   AttachMoney as MoneyIcon,
   CalendarToday as CalendarIcon,
   CheckCircle as CheckCircleIcon,
-  AccessTime as AccessTimeIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  EventAvailable as EventAvailableIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
   ConfirmationNumber as ConfirmationNumberIcon,
   Security as SecurityIcon,
@@ -127,9 +125,10 @@ interface TrendData {
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
-  const { formatCurrency, currency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<DashboardTransaction[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [upcomingEvents, setUpcomingEvents] = useState<DashboardEvent[]>([]);
   const [draftEvents, setDraftEvents] = useState<DashboardEvent[]>([]);
   const [trendData, setTrendData] = useState<TrendData | null>(null);

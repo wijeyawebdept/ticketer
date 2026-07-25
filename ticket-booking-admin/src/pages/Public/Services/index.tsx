@@ -13,13 +13,10 @@ import {
   Button,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   EventNote as EventNoteIcon,
   Payment as PaymentIcon,
   LocationOn as LocationIcon,
   ReceiptLong as ReceiptLongIcon,
-  Support as SupportIcon,
-  AdminPanelSettings as AdminPanelSettingsIcon,
   Verified as VerifiedIcon,
   Bolt as SpeedIcon,
   Lock as SecurityIcon,

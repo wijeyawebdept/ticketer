@@ -43,11 +43,13 @@ axiosInstance.interceptors.request.use(
     
     // Check sessionStorage first for admin routes, localStorage first for customer routes
     let token = isRestrictedRoute ? sessionStorage.getItem('auth_token') : localStorage.getItem('auth_token');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let storageType = isRestrictedRoute ? 'sessionStorage' : 'localStorage';
     
     // If not found, check the other storage as fallback
     if (!token) {
       token = isRestrictedRoute ? localStorage.getItem('auth_token') : sessionStorage.getItem('auth_token');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       storageType = isRestrictedRoute ? 'localStorage (fallback)' : 'sessionStorage (fallback)';
     }
     

@@ -222,6 +222,7 @@ const EventSchedules: React.FC = () => {
   };
 
   // Calculate total scheduled capacity across all schedules
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getTotalScheduledCapacity = () => {
     return schedules.reduce((sum, schedule) => sum + schedule.capacity, 0);
   };

@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import { AuthService, profileService } from '../../services';
+import { profileService } from '../../services';
 import { useCurrency } from '../../context/CurrencyContext';
 
 export interface CheckoutModalProps {
@@ -74,7 +74,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
   
-  const { user } = useAuth();
+  useAuth();
   
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
   const [deliveryMethod, setDeliveryMethod] = useState('online');

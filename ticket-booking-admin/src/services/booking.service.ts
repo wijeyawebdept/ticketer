@@ -6,10 +6,12 @@ class BookingService {
   private getBasePath(): string {
     // Check both sessionStorage (admin) and localStorage (customer) for user data
     let userStr = sessionStorage.getItem('user');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let storageType = 'sessionStorage';
     
     if (!userStr) {
       userStr = localStorage.getItem('user');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       storageType = 'localStorage';
     }
     

@@ -19,7 +19,6 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Close as CloseIcon,
   Refresh as RefreshIcon,
   Restore as RestoreIcon,

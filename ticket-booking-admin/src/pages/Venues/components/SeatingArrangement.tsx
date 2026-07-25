@@ -28,7 +28,6 @@ import {
   CenterFocusStrong,
   Lock,
   LockOpen,
-  CheckCircle,
   EventSeat,
   Info,
   Close
@@ -349,6 +348,7 @@ const SeatingArrangement: React.FC = () => {
   };
 
   // Mark as accessible
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const markAccessible = async (seat: VenueSeat) => {
     try {
       await api.put(`/api/venue-seats/${seat.seatId}/accessible`, { isAccessible: true });
@@ -362,6 +362,7 @@ const SeatingArrangement: React.FC = () => {
   };
 
   // Reserve seat for VIP
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const reserveForVIP = async (seat: VenueSeat) => {
     try {
       await api.put(`/api/venue-seats/${seat.seatId}/reserve-vip`);

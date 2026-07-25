@@ -90,6 +90,7 @@ const handleApiError = (
 };
 
 // Image preview component
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ImagePreview: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
   <Box 
     sx={{ 
@@ -592,6 +593,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           if (selectedImage && savedEvent.id) {
             const formData = new FormData();
             formData.append('file', selectedImage);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const imageUrl = await EventService.uploadEventImage(savedEvent.id, formData);
           }
           

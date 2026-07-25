@@ -30,12 +30,6 @@ import { useCurrency } from '../../../context/CurrencyContext';
 
 const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
-// Import carousel images from public folder
-const carouselImages = [
-  '/images/1.jpg',
-  '/images/2.jpg',
-  '/images/3.jpg',
-];
 
 interface EventCardProps {
   title: string;
@@ -62,7 +56,7 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  useMediaQuery(theme.breakpoints.down('sm'));
 
   // Helper to format clean date string without HTML tags for badges
   const cleanDateText = (date || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -299,7 +293,6 @@ const Home: React.FC = () => {
         });
 
         const eventsWithDeals = allEvents.filter((event: Event) => event.hasDeal);
-        const eventsWithoutDeals = allEvents.filter((event: Event) => !event.hasDeal);
         
         setDealEvents(eventsWithDeals);
         

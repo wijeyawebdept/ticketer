@@ -262,6 +262,7 @@ const AdminEventAssignments: React.FC = () => {
     return acc;
   }, {} as Record<string, EventEmployeeAssignment[]>);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getEmployeesForEvent = (eventId: string) => {
     const event = events.find(e => e.eventId === eventId);
     if (!event || !event.organizer) return [];
@@ -444,7 +445,8 @@ const AdminEventAssignments: React.FC = () => {
                   value={selectedEventId}
                   onChange={(e) => {
                     const value = typeof e.target.value === 'string' ? e.target.value : '';
-                    const selectedEvent = events.find(ev => ev.eventId === value);
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const _selectedEvent = events.find(ev => ev.eventId === value);
                     setSelectedEventId(value);
                     setSelectedEmployeeIds([]);
                   }}

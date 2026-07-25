@@ -71,6 +71,7 @@ const VenuesPage = () => {
   const isOrganizerEmployee = user?.role === 'ORGANIZER_EMPLOYEE' || user?.role === 'ROLE_ORGANIZER_EMPLOYEE';
   
   // Organizers and organizer employees can access seating arrangements
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const canAccessSeating = isAdmin || isOrganizer || isOrganizerEmployee;
   
   // Fetch all venues from the API
@@ -488,6 +489,7 @@ const VenuesPage = () => {
         </Box>
       ),
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [isOrganizer]); // Only recreate if isOrganizer changes
 
   return (

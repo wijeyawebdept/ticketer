@@ -11,9 +11,11 @@ export const debugAuth = () => {
       // Just show basic token info
       const parts = token.split('.');
       if (parts.length === 3) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const payload = JSON.parse(atob(parts[1]));
         
         // Check if token is expired
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const currentTime = Date.now() / 1000;
       }
     } catch (e) {

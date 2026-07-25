@@ -10,7 +10,7 @@ import { CircularProgress, Box } from '@mui/material';
  */
 const PublicRoute: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+  useLocation();
 
   // Show loading spinner while checking auth status
   if (loading) {

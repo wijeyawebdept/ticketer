@@ -1,6 +1,5 @@
 import api from './api';
 import { EventSchedule, EventScheduleRequest, ScheduleStatus } from '../types';
-import AuthService from './auth.service';
 
 class EventScheduleService {
   private getBasePath(): string {

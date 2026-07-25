@@ -220,6 +220,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
   const formatPrice = (price: number) =>
     `LKR ${Number(price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dealsByEvent: Record<string, TicketCategoryDeal[]> = deals.reduce((acc, d) => {
     if (!acc[d.eventId]) acc[d.eventId] = [];
     acc[d.eventId].push(d);

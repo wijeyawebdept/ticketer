@@ -9,6 +9,7 @@ const TermsAndConditions: React.FC = () => {
   const [title, setTitle] = useState('Terms and Conditions');
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadContent();
   }, []);

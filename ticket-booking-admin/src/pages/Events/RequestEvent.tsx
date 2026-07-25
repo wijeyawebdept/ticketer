@@ -9,10 +9,9 @@ import {
   MenuItem,
   CircularProgress,
   Divider,
-  Alert,
   IconButton,
 } from '@mui/material';
-import { CheckCircle as CheckCircleIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -22,7 +21,7 @@ import { toast } from 'react-toastify';
 import { VenueService, EventService, EventCategoryService } from '../../services';
 import venueSeatService, { VenueSeatCategoryDTO } from '../../services/venueSeatService';
 import api from '../../services/api';
-import { Venue, EventCategory, EventScheduleRequest } from '../../types';
+import { Venue, EventCategory } from '../../types';
 
 interface TicketCategoryForm {
   categoryName: string;

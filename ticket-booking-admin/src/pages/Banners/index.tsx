@@ -8,7 +8,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   Paper,
   Table,
   TableBody,
@@ -38,7 +37,6 @@ import BannerService, { BannerResponse } from '../../services/banner.service';
 import {
   validateBannerImage,
   BannerValidationResult,
-  getBannerGuidanceText,
 } from '../../services/bannerValidation.service';
 
 interface BannerFormData {

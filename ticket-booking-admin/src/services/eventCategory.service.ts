@@ -86,4 +86,5 @@ class EventCategoryService {
   }
 }
 
-export default new EventCategoryService();
+const eventCategoryService = new EventCategoryService();
+export default eventCategoryService;
