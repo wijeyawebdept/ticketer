@@ -840,45 +840,94 @@ const Home: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress sx={{ color: '#ff1955' }} />
           </Box>
-        ) : events.length === 0 ? (
+                ) : events.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" sx={{ color: '#666', fontFamily: 'Raleway, sans-serif' }}>
               No upcoming events at the moment. Check back soon!
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
-              {events.map((event) => {
-                // Compute the true lowest current price across all categories
-                const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
-                  const originalPrice = Number(tc.price) || 0;
-                  const currentPrice = (tc.dealActive && tc.dealDiscountPercentage > 0)
-                    ? originalPrice * (1 - tc.dealDiscountPercentage / 100)
-                    : originalPrice;
-                  return { originalPrice, currentPrice };
-                });
+          <Box>
+            {Object.entries(
+              events.reduce<{ [key: string]: Event[] }>((acc, event) => {
+                const categoryName = event.category?.categoryName || 'Other';
+                if (!acc[categoryName]) {
+                  acc[categoryName] = [];
+                }
+                acc[categoryName].push(event);
+                return acc;
+              }, {})
+            ).map(([categoryName, categoryEvents]) => {
+              const displayCategoryName = categoryName.toLowerCase() === 'other'
+                ? 'Other'
+                : categoryName
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
 
-                const lowestCurrentPrice = allCategoryPrices.length > 0
-                  ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
-                  : Number(event.basePrice) || 0;
+              return (
+                <Box key={categoryName} sx={{ mb: 6 }}>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: 'Raleway, sans-serif',
+                      color: '#fff',
+                      fontSize: isMobile ? '22px' : '28px',
+                      mb: 3.5,
+                      position: 'relative',
+                      display: 'inline-block',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: '-8px',
+                        left: 0,
+                        width: '60px',
+                        height: '4px',
+                        backgroundColor: '#ff1955',
+                        borderRadius: '2px',
+                      }
+                    }}
+                  >
+                    {displayCategoryName}
+                  </Typography>
 
-                return (
-                <Grid item xs={12} key={event.id || event.eventId}>
-                  <EventCard
-                    title={event.name}
-                    artists={event.description?.substring(0, 100) || ''}
-                    venue={event.venue?.name || 'TBA'}
-                    tickets={`From ${formatPrice(lowestCurrentPrice)}`}
-                    date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
-                    day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
-                    backgroundImage={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
-                    eventId={event.id || event.eventId}
-                    slug={event.slug}
-                  />
-                </Grid>
-                );
-              })}
-          </Grid>
+                  <Grid container spacing={3}>
+                    {categoryEvents.map((event) => {
+                      // Compute the true lowest current price across all categories
+                      const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
+                        const originalPrice = Number(tc.price) || 0;
+                        const currentPrice = (tc.dealActive && tc.dealDiscountPercentage > 0)
+                          ? originalPrice * (1 - tc.dealDiscountPercentage / 100)
+                          : originalPrice;
+                        return { originalPrice, currentPrice };
+                      });
+
+                      const lowestCurrentPrice = allCategoryPrices.length > 0
+                        ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
+                        : Number(event.basePrice) || 0;
+
+                      return (
+                        <Grid item xs={12} key={event.id || event.eventId}>
+                          <EventCard
+                            title={event.name}
+                            artists={event.description?.substring(0, 100) || ''}
+                            venue={event.venue?.name || 'TBA'}
+                            tickets={`From ${formatPrice(lowestCurrentPrice)}`}
+                            date={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA'}
+                            day={event.startDateTime ? new Date(event.startDateTime).toLocaleDateString('en-US', { weekday: 'long' }) : 'TBA'}
+                            backgroundImage={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
+                            eventId={event.id || event.eventId}
+                            slug={event.slug}
+                          />
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              );
+            })}
+          </Box>
         )}
 
         <Box sx={{ textAlign: 'center', mt: 4 }}>

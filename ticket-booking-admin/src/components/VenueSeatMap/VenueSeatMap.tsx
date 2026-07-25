@@ -665,7 +665,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                             strokeWidth={isSelected ? '2.5' : '1.5'}
                             className="seat-circle"
                             style={{
-                              pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto'
+                              pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto',
+                              cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer'
                             }}
                             onMouseDown={(e) => {
                               e.stopPropagation();
