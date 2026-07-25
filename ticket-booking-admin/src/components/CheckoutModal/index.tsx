@@ -87,6 +87,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     phone: '',
     email: '',
   });
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -123,6 +124,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     };
 
     if (isOpen) {
+      setLocalError(null);
       loadProfileData();
     }
   }, [isOpen]);
@@ -132,6 +134,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleConfirm = () => {
+    setLocalError(null);
+    if (!selectedPaymentMethod) {
+      setLocalError(t('errSelectPayment', 'Please select a payment method'));
+      return;
+    }
+    if (!acceptTerms) {
+      setLocalError(t('errAcceptTerms', 'Please accept the terms and conditions'));
+      return;
+    }
+    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
+      setLocalError(t('errRequiredFields', 'Please fill all required fields'));
+      return;
+    }
+
     onConfirmBooking({
       paymentMethod: selectedPaymentMethod,
       deliveryMethod,
@@ -249,7 +265,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </Box>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+            {localError && (
+              <Box sx={{ mt: 2, mb: 1 }}>
+                <Typography sx={{ color: '#d32f2f', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'Raleway, sans-serif' }}>
+                   {localError}
+                </Typography>
+              </Box>
+            )}
+
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <Button variant="outlined" onClick={onClose} sx={{ borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600 }}>
                 {t('backToSelection', 'Back to selection')}
               </Button>

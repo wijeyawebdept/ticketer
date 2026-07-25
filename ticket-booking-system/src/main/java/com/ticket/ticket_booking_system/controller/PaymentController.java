@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.controller;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -70,16 +71,18 @@ public class PaymentController {
                     + (request.getCancelUrl().contains("?") ? "&" : "?")
                     + "bookingId=" + booking.getBookingId().toString();
 
+            BigDecimal gatewayAmount = request.getAmountInLkr() != null ? request.getAmountInLkr() : request.getTotalAmount();
+
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),
-                    request.getTotalAmount(),
-                    request.getCurrency(),
+                    gatewayAmount,
+                    "LKR",
                     returnUrl,
                     cancelUrl);
 
             transactionService.createPendingTransaction(
                     booking.getBookingId(),
-                    request.getTotalAmount(),
+                    gatewayAmount,
                     sessionResponse.getSessionId(),
                     sessionResponse.getSuccessIndicator());
 

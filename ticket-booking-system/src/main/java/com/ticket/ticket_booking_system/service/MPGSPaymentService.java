@@ -62,8 +62,9 @@ public class MPGSPaymentService {
         String endpoint = mpgsConfig.getApiEndpoint("/session");
 
         String orderId = bookingId.toString();
-        String amountStr = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
         String currencyStr = currency != null ? currency : mpgsConfig.getCurrency();
+        int decimalPlaces = "JPY".equalsIgnoreCase(currencyStr) ? 0 : 2;
+        String amountStr = amount.setScale(decimalPlaces, RoundingMode.HALF_UP).toPlainString();
 
         // MPGS Hosted Checkout v67+: Initiate Checkout API
         // All order details must be sent during session creation

@@ -913,7 +913,7 @@ const OrganizerEmployees: React.FC = () => {
                 <Typography variant="body2">{employeeToDelete.organizationName}</Typography>
               </Box>
               <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 500 }}>
-                ⚠️ Warning: This action will move the employee account to the recycle bin.
+                 Warning: This action will move the employee account to the recycle bin.
               </Typography>
             </Box>
           )}

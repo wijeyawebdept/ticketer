@@ -829,6 +829,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       {!loading && hoveredSeat && (() => {
             const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
             if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
+            
+            let statusText: string = hoveredStatus || 'AVAILABLE';
+            if (statusText === 'HELD' || (selectedSeats && selectedSeats.includes(hoveredSeat.seatId))) {
+              statusText = 'TEMPORARILY HELD';
+            }
+
             return (
               <div className="seat-tooltip">
                 <strong>{hoveredSeat.seatId}</strong>
@@ -838,7 +844,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                 {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
                   <div>{t('priceLabel', 'Price:')} {formatCurrency(seatStatuses.get(hoveredSeat.seatId)?.currentPrice ?? 0)}</div>
                 )}
-                <div>{t('statusLabel', 'Status:')} {hoveredStatus || t('availableUpper', 'AVAILABLE')}</div>
+                <div>{t('statusLabel', 'Status:')} {statusText}</div>
               </div>
             );
       })()}

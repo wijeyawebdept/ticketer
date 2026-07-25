@@ -450,7 +450,7 @@ const RoleManagement: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-                ⚠️ Warning: This action cannot be undone. Users with this role may lose their permissions.
+                 Warning: This action cannot be undone. Users with this role may lose their permissions.
               </Typography>
             </Box>
           )}

@@ -23,6 +23,7 @@ export interface InitiatePaymentRequest {
   seatIds?: string[];
   sharedAreaTickets?: SharedAreaTicketRequest[];
   totalAmount: number;
+  amountInLkr?: number;
   discountAmount?: number;
   discountInfo?: string;
   currency: string;

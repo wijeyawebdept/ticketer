@@ -403,6 +403,7 @@ const EventDetails: React.FC = () => {
         seatIds: [],
         sharedAreaTickets,
         totalAmount: convertAmount(finalAmount),
+        amountInLkr: finalAmount,
         currency: currency,
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -522,7 +523,7 @@ const EventDetails: React.FC = () => {
               {selectedSchedule && (
                 <div className="summary-item">
                   <span>Time Slot:</span>
-                  <strong>{formatDate(selectedSchedule.scheduleDate)} • {formatTime(selectedSchedule.startTime)}</strong>
+                  <strong>{formatDate(selectedSchedule.scheduleDate)} • {formatScheduleTime(selectedSchedule.startTime)}</strong>
                 </div>
               )}
               <div className="summary-item">

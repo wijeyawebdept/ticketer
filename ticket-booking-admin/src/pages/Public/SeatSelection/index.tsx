@@ -519,6 +519,7 @@ const SeatSelectionPage: React.FC = () => {
           pricePerTicket: convertAmount(selection.pricePerTicket),
         })),
         totalAmount: convertAmount(finalAmount),
+        amountInLkr: finalAmount,
         discountAmount: convertAmount(totalDiscount || 0),
         discountInfo: discountInfoString,
         currency: currency,
