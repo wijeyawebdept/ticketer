@@ -29,7 +29,8 @@ public class BookingMapper {
             .status(booking.getStatus())
             .attended(booking.getAttended())
             .cancelledAt(booking.getCancelledAt())
-            .cancellationReason(booking.getCancellationReason());
+            .cancellationReason(booking.getCancellationReason())
+            .currency(booking.getCurrency());
         
         // User information
         if (booking.getUser() != null) {

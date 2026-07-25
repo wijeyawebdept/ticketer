@@ -39,12 +39,14 @@ import '../SeatSelection/SeatSelection.css';
 import { useTranslation } from 'react-i18next';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import CheckoutModal from '../../../components/CheckoutModal';
+import { useCurrency } from '../../../context/CurrencyContext';
 import './EventDetails.css';
 
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { formatCurrency, getCurrencySymbol, currency, convertAmount } = useCurrency();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
@@ -386,7 +388,7 @@ const EventDetails: React.FC = () => {
           categoryName: cat.categoryName || cat.name,
           sharedAreaNumber: 1,
           ticketCount: ticketQuantities[cat.categoryName || cat.name],
-          pricePerTicket: cat.price || 0
+          pricePerTicket: convertAmount(cat.price || 0)
         }));
 
       if (sharedAreaTickets.length === 0) {
@@ -400,8 +402,8 @@ const EventDetails: React.FC = () => {
         scheduleId: targetScheduleId,
         seatIds: [],
         sharedAreaTickets,
-        totalAmount: finalAmount,
-        currency: 'LKR',
+        totalAmount: convertAmount(finalAmount),
+        currency: currency,
         customerInfo: {
           firstName: customerInfo.firstName,
           lastName: customerInfo.lastName,
@@ -1062,21 +1064,21 @@ const EventDetails: React.FC = () => {
                               variant="caption"
                               sx={{ textDecoration: 'line-through', color: '#999', display: 'block' }}
                             >
-                              Rs.{Number(categoryPrice).toFixed(2)}
+                              {formatCurrency(categoryPrice)}
                             </Typography>
                             <Typography variant="body2" fontWeight={700} sx={{ color: '#e53935' }}>
-                              Rs.{Number(discountedPrice).toFixed(2)}
+                              {formatCurrency(discountedPrice)}
                             </Typography>
                           </Box>
                         ) : isBuyGetDeal ? (
                           <Box>
-                            <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                            <Typography variant="body2">{formatCurrency(categoryPrice)}</Typography>
                             <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 600 }}>
                               {category.dealFreeQuantity} free with {category.dealBuyQuantity}
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography variant="body2">Rs.{Number(categoryPrice).toFixed(2)}</Typography>
+                          <Typography variant="body2">{formatCurrency(categoryPrice)}</Typography>
                         )}
                       </Grid>
                       {!hasSeatingLayout && (
@@ -1129,14 +1131,14 @@ const EventDetails: React.FC = () => {
                     if (qty > 0) {
                       return (
                         <Typography key={categoryName} variant="body2">
-                          {categoryName} {qty} x {categoryPrice}/=
+                          {categoryName} {qty} x {formatCurrency(categoryPrice)}
                         </Typography>
                       );
                     }
                     return null;
                   })}
                   <Typography fontWeight="bold" variant="body1" sx={{ mt: 1 }}>
-                    Total = {calculateTotal()}/=
+                    Total = {formatCurrency(calculateTotal())}
                   </Typography>
                 </Box>
               )}

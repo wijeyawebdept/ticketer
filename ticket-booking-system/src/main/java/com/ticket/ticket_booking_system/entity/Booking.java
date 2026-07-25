@@ -100,6 +100,9 @@ public class Booking {
     @Column(name = "discount_info", columnDefinition = "TEXT")
     private String discountInfo;
 
+    @Column(name = "currency", length = 10)
+    private String currency;
+
     @Column(name = "refund_amount")
     private BigDecimal refundAmount;
 

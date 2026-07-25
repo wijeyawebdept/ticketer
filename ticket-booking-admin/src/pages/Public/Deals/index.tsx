@@ -20,6 +20,7 @@ import PublicFooter from '../../../components/public/PublicFooter';
 import dealService from '../../../services/deal.service';
 import { getAssetUrl } from '../../../utils/formatters';
 import { TicketCategoryDeal } from '../../../types';
+import { useCurrency } from '../../../context/CurrencyContext';
 
 // Group deals by eventId
 function groupByEvent(deals: TicketCategoryDeal[]): Record<string, TicketCategoryDeal[]> {
@@ -31,6 +32,7 @@ function groupByEvent(deals: TicketCategoryDeal[]): Record<string, TicketCategor
 }
 
 const Deals: React.FC = () => {
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -51,8 +53,7 @@ const Deals: React.FC = () => {
     fetchDeals();
   }, []);
 
-  const formatPrice = (price: number) =>
-    `${Number(price).toLocaleString('en-LK', { minimumFractionDigits: 0 })} LKR`;
+  const formatPrice = (price: number) => formatCurrency(price);
 
   const formatSavings = (original: number, discounted: number) =>
     `Save ${formatPrice(original - discounted)}`;

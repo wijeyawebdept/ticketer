@@ -232,6 +232,7 @@ export interface Booking {
   discountInfo?: string;
   ticketCount: number;
   attended?: boolean;
+  currency?: string;
   
   // User information
   userId?: string;

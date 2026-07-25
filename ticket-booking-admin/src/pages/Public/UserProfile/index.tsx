@@ -23,7 +23,8 @@ import {
   InputAdornment,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  MenuItem
 } from '@mui/material';
 import { 
   PhotoCamera, 
@@ -245,6 +246,19 @@ const UserProfile: React.FC = () => {
     printWindow.print();
   };
 
+  const formatReceiptPrice = (amount: number, currencyCode?: string) => {
+    const currency = currencyCode || 'LKR';
+    const symbols: Record<string, string> = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      JPY: '¥',
+      LKR: 'Rs.'
+    };
+    const symbol = symbols[currency] || 'Rs.';
+    return `${symbol}${Number(amount ?? 0).toLocaleString()}`;
+  };
+
   const bookingColumns: GridColDef[] = [
     { field: 'bookingReference', headerName: 'Booking Ref', width: 160 },
     {
@@ -254,7 +268,7 @@ const UserProfile: React.FC = () => {
     { field: 'ticketCount', headerName: 'Tickets', width: 90 },
     {
       field: 'totalAmount', headerName: 'Amount', width: 130,
-      valueFormatter: (params: any) => `LKR ${params.value?.toLocaleString() ?? 0}`
+      renderCell: (params: any) => formatReceiptPrice(params.value, params.row.currency)
     },
     {
       field: 'bookingTime', headerName: 'Booking Date', width: 160,
@@ -329,9 +343,25 @@ const UserProfile: React.FC = () => {
   // System settings
   const [systemSettings, setSystemSettings] = useState({
     defaultCurrency: 'LKR',
-    defaultLanguage: 'en',
     enableMaintenance: false
   });
+
+  // Load system settings from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('systemSettings');
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved);
+        setSystemSettings(prev => ({
+          ...prev,
+          defaultCurrency: settings.defaultCurrency || 'LKR',
+          enableMaintenance: settings.enableMaintenance || false
+        }));
+      } catch (error) {
+        console.error('Failed to parse system settings:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -673,6 +703,7 @@ const UserProfile: React.FC = () => {
     setSaving(true);
     try {
       localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
+      window.dispatchEvent(new Event('currencyChanged'));
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSnackbar({
         open: true,
@@ -1754,10 +1785,27 @@ const UserProfile: React.FC = () => {
                     fullWidth
                     size="small"
                     SelectProps={{
-                      native: true,
-                    }}
-                    inputProps={{
-                      'aria-label': 'Default Currency',
+                      MenuProps: {
+                        PaperProps: {
+                          sx: {
+                            bgcolor: '#242a33',
+                            color: '#fff',
+                            '& .MuiMenuItem-root': {
+                              fontFamily: 'Raleway, sans-serif',
+                              '&:hover': {
+                                bgcolor: 'rgba(255, 25, 85, 0.12)',
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: '#ff1955',
+                                color: '#fff',
+                                '&:hover': {
+                                  bgcolor: '#e01545',
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
                     }}
                     sx={{
                       '& .MuiInputBase-root': {
@@ -1766,41 +1814,11 @@ const UserProfile: React.FC = () => {
                       }
                     }}
                   >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
-                    <option value="LKR">LKR - Sri Lankan Rupee</option>
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 0.5, display: 'block' }}>
-                    Default Language
-                  </Typography>
-                  <TextField
-                    select
-                    name="defaultLanguage"
-                    value={systemSettings.defaultLanguage}
-                    onChange={handleSystemChange}
-                    fullWidth
-                    size="small"
-                    SelectProps={{
-                      native: true,
-                    }}
-                    inputProps={{
-                      'aria-label': 'Default Language',
-                    }}
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        backgroundColor: '#242a33',
-                        color: '#fff'
-                      }
-                    }}
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
+                    <MenuItem value="USD">USD - US Dollar</MenuItem>
+                    <MenuItem value="EUR">EUR - Euro</MenuItem>
+                    <MenuItem value="GBP">GBP - British Pound</MenuItem>
+                    <MenuItem value="JPY">JPY - Japanese Yen</MenuItem>
+                    <MenuItem value="LKR">LKR - Sri Lankan Rupee</MenuItem>
                   </TextField>
                 </Grid>
                 <Grid item xs={12}>
@@ -1902,11 +1920,11 @@ const UserProfile: React.FC = () => {
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Tickets ({receiptBooking.ticketCount || 1})</Typography>
-                <Typography sx={{ color: '#fff', fontWeight: 600 }}>LKR {receiptBooking.totalAmount?.toLocaleString() ?? 0}</Typography>
+                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{formatReceiptPrice(receiptBooking.totalAmount ?? 0, receiptBooking.currency)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 2, mt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>Total Amount</Typography>
-                <Typography sx={{ color: '#ff1955', fontWeight: 800, fontSize: '1.2rem' }}>LKR {receiptBooking.totalAmount?.toLocaleString() ?? 0}</Typography>
+                <Typography sx={{ color: '#ff1955', fontWeight: 800, fontSize: '1.2rem' }}>{formatReceiptPrice(receiptBooking.totalAmount ?? 0, receiptBooking.currency)}</Typography>
               </Box>
             </Box>
           )}

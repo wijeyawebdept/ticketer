@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 
-// Exchange rates relative to LKR (Sri Lankan Rupee as base)
-const EXCHANGE_RATES: { [key: string]: number } = {
+// Fallback exchange rates relative to LKR (Sri Lankan Rupee as base)
+const DEFAULT_RATES: { [key: string]: number } = {
   LKR: 1,
-  USD: 0.0031,    // 1 LKR = 0.0031 USD
-  EUR: 0.0029,    // 1 LKR = 0.0029 EUR
-  GBP: 0.0025,    // 1 LKR = 0.0025 GBP
-  JPY: 0.48,      // 1 LKR = 0.48 JPY
+  USD: 0.0030,    // 1 LKR = 0.0030 USD
+  EUR: 0.0027,    // 1 LKR = 0.0027 EUR
+  GBP: 0.0023,    // 1 LKR = 0.0023 GBP
+  JPY: 0.46,      // 1 LKR = 0.46 JPY
 };
 
 const CURRENCY_SYMBOLS: { [key: string]: string } = {
@@ -29,6 +29,31 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined
 
 export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currency, setCurrencyState] = useState<string>('LKR');
+  const [rates, setRates] = useState<{ [key: string]: number }>(DEFAULT_RATES);
+
+  // Fetch live exchange rates relative to LKR on mount
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/LKR');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        if (data && data.rates) {
+          setRates({
+            LKR: 1,
+            USD: data.rates.USD || DEFAULT_RATES.USD,
+            EUR: data.rates.EUR || DEFAULT_RATES.EUR,
+            GBP: data.rates.GBP || DEFAULT_RATES.GBP,
+            JPY: data.rates.JPY || DEFAULT_RATES.JPY,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch live exchange rates, using fallback rates:', error);
+      }
+    };
+
+    fetchRates();
+  }, []);
 
   // Load currency from localStorage on mount
   useEffect(() => {
@@ -76,12 +101,12 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   const convertAmount = useCallback((amount: number): number => {
-    const rate = EXCHANGE_RATES[currency] || 1;
+    const rate = rates[currency] || 1;
     return amount * rate;
-  }, [currency]);
+  }, [currency, rates]);
 
   const formatCurrency = useCallback((amount: number): string => {
-    const rate = EXCHANGE_RATES[currency] || 1;
+    const rate = rates[currency] || 1;
     const convertedAmount = amount * rate;
     const symbol = CURRENCY_SYMBOLS[currency] || currency;
     
@@ -93,7 +118,7 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
 
     return `${symbol} ${formatted}`;
-  }, [currency]);
+  }, [currency, rates]);
 
   const getCurrencySymbol = useCallback((): string => {
     return CURRENCY_SYMBOLS[currency] || currency;

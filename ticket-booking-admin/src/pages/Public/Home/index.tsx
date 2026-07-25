@@ -26,6 +26,7 @@ import EventService from '../../../services/event.service';
 import BannerService, { BannerResponse } from '../../../services/banner.service';
 import { Event } from '../../../types';
 import { getAssetUrl } from '../../../utils/formatters';
+import { useCurrency } from '../../../context/CurrencyContext';
 
 const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
@@ -207,6 +208,7 @@ const EventCard: React.FC<EventCardProps> = ({
 };
 
 const Home: React.FC = () => {
+  const { formatCurrency } = useCurrency();
   const [activeSlide, setActiveSlide] = useState(0);
   const [events, setEvents] = useState<Event[]>([]);
   const [dealEvents, setDealEvents] = useState<Event[]>([]);
@@ -364,7 +366,7 @@ const Home: React.FC = () => {
 
   const formatPrice = (price: number | null | undefined) => {
     if (!price || price === 0) return 'Free';
-    return `LKR ${price.toLocaleString()}`;
+    return formatCurrency(price);
   };
 
   const handleDealScroll = (direction: 'left' | 'right') => {

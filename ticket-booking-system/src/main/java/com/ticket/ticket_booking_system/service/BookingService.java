@@ -101,6 +101,7 @@ public class BookingService {
                 .status(Booking.BookingStatus.PENDING)
                 .bookingReference(generateBookingReference())
                 .attended(false)
+                .currency(request.getCurrency())
                 .build();
 
         // Calculate average price per ticket based on total amount to include taxes and deals

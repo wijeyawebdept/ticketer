@@ -13,11 +13,13 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DownloadIcon from '@mui/icons-material/Download';
 import paymentService, { PaymentVerificationResponse } from '../../../services/payment.service';
+import { useCurrency } from '../../../context/CurrencyContext';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { formatCurrency } = useCurrency();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [verificationResult, setVerificationResult] = useState<PaymentVerificationResponse | null>(null);
@@ -183,11 +185,11 @@ const PaymentSuccess: React.FC = () => {
                       Payment Details
                     </Typography>
                     <Box sx={{ mb: 1 }}>
-                      <ReceiptRow label="Amount Paid" value={`LKR ${r.amount?.toLocaleString()}`} bold />
+                      <ReceiptRow label="Amount Paid" value={formatCurrency(r.amount ?? 0)} bold />
                       {r.discountAmount && r.discountAmount > 0 && (
                         <ReceiptRow 
                           label={`Discount${r.discountInfo ? ` (${r.discountInfo})` : ''}`} 
-                          value={`- LKR ${r.discountAmount.toLocaleString()}`} 
+                          value={`- ${formatCurrency(r.discountAmount)}`} 
                         />
                       )}
                       <ReceiptRow label="Status" value="✓ PAID" />

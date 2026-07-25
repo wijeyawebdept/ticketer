@@ -132,7 +132,7 @@ public class EmailService {
             ctx.setVariable("venueName", venueName);
             ctx.setVariable("ticketCount", booking.getBookingSeats().size());
             ctx.setVariable("seatDetails", seatDetails);
-            ctx.setVariable("currency", "LKR");
+            ctx.setVariable("currency", booking.getCurrency() != null ? booking.getCurrency() : "LKR");
             ctx.setVariable("totalAmount", booking.getTotalAmount());
             ctx.setVariable("discountAmount", booking.getDiscountAmount());
             ctx.setVariable("discountInfo", booking.getDiscountInfo());
@@ -206,7 +206,7 @@ public class EmailService {
                     + "TIME: " + ("N/A".equals(eventTime) ? "N/A" : eventTime) + "\n"
                     + "VENUE: " + venueName + "\n"
                     + "TICKETS: " + booking.getBookingSeats().size() + "\n"
-                    + "AMOUNT: LKR " + booking.getTotalAmount() + "\n"
+                    + "AMOUNT: " + (booking.getCurrency() != null ? booking.getCurrency() : "LKR") + " " + booking.getTotalAmount() + "\n"
                     + "TXN: " + transactionId + "\n"
                     + "PAID: " + paymentDate;
             String qrCodeBase64 = generateQrCodeBase64(qrContent);
@@ -219,7 +219,7 @@ public class EmailService {
             ctx.setVariable("venueName", venueName);
             ctx.setVariable("ticketCount", booking.getBookingSeats().size());
             ctx.setVariable("seatDetails", seatDetails);
-            ctx.setVariable("currency", "LKR");
+            ctx.setVariable("currency", booking.getCurrency() != null ? booking.getCurrency() : "LKR");
             ctx.setVariable("totalAmount", booking.getTotalAmount());
             ctx.setVariable("transactionId", transactionId);
             ctx.setVariable("paymentMethod", paymentMethod);

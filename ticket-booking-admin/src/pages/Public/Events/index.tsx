@@ -26,10 +26,12 @@ import PublicFooter from '../../../components/public/PublicFooter';
 import EventService from '../../../services/event.service';
 import { Event } from '../../../types';
 import { getAssetUrl } from '../../../utils/formatters';
+import { useCurrency } from '../../../context/CurrencyContext';
 
 const SlideTransition = (props: SlideProps) => <Slide {...props} direction="down" />;
 
 const Events: React.FC = () => {
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -136,7 +138,7 @@ const Events: React.FC = () => {
 
   const formatPrice = (price: number | null | undefined) => {
     if (!price || price === 0) return 'Free';
-    return `LKR ${price.toLocaleString()}`;
+    return formatCurrency(price);
   };
 
   return (

@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { AuthService, profileService } from '../../services';
+import { useCurrency } from '../../context/CurrencyContext';
 
 export interface CheckoutModalProps {
   isOpen: boolean;
@@ -71,6 +72,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   children,
 }) => {
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
   
   const { user } = useAuth();
   
@@ -330,7 +332,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         {(seat?.seatId || selectedSeats.find((_, i) => i === index))} - {seat?.categoryName || t('standard', 'Standard')}
                       </Typography>
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        {(seat?.currentPrice || seat?.price || 0).toLocaleString()} LKR
+                        {formatCurrency(seat?.currentPrice || seat?.price || 0)}
                       </Typography>
                     </Box>
                   ))}
@@ -345,7 +347,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       {selection.categoryName} × {selection.ticketCount}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {(selection.ticketCount * (selection.pricePerTicket || selection.price || 0)).toLocaleString()} LKR
+                      {formatCurrency(selection.ticketCount * (selection.pricePerTicket || selection.price || 0))}
                     </Typography>
                   </Box>
                 </Box>
@@ -367,7 +369,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">{t('subTotal', 'Sub Total')}</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice).toLocaleString()} LKR
+                  {formatCurrency(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice)}
                 </Typography>
               </Box>
               {totalDiscount > 0 && (
@@ -376,17 +378,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     {discountInfoString ? `Discount (${discountInfoString})` : t('discount', 'Discount')}
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
-                    -{totalDiscount.toLocaleString()} LKR
+                    -{formatCurrency(totalDiscount)}
                   </Typography>
                 </Box>
               )}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Typography variant="body2">{t('handlingFee', 'Handling fee')}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>{handlingFee} LKR</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>{formatCurrency(handlingFee)}</Typography>
               </Box>
               <Box sx={{ borderTop: '2px solid #e0e0e0', pt: 2, display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('total', 'Total')}</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{(totalPrice + handlingFee).toLocaleString()} LKR</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(totalPrice + handlingFee)}</Typography>
               </Box>
             </Box>
             

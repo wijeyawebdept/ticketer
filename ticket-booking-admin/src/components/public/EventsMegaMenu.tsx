@@ -18,6 +18,7 @@ import { EventCategory, Event } from '../../types';
 import eventService from '../../services/event.service';
 import { format } from 'date-fns';
 import { getAssetUrl } from '../../utils/formatters';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface EventsMegaMenuProps {
   anchorEl: HTMLElement | null;
@@ -37,6 +38,7 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
   onMouseLeave,
 }) => {
   const navigate = useNavigate();
+  const { formatCurrency } = useCurrency();
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [eventsCache, setEventsCache] = useState<Record<string, Event[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -290,7 +292,7 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
                       sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.78rem', color: '#fcd0a5' }}
                     >
                       {event.startDateTime ? format(new Date(event.startDateTime), 'EEE dd MMM') : 'TBA'} 
-                      {event.basePrice ? ` • ${event.basePrice} LKR` : ''}
+                      {event.basePrice ? ` • ${formatCurrency(event.basePrice)}` : ''}
                     </Typography>
                   </CardContent>
                 </Card>

@@ -9,6 +9,7 @@ import {
 import axiosInstance from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useCurrency } from '../../context/CurrencyContext';
 import './VenueSeatMap.css';
 
 interface VenueSeatData {
@@ -135,6 +136,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 }) => {
   const { isRestrictedUser, user } = useAuth();
   const { t } = useTranslation();
+  const { formatCurrency } = useCurrency();
   const [venueSeats, setVenueSeats] = useState<VenueSeatData[]>([]);
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
   const [localSelectedSeats, setLocalSelectedSeats] = useState<Set<string>>(new Set(selectedSeats));
@@ -774,7 +776,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           fill="#cbd5e1"
                           style={{ cursor: 'pointer', pointerEvents: 'none' }}
                         >
-                          {t('lkr', 'LKR')} {area.price.toLocaleString()} • {area.availableTickets} {t('availableLower', 'available')}
+                          {formatCurrency(area.price)} • {area.availableTickets} {t('availableLower', 'available')}
                         </text>
                       </g>
                     );
@@ -798,7 +800,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               });
               const representativeSeat = seatsInCategory[0];
               const status = seatWithPrice ? seatStatuses.get(seatWithPrice.seatId) : null;
-              const priceStr = status?.currentPrice ? ` - ${status.currentPrice.toLocaleString()} LKR` : '';
+              const priceStr = status?.currentPrice ? ` - ${formatCurrency(status.currentPrice)}` : '';
               return (
                 <div key={`cat-${index}`} className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: representativeSeat?.colorCode || '#4CAF50' }} />
@@ -826,7 +828,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       {/* Hover tooltip */}
       {!loading && hoveredSeat && (() => {
             const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
-            // Customers and unauthenticated users should not see details of locked seats
             if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
             return (
               <div className="seat-tooltip">
@@ -835,7 +836,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                 <div>{t('rowLabelText', 'Row:')} {hoveredSeat.rowLabel}, {t('seatLabel', 'Seat:')} {hoveredSeat.seatNumber}</div>
                 <div>{t('categoryLabel', 'Category:')} {hoveredSeat.categoryName}</div>
                 {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
-                  <div>{t('priceRs', 'Price: Rs.')}{seatStatuses.get(hoveredSeat.seatId)?.currentPrice.toLocaleString()}</div>
+                  <div>{t('priceLabel', 'Price:')} {formatCurrency(seatStatuses.get(hoveredSeat.seatId)?.currentPrice ?? 0)}</div>
                 )}
                 <div>{t('statusLabel', 'Status:')} {hoveredStatus || t('availableUpper', 'AVAILABLE')}</div>
               </div>
@@ -883,7 +884,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </Typography>
 
               <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
-                {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{t('lkr', 'LKR')} {selectedSharedArea?.price.toLocaleString()}</strong>
+                {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{formatCurrency(selectedSharedArea?.price ?? 0)}</strong>
               </Typography>
 
               <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>

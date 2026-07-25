@@ -36,6 +36,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import { formatTimeString } from '../../../utils/formatters';
 import CheckoutModal from '../../../components/CheckoutModal';
+import { useCurrency } from '../../../context/CurrencyContext';
 import './SeatSelection.css';
 
 interface EventDetails {
@@ -55,6 +56,7 @@ const SeatSelectionPage: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
+  const { formatCurrency, currency, convertAmount } = useCurrency();
   const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -514,12 +516,12 @@ const SeatSelectionPage: React.FC = () => {
           categoryName: selection.categoryName,
           sharedAreaNumber: selection.areaNumber,
           ticketCount: selection.ticketCount,
-          pricePerTicket: selection.pricePerTicket,
+          pricePerTicket: convertAmount(selection.pricePerTicket),
         })),
-        totalAmount: finalAmount,
-        discountAmount: totalDiscount,
+        totalAmount: convertAmount(finalAmount),
+        discountAmount: convertAmount(totalDiscount || 0),
         discountInfo: discountInfoString,
-        currency: 'LKR',
+        currency: currency,
         customerInfo: {
           firstName: customerInfo.firstName,
           lastName: customerInfo.lastName,
@@ -610,7 +612,7 @@ const SeatSelectionPage: React.FC = () => {
               )}
               <div className="summary-item">
                 <span>{t('totalAmountLabel', 'Total Amount:')}</span>
-                <strong>{(totalPrice + 100).toLocaleString()} LKR</strong>
+                <strong>{formatCurrency(totalPrice + 100)}</strong>
               </div>
             </div>
             <button 
@@ -869,7 +871,7 @@ const SeatSelectionPage: React.FC = () => {
                       </div>
                       <div className="summary-row">
                         <span>{t('priceLabel', 'Price')} ({selection.categoryName}):</span>
-                        <strong>{(selection.ticketCount * selection.pricePerTicket).toLocaleString()} LKR</strong>
+                        <strong>{formatCurrency(selection.ticketCount * selection.pricePerTicket)}</strong>
                       </div>
                     </React.Fragment>
                   ))}
@@ -878,18 +880,18 @@ const SeatSelectionPage: React.FC = () => {
                     <>
                       <div className="summary-row">
                         <span style={{ color: '#aaa' }}>{t('subtotalLabel', 'Subtotal:')}</span>
-                        <strong style={{ color: '#aaa' }}>{(totalPrice + totalDiscount).toLocaleString()} LKR</strong>
+                        <strong style={{ color: '#aaa' }}>{formatCurrency(totalPrice + totalDiscount)}</strong>
                       </div>
                       <div className="summary-row" style={{ color: '#4caf50' }}>
                         <span>{discountInfoString ? `Discount (${discountInfoString}):` : t('discountLabel', 'Discount:')}</span>
-                        <strong>-{totalDiscount.toLocaleString()} LKR</strong>
+                        <strong>-{formatCurrency(totalDiscount)}</strong>
                       </div>
                       <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '10px 0' }} />
                     </>
                   )}
                   <div className="summary-row total">
                     <span>{t('totalPriceLabel', 'Total Price:')}</span>
-                    <strong>{totalPrice.toLocaleString()} LKR</strong>
+                    <strong>{formatCurrency(totalPrice)}</strong>
                   </div>
                 </div>
 
