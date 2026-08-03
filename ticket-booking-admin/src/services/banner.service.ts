@@ -5,6 +5,8 @@ export interface BannerResponse {
   title: string;
   description: string;
   imageUrl: string;
+  targetEventId?: string | number;
+  linkUrl?: string;
 
   displayOrder: number;
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
