@@ -7,6 +7,11 @@ import {
   IconButton,
   CircularProgress,
   Chip,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
@@ -327,6 +332,36 @@ const SeatSelectionPage: React.FC = () => {
   const [totalDiscount, setTotalDiscount] = useState(0);
   const [discountInfoString, setDiscountInfoString] = useState<string | undefined>(undefined);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+  // Restore seat booking & auto-open payment modal after login
+  useEffect(() => {
+    const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
+    if (pendingSeatBookingStr && isAuthenticated()) {
+      const restoreSeatBooking = async () => {
+        try {
+          const pendingData = JSON.parse(pendingSeatBookingStr);
+          if (pendingData.eventScheduleId === eventScheduleId) {
+            if (pendingData.selectedSeats && pendingData.selectedSeats.length > 0) {
+              setSelectedSeats(pendingData.selectedSeats);
+              await calculateTotalPrice(pendingData.selectedSeats);
+            }
+            if (pendingData.sharedAreaSelections && pendingData.sharedAreaSelections.length > 0) {
+              setSharedAreaSelections(pendingData.sharedAreaSelections);
+            }
+            if (pendingData.autoOpenPaymentModal) {
+              setPaymentModalOpen(true);
+              setIsCollapsed(true);
+            }
+            sessionStorage.removeItem('pendingSeatBooking');
+          }
+        } catch (error) {
+          sessionStorage.removeItem('pendingSeatBooking');
+        }
+      };
+      restoreSeatBooking();
+    }
+  }, [eventScheduleId, isAuthenticated]);
 
   useEffect(() => {
     let newTotal = 0;
@@ -457,13 +492,7 @@ const SeatSelectionPage: React.FC = () => {
 
   const handleProceedToPayment = () => {
     if (!isAuthenticated()) {
-      // Redirect to login page and return here after login
-      navigate('/login', {
-        state: {
-          from: `/seat-selection/${eventScheduleId}`,
-          returnMessage: 'Please sign in to continue with your booking',
-        },
-      });
+      setLoginModalOpen(true);
     } else {
       setPaymentModalOpen(true);
       setIsCollapsed(true);
@@ -932,6 +961,79 @@ const SeatSelectionPage: React.FC = () => {
         discountInfoString={discountInfoString}
         handlingFee={100}
       />
+
+      {/* Sign In Required Modal */}
+      <Dialog
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 1.5,
+            textAlign: 'center'
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ff1955', fontSize: '1.25rem' }}>
+          Sign In Required
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ fontFamily: 'Raleway, sans-serif', color: '#4a5568', mt: 0.5 }}>
+            Please sign in to your account before proceeding to ticket booking and payment.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', gap: 1.5, pb: 2, px: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setLoginModalOpen(false)}
+            sx={{
+              borderRadius: '25px',
+              px: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 600,
+              color: '#4a5568',
+              borderColor: '#cbd5e0',
+              textTransform: 'none',
+              '&:hover': { borderColor: '#a0aec0', backgroundColor: '#f7fafc' },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const pendingData = {
+                eventScheduleId,
+                selectedSeats,
+                sharedAreaSelections,
+                autoOpenPaymentModal: true,
+              };
+              sessionStorage.setItem('pendingSeatBooking', JSON.stringify(pendingData));
+              navigate('/login', {
+                state: {
+                  from: `/seat-selection/${eventScheduleId}`,
+                  returnMessage: 'Please sign in to continue with your booking',
+                },
+              });
+            }}
+            sx={{
+              backgroundColor: '#ff1955',
+              color: '#ffffff',
+              borderRadius: '25px',
+              px: 3,
+              fontFamily: 'Raleway, sans-serif',
+              fontWeight: 700,
+              textTransform: 'none',
+              boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+              '&:hover': { backgroundColor: '#e01545' },
+            }}
+          >
+            Sign In
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* (Terms dialog unchanged) */}
         </>

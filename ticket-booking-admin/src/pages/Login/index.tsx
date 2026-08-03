@@ -141,10 +141,19 @@ const Login: React.FC = () => {
           window.dispatchEvent(new Event('authRefresh'));
 
           const pendingBooking = sessionStorage.getItem('pendingBooking');
+          const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
+          let seatScheduleId: string | null = null;
+          if (pendingSeatBookingStr) {
+            try {
+              const data = JSON.parse(pendingSeatBookingStr);
+              if (data.eventScheduleId) seatScheduleId = data.eventScheduleId;
+            } catch (e) {}
+          }
           const from = (location.state as any)?.from;
 
+          const targetPath = seatScheduleId ? `/seat-selection/${seatScheduleId}` : (from || '/events');
           const welcomeState = { googleWelcome: true, firstName: response.user.firstName };
-          if (pendingBooking || from) navigate(from || '/events', { state: welcomeState });
+          if (seatScheduleId || pendingBooking || from) navigate(targetPath, { state: welcomeState });
           else navigate('/events', { state: welcomeState });
         } else {
           localStorage.removeItem('auth_token');
@@ -189,12 +198,22 @@ const Login: React.FC = () => {
 
         // Only allow USER role on this login page
         if (normalizedRole === 'USER' || user.role === 'ROLE_USER') {
-          // Check if there's a pending booking (user was redirected from event details)
+          // Check if there's a pending booking (user was redirected from event details or seat selection)
           const pendingBooking = sessionStorage.getItem('pendingBooking');
+          const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
+          let seatScheduleId: string | null = null;
+          if (pendingSeatBookingStr) {
+            try {
+              const data = JSON.parse(pendingSeatBookingStr);
+              if (data.eventScheduleId) seatScheduleId = data.eventScheduleId;
+            } catch (e) {}
+          }
           const from = location.state?.from;
 
-          if (pendingBooking || from) {
-            // Redirect back to the event details page to restore booking
+          if (seatScheduleId) {
+            navigate(`/seat-selection/${seatScheduleId}`);
+          } else if (pendingBooking || from) {
+            // Redirect back to the specified page to restore booking
             navigate(from || '/events');
           } else {
             // Normal login flow - go to events page

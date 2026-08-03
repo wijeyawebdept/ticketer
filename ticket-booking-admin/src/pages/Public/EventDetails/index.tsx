@@ -308,13 +308,7 @@ const EventDetails: React.FC = () => {
       return;
     }
 
-    // Check if customer is logged in
-    if (!isAuthenticated()) {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    // If it's a seated event, redirect to seat selection page
+    // If it's a seated event, redirect directly to seat selection page
     if (hasSeatingLayout) {
       // Find the selected schedule details
       const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
@@ -329,6 +323,17 @@ const EventDetails: React.FC = () => {
           eventId: id, // Pass the event ID
         }
       });
+      return;
+    }
+
+    // For seatless events, check if customer is logged in
+    if (!isAuthenticated()) {
+      sessionStorage.setItem('pendingBooking', JSON.stringify({
+        eventId: id,
+        scheduleId: selectedShowtime,
+        ticketQuantities: ticketQuantities
+      }));
+      setLoginModalOpen(true);
       return;
     }
 

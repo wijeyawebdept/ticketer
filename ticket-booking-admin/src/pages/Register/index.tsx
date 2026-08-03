@@ -75,12 +75,23 @@ const Register: React.FC = () => {
 
   const handleVerify = async () => {
     setVerifyLoading(true);
-    setVerifyError(null);
     try {
       const response = await AuthService.verifyEmail(registeredEmail, verificationCode.trim());
-      // Successful verification returns a token (auto-login)
+      const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
+      let seatScheduleId: string | null = null;
+      if (pendingSeatBookingStr) {
+        try {
+          const data = JSON.parse(pendingSeatBookingStr);
+          if (data.eventScheduleId) seatScheduleId = data.eventScheduleId;
+        } catch (e) {}
+      }
+
       if (response.token) {
-        navigate('/events');
+        if (seatScheduleId) {
+          navigate(`/seat-selection/${seatScheduleId}`);
+        } else {
+          navigate('/events');
+        }
       } else {
         // Fallback in case token isn't returned
         navigate('/login', { state: { message: 'Email verified! You can now sign in.' } });
