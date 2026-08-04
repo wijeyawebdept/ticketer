@@ -399,9 +399,15 @@ public class AuthController {
                 response.put("error_code", "MISSING_TOKEN");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            logger.info("Processing Google OAuth login (ID token flow)");
-            com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = googleOAuthService.verifyGoogleToken(idToken);
-            GoogleOAuthService.GoogleUserInfo googleUserInfo = new GoogleOAuthService.GoogleUserInfo(payload);
+            logger.info("Processing Google OAuth login");
+            GoogleOAuthService.GoogleUserInfo googleUserInfo;
+            try {
+                com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = googleOAuthService.verifyGoogleToken(idToken);
+                googleUserInfo = new GoogleOAuthService.GoogleUserInfo(payload);
+            } catch (Exception e) {
+                logger.info("Token verification as ID token failed ({}), attempting access token lookup", e.getMessage());
+                googleUserInfo = googleOAuthService.getUserInfoFromAccessToken(idToken);
+            }
             if (!googleUserInfo.isEmailVerified()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "error");

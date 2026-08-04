@@ -12,7 +12,7 @@ import {
   InputAdornment,
   Divider
 } from '@mui/material';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -114,13 +114,12 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleGoogleCredentialSuccess = async (credentialResponse: any) => {
+  const processGoogleLogin = async (googleToken: string) => {
     setIsGoogleLoading(true);
     setError(null);
     try {
-      const idToken = credentialResponse?.credential;
-      if (!idToken) throw new Error('Google did not return an ID token.');
-      const response = await AuthService.googleLogin(idToken);
+      if (!googleToken) throw new Error('Google did not return a valid authentication token.');
+      const response = await AuthService.googleLogin(googleToken);
       if (response.user) {
         const normalizedRole = response.user.role.replace('ROLE_', '');
         if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
@@ -140,6 +139,14 @@ const Register: React.FC = () => {
       setIsGoogleLoading(false);
     }
   };
+
+  const handleGoogleClick = useGoogleLogin({
+    onSuccess: (tokenResponse) => processGoogleLogin(tokenResponse.access_token),
+    onError: () => {
+      setError('Google sign-in failed. Please try again.');
+      setIsGoogleLoading(false);
+    },
+  });
 
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
@@ -567,18 +574,49 @@ const Register: React.FC = () => {
                           </Typography>
                         </Divider>
 
-                        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
-                            <GoogleLogin
-                              onSuccess={handleGoogleCredentialSuccess}
-                              onError={() => {
-                                setError('Google sign-in failed. Please try again.');
-                                setIsGoogleLoading(false);
-                              }}
-                              text="continue_with"
-                            />
-                          </Box>
-                          {isGoogleLoading && <CircularProgress size={24} />}
+                        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', my: 1 }}>
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleGoogleClick()}
+                            disabled={isGoogleLoading}
+                            startIcon={
+                              isGoogleLoading ? null : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" style={{ display: 'block' }}>
+                                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                                </svg>
+                              )
+                            }
+                            sx={{
+                              width: 'auto',
+                              px: 3,
+                              py: 0.9,
+                              minWidth: '220px',
+                              borderRadius: '25px',
+                              borderColor: '#dadce0',
+                              backgroundColor: '#ffffff',
+                              color: '#3c4043',
+                              fontFamily: 'Raleway, sans-serif',
+                              fontWeight: 600,
+                              fontSize: '0.88rem',
+                              textTransform: 'none',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                              transition: 'all 0.2s ease-in-out',
+                              '&:hover': {
+                                backgroundColor: '#f8f9fa',
+                                borderColor: '#c6c9ce',
+                                boxShadow: '0 3px 8px rgba(60,64,67,0.15)',
+                                transform: 'translateY(-1px)',
+                              },
+                              '&:active': {
+                                transform: 'translateY(0)',
+                              },
+                            }}
+                          >
+                            {isGoogleLoading ? <CircularProgress size={20} sx={{ color: '#ff1955' }} /> : 'Sign up with Google'}
+                          </Button>
                         </Box>
 
                         <Box sx={{ textAlign: 'center', mt: 1.5 }}>
