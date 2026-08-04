@@ -275,7 +275,22 @@ const RecycleBin: React.FC = () => {
       )}
 
       <Paper>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="recycle bin tabs">
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange} 
+          aria-label="recycle bin tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            '& .MuiTab-root': {
+              fontWeight: 600,
+              fontSize: { xs: '0.82rem', sm: '0.9rem' },
+              minWidth: 'auto',
+              px: { xs: 1.5, sm: 2.5 }
+            }
+          }}
+        >
           <Tab label="All Items" />
           <Tab label="Users" />
           <Tab label="Admins" />

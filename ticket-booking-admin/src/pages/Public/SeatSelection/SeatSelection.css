@@ -148,6 +148,29 @@
   min-height: 100%;
 }
 
+.swipe-handle-bar {
+  display: none !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 4px 0 8px 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.swipe-handle-pill {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.swipe-handle-bar:active .swipe-handle-pill,
+.swipe-handle-bar:hover .swipe-handle-pill {
+  background: #ff1955;
+}
+
 .summary-header {
   display: flex;
   justify-content: space-between;
@@ -424,71 +447,196 @@
 /* Responsive */
 @media (max-width: 768px) {
   .seat-selection-page {
-    padding: 10px;
+    padding: 4px;
   }
 
   .event-header {
-    padding: 15px;
+    padding: 10px;
   }
 
   .event-info h1 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .event-meta {
-    font-size: 12px;
-    gap: 10px;
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  /* Booking summary as compact full-width bottom sheet on mobile */
+  .booking-summary {
+    width: 100%;
+    height: auto;
+    max-height: 55vh;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-left: none;
+    border-top: 2px solid rgba(255, 25, 85, 0.5);
+    border-radius: 16px 16px 0 0;
+    animation: slideUp 0.4s ease;
+    overflow-y: auto;
+  }
+
+  .booking-summary.collapsed {
+    transform: translateY(100%);
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .swipe-handle-bar {
+    display: flex !important;
   }
 
   .summary-content {
-    padding: 15px;
+    padding: 12px 14px;
   }
 
   .summary-header {
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     flex-wrap: wrap;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
   }
 
   .summary-header h3 {
     flex: 1;
-    min-width: 150px;
-  }
-
-  .collapse-btn {
-    order: 3;
-    margin-left: auto;
+    min-width: 100px;
+    font-size: 15px;
   }
 
   .hold-timer {
-    order: 2;
     width: 100%;
+    font-size: 12px;
+  }
+
+  .summary-details {
+    margin-bottom: 8px;
   }
 
   .summary-actions {
     flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+    align-items: center;
   }
 
   .btn {
-    width: 100%;
+    width: 65%;
+    max-width: 190px;
     min-width: auto;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    height: 30px;
+    border-radius: 15px;
   }
 
   .seat-badges {
     max-width: 100%;
     justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .seat-badge {
+    padding: 2px 6px;
+    font-size: 11px;
   }
 
   .summary-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+    font-size: 12px;
   }
 
-  .booking-summary {
-    max-height: 60vh;
+  .summary-row.total {
+    padding-top: 6px;
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .summary-row.total strong {
+    font-size: 16px;
+  }
+
+  .floating-cart-btn {
+    right: 14px;
+    bottom: 14px;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Payment redirection view mobile */
+  .redirection-content {
+    padding: 16px 12px;
+    margin: 8px;
+    width: calc(100% - 16px);
+    max-height: 92vh;
     overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .secure-badge {
+    padding: 6px 12px;
+    font-size: 10px;
+    margin-bottom: 12px;
+  }
+
+  .redirection-content h1 {
+    font-size: 17px;
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+
+  .redirection-content p {
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+
+  .loading-container {
+    margin-bottom: 16px;
+  }
+
+  .loading-orbit {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 10px;
+  }
+
+  .loading-text {
+    font-size: 12px;
+  }
+
+  .order-summary-mini {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .summary-item {
+    font-size: 11px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .redirection-back-btn {
+    margin-top: 16px;
+    padding: 8px 18px;
+    font-size: 11px;
   }
 }
 

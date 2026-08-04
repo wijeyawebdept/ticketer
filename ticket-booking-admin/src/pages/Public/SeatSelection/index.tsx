@@ -70,6 +70,30 @@ const SeatSelectionPage: React.FC = () => {
   const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const summaryRef = React.useRef<HTMLDivElement>(null);
   const seatMapRef = React.useRef<HTMLDivElement>(null);
+  const summaryTouchStartY = React.useRef<number | null>(null);
+  const summaryTouchCurrentY = React.useRef<number | null>(null);
+
+  const handleSummaryTouchStart = (e: React.TouchEvent) => {
+    summaryTouchStartY.current = e.touches[0].clientY;
+    summaryTouchCurrentY.current = e.touches[0].clientY;
+  };
+
+  const handleSummaryTouchMove = (e: React.TouchEvent) => {
+    summaryTouchCurrentY.current = e.touches[0].clientY;
+  };
+
+  const handleSummaryTouchEnd = () => {
+    if (summaryTouchStartY.current !== null && summaryTouchCurrentY.current !== null) {
+      const deltaY = summaryTouchCurrentY.current - summaryTouchStartY.current;
+      if (deltaY > 35) {
+        setIsCollapsed(true);
+      } else if (deltaY < -35) {
+        setIsCollapsed(false);
+      }
+    }
+    summaryTouchStartY.current = null;
+    summaryTouchCurrentY.current = null;
+  };
 
   interface SharedAreaSelection {
     areaNumber: number;
@@ -579,7 +603,7 @@ const SeatSelectionPage: React.FC = () => {
     return (
       <Box sx={{ backgroundColor: '#242a33', minHeight: '100vh' }}>
         <PublicNavbar />
-        <Container maxWidth="xl" sx={{ pt: 16, pb: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Container maxWidth="xl" sx={{ pt: { xs: 9, md: 16 }, pb: { xs: 2, md: 6 }, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <CircularProgress sx={{ color: '#ff1955' }} />
         </Container>
       </Box>
@@ -589,7 +613,7 @@ const SeatSelectionPage: React.FC = () => {
   return (
     <Box sx={{ backgroundColor: '#242a33', minHeight: '100vh' }}>
       <PublicNavbar />
-      <Container maxWidth="xl" sx={{ pt: 12, pb: 6 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 9, md: 12 }, pb: { xs: 2, md: 6 }, px: { xs: 1.5, md: 3 } }}>
         <div className="seat-selection-page">
       {isRedirecting ? (
         <div className="payment-redirection-view">
@@ -648,17 +672,19 @@ const SeatSelectionPage: React.FC = () => {
           <Box
             sx={{
               display: 'flex',
-              alignItems: 'center',
+              alignItems: { xs: 'flex-start', md: 'center' },
               justifyContent: 'space-between',
+              flexDirection: { xs: 'column', md: 'row' },
               backgroundColor: '#1b222c',
               border: '1px solid rgba(255, 25, 85, 0.25)',
-              borderRadius: '12px',
-              px: { xs: 2, md: 3 },
-              py: 1.5,
-              mb: 3,
+              borderRadius: { xs: '8px', md: '12px' },
+              px: { xs: 1.5, md: 3 },
+              py: { xs: 1, md: 1.5 },
+              mb: { xs: 2, md: 3 },
+              gap: { xs: 1, md: 0 },
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(12px)',
-              width: '85%',
+              width: { xs: '100%', md: '85%' },
               maxWidth: '1100px',
               mx: 'auto',
             }}
@@ -699,8 +725,9 @@ const SeatSelectionPage: React.FC = () => {
                   fontFamily: 'Raleway, sans-serif',
                   fontWeight: 800,
                   color: '#ffffff',
-                  fontSize: { xs: '1.05rem', md: '1.2rem' },
-                  whiteSpace: 'nowrap',
+                  fontSize: { xs: '0.85rem', md: '1.2rem' },
+                  whiteSpace: { xs: 'normal', md: 'nowrap' },
+                  wordBreak: 'break-word',
                 }}
               >
                 {eventDetails.title}
@@ -841,9 +868,25 @@ const SeatSelectionPage: React.FC = () => {
           <div 
             className={`booking-summary ${isCollapsed ? 'collapsed' : ''}`} 
             ref={summaryRef}
+            onTouchStart={handleSummaryTouchStart}
+            onTouchMove={handleSummaryTouchMove}
+            onTouchEnd={handleSummaryTouchEnd}
           >
             <div className="summary-content">
-              <div className="summary-header">
+              <div 
+                className="swipe-handle-bar"
+                onTouchStart={handleSummaryTouchStart}
+                onTouchMove={handleSummaryTouchMove}
+                onTouchEnd={handleSummaryTouchEnd}
+              >
+                <div className="swipe-handle-pill" />
+              </div>
+              <div 
+                className="summary-header"
+                onTouchStart={handleSummaryTouchStart}
+                onTouchMove={handleSummaryTouchMove}
+                onTouchEnd={handleSummaryTouchEnd}
+              >
                 <h3>{t('bookingSummary', 'Booking Summary')}</h3>
                 <button 
                   className="close-panel-btn"

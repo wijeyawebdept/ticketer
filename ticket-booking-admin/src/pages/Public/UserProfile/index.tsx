@@ -770,18 +770,26 @@ const UserProfile: React.FC = () => {
           <Tabs 
             value={currentTab} 
             onChange={(e, newValue) => setCurrentTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'uppercase',
-                fontWeight: 500,
-                fontSize: '0.875rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
                 color: 'rgba(255, 255, 255, 0.6)',
+                minWidth: 'auto',
+                px: { xs: 2, sm: 3 },
               },
               '& .Mui-selected': {
                 color: '#ff1955 !important',
               },
               '& .MuiTabs-indicator': {
                 backgroundColor: '#ff1955',
+              },
+              '& .MuiSvgIcon-root': {
+                color: '#ff1955',
               }
             }}
           >
@@ -859,11 +867,21 @@ const UserProfile: React.FC = () => {
                     {!isEditing ? (
                       <Button
                         variant="contained"
-                        startIcon={<Edit />}
+                        size="small"
+                        startIcon={<Edit sx={{ fontSize: '14px !important' }} />}
                         onClick={() => setIsEditing(true)}
                         sx={{ 
                           backgroundColor: '#ff1955',
-                          '&:hover': { backgroundColor: '#e01545' }
+                          color: '#fff',
+                          fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                          py: { xs: 0.3, sm: 0.5 },
+                          px: { xs: 1.2, sm: 1.8 },
+                          minHeight: { xs: 26, sm: 32 },
+                          borderRadius: '6px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          boxShadow: 'none',
+                          '&:hover': { backgroundColor: '#e01545', boxShadow: 'none' }
                         }}
                       >
                         Edit Profile
@@ -1085,14 +1103,23 @@ const UserProfile: React.FC = () => {
                         </Grid>
 
                         {isEditing && (
-                          <Box mt={3} display="flex" gap={2}>
+                          <Box mt={3} display="flex" gap={1.5}>
                             <Button
                               type="submit"
                               variant="contained"
-                              startIcon={<Save />}
+                              size="small"
+                              startIcon={<Save sx={{ fontSize: '14px !important' }} />}
                               disabled={isSubmitting}
                               sx={{ 
                                 backgroundColor: '#ff1955',
+                                color: '#fff',
+                                fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                                py: { xs: 0.3, sm: 0.5 },
+                                px: { xs: 1.2, sm: 1.8 },
+                                minHeight: { xs: 26, sm: 32 },
+                                borderRadius: '6px',
+                                textTransform: 'none',
+                                fontWeight: 600,
                                 '&:hover': { backgroundColor: '#e01545' }
                               }}
                             >
@@ -1100,7 +1127,8 @@ const UserProfile: React.FC = () => {
                             </Button>
                             <Button
                               variant="outlined"
-                              startIcon={<Cancel />}
+                              size="small"
+                              startIcon={<Cancel sx={{ fontSize: '14px !important' }} />}
                               onClick={() => {
                                 setIsEditing(false);
                                 setSelectedFile(null);
@@ -1109,6 +1137,13 @@ const UserProfile: React.FC = () => {
                               sx={{
                                 color: '#fff',
                                 borderColor: 'rgba(255, 255, 255, 0.3)',
+                                fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                                py: { xs: 0.3, sm: 0.5 },
+                                px: { xs: 1.2, sm: 1.8 },
+                                minHeight: { xs: 26, sm: 32 },
+                                borderRadius: '6px',
+                                textTransform: 'none',
+                                fontWeight: 600,
                                 '&:hover': {
                                   borderColor: '#fff',
                                   backgroundColor: 'rgba(255, 255, 255, 0.1)'
@@ -1144,9 +1179,21 @@ const UserProfile: React.FC = () => {
                   </Typography>
                   <Button
                     variant="contained"
-                    startIcon={<RefreshIcon />}
+                    size="small"
+                    startIcon={<RefreshIcon sx={{ fontSize: '14px !important' }} />}
                     onClick={fetchBookings}
-                    sx={{ backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' }, fontWeight: 600 }}
+                    sx={{
+                      backgroundColor: '#ff1955',
+                      color: '#fff',
+                      fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                      py: { xs: 0.3, sm: 0.5 },
+                      px: { xs: 1.2, sm: 1.8 },
+                      minHeight: { xs: 26, sm: 32 },
+                      borderRadius: '6px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': { backgroundColor: '#e01545' }
+                    }}
                   >
                     Refresh
                   </Button>

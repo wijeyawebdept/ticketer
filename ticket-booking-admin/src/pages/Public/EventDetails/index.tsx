@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
 import { getAssetUrl } from '../../../utils/formatters';
 import EventService from '../../../services/event.service';
 import EventScheduleService from '../../../services/eventSchedule.service';
@@ -613,24 +614,24 @@ const EventDetails: React.FC = () => {
         backgroundSize: 'cover',
         minHeight: '100vh',
         width: '100%',
+        backgroundColor: '#0a0e16',
       }}
     >
       <PublicNavbar />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Grid container spacing={0} sx={{ mt: 4, display: 'flex', alignItems: 'stretch' }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
+        <Grid container spacing={{ xs: 2.5, md: 3 }} sx={{ mt: { xs: 0, md: 2 }, alignItems: 'stretch' }}>
           {/* Left Column - Event Information */}
-          <Grid item xs={12} md={6} sx={{ display: 'flex', paddingRight: { md: '15px' } }}>
+          <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
             <Box
               className="inner-side"
               sx={{
-                marginTop: '70px',
-                backgroundColor: 'rgba(47,55,66,0.9)',
-                borderRadius: '13px',
-                paddingTop: '20px',
-                paddingBottom: '30px',
-                paddingLeft: '30px',
-                paddingRight: '30px',
+                marginTop: { xs: 0, md: '70px' },
+                backgroundColor: '#1b222c',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                p: { xs: 2, sm: 3, md: 4 },
                 width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -638,14 +639,12 @@ const EventDetails: React.FC = () => {
             >
               <Typography
                 component="h1"
-                className="my-4 inner-text"
                 sx={{
-                  marginTop: '1.5rem',
-                  marginBottom: '1.5rem',
-                  fontWeight: 300,
+                  mb: { xs: 1, md: 2 },
+                  fontWeight: 800,
                   fontFamily: 'Raleway, sans-serif',
                   color: '#ffffff',
-                  fontSize: '30px',
+                  fontSize: { xs: '20px', sm: '24px', md: '30px' },
                   lineHeight: 1.2,
                 }}
               >
@@ -655,24 +654,25 @@ const EventDetails: React.FC = () => {
               <Typography
                 component="h2"
                 sx={{
-                  marginBottom: '1rem',
+                  mb: 1.5,
                   fontWeight: 700,
                   color: '#ff1955',
                   fontFamily: 'Raleway, sans-serif',
-                  fontSize: '24px',
+                  fontSize: { xs: '18px', sm: '21px', md: '24px' },
                 }}
               >
                 {event.name}
               </Typography>
 
               {event.imageUrl && (
-                <Typography
-                  component="p"
+                <Box
                   sx={{
-                    marginTop: 0,
-                    marginBottom: '1rem',
-                    color: '#fff',
-                    fontFamily: 'Raleway, sans-serif',
+                    mb: 2,
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    maxHeight: { xs: '200px', sm: '280px', md: '350px' },
+                    width: '100%',
+                    backgroundColor: '#0f131a',
                   }}
                 >
                   <Box
@@ -681,21 +681,22 @@ const EventDetails: React.FC = () => {
                     alt={event.name}
                     sx={{
                       display: 'block',
-                      maxWidth: '100%',
-                      height: 'auto',
-                      borderRadius: '8px',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
                     }}
                   />
-                </Typography>
+                </Box>
               )}
 
               <Typography
                 component="p"
                 sx={{
-                  marginTop: 0,
-                  marginBottom: '1rem',
-                  color: '#fff',
+                  mb: 2,
+                  color: '#cbd5e1',
                   fontFamily: 'Raleway, sans-serif',
+                  fontSize: { xs: '0.85rem', md: '0.95rem' },
+                  lineHeight: 1.6,
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
                   wordBreak: 'break-word',
@@ -705,15 +706,15 @@ const EventDetails: React.FC = () => {
                 {event.description || 'No description available for this event.'}
               </Typography>
 
-              <Box sx={{ mt: 2 }}>
-                <Typography sx={{ color: '#fcd0a5', fontWeight: 600, mb: 1 }}>
+              <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <Typography sx={{ color: '#fcd0a5', fontWeight: 700, mb: 1, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                   Event Details:
                 </Typography>
                 
                 {/* Display schedules if available */}
                 {schedules.length > 0 ? (
                   <>
-                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 1, mt: 2 }}>
+                    <Typography sx={{ color: '#ffffff', fontWeight: 600, mb: 1, mt: 1, fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
                       Show Times:
                     </Typography>
                     {schedules.map((schedule, index) => {
@@ -731,9 +732,10 @@ const EventDetails: React.FC = () => {
                         <Typography 
                           key={schedule.scheduleId} 
                           sx={{ 
-                            color: isPast ? 'rgba(255, 255, 255, 0.4)' : '#fff', 
+                            color: isPast ? 'rgba(255, 255, 255, 0.4)' : '#e2e8f0', 
                             mb: 0.5, 
-                            pl: 2,
+                            pl: 1.5,
+                            fontSize: { xs: '0.8rem', md: '0.9rem' },
                             textDecoration: isPast ? 'line-through' : 'none',
                             fontStyle: isPast ? 'italic' : 'normal'
                           }}
@@ -746,42 +748,41 @@ const EventDetails: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                    <Typography sx={{ color: '#e2e8f0', mb: 0.5, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>
                       <strong>Date:</strong> {formatDate(event.startDateTime)}
                     </Typography>
-                    <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                    <Typography sx={{ color: '#e2e8f0', mb: 0.5, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>
                       <strong>Time:</strong> {formatTime(event.startDateTime)}
                     </Typography>
                   </>
                 )}
                 
-                <Typography sx={{ color: '#fff', mb: 0.5, mt: 2 }}>
+                <Typography sx={{ color: '#e2e8f0', mb: 0.5, mt: 1.5, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>
                   <strong>Venue:</strong> {event.venue?.name || 'TBA'}
                 </Typography>
 
                 {event.venue?.address && (
-                  <Typography sx={{ color: '#fff', mb: 0.5 }}>
+                  <Typography sx={{ color: '#e2e8f0', mb: 0.5, fontSize: { xs: '0.8rem', md: '0.9rem' } }}>
                     <strong>Address:</strong> {event.venue.address}, {event.venue.city}
                   </Typography>
                 )}
-
               </Box>
             </Box>
           </Grid>
 
           {/* Right Column - Ticket Booking */}
-          <Grid item xs={12} md={6} sx={{ marginTop: '70px', paddingLeft: { md: '15px' } }}>
+          <Grid item xs={12} md={6} sx={{ marginTop: { xs: 0, md: '70px' } }}>
             <Typography
-              className="right-text hidden-xs"
+              className="right-text"
               sx={{
                 fontFamily: 'Raleway, sans-serif',
                 fontWeight: 900,
                 color: '#fff',
-                fontSize: { xs: '30px', md: '60px' },
+                fontSize: { xs: '24px', md: '48px', lg: '56px' },
                 lineHeight: 1.1,
                 letterSpacing: '0px',
-                marginBottom: 0,
-                display: { xs: 'none', sm: 'block' },
+                marginBottom: { xs: 1, md: 2 },
+                display: { xs: 'none', md: 'block' },
               }}
             >
               {event.name}
@@ -790,28 +791,26 @@ const EventDetails: React.FC = () => {
             <Box
               className="tk-price"
               sx={{
-                marginTop: '10px',
-                backgroundColor: '#ffffff',
-                borderRadius: '13px',
-                paddingTop: '20px',
-                paddingBottom: '26px',
-                paddingLeft: '30px',
-                paddingRight: '30px',
+                backgroundColor: '#1b222c',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                p: { xs: 2, sm: 3, md: 4 },
               }}
             >
               {event.ticketCutoffTime && (
                 <Box sx={{ 
-                  mb: 3, 
-                  p: 2, 
-                  backgroundColor: 'rgba(255, 25, 85, 0.1)', 
+                  mb: 2.5, 
+                  p: { xs: 1.5, md: 2 }, 
+                  backgroundColor: 'rgba(255, 25, 85, 0.12)', 
                   borderLeft: '4px solid #ff1955',
                   borderRadius: '8px'
                 }}>
-                  <Typography sx={{ color: '#333', fontWeight: 600, fontSize: '16px', fontFamily: 'Raleway, sans-serif' }}>
+                  <Typography sx={{ color: '#ffffff', fontWeight: 600, fontSize: { xs: '0.82rem', md: '0.95rem' }, fontFamily: 'Raleway, sans-serif' }}>
                     <strong>Ticket Sales Close:</strong> {formatDate(event.ticketCutoffTime)} at {formatTime(event.ticketCutoffTime)}
                   </Typography>
                   {showCutoffCountdown && cutoffCountdownText && (
-                    <Typography sx={{ color: '#ff1955', fontWeight: 700, fontSize: '15px', mt: 1, fontFamily: 'Raleway, sans-serif' }}>
+                    <Typography sx={{ color: '#ff1955', fontWeight: 700, fontSize: { xs: '0.82rem', md: '0.9rem' }, mt: 0.5, fontFamily: 'Raleway, sans-serif' }}>
                       Closes in: {cutoffCountdownText}
                     </Typography>
                   )}
@@ -827,31 +826,28 @@ const EventDetails: React.FC = () => {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'flex-start',
-                        gap: 1,
-                        marginTop: '20px',
-                        marginBottom: '20px',
+                        gap: 0.5,
+                        my: 2,
                       }}
                       className={`event-countdown countdown-${countdownStatus}`}
                     >
                       <Typography sx={{ 
                         fontWeight: 800, 
-                        fontSize: '22px', 
+                        fontSize: { xs: '16px', md: '20px' }, 
                         background: 'linear-gradient(135deg, #ff1955 0%, #ff4080 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
                         textTransform: 'uppercase',
                         letterSpacing: '1px',
-                        textShadow: '0 2px 4px rgba(255, 25, 85, 0.3)',
                         margin: 0,
                       }}>
                         Event starts in:
                       </Typography>
                       <Typography sx={{ 
-                        fontSize: '18px', 
-                        color: '#250e2a5c', 
-                        fontWeight: 600,
-                        textShadow: '0 2px 8px rgba(255, 25, 85, 0.3)',
+                        fontSize: { xs: '14px', md: '17px' }, 
+                        color: '#ff1955', 
+                        fontWeight: 700,
                       }}>
                         {countdownText}
                       </Typography>
@@ -859,22 +855,20 @@ const EventDetails: React.FC = () => {
                   )}
                   <Box
                     sx={{
-                      marginTop: '20px',
-                      backgroundColor: '#eee',
-                      paddingTop: '10px',
-                      paddingBottom: '10px',
-                      paddingLeft: '15px',
-                      paddingRight: '15px',
-                      marginBottom: '10px',
+                      my: 2,
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      p: { xs: 1.5, md: 2 },
                     }}
                   >
                     <Typography
                       sx={{
-                        marginTop: '15px',
-                        marginBottom: '10px',
+                        mb: 1.5,
                         fontWeight: 700,
                         fontFamily: 'Raleway, sans-serif',
-                        fontSize: '14px',
+                        fontSize: { xs: '0.85rem', md: '0.95rem' },
+                        color: '#fcd0a5',
                       }}
                     >
                       Select Show Time:
@@ -882,7 +876,7 @@ const EventDetails: React.FC = () => {
                     <RadioGroup
                       value={selectedShowtime}
                       onChange={handleShowtimeChange}
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
+                      sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}
                     >
                       {schedules.map((schedule) => {
                         const { isAvailable, label, color, bg } = getScheduleAvailability(schedule);
@@ -895,28 +889,28 @@ const EventDetails: React.FC = () => {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              backgroundColor: '#ffffff',
+                              backgroundColor: '#121620',
                               padding: '6px 12px',
                               borderRadius: '8px',
-                              border: isSelected ? '2px solid #ff1955' : '1px solid #e0e0e0',
+                              border: isSelected ? '2px solid #ff1955' : '1px solid rgba(255, 255, 255, 0.12)',
                               opacity: isAvailable ? 1 : 0.55,
                               transition: 'all 0.2s ease',
-                              boxShadow: isSelected ? '0 2px 8px rgba(255, 25, 85, 0.15)' : 'none',
+                              boxShadow: isSelected ? '0 2px 8px rgba(255, 25, 85, 0.25)' : 'none',
                             }}
                           >
                             <FormControlLabel
                               value={schedule.scheduleId}
-                              control={<Radio size="small" disabled={!isAvailable} />}
+                              control={<Radio size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&.Mui-checked': { color: '#ff1955' } }} disabled={!isAvailable} />}
                               label={formatScheduleDisplay(schedule)}
                               disabled={!isAvailable}
                               sx={{ 
                                 flexGrow: 1,
                                 margin: 0,
                                 '& .MuiFormControlLabel-label': { 
-                                  fontSize: '14px',
+                                  fontSize: { xs: '12px', sm: '14px' },
                                   fontWeight: isSelected ? 600 : 500,
                                   textDecoration: !isAvailable ? 'line-through' : 'none',
-                                  color: !isAvailable ? 'rgba(0, 0, 0, 0.45)' : '#222',
+                                  color: !isAvailable ? 'rgba(255, 255, 255, 0.45)' : '#ffffff',
                                   fontStyle: !isAvailable ? 'italic' : 'normal'
                                 },
                               }}
@@ -927,7 +921,7 @@ const EventDetails: React.FC = () => {
                               sx={{ 
                                 bgcolor: bg, 
                                 color: color, 
-                                fontSize: '11px', 
+                                fontSize: '10px', 
                                 fontWeight: 800, 
                                 height: 22,
                                 borderRadius: '4px',
@@ -944,22 +938,19 @@ const EventDetails: React.FC = () => {
               ) : (
                 <Box
                   sx={{
-                    marginTop: '20px',
-                    backgroundColor: '#eee',
-                    paddingTop: '10px',
-                    paddingBottom: '10px',
-                    paddingLeft: '15px',
-                    paddingRight: '15px',
-                    marginBottom: '10px',
+                    my: 2,
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    p: 2,
                   }}
                 >
                   <Typography
                     sx={{
-                      marginTop: '15px',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       fontFamily: 'Raleway, sans-serif',
-                      fontSize: '14px',
-                      color: '#666',
+                      fontSize: '0.85rem',
+                      color: 'rgba(255, 255, 255, 0.6)',
                     }}
                   >
                     Show times to be announced
@@ -969,12 +960,11 @@ const EventDetails: React.FC = () => {
 
               <Box
                 sx={{
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
                   borderRadius: '12px',
-                  p: { xs: 2, md: 3 },
+                  p: { xs: 1.5, md: 2.5 },
                   mb: 3,
-                  border: '1px solid #eaeaea',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
                 {/* Table Header */}
@@ -982,23 +972,23 @@ const EventDetails: React.FC = () => {
                   container
                   sx={{
                     borderBottom: '2px solid #ff1955',
-                    pb: 1.5,
-                    mb: 2,
+                    pb: 1,
+                    mb: 1.5,
                   }}
                 >
                   <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
                       SEAT TYPE
                     </Typography>
                   </Grid>
                   <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
                       PRICE (RS.)
                     </Typography>
                   </Grid>
                   {!hasSeatingLayout && (
                     <Grid item xs={4}>
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#555', letterSpacing: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
                         TICKETS
                       </Typography>
                     </Grid>
@@ -1029,13 +1019,13 @@ const EventDetails: React.FC = () => {
                       key={index}
                       container
                       sx={{
-                        borderBottom: index !== ticketCategories.length - 1 ? '1px dashed #ccc' : 'none',
-                        py: 2,
+                        borderBottom: index !== ticketCategories.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none',
+                        py: 1.5,
                         alignItems: 'center',
                       }}
                     >
                       <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                        <Typography variant="body2" fontWeight={600}>{categoryName}</Typography>
+                        <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{categoryName}</Typography>
                         {hasActiveDeal && (
                           <Box
                             sx={{
@@ -1046,9 +1036,9 @@ const EventDetails: React.FC = () => {
                               color: '#fff',
                               borderRadius: '4px',
                               px: 0.75,
-                              py: 0.25,
+                              py: 0.2,
                               mt: 0.5,
-                              fontSize: '10px',
+                              fontSize: '9px',
                               fontWeight: 700,
                               letterSpacing: '0.5px',
                             }}
@@ -1062,23 +1052,23 @@ const EventDetails: React.FC = () => {
                           <Box>
                             <Typography
                               variant="caption"
-                              sx={{ textDecoration: 'line-through', color: '#999', display: 'block' }}
+                              sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}
                             >
                               {formatCurrency(categoryPrice)}
                             </Typography>
-                            <Typography variant="body2" fontWeight={700} sx={{ color: '#e53935' }}>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>
                               {formatCurrency(discountedPrice)}
                             </Typography>
                           </Box>
                         ) : isBuyGetDeal ? (
                           <Box>
-                            <Typography variant="body2">{formatCurrency(categoryPrice)}</Typography>
-                            <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 600 }}>
+                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
                               {category.dealFreeQuantity} free with {category.dealBuyQuantity}
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography variant="body2">{formatCurrency(categoryPrice)}</Typography>
+                          <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
                         )}
                       </Grid>
                       {!hasSeatingLayout && (
@@ -1090,9 +1080,23 @@ const EventDetails: React.FC = () => {
                                 handleQuantityChange(categoryName, e.target.value);
                               }}
                               sx={{
+                                color: '#ffffff',
+                                backgroundColor: '#121620',
                                 '& .MuiSelect-select': {
-                                  backgroundColor: 'white'
-                                }
+                                  backgroundColor: '#121620',
+                                  color: '#ffffff',
+                                  py: '4px',
+                                  fontSize: { xs: '0.78rem', md: '0.88rem' },
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                                },
+                                '& .MuiSvgIcon-root': {
+                                  color: '#ffffff',
+                                },
                               }}
                             >
                               {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
@@ -1108,7 +1112,7 @@ const EventDetails: React.FC = () => {
                   );
                 })
               ) : (
-                  <Typography variant="body2" sx={{ textAlign: 'center', py: 3, color: '#666', fontStyle: 'italic' }}>
+                  <Typography variant="body2" sx={{ textAlign: 'center', py: 3, color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>
                     No ticket categories available for this event
                   </Typography>
                 )
@@ -1119,8 +1123,8 @@ const EventDetails: React.FC = () => {
               {!hasSeatingLayout && (
                 <Box
                   sx={{
-                    borderBottom: '2px solid #444',
-                    pb: 2,
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    pb: 1.5,
                     mb: 2,
                   }}
                 >
@@ -1130,14 +1134,14 @@ const EventDetails: React.FC = () => {
                     const qty = ticketQuantities[categoryName] || 0;
                     if (qty > 0) {
                       return (
-                        <Typography key={categoryName} variant="body2">
+                        <Typography key={categoryName} variant="body2" sx={{ color: '#cbd5e1', fontSize: { xs: '0.8rem', md: '0.88rem' } }}>
                           {categoryName} {qty} x {formatCurrency(categoryPrice)}
                         </Typography>
                       );
                     }
                     return null;
                   })}
-                  <Typography fontWeight="bold" variant="body1" sx={{ mt: 1 }}>
+                  <Typography fontWeight="bold" variant="body1" sx={{ mt: 1, color: '#ffffff', fontSize: { xs: '0.95rem', md: '1.1rem' } }}>
                     Total = {formatCurrency(calculateTotal())}
                   </Typography>
                 </Box>
@@ -1150,21 +1154,20 @@ const EventDetails: React.FC = () => {
                 onClick={handleNextClick}
                 sx={{
                   fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   color: '#ffffff',
                   backgroundColor: '#ff1955',
-                  borderColor: '#ff1955',
-                  padding: '1px 27px 0',
-                  lineHeight: '48px',
-                  border: '1px solid',
                   borderRadius: '25px',
-                  letterSpacing: '2px',
-                  minWidth: '154px',
+                  py: { xs: 1, md: 1.5 },
+                  fontSize: { xs: '0.82rem', md: '0.95rem' },
+                  letterSpacing: '1px',
                   textTransform: 'uppercase',
+                  boxShadow: '0 6px 18px rgba(255, 25, 85, 0.4)',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    backgroundColor: '#FFFFFF',
-                    color: '#ff1955',
-                    borderColor: '#ff1955',
+                    backgroundColor: '#e01545',
+                    boxShadow: '0 8px 22px rgba(255, 25, 85, 0.65)',
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >
@@ -1313,6 +1316,9 @@ const EventDetails: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Public Footer */}
+      <PublicFooter />
     </Box>
   );
 };

@@ -1,6 +1,8 @@
 .landing-container {
+  min-height: 100dvh;
   height: 100vh;
-  width: 100vw;
+  width: 100%;
+  max-width: 100vw;
   background-color: #242a33;
   display: flex;
   justify-content: center;
@@ -9,6 +11,8 @@
   position: relative;
   color: #ffffff;
   font-family: 'Raleway', sans-serif;
+  box-sizing: border-box;
+  padding: 16px;
 }
 
 .landing-content {
@@ -18,13 +22,17 @@
   align-items: center;
   text-align: center;
   animation: fadeIn 1s ease-out;
+  max-width: 100%;
+  width: 100%;
 }
 
 .logo-wrapper {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 24px;
+  max-width: 100%;
 }
 
 .landing-logo-icon {
@@ -46,11 +54,53 @@
 }
 
 .landing-subtitle {
-  font-weight: 400 !important;
-  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.75) !important;
   letter-spacing: 1.5px !important;
   text-transform: uppercase;
   font-family: 'Raleway', sans-serif;
+  font-size: 1rem !important;
+  max-width: 90%;
+  line-height: 1.5 !important;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 600px) {
+  .logo-wrapper {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .landing-logo-icon {
+    font-size: 56px !important;
+  }
+
+  .landing-title {
+    font-size: 34px !important;
+    letter-spacing: 2px !important;
+  }
+
+  .landing-subtitle {
+    font-size: 0.85rem !important;
+    letter-spacing: 1px !important;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .landing-logo-icon {
+    font-size: 48px !important;
+  }
+
+  .landing-title {
+    font-size: 28px !important;
+    letter-spacing: 1.5px !important;
+  }
+
+  .landing-subtitle {
+    font-size: 0.78rem !important;
+  }
 }
 
 /* Background Blobs */

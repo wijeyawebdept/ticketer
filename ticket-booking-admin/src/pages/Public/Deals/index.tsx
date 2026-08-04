@@ -174,14 +174,17 @@ const Deals: React.FC = () => {
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      backgroundColor: '#fff',
+                      backgroundColor: '#1b222c',
                       borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
                       overflow: 'hidden',
                       cursor: 'pointer',
                       position: 'relative',
                       transition: 'transform 0.25s ease, box-shadow 0.25s ease',
                       '&:hover': {
                         transform: 'translateY(-6px)',
+                        borderColor: 'rgba(0, 200, 83, 0.5)',
                         boxShadow: '0 16px 40px rgba(0,200,83,0.25)',
                       },
                     }}
@@ -243,18 +246,34 @@ const Deals: React.FC = () => {
                       )}
                     </Box>
 
-                    {/* Event Image */}
-                    <CardMedia
-                      component="img"
-                      height="210"
-                      image={
-                        firstDeal.eventImageUrl
-                          ? getAssetUrl(firstDeal.eventImageUrl)
-                          : '/images/default-event.jpg'
-                      }
-                      alt={firstDeal.eventName}
-                      sx={{ objectFit: 'cover' }}
-                    />
+                    {/* Event Image Container with Locked Height */}
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: { xs: '140px', sm: '180px', md: '200px' },
+                        minHeight: { xs: '140px', sm: '180px', md: '200px' },
+                        maxHeight: { xs: '140px', sm: '180px', md: '200px' },
+                        overflow: 'hidden',
+                        position: 'relative',
+                        backgroundColor: '#0f131a',
+                      }}
+                    >
+                      <CardMedia
+                        component="img"
+                        image={
+                          firstDeal.eventImageUrl
+                            ? getAssetUrl(firstDeal.eventImageUrl)
+                            : '/images/default-event.jpg'
+                        }
+                        alt={firstDeal.eventName}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: 'center center',
+                        }}
+                      />
+                    </Box>
 
                     <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2.5 }}>
                       {/* Event Name */}
@@ -263,7 +282,7 @@ const Deals: React.FC = () => {
                         sx={{
                           fontFamily: 'Raleway, sans-serif',
                           fontWeight: 700,
-                          color: '#1a2035',
+                          color: '#ffffff',
                           mb: 1.5,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -280,12 +299,12 @@ const Deals: React.FC = () => {
                       {/* Venue */}
                       {firstDeal.venueName && (
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <LocationOn sx={{ fontSize: 15, color: '#ff1955', mr: 0.75 }} />
+                          <LocationOn sx={{ fontSize: 15, color: '#fcd0a5', mr: 0.75 }} />
                           <Typography
                             variant="body2"
                             sx={{
                               fontFamily: 'Raleway, sans-serif',
-                              color: '#555',
+                              color: '#fcd0a5',
                               fontSize: '0.8rem',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',

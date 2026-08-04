@@ -262,7 +262,94 @@
 }
 
 @media (max-width: 768px) {
+  .venue-map-section {
+    width: 100%;
+    gap: 4px;
+  }
+
+  .venue-map-row {
+    position: relative;
+  }
+
   .venue-svg-container {
-    height: 400px;
+    height: 320px;
+    touch-action: none;
+  }
+
+  .venue-seat-map-container {
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  /* On mobile, hide the floating control buttons overlay so user has a clean view */
+  .venue-controls-col {
+    display: none !important;
+  }
+
+  .ctrl-toggle-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(26, 31, 40, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  }
+
+  .ctrl-toggle-btn svg {
+    font-size: 12px !important;
+    width: 12px;
+    height: 12px;
+  }
+
+  .ctrl-icon-btn {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ctrl-icon-btn svg {
+    font-size: 11px !important;
+    width: 11px;
+    height: 11px;
+  }
+
+  .venue-controls-vertical {
+    padding: 4px;
+    gap: 2px;
+    background: rgba(26, 31, 40, 0.95);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  }
+
+  .venue-legend {
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .legend-item {
+    font-size: 10px;
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .legend-color {
+    width: 9px;
+    height: 9px;
+  }
+
+  .seat-tooltip {
+    position: fixed;
+    right: 10px;
+    left: 10px;
+    top: auto;
+    bottom: 20px;
+    transform: none;
+    min-width: auto;
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  .seat-tooltip strong {
+    font-size: 14px;
   }
 }

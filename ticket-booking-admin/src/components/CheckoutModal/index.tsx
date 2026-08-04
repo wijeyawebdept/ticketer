@@ -19,6 +19,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services';
 import { useCurrency } from '../../context/CurrencyContext';
+import {
+  Event as EventIcon,
+  AccessTime as AccessTimeIcon,
+  LocationOn as LocationOnIcon,
+  ConfirmationNumber as TicketIcon,
+  Edit as EditIcon,
+} from '@mui/icons-material';
 
 export interface CheckoutModalProps {
   isOpen: boolean;
@@ -168,9 +175,41 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       }}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 2, maxHeight: '90vh' } }}
+      PaperProps={{
+        sx: {
+          borderRadius: { xs: 0, sm: 2 },
+          m: { xs: 0, sm: 2 },
+          maxHeight: { xs: '100vh', sm: '90vh' },
+          width: '100%',
+          '& .MuiOutlinedInput-root': {
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(0, 0, 0, 0.23) !important',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2c3e50 !important',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2c3e50 !important',
+              borderWidth: '1.5px !important',
+            },
+            '&.Mui-error .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2c3e50 !important',
+            },
+            '&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2c3e50 !important',
+            },
+            '& input': {
+              outline: 'none !important',
+              boxShadow: 'none !important',
+            },
+          },
+          '& .MuiFormLabel-root.Mui-focused, & .MuiInputLabel-root.Mui-focused, & .MuiFormLabel-root.Mui-error, & .MuiInputLabel-root.Mui-error': {
+            color: '#2c3e50 !important',
+          },
+        }
+      }}
     >
-      <DialogTitle sx={{ position: 'relative', pb: 2, borderBottom: '1px solid #f0f0f0' }}>
+      <DialogTitle sx={{ position: 'relative', pb: { xs: 1, sm: 2 }, px: { xs: 2, sm: 3 }, borderBottom: '1px solid #f0f0f0' }}>
         <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8, color: 'grey.500' }}>
           ×
         </IconButton>
@@ -178,13 +217,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       <DialogContent sx={{ p: 0 }}>
         <Grid container>
-          <Grid item xs={12} md={7} sx={{ p: 4, borderRight: { md: '1px solid #f0f0f0' } }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, fontFamily: 'Raleway, sans-serif' }}>
+          <Grid item xs={12} md={7} order={{ xs: 2, md: 1 }} sx={{ p: { xs: 2, sm: 4 }, borderRight: { md: '1px solid #f0f0f0' } }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: { xs: 2, sm: 3 }, fontFamily: 'Raleway, sans-serif', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               {t('checkout', 'Checkout')}
             </Typography>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 {t('deliveryMethod', 'Delivery method')}
               </Typography>
               <FormControl fullWidth>
@@ -193,16 +232,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <MenuItem value="pickup">{t('pickup', 'Pick up')}</MenuItem>
                 </Select>
               </FormControl>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block', fontSize: '0.75rem' }}>
                 {t('handlingFeeNotice', "Ha. Ha. Ha. we're gonna charge u more 100/=")}
               </Typography>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 {t('paymentMethodSelect', 'Payment Method')} <span style={{ color: '#d32f2f' }}>({t('selectOne', 'Select one')})</span>
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
                 {[
                   { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
                   { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
@@ -215,8 +254,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     key={method.value}
                     onClick={() => setSelectedPaymentMethod(method.value)}
                     sx={{
-                      width: '80px',
-                      height: '50px',
+                      width: { xs: '62px', sm: '80px' },
+                      height: { xs: '42px', sm: '50px' },
                       border: selectedPaymentMethod === method.value ? '3px solid #ff1955' : '2px solid #ddd',
                       borderRadius: '8px',
                       cursor: 'pointer',
@@ -226,14 +265,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       overflow: 'hidden',
                     }}
                   >
-                    <Box component="img" src={method.img} alt={method.alt} sx={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }} />
+                    <Box component="img" src={method.img} alt={method.alt} sx={{ width: '100%', height: '100%', objectFit: 'contain', padding: { xs: '4px', sm: '8px' } }} />
                   </Box>
                 ))}
               </Box>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Grid container spacing={2}>
+            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth label="First Name" value={customerInfo.firstName} onChange={(e) => handleCustomerInfoChange('firstName', e.target.value)} size="small" required />
                 </Grid>
@@ -255,12 +294,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <Box sx={{ mb: 2 }}>
               <FormControlLabel
                 control={<input type="checkbox" checked={bookingForSomeoneElse} onChange={(e) => setBookingForSomeoneElse(e.target.checked)} style={{ marginRight: '8px' }} />}
-                label={<Typography variant="body2">{t('bookingForSomeoneElse', 'I am booking for someone else')}</Typography>}
+                label={<Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{t('bookingForSomeoneElse', 'I am booking for someone else')}</Typography>}
               />
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 0.5 }}>
                 <FormControlLabel
                   control={<input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} style={{ marginRight: '8px' }} />}
-                  label={<Typography variant="body2">{t('acceptTerms', 'I accept and agree to Terms and Conditions')}</Typography>}
+                  label={<Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{t('acceptTerms', 'I accept and agree to Terms and Conditions')}</Typography>}
                 />
               </Box>
             </Box>
@@ -273,77 +312,93 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </Box>
             )}
 
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button variant="outlined" onClick={onClose} sx={{ borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column-reverse', sm: 'row' }, gap: { xs: 1, sm: 2 }, mt: 2 }}>
+              <Button variant="outlined" onClick={onClose} sx={{ width: { xs: '100%', sm: 'auto' }, borderColor: '#ff1955', color: '#ff1955', textTransform: 'none', fontWeight: 600, py: { xs: 1, sm: 1.2 } }}>
                 {t('backToSelection', 'Back to selection')}
               </Button>
-              <Button variant="contained" fullWidth onClick={handleConfirm} disabled={loading} sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700 }}>
+              <Button variant="contained" fullWidth onClick={handleConfirm} disabled={loading} sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700, py: { xs: 1, sm: 1.2 } }}>
                 {loading ? t('processing', 'Processing...') : t('confirmBooking', 'Confirm booking')}
               </Button>
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={5} sx={{ p: 4, backgroundColor: '#fafafa' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '2px solid #e0e0e0' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {t('ticketSummary', 'Ticket Summary')}
-              </Typography>
+          <Grid item xs={12} md={5} order={{ xs: 1, md: 2 }} sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid #e2e8f0' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TicketIcon sx={{ color: '#ff1955', fontSize: 22 }} />
+                <Typography variant="h6" sx={{ fontWeight: 800, fontFamily: 'Raleway, sans-serif', color: '#0f172a', fontSize: '1.1rem' }}>
+                  {t('ticketSummary', 'Ticket Summary')}
+                </Typography>
+              </Box>
               {!hideChangeSeats && (
                 <Button 
                   size="small" 
                   onClick={onClose}
-                  sx={{ color: '#ff1955', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
+                  startIcon={<EditIcon sx={{ fontSize: '14px !important' }} />}
+                  sx={{ color: '#ff1955', textTransform: 'none', fontWeight: 700, fontSize: '0.8rem', borderRadius: '12px', border: '1px solid rgba(255,25,85,0.2)', px: 1.5, py: 0.3, '&:hover': { bgcolor: 'rgba(255,25,85,0.08)' } }}
                 >
                   {t('changeSeats', 'Change Seats')}
                 </Button>
               )}
             </Box>
 
-            {/* Event Details Section */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: '#ff1955' }}>
+            {/* Event Details Card */}
+            <Box sx={{ p: 2, borderRadius: '12px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: '4px solid #ff1955' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, color: '#0f172a', fontFamily: 'Raleway, sans-serif', fontSize: '1rem' }}>
                 {eventDetails?.title}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-                <Typography variant="body2">{eventDetails?.date}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-                <Typography variant="body2">{eventDetails?.time}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5, gap: 1 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{eventDetails?.venue}</Typography>
-                  {eventDetails?.venueAddress && (
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                      {eventDetails.venueAddress}
-                    </Typography>
-                  )}
-                </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
+                {eventDetails?.date && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#475569', fontSize: '0.85rem' }}>
+                    <EventIcon sx={{ fontSize: 16, color: '#ff1955' }} />
+                    <span>{eventDetails.date}</span>
+                  </Box>
+                )}
+                {eventDetails?.time && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#475569', fontSize: '0.85rem' }}>
+                    <AccessTimeIcon sx={{ fontSize: 16, color: '#ff1955' }} />
+                    <span>{eventDetails.time}</span>
+                  </Box>
+                )}
+                {eventDetails?.venue && (
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, color: '#475569', fontSize: '0.85rem' }}>
+                    <LocationOnIcon sx={{ fontSize: 16, color: '#ff1955', mt: 0.2 }} />
+                    <Box>
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>{eventDetails.venue}</span>
+                      {eventDetails?.venueAddress && (
+                        <Typography variant="caption" sx={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>
+                          {eventDetails.venueAddress}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
               </Box>
             </Box>
 
-            {/* Selected Tickets Section */}
-            <Box sx={{ mb: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
+            {/* Selected Tickets Card */}
+            <Box sx={{ p: 2, borderRadius: '12px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                 {t('selectedTickets', 'Selected Tickets')}
               </Typography>
 
               {/* Seated Tickets */}
               {selectedSeatDetails.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>{t('seatsLabelShort', 'Seats')} ({selectedSeatDetails.length})</Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                <Box sx={{ mb: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#1e293b' }}>{t('seatsLabelShort', 'Seats')} ({selectedSeatDetails.length})</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mb: 1.5 }}>
                     {selectedSeatDetails.map((seat, index) => (
                       <Box
                         key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)}
                         sx={{
-                          px: 1,
-                          py: 0.5,
-                          backgroundColor: '#fff',
-                          border: '1px solid #ddd',
-                          borderRadius: 1,
+                          px: 1.2,
+                          py: 0.4,
+                          backgroundColor: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 700,
+                          color: '#0f172a',
                         }}
                       >
                         {seat?.seatId || selectedSeats.find((_, i) => i === index)}
@@ -351,11 +406,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     ))}
                   </Box>
                   {selectedSeatDetails.map((seat, index) => (
-                    <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {(seat?.seatId || selectedSeats.find((_, i) => i === index))} - {seat?.categoryName || t('standard', 'Standard')}
+                    <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.4, borderBottom: '1px dashed #f1f5f9' }}>
+                      <Typography variant="caption" sx={{ color: '#475569', fontWeight: 500 }}>
+                        {(seat?.seatId || selectedSeats.find((_, i) => i === index))} • {seat?.categoryName || t('standard', 'Standard')}
                       </Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#0f172a' }}>
                         {formatCurrency(seat?.currentPrice || seat?.price || 0)}
                       </Typography>
                     </Box>
@@ -365,60 +420,62 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
               {/* Shared Area Tickets */}
               {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => (
-                <Box key={`shared-${selection.areaNumber || selection.categoryName}`} sx={{ mb: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">
-                      {selection.categoryName} × {selection.ticketCount}
+                <Box key={`shared-${selection.areaNumber || selection.categoryName}`} sx={{ py: 0.5, borderBottom: '1px dashed #f1f5f9' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                      {selection.categoryName} <span style={{ color: '#64748b', fontWeight: 400 }}>× {selection.ticketCount}</span>
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
                       {formatCurrency(selection.ticketCount * (selection.pricePerTicket || selection.price || 0))}
                     </Typography>
                   </Box>
                 </Box>
               ))}
 
-              {/* Show message if no tickets selected */}
               {selectedSeatDetails.length === 0 && sharedAreaSelections.length === 0 && (
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                   {t('noTicketsSelected', 'No tickets selected')}
                 </Typography>
               )}
             </Box>
 
-            {/* Amount Section */}
-            <Box sx={{ pt: 2, borderTop: '2px solid #e0e0e0' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary' }}>
-                {t('amount', 'Amount')}
+            {/* Total Payment Breakdown Card */}
+            <Box sx={{ p: 2, borderRadius: '12px', background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)', color: '#ffffff', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
+                {t('amount', 'Amount Breakdown')}
               </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">{t('subTotal', 'Sub Total')}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem' }}>
+                <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('subTotal', 'Sub Total')}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#ffffff' }}>
                   {formatCurrency(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice)}
                 </Typography>
               </Box>
               {totalDiscount > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#4caf50' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ color: '#4ade80' }}>
                     {discountInfoString ? `Discount (${discountInfoString})` : t('discount', 'Discount')}
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#4ade80' }}>
                     -{formatCurrency(totalDiscount)}
                   </Typography>
                 </Box>
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="body2">{t('handlingFee', 'Handling fee')}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4CAF50' }}>{formatCurrency(handlingFee)}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, fontSize: '0.875rem' }}>
+                <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('handlingFee', 'Handling fee')}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4ade80' }}>{formatCurrency(handlingFee)}</Typography>
               </Box>
-              <Box sx={{ borderTop: '2px solid #e0e0e0', pt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('total', 'Total')}</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(totalPrice + handlingFee)}</Typography>
+              <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.15)', pt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#ffffff', fontFamily: 'Raleway, sans-serif' }}>
+                  {t('total', 'Total Pay')}
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#ff1955', fontFamily: 'Raleway, sans-serif', fontSize: '1.25rem' }}>
+                  {formatCurrency(totalPrice + handlingFee)}
+                </Typography>
               </Box>
             </Box>
-            
-            {/* Optional extra content (like Showtime Selector) */}
+
             {children && (
-              <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
+              <Box sx={{ mt: 1, pt: 2, borderTop: '1px solid #e2e8f0' }}>
                 {children}
               </Box>
             )}

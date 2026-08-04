@@ -15,6 +15,7 @@ import {
   TextField,
   Card,
   CardContent,
+  IconButton,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
@@ -342,38 +343,63 @@ const SeatMap: React.FC<SeatMapProps> = ({ eventId, onBookingComplete }) => {
     );
   }
 
+  const [zoomScale, setZoomScale] = useState<number>(1.0);
+
+  const handleZoomIn = () => setZoomScale((prev) => Math.min(3.0, prev + 0.25));
+  const handleZoomOut = () => setZoomScale((prev) => Math.max(0.5, prev - 0.25));
+  const handleZoomReset = () => setZoomScale(1.0);
+
   const rowOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S'];
 
   return (
     <Box>
-      <SeatMapContainer>
-        <StageBox>STAGE</StageBox>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+        <Typography variant="subtitle2" color="text.secondary" fontWeight={700}>
+          Interactive Seat Map (Zoom: {(zoomScale * 100).toFixed(0)}%)
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <IconButton size="small" onClick={handleZoomOut} disabled={zoomScale <= 0.5} sx={{ border: '1px solid #cbd5e1', minHeight: 36, minWidth: 36 }}>
+            <RemoveIcon fontSize="small" />
+          </IconButton>
+          <Button size="small" variant="outlined" onClick={handleZoomReset} sx={{ fontSize: '11px', fontWeight: 700, minHeight: 36 }}>
+            Reset View
+          </Button>
+          <IconButton size="small" onClick={handleZoomIn} disabled={zoomScale >= 3.0} sx={{ border: '1px solid #cbd5e1', minHeight: 36, minWidth: 36 }}>
+            <AddIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
 
-        {/* Seat grid */}
-        {rowOrder.map((row) => {
-          const rowSeats = groupedSeats[row];
-          if (!rowSeats) return null;
+      <SeatMapContainer sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', p: { xs: 1.5, sm: 3 } }}>
+        <Box sx={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center', transition: 'transform 0.25s ease', minWidth: 'fit-content' }}>
+          <StageBox>STAGE</StageBox>
 
-          return (
-            <RowContainer key={row}>
-              <RowLabel variant="h6">{row}</RowLabel>
-              <Box display="flex" flexWrap="nowrap">
-                {rowSeats.map((seat) => (
-                  <SeatButton
-                    key={seat.seatId}
-                    status={seat.status}
-                    seatType={seat.seatType}
-                    onClick={() => handleSeatClick(seat)}
-                    disabled={seat.status === 'booked' || seat.status === 'held' || seat.status === 'blocked'}
-                    size="small"
-                  >
-                    {seat.seatNumber}
-                  </SeatButton>
-                ))}
-              </Box>
-            </RowContainer>
-          );
-        })}
+          {/* Seat grid */}
+          {rowOrder.map((row) => {
+            const rowSeats = groupedSeats[row];
+            if (!rowSeats) return null;
+
+            return (
+              <RowContainer key={row}>
+                <RowLabel variant="h6">{row}</RowLabel>
+                <Box display="flex" flexWrap="nowrap">
+                  {rowSeats.map((seat) => (
+                    <SeatButton
+                      key={seat.seatId}
+                      status={seat.status}
+                      seatType={seat.seatType}
+                      onClick={() => handleSeatClick(seat)}
+                      disabled={seat.status === 'booked' || seat.status === 'held' || seat.status === 'blocked'}
+                      size="small"
+                    >
+                      {seat.seatNumber}
+                    </SeatButton>
+                  ))}
+                </Box>
+              </RowContainer>
+            );
+          })}
+        </Box>
       </SeatMapContainer>
 
       {/* Legend – unified */}

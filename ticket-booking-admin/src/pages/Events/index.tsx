@@ -448,58 +448,82 @@ const Events: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>Event Management</Typography>
-          <Box display="flex" gap={2} alignItems="center">
-            <TextField
-              size="small"
-              placeholder="Search events, venues, organizers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ minWidth: 350 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <IconButton onClick={fetchEvents} sx={{ mr: 1 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', md: 'center' },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1976d2', fontSize: { xs: '20px', sm: '28px', md: '32px' } }}>
+          Event Management
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1.5,
+            alignItems: { xs: 'stretch', sm: 'center' },
+            width: { xs: '100%', md: 'auto' },
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Search events, venues, organizers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 260, md: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
+            <IconButton onClick={fetchEvents} sx={{ minHeight: 44, minWidth: 44 }}>
               <RefreshIcon />
             </IconButton>
+
             {isAdmin && (
               <Button
                 variant="outlined"
                 color="warning"
                 onClick={() => navigate('/admin/events/pending')}
                 sx={{
-                  mr: 1,
                   borderRadius: 2,
-                  padding: '8px 16px',
+                  minHeight: 44,
                   fontWeight: 600,
+                  flex: { xs: 1, sm: 'none' },
                 }}
               >
                 Pending Requests
               </Button>
             )}
+
             {isOrganizer && (
               <Button
                 variant="outlined"
                 color="secondary"
                 onClick={() => navigate('/organizer/events/request')}
                 sx={{
-                  mr: 1,
                   borderRadius: 2,
-                  padding: '8px 16px',
+                  minHeight: 44,
                   fontWeight: 600,
+                  flex: { xs: 1, sm: 'none' },
                 }}
               >
                 Request Event
               </Button>
             )}
+
             <Button
               variant="contained"
               color="primary"
@@ -507,18 +531,19 @@ const Events: React.FC = () => {
               onClick={handleCreateClick}
               sx={{
                 borderRadius: 2,
-                padding: '8px 16px',
-                fontWeight: 600,
+                minHeight: 44,
+                fontWeight: 700,
                 boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-                '&:hover': {
-                  boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
-                }
+                backgroundColor: '#ff1955',
+                flex: { xs: 1, sm: 'none' },
+                '&:hover': { backgroundColor: '#d01443' },
               }}
             >
               Add New Event
             </Button>
           </Box>
-        </Grid>
+        </Box>
+      </Box>
 
         {/* Bulk Actions Toolbar */}
         {selectedEventIds.length > 0 && (
@@ -637,7 +662,6 @@ const Events: React.FC = () => {
             )}
           </Paper>
         </Grid>
-      </Grid>
 
       {/* Status Change Menu */}
       <Menu

@@ -33,7 +33,6 @@ import { useAuth } from '../../context/AuthContext';
 import PublicNavbar from '../../components/public/PublicNavbar';
 import AuthService from '../../services/auth.service';
 
-// Add this for better type checking
 type FormikBag<V> = {
   isSubmitting: boolean;
   errors: { [K in keyof V]?: string };
@@ -65,7 +64,6 @@ const Login: React.FC = () => {
   const location = useLocation();
   const { login } = useAuth();
 
-  // Email verification step (shown when user hasn't verified their email)
   const [showVerifyStep, setShowVerifyStep] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [verifyCode, setVerifyCode] = useState('');
@@ -103,14 +101,11 @@ const Login: React.FC = () => {
     }
   };
 
-  // Check for success message from registration and load remember me preference
   useEffect(() => {
     const state = location.state as { message?: string } | undefined;
     if (state?.message) {
       setSuccessMessage(state.message);
     }
-
-    // Load remember me preference
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
     setRememberMe(savedRememberMe);
   }, [location]);
@@ -128,16 +123,14 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const idToken = credentialResponse?.credential; // ID token JWT, starts with eyJ
+      const idToken = credentialResponse?.credential;
       if (!idToken) throw new Error('Google did not return an ID token (credential).');
 
-      // Exchange Google ID token for our backend JWT token
       const response = await AuthService.googleLogin(idToken);
 
       if (response.user) {
         const normalizedRole = response.user.role.replace('ROLE_', '');
         if (normalizedRole === 'USER' || response.user.role === 'ROLE_USER') {
-          // Notify AuthContext to reload user from localStorage so the navbar updates immediately
           window.dispatchEvent(new Event('authRefresh'));
 
           const pendingBooking = sessionStorage.getItem('pendingBooking');
@@ -177,28 +170,19 @@ const Login: React.FC = () => {
   ) => {
     try {
       setError(null);
-
-      // Save remember me preference
       localStorage.setItem('rememberMe', rememberMe.toString());
-
-      // Clear only localStorage tokens (don't touch sessionStorage for admin sessions)
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
       localStorage.removeItem('user');
 
       await login(values.email, values.password);
 
-      // Redirect based on user role
-      // Note: AuthService uses sessionStorage for tab isolation
       const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
-
         const normalizedRole = user.role.replace('ROLE_', '');
 
-        // Only allow USER role on this login page
         if (normalizedRole === 'USER' || user.role === 'ROLE_USER') {
-          // Check if there's a pending booking (user was redirected from event details or seat selection)
           const pendingBooking = sessionStorage.getItem('pendingBooking');
           const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
           let seatScheduleId: string | null = null;
@@ -213,14 +197,11 @@ const Login: React.FC = () => {
           if (seatScheduleId) {
             navigate(`/seat-selection/${seatScheduleId}`);
           } else if (pendingBooking || from) {
-            // Redirect back to the specified page to restore booking
             navigate(from || '/events');
           } else {
-            // Normal login flow - go to events page
             navigate('/events');
           }
         } else {
-          // If user is admin, organizer, or organizer employee, deny access
           sessionStorage.removeItem('auth_token');
           sessionStorage.removeItem('user');
           sessionStorage.removeItem('user_data');
@@ -231,19 +212,14 @@ const Login: React.FC = () => {
           return;
         }
       } else {
-        // Fallback - try to determine from token
         setError('Unable to determine user role. Please try again.');
       }
     } catch (err: any) {
-
       let errorMessage = 'Login failed. Please try again.';
-
-      // Handle specific error cases with detailed messages
       if (err.response?.status === 401) {
         const responseMessage = err.response?.data?.message?.toLowerCase() || '';
         const errorCode = err.response?.data?.error_code || '';
 
-        // Check specific error codes from backend
         if (errorCode === 'INVALID_CREDENTIALS') {
           errorMessage = 'Invalid email or password. Please check your credentials and try again.';
         } else if (errorCode === 'USER_DISABLED') {
@@ -301,7 +277,6 @@ const Login: React.FC = () => {
 
   return (
     <>
-      {/* Forgot Password Dialog */}
       <Dialog
         open={forgotOpen}
         onClose={() => !forgotLoading && setForgotOpen(false)}
@@ -371,318 +346,349 @@ const Login: React.FC = () => {
         sx={{
           backgroundColor: '#242a33',
           minHeight: '100vh',
+          height: { xs: 'auto', sm: '100vh' },
+          maxHeight: { sm: '100vh' },
+          overflowY: { xs: 'auto', sm: 'auto' },
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pt: 10,
-          pb: 4,
+          flexDirection: 'column',
+          boxSizing: 'border-box',
         }}
       >
         <PublicNavbar />
-        <Container component="main" maxWidth="xs">
-          <Paper
-            elevation={6}
-            sx={{
-              padding: 4,
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              borderRadius: 2
-            }}
-          >
-            <Box
+        <Box
+          sx={{
+            flex: 1,
+            mt: { xs: '56px', sm: '82px' },
+            mb: { xs: 1, sm: '16px' },
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            px: { xs: 1.5, sm: 3 },
+            py: { xs: 0, sm: 1 },
+          }}
+        >
+          <Container component="main" sx={{ p: 0, width: '100%', maxWidth: { xs: '100%', sm: '450px' } }}>
+            <Paper
+              elevation={6}
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
+                padding: { xs: 2, sm: 4 },
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 3,
+                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.3)',
+                '& .MuiOutlinedInput-root': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(0, 0, 0, 0.23) !important',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#2c3e50 !important',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#2c3e50 !important',
+                    borderWidth: '1.5px !important',
+                  },
+                  '&.Mui-error .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#2c3e50 !important',
+                  },
+                  '&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#2c3e50 !important',
+                  },
+                  '& input': {
+                    outline: 'none !important',
+                    boxShadow: 'none !important',
+                  },
+                },
+                '& .MuiFormLabel-root.Mui-focused, & .MuiInputLabel-root.Mui-focused, & .MuiFormLabel-root.Mui-error, & .MuiInputLabel-root.Mui-error': {
+                  color: '#2c3e50 !important',
+                },
               }}
             >
               <Box
                 sx={{
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  mb: 1.5,
-                  userSelect: 'none',
                 }}
               >
-                <TicketIcon sx={{ fontSize: 32, color: '#ff1955', transform: 'rotate(-10deg)', mr: 1 }} />
-                <Typography
-                  variant="h4"
+                <Box
                   sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: { xs: 0.5, sm: 1.5 },
+                    userSelect: 'none',
+                  }}
+                >
+                  <TicketIcon sx={{ fontSize: { xs: 22, md: 32 }, color: '#ff1955', transform: 'rotate(-10deg)', mr: 0.8 }} />
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontFamily: 'Raleway, sans-serif',
+                      fontWeight: 800,
+                      color: '#2c3e50',
+                      letterSpacing: '-0.5px',
+                      fontSize: { xs: '1.15rem', md: '1.75rem' },
+                    }}
+                  >
+                    Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+                  </Typography>
+                </Box>
+
+                <Typography
+                  component="h1"
+                  variant="h5"
+                  sx={{
+                    mb: { xs: 0, sm: 0.3 },
                     fontFamily: 'Raleway, sans-serif',
                     fontWeight: 800,
                     color: '#2c3e50',
-                    letterSpacing: '-0.5px',
-                    fontSize: '1.75rem',
+                    fontSize: { xs: '1rem', md: '1.45rem' },
                   }}
                 >
-                  Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+                  Welcome Back!
                 </Typography>
-              </Box>
 
-              <Typography
-                component="h1"
-                variant="h5"
-                sx={{
-                  mb: 2,
-                  fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 700,
-                  color: '#2c3e50',
-                }}
-              >
-                Welcome Back!
-              </Typography>
+                <Typography
+                  component="h2"
+                  variant="h6"
+                  sx={{
+                    mb: { xs: 1.5, sm: 2.5 },
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 600,
+                    color: '#2c3e50',
+                    fontSize: { xs: '0.8rem', md: '1rem' },
+                  }}
+                >
+                  Sign in
+                </Typography>
 
-              <Typography
-                component="h2"
-                variant="h6"
-                sx={{
-                  mb: 3,
-                  fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 600,
-                  color: '#2c3e50',
-                }}
-              >
-                Sign in
-              </Typography>
+                {successMessage && (
+                  <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
+                    {successMessage}
+                  </Alert>
+                )}
 
-              {successMessage && (
-                <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-                  {successMessage}
-                </Alert>
-              )}
-
-              {/* ── Email Verification Step ── */}
-              {showVerifyStep ? (
-                <>
-                  <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
-                    Your email <strong>{pendingEmail}</strong> is not verified yet.<br />
-                    Enter the 6-digit code we sent to your inbox.
-                  </Typography>
-
-                  {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
-                  {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
-
-                  <TextField
-                    fullWidth
-                    label="6-digit Verification Code"
-                    value={verifyCode}
-                    onChange={(e) => setVerifyCode(e.target.value)}
-                    inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '22px', textAlign: 'center', fontWeight: 700 } }}
-                    placeholder="------"
-                    sx={{ mb: 2 }}
-                  />
-
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    disabled={verifyLoading || verifyCode.length !== 6}
-                    onClick={handleVerify}
-                    sx={{ py: 1.5, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
-                  >
-                    {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
-                  </Button>
-
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="body2" sx={{ color: '#666' }}>
-                      Didn't receive a code?{' '}
-                      <span
-                        onClick={resendLoading ? undefined : handleResendCode}
-                        style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
-                      >
-                        {resendLoading ? 'Sending...' : 'Resend Code'}
-                      </span>
+                {showVerifyStep ? (
+                  <>
+                    <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: '#555' }}>
+                      Your email <strong>{pendingEmail}</strong> is not verified yet.<br />
+                      Enter the 6-digit code we sent to your inbox.
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
-                      <span
-                        onClick={() => { setShowVerifyStep(false); setVerifyCode(''); setVerifyError(null); }}
-                        style={{ color: '#999', cursor: 'pointer', textDecoration: 'underline' }}
-                      >
-                        Back to login
-                      </span>
-                    </Typography>
-                  </Box>
-                </>
-              ) : (
-                <>
-                  {error && (
-                    <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-                      {error}
-                      {error.includes('not registered') && (
-                        <Box sx={{ mt: 1 }}>
-                          <Link to="/register" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
-                            Create an account here
-                          </Link>
-                        </Box>
-                      )}
-                    </Alert>
-                  )}
 
-                  <Formik<LoginFormValues>
-                    initialValues={{ email: '', password: '' }}
-                    validationSchema={validationSchema}
-                    onSubmit={handleSubmit}
-                  >
-                    {(props: FormikBag<LoginFormValues>) => {
-                      // Destructure here to avoid unused prop warnings
-                      const { isSubmitting, errors, touched } = props;
-                      return (
-                        <Form style={{ width: '100%' }}>
-                          <Box sx={{ mb: 2 }}>
-                            <Field
-                              as={TextField}
-                              fullWidth
-                              id="email"
-                              name="email"
-                              label="Email Address"
-                              variant="outlined"
-                              error={touched.email && Boolean(errors.email)}
-                              helperText={touched.email && errors.email}
-                            />
+                    {verifyError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{verifyError}</Alert>}
+                    {resendSuccess && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>A new code has been sent to your email.</Alert>}
+
+                    <TextField
+                      fullWidth
+                      label="6-digit Verification Code"
+                      value={verifyCode}
+                      onChange={(e) => setVerifyCode(e.target.value)}
+                      inputProps={{ maxLength: 6, style: { letterSpacing: '8px', fontSize: '20px', textAlign: 'center', fontWeight: 700 } }}
+                      placeholder="------"
+                      sx={{ mb: 2 }}
+                    />
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      disabled={verifyLoading || verifyCode.length !== 6}
+                      onClick={handleVerify}
+                      sx={{ py: 1.2, mb: 2, fontFamily: 'Raleway, sans-serif', fontWeight: 700, borderRadius: '25px', backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#e01545' } }}
+                    >
+                      {verifyLoading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Verify Email'}
+                    </Button>
+
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" sx={{ color: '#666' }}>
+                        Didn't receive a code?{' '}
+                        <span
+                          onClick={resendLoading ? undefined : handleResendCode}
+                          style={{ color: '#ff1955', fontWeight: 600, cursor: resendLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
+                        >
+                          {resendLoading ? 'Sending...' : 'Resend Code'}
+                        </span>
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
+                        <span
+                          onClick={() => { setShowVerifyStep(false); setVerifyCode(''); setVerifyError(null); }}
+                          style={{ color: '#999', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Back to login
+                        </span>
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  <>
+                    {error && (
+                      <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                        {error}
+                        {error.includes('not registered') && (
+                          <Box sx={{ mt: 1 }}>
+                            <Link to="/register" style={{ color: '#ff1955', fontWeight: 600, textDecoration: 'underline' }}>
+                              Create an account here
+                            </Link>
                           </Box>
+                        )}
+                      </Alert>
+                    )}
 
-                          <Box sx={{ mb: 3 }}>
-                            <Field
-                              as={TextField}
-                              fullWidth
-                              id="password"
-                              name="password"
-                              label="Password"
-                              type={showPassword ? 'text' : 'password'}
-                              variant="outlined"
-                              error={touched.password && Boolean(errors.password)}
-                              helperText={touched.password && errors.password}
-                              InputProps={{
-                                endAdornment: (
-                                  <InputAdornment position="end">
-                                    <IconButton
-                                      aria-label="toggle password visibility"
-                                      onClick={handleClickShowPassword}
-                                      onMouseDown={handleMouseDownPassword}
-                                      edge="end"
-                                    >
-                                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                    </IconButton>
-                                  </InputAdornment>
-                                ),
-                              }}
-                            />
-                          </Box>
-
-                          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={rememberMe}
-                                  onChange={(e) => setRememberMe(e.target.checked)}
-                                  sx={{
-                                    color: '#ff1955',
-                                    '&.Mui-checked': {
-                                      color: '#ff1955',
-                                    },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.9rem', color: '#2c3e50' }}>
-                                  Remember Me
-                                </Typography>
-                              }
-                            />
-                            <MuiLink
-                              component="button"
-                              type="button"
-                              onClick={handleForgotPassword}
-                              sx={{
-                                fontFamily: 'Raleway, sans-serif',
-                                fontSize: '0.9rem',
-                                color: '#ff1955',
-                                textDecoration: 'none',
-                                '&:hover': {
-                                  textDecoration: 'underline',
-                                },
-                              }}
-                            >
-                              Forgot Password?
-                            </MuiLink>
-                          </Box>
-
-                          <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            disabled={isSubmitting}
-                            sx={{
-                              py: 1.5,
-                              fontFamily: 'Raleway, sans-serif',
-                              fontWeight: 700,
-                              backgroundColor: '#ff1955',
-                              color: '#fff',
-                              fontSize: '1rem',
-                              letterSpacing: '1px',
-                              '&:hover': {
-                                backgroundColor: '#e01545',
-                              },
-                            }}
-                          >
-                            {isSubmitting ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Sign In'}
-                          </Button>
-
-                          <Divider sx={{ my: 3 }}>
-                            <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
-                              OR
-                            </Typography>
-                          </Divider>
-
-                          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                            <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
-                              <GoogleLogin
-                                onSuccess={handleGoogleCredentialSuccess}
-                                onError={() => {
-                                  setError('Google sign-in failed. Please try again.');
-                                  setIsGoogleLoading(false);
-                                }}
-                                use_fedcm_for_prompt={true}
+                    <Formik<LoginFormValues>
+                      initialValues={{ email: '', password: '' }}
+                      validationSchema={validationSchema}
+                      onSubmit={handleSubmit}
+                    >
+                      {(props: FormikBag<LoginFormValues>) => {
+                        const { isSubmitting, errors, touched } = props;
+                        return (
+                          <Form style={{ width: '100%' }}>
+                            <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                              <Field
+                                as={TextField}
+                                fullWidth
+                                id="email"
+                                name="email"
+                                label="Email Address"
+                                variant="outlined"
+                                size="small"
+                                error={touched.email && Boolean(errors.email)}
+                                helperText={touched.email && errors.email}
                               />
                             </Box>
 
-                            {isGoogleLoading && (
-                              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
-                                <CircularProgress size={24} />
+                            <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                              <Field
+                                as={TextField}
+                                fullWidth
+                                id="password"
+                                name="password"
+                                label="Password"
+                                type={showPassword ? 'text' : 'password'}
+                                variant="outlined"
+                                size="small"
+                                error={touched.password && Boolean(errors.password)}
+                                helperText={touched.password && errors.password}
+                                InputProps={{
+                                  endAdornment: (
+                                    <InputAdornment position="end">
+                                      <IconButton
+                                        aria-label="toggle password visibility"
+                                        onClick={handleClickShowPassword}
+                                        onMouseDown={handleMouseDownPassword}
+                                        edge="end"
+                                      >
+                                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                      </IconButton>
+                                    </InputAdornment>
+                                  ),
+                                }}
+                              />
+                            </Box>
+
+                            <Box sx={{ mb: { xs: 1.5, sm: 2 }, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    size="small"
+                                    sx={{
+                                      color: '#ff1955',
+                                      '&.Mui-checked': {
+                                        color: '#ff1955',
+                                      },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ fontFamily: 'Raleway, sans-serif', fontSize: { xs: '0.78rem', md: '0.88rem' }, color: '#2c3e50' }}>
+                                    Remember Me
+                                  </Typography>
+                                }
+                              />
+                              <MuiLink
+                                component="button"
+                                type="button"
+                                onClick={handleForgotPassword}
+                                sx={{
+                                  fontFamily: 'Raleway, sans-serif',
+                                  fontSize: { xs: '0.78rem', md: '0.88rem' },
+                                  color: '#ff1955',
+                                  textDecoration: 'none',
+                                  '&:hover': {
+                                    textDecoration: 'underline',
+                                  },
+                                }}
+                              >
+                                Forgot Password?
+                              </MuiLink>
+                            </Box>
+
+                            <Button
+                              type="submit"
+                              fullWidth
+                              variant="contained"
+                              disabled={isSubmitting}
+                              sx={{
+                                py: { xs: 1, md: 1.2 },
+                                fontFamily: 'Raleway, sans-serif',
+                                fontWeight: 700,
+                                backgroundColor: '#ff1955',
+                                color: '#fff',
+                                borderRadius: '25px',
+                                fontSize: { xs: '0.85rem', md: '0.95rem' },
+                                letterSpacing: '0.5px',
+                                boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                '&:hover': {
+                                  backgroundColor: '#e01545',
+                                },
+                              }}
+                            >
+                              {isSubmitting ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : 'Sign In'}
+                            </Button>
+
+                            <Divider sx={{ my: 2.5 }}>
+                              <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666', fontSize: '0.8rem' }}>
+                                OR
+                              </Typography>
+                            </Divider>
+
+                            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                              <Box sx={{ opacity: isGoogleLoading ? 0.6 : 1, pointerEvents: isGoogleLoading ? 'none' : 'auto' }}>
+                                <GoogleLogin
+                                  onSuccess={handleGoogleCredentialSuccess}
+                                  onError={() => {
+                                    setError('Google sign-in failed. Please try again.');
+                                    setIsGoogleLoading(false);
+                                  }}
+                                  use_fedcm_for_prompt={true}
+                                />
                               </Box>
-                            )}
-                          </Box>
 
-                          <Box sx={{ textAlign: 'center', mt: 2 }}>
-                            <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50' }}>
-                              Don't have an account?{' '}
-                              <Link to="/register" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
-                                Register here
-                              </Link>
-                            </Typography>
-                          </Box>
+                              {isGoogleLoading && (
+                                <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+                                  <CircularProgress size={24} />
+                                </Box>
+                              )}
+                            </Box>
 
-                          <Box sx={{ textAlign: 'center', mt: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              <Link to="/auth-debug" style={{ textDecoration: 'none', color: 'inherit' }}>
-                              </Link>
-                            </Typography>
-                          </Box>
-
-                          <Box sx={{ textAlign: 'center', mt: 0.5 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              <Link to="/auth-tester" style={{ textDecoration: 'none', color: 'inherit' }}>
-                              </Link>
-                            </Typography>
-                          </Box>
-                        </Form>
-                      );
-                    }}
-                  </Formik>
-                </>
-              )}
-            </Box>
-          </Paper>
-        </Container>
+                            <Box sx={{ textAlign: 'center', mt: 2.5 }}>
+                              <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#2c3e50', fontSize: { xs: '0.82rem', md: '0.9rem' } }}>
+                                Don't have an account?{' '}
+                                <Link to="/register" style={{ textDecoration: 'none', color: '#ff1955', fontWeight: 600 }}>
+                                  Register here
+                                </Link>
+                              </Typography>
+                            </Box>
+                          </Form>
+                        );
+                      }}
+                    </Formik>
+                  </>
+                )}
+              </Box>
+            </Paper>
+          </Container>
+        </Box>
       </Box>
     </>
   );

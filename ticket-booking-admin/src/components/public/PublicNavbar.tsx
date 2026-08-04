@@ -23,6 +23,15 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import HomeIcon from '@mui/icons-material/Home';
+import EventIcon from '@mui/icons-material/EventNote';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import CollectionsIcon from '@mui/icons-material/Collections';
+import DescriptionIcon from '@mui/icons-material/Description';
+import InfoIcon from '@mui/icons-material/Info';
+import ServicesIcon from '@mui/icons-material/DesignServices';
+import ContactIcon from '@mui/icons-material/ContactSupport';
+import CloseIcon from '@mui/icons-material/Close';
 //import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -114,31 +123,209 @@ const PublicNavbar: React.FC = () => {
     navigate('/', { state: { loggedOut: true } });
   };
 
+  const mobileNavItems = [
+    { label: 'Home', path: '/', icon: <HomeIcon /> },
+    { label: 'Events', path: '/events', icon: <EventIcon /> },
+    { label: 'Ticketer Deals', path: '/deals', icon: <LocalOfferIcon sx={{ color: '#00e676' }} />, highlight: true },
+    { label: 'Gallery', path: '/gallery', icon: <CollectionsIcon /> },
+    { label: 'Blog', path: '/blog', icon: <DescriptionIcon /> },
+    { label: 'About Us', path: '/about', icon: <InfoIcon /> },
+    { label: 'Services', path: '/services', icon: <ServicesIcon /> },
+    { label: 'Contact Us', path: '/contact', icon: <ContactIcon /> },
+  ];
+
   const navItems = [
     { label: 'About', path: '/about' },
     { label: 'Services', path: '/services' },
     { label: 'Contact', path: '/contact' },
   ];
 
-
   const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center', pt: 2 }}>
-      <List>
-        {navItems.map((item) => (
-          <ListItem key={item.label} onClick={() => navigate(item.path)}>
-            <ListItemText 
-              primary={item.label} 
-              sx={{ 
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#1b222c',
+        color: '#ffffff',
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          p: 2,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => { setMobileOpen(false); navigate('/'); }}>
+          <ConfirmationNumberIcon sx={{ color: '#ff1955', fontSize: '1.6rem', transform: 'rotate(-10deg)', mr: 1 }} />
+          <Typography variant="h6" sx={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, color: '#fcd0a5' }}>
+            Ticketer<span style={{ color: '#ff1955' }}>.lk</span>
+          </Typography>
+        </Box>
+        <IconButton onClick={handleDrawerToggle} sx={{ color: '#ffffff' }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+
+      {/* Navigation List */}
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', py: 1 }}>
+        <List>
+          {mobileNavItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <ListItem key={item.label} disablePadding>
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    setMobileOpen(false);
+                    navigate(item.path);
+                  }}
+                  startIcon={item.icon}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    px: 1.8,
+                    py: 0.6,
+                    color: active ? '#ff1955' : item.highlight ? '#00e676' : '#ffffff',
+                    backgroundColor: active ? 'rgba(255, 25, 85, 0.1)' : 'transparent',
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: active || item.highlight ? 700 : 500,
+                    fontSize: '0.82rem',
+                    textTransform: 'none',
+                    borderRadius: 0,
+                    borderLeft: active ? '3px solid #ff1955' : '3px solid transparent',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    '& .MuiButton-startIcon': {
+                      mr: 1,
+                      color: active ? '#ff1955' : item.highlight ? '#00e676' : 'rgba(255, 255, 255, 0.7)',
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              </ListItem>
+            );
+          })}
+        </List>
+      </Box>
+
+      {/* Bottom Auth Section */}
+      {isAuthenticated() && isCustomerUser() ? (
+        <Box sx={{ p: 1, borderTop: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(0, 0, 0, 0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, width: '100%', px: 0.5 }}>
+            {profile?.profilePicture ? (
+              <Avatar src={getProfilePictureUrl(profile.profilePicture)} sx={{ width: 28, height: 28, border: '1.5px solid #ff1955' }} />
+            ) : (
+              <Avatar sx={{ width: 28, height: 28, bgcolor: '#ff1955', fontWeight: 700, fontSize: '0.75rem' }}>
+                {profile?.firstName?.[0] || user?.email?.[0] || 'U'}
+              </Avatar>
+            )}
+            <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
+              <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.74rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {profile?.firstName ? `${profile.firstName} ${profile.lastName || ''}` : 'Customer Account'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.email || ''}
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, width: '90%', alignItems: 'center' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PersonIcon sx={{ fontSize: '13px !important' }} />}
+              onClick={() => { setMobileOpen(false); navigate('/profile'); }}
+              sx={{
                 color: '#fff',
-                '& .MuiTypography-root': {
-                  fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 300,
-                }
-              }} 
-            />
-          </ListItem>
-        ))}
-      </List>
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.72rem',
+                py: 0.2,
+                px: 1.5,
+                minHeight: 26,
+                width: '100%',
+                maxWidth: '140px',
+              }}
+            >
+              View Profile
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<LogoutIcon sx={{ fontSize: '13px !important' }} />}
+              onClick={() => { setMobileOpen(false); handleLogout(); }}
+              sx={{
+                backgroundColor: '#ff1955',
+                color: '#fff',
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+                py: 0.2,
+                px: 1.5,
+                minHeight: 26,
+                width: '100%',
+                maxWidth: '140px',
+                '&:hover': { backgroundColor: '#d01443' }
+              }}
+            >
+              Log Out
+            </Button>
+          </Box>
+        </Box>
+      ) : (
+        <Box sx={{ p: 1, borderTop: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(0, 0, 0, 0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.6 }}>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => { setMobileOpen(false); navigate('/login'); }}
+            sx={{
+              backgroundColor: '#ff1955',
+              color: '#fff',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              py: 0.2,
+              px: 1.5,
+              textTransform: 'none',
+              minHeight: 26,
+              width: '100%',
+              maxWidth: '140px',
+              '&:hover': { backgroundColor: '#d01443' }
+            }}
+          >
+            Sign In
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => { setMobileOpen(false); navigate('/register'); }}
+            sx={{
+              color: '#fff',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderRadius: '12px',
+              fontWeight: 600,
+              fontSize: '0.72rem',
+              py: 0.2,
+              px: 1.5,
+              textTransform: 'none',
+              minHeight: 26,
+              width: '100%',
+              maxWidth: '140px',
+              '&:hover': { borderColor: '#ff1955', color: '#ff1955' }
+            }}
+          >
+            Register
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 
@@ -522,8 +709,8 @@ const PublicNavbar: React.FC = () => {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            width: 240,
-            backgroundColor: '#343a40',
+            width: 215,
+            backgroundColor: '#1b222c',
           },
         }}
       >

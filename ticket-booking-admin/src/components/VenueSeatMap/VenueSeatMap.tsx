@@ -149,6 +149,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
+  const initialTouchDistance = useRef<number | null>(null);
+  const initialTouchZoom = useRef<number>(1);
+  const isTouchMoved = useRef<boolean>(false);
 
   // Check if venue has shared areas from database
   const hasSharedAreas = sharedAreas.length > 0;
@@ -398,6 +401,54 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     }
   }, []);
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isTouchMoved.current = false;
+    if (e.touches.length === 1) {
+      const target = e.target as SVGElement;
+      if (target.tagName === 'circle') return;
+      isPanning.current = true;
+      lastPanPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      isPanning.current = false;
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialTouchDistance.current = dist;
+      initialTouchZoom.current = zoomLevel;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    isTouchMoved.current = true;
+    if (e.touches.length === 1 && isPanning.current) {
+      const deltaX = e.touches[0].clientX - lastPanPosition.current.x;
+      const deltaY = e.touches[0].clientY - lastPanPosition.current.y;
+      setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+      lastPanPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2 && initialTouchDistance.current) {
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (currentDist > 0 && initialTouchDistance.current > 0) {
+        const factor = currentDist / initialTouchDistance.current;
+        const newZoom = Math.min(Math.max(initialTouchZoom.current * factor, 0.5), 3.5);
+        setZoomLevel(newZoom);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      isPanning.current = false;
+      initialTouchDistance.current = null;
+    } else if (e.touches.length === 1) {
+      initialTouchDistance.current = null;
+      lastPanPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
   const handleSharedAreaClick = (area: SharedAreaCategory) => {
     setSelectedSharedArea(area);
     setShowSharedAreaDialog(true);
@@ -545,6 +596,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   onMouseMove={handleSVGMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                   onClick={handleSVGClick}
                 >
                   <defs>
@@ -853,21 +907,24 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
             fullWidth
             PaperProps={{
               sx: {
-                borderRadius: 2,
-                p: 2,
+                borderRadius: { xs: 0, sm: 2 },
+                p: { xs: 1.5, sm: 2 },
                 backgroundColor: '#1a1e24',
                 color: '#ffffff',
                 border: '1px solid rgba(255, 25, 85, 0.3)',
+                m: { xs: 1, sm: 4 },
+                maxHeight: { xs: '90vh', sm: '80vh' },
+                overflow: 'auto',
               }
             }}
           >
-            <DialogTitle sx={{ position: 'relative', pb: 1 }}>
+            <DialogTitle sx={{ position: 'relative', pb: 1, px: { xs: 1, sm: 3 } }}>
               <IconButton
                 onClick={handleSharedAreaDialogClose}
                 sx={{
                   position: 'absolute',
-                  right: 8,
-                  top: 8,
+                  right: 4,
+                  top: 4,
                   color: 'rgba(255, 255, 255, 0.5)',
                   '&:hover': { color: '#ff1955' }
                 }}
@@ -876,37 +933,37 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </IconButton>
             </DialogTitle>
 
-            <DialogContent sx={{ textAlign: 'center', pt: 1 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#ffffff' }}>
+            <DialogContent sx={{ textAlign: 'center', pt: 1, px: { xs: 1.5, sm: 3 } }}>
+              <Typography variant="h6" sx={{ mb: { xs: 1, sm: 2 }, fontWeight: 600, color: '#ffffff', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 {selectedSharedArea?.categoryName || t('standingArea', 'Standing Area')}
               </Typography>
 
-              <Typography variant="body1" sx={{ mb: 1, fontWeight: 500, color: 'rgba(255, 255, 255, 0.7)' }}>
+              <Typography variant="body1" sx={{ mb: 1, fontWeight: 500, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                 {t('sharedSpaceNoticeStart', 'This section is a')} <strong style={{ color: '#ff1955' }}>{t('sharedSpaceNoticeStrong', '*Shared Space*')}</strong> {t('sharedSpaceNoticeEnd', 'and does not have any allocated seats.')}
               </Typography>
 
-              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 0.5, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{formatCurrency(selectedSharedArea?.price ?? 0)}</strong>
               </Typography>
 
-              <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
+              <Typography variant="body2" sx={{ mb: { xs: 1.5, sm: 3 }, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 {t('availableLabel', 'Available:')} <strong style={{ color: '#ffffff' }}>{selectedSharedArea?.availableTickets}</strong> {t('tickets', 'tickets')}
               </Typography>
 
-              <Typography variant="body1" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
+              <Typography variant="body1" sx={{ mb: { xs: 1.5, sm: 3 }, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                 {t('howManyTickets', 'How many tickets do you want?')}
               </Typography>
 
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', mb: 4 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, justifyContent: 'center', mb: { xs: 2, sm: 4 } }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(count => count <= (selectedSharedArea?.availableTickets || 10)).map((count) => (
                   <Button
                     key={count}
                     variant={sharedAreaTicketCount === count ? 'contained' : 'outlined'}
                     onClick={() => handleSharedAreaTicketSelect(count)}
                     sx={{
-                      minWidth: '60px',
-                      height: '50px',
-                      fontSize: '18px',
+                      minWidth: { xs: '44px', sm: '60px' },
+                      height: { xs: '40px', sm: '50px' },
+                      fontSize: { xs: '14px', sm: '18px' },
                       fontWeight: 600,
                       borderRadius: 2,
                       border: sharedAreaTicketCount === count ? 'none' : '2px solid rgba(255, 255, 255, 0.2)',
@@ -924,7 +981,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </Box>
 
               {sharedAreaTicketCount && selectedSharedArea && (
-                <Typography variant="h6" sx={{ mb: 3, color: '#ff1955' }}>
+                <Typography variant="h6" sx={{ mb: { xs: 1.5, sm: 3 }, color: '#ff1955', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                   {t('totalLabel', 'Total:')} {t('lkr', 'LKR')} {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
                 </Typography>
               )}
@@ -936,8 +993,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                   disabled={!sharedAreaTicketCount}
                   onClick={handleSharedAreaConfirm}
                   sx={{
-                    py: 1.5,
-                    fontSize: '16px',
+                    py: { xs: 1, sm: 1.5 },
+                    fontSize: { xs: '14px', sm: '16px' },
                     fontWeight: 600,
                     textTransform: 'none',
                     borderRadius: 2,
@@ -959,10 +1016,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               <Button
                 onClick={handleSharedAreaDialogClose}
                 sx={{
-                  mt: 2,
+                  mt: 1.5,
                   color: 'rgba(255, 255, 255, 0.5)',
                   textTransform: 'none',
                   fontWeight: 500,
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
                   '&:hover': {
                     color: '#ffffff'
                   }

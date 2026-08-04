@@ -64,26 +64,26 @@ const EventCard: React.FC<EventCardProps> = ({
   return (
     <Box
       sx={{
-        marginBottom: '40px',
+        marginBottom: { xs: '20px', sm: '32px', md: '40px' },
         backgroundColor: '#1b222c',
-        borderRadius: '16px',
+        borderRadius: '14px',
         overflow: 'hidden',
         border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
         transition: 'all 0.3s ease',
         '&:hover': {
           borderColor: 'rgba(255, 25, 85, 0.35)',
-          boxShadow: '0 14px 40px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
         },
       }}
     >
       <Grid container alignItems="stretch">
-        {/* Left Column: 100% Clean Event Banner Image (Non-clickable) */}
+        {/* Left Column: Clean Event Banner Image */}
         <Grid item xs={12} md={8.5} lg={9}>
           <Box
             sx={{
-              height: { xs: '260px', sm: '340px', md: '100%' },
-              minHeight: { md: '320px' },
+              height: { xs: '150px', sm: '220px', md: '100%' },
+              minHeight: { md: '280px' },
               backgroundImage: `url(${backgroundImage})`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center center',
@@ -96,7 +96,7 @@ const EventCard: React.FC<EventCardProps> = ({
         <Grid item xs={12} md={3.5} lg={3}>
           <Box
             sx={{
-              p: { xs: 2.5, sm: 2.5, md: 2.5 },
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
@@ -111,23 +111,23 @@ const EventCard: React.FC<EventCardProps> = ({
                   fontWeight: 800,
                   fontFamily: 'Raleway, sans-serif',
                   color: '#fff',
-                  fontSize: { xs: '18px', sm: '20px', md: '21px' },
+                  fontSize: { xs: '15px', sm: '18px', md: '21px' },
                   lineHeight: 1.25,
-                  mb: 2,
+                  mb: { xs: 1, sm: 1.5 },
                 }}
               >
                 {title}
               </Typography>
 
               {/* Date & Time */}
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <CalendarToday sx={{ fontSize: 18, color: '#ff1955', mr: 1.2, flexShrink: 0 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.8, sm: 1.2 } }}>
+                <CalendarToday sx={{ fontSize: { xs: 15, sm: 18 }, color: '#ff1955', mr: 0.8, flexShrink: 0 }} />
                 <Typography
                   sx={{
                     fontFamily: 'Raleway, sans-serif',
                     fontWeight: 600,
                     color: '#e2e8f0',
-                    fontSize: '0.88rem',
+                    fontSize: { xs: '0.78rem', sm: '0.88rem' },
                   }}
                 >
                   {day ? `${day}, ` : ''}{cleanDateText}
@@ -136,14 +136,14 @@ const EventCard: React.FC<EventCardProps> = ({
 
               {/* Venue */}
               {venue && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                  <LocationOn sx={{ fontSize: 18, color: '#fcd0a5', mr: 1.2, flexShrink: 0 }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.8, sm: 1.2 } }}>
+                  <LocationOn sx={{ fontSize: { xs: 15, sm: 18 }, color: '#fcd0a5', mr: 0.8, flexShrink: 0 }} />
                   <Typography
                     sx={{
                       fontFamily: 'Raleway, sans-serif',
                       fontWeight: 600,
                       color: '#fcd0a5',
-                      fontSize: '0.88rem',
+                      fontSize: { xs: '0.78rem', sm: '0.88rem' },
                     }}
                   >
                     {venue}
@@ -151,49 +151,103 @@ const EventCard: React.FC<EventCardProps> = ({
                 </Box>
               )}
 
-              {/* Tickets / Pricing */}
-              {tickets && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Typography
-                    sx={{
-                      fontFamily: 'Raleway, sans-serif',
-                      fontWeight: 700,
-                      color: '#00e676',
-                      fontSize: '0.92rem',
-                    }}
-                  >
-                    {tickets}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
+              {/* Mobile View (xs/sm): Price on Left, Compact Button on Right */}
+              <Box
+                sx={{
+                  display: { xs: 'flex', md: 'none' },
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1.5,
+                  mt: 'auto',
+                  pt: 1,
+                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 700,
+                    color: '#00e676',
+                    fontSize: '0.78rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tickets || ''}
+                </Typography>
 
-            {/* Book Button */}
-            <Button
-              onClick={() => navigate(`/event/${slug || eventId}`)}
-              variant="contained"
-              fullWidth
-              sx={{
-                fontFamily: 'Raleway, sans-serif',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                textTransform: 'none',
-                backgroundColor: '#ff1955',
-                color: '#fff',
-                borderRadius: '25px',
-                py: 1,
-                letterSpacing: '0.5px',
-                boxShadow: 'none',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  backgroundColor: '#ff1955',
-                  boxShadow: '0 0 22px 5px rgba(255, 25, 85, 0.7), 0 4px 15px rgba(255, 25, 85, 0.4)',
-                  transform: 'translateY(-2px)',
-                },
-              }}
-            >
-              Book Your Seat
-            </Button>
+                <Button
+                  onClick={() => navigate(`/event/${slug || eventId}`)}
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                    textTransform: 'none',
+                    backgroundColor: '#ff1955',
+                    color: '#fff',
+                    borderRadius: '16px',
+                    py: 0.3,
+                    px: 1.5,
+                    minHeight: 26,
+                    letterSpacing: '0.2px',
+                    boxShadow: 'none',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    '&:hover': {
+                      backgroundColor: '#e01545',
+                      boxShadow: '0 0 14px 2px rgba(255, 25, 85, 0.5)',
+                    },
+                  }}
+                >
+                  Book Your Seat
+                </Button>
+              </Box>
+
+              {/* Desktop View (md+): Original Full Desktop Pricing Block & Full Width Button */}
+              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                {tickets && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: 'Raleway, sans-serif',
+                        fontWeight: 700,
+                        color: '#00e676',
+                        fontSize: '0.92rem',
+                      }}
+                    >
+                      {tickets}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Button
+                  onClick={() => navigate(`/event/${slug || eventId}`)}
+                  variant="contained"
+                  fullWidth
+                  sx={{
+                    fontFamily: 'Raleway, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    textTransform: 'none',
+                    backgroundColor: '#ff1955',
+                    color: '#fff',
+                    borderRadius: '25px',
+                    py: 1,
+                    letterSpacing: '0.5px',
+                    boxShadow: 'none',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      backgroundColor: '#ff1955',
+                      boxShadow: '0 0 22px 5px rgba(255, 25, 85, 0.7), 0 4px 15px rgba(255, 25, 85, 0.4)',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  Book Your Seat
+                </Button>
+              </Box>
+            </Box>
           </Box>
         </Grid>
       </Grid>
@@ -449,7 +503,10 @@ const Home: React.FC = () => {
     <Box
       sx={{
         backgroundColor: '#242a33',
-        minHeight: '100vh',
+        minHeight: '100dvh',
+        width: '100%',
+        maxWidth: '100vw',
+        overflowX: 'hidden',
       }}
     >
       <PublicNavbar />
@@ -467,8 +524,8 @@ const Home: React.FC = () => {
             position: 'relative',
             width: '100%',
             overflow: 'hidden',
-            height: { xs: '300px', sm: '370px', md: '440px', lg: '480px' },
-            borderRadius: '18px',
+            height: { xs: '200px', sm: '280px', md: '440px', lg: '480px' },
+            borderRadius: '16px',
             border: '1.5px solid #ff1955',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
             backgroundColor: '#12161f',
@@ -505,7 +562,7 @@ const Home: React.FC = () => {
                       sx={{
                         width: '100%',
                         minWidth: '100%',
-                        height: { xs: '300px', sm: '370px', md: '440px', lg: '480px' },
+                        height: { xs: '200px', sm: '280px', md: '440px', lg: '480px' },
                         flexShrink: 0,
                         position: 'relative',
                         backgroundImage: `url(${bannerImg})`,
@@ -524,7 +581,7 @@ const Home: React.FC = () => {
                             position: 'absolute',
                             inset: 0,
                             background: {
-                              xs: 'linear-gradient(to top, rgba(10, 14, 22, 0.92) 0%, rgba(10, 14, 22, 0.5) 60%, rgba(10, 14, 22, 0.05) 100%)',
+                              xs: 'linear-gradient(to top, rgba(10, 14, 22, 0.95) 0%, rgba(10, 14, 22, 0.6) 65%, rgba(10, 14, 22, 0.1) 100%)',
                               md: 'linear-gradient(to right, rgba(10, 14, 22, 0.9) 0%, rgba(10, 14, 22, 0.35) 50%, rgba(10, 14, 22, 0.7) 100%)',
                             },
                             zIndex: 1,
@@ -539,29 +596,34 @@ const Home: React.FC = () => {
                             position: 'relative',
                             zIndex: 2,
                             width: '100%',
-                            p: { xs: 1.5, sm: 2.5, md: 2.5 },
-                            pb: { xs: 2, sm: 2.5, md: 2.5 },
+                            p: { xs: 1, sm: 1.8, md: 2.5 },
+                            pb: { xs: 2, sm: 3, md: 2.5 },
                             display: 'flex',
                             flexDirection: { xs: 'column', md: 'row' },
                             justifyContent: 'space-between',
                             alignItems: { xs: 'stretch', md: 'flex-end' },
-                            gap: { xs: 1.5, md: 2.5 },
+                            gap: { xs: 0.6, md: 2.5 },
                           }}
                         >
-                          {/* Bottom Left: Event Title */}
+                          {/* Desktop/Tablet Title (sm+) */}
                           {slide.title && (
-                            <Box sx={{ maxWidth: { xs: '100%', md: '55%' }, mb: { xs: 0, md: 0.5 } }}>
+                            <Box sx={{ display: { xs: 'none', sm: 'block' }, maxWidth: { sm: '100%', md: '55%' }, mb: { sm: 0.2, md: 0.5 } }}>
                               <Typography
                                 component="h1"
                                 sx={{
                                   fontFamily: 'Raleway, sans-serif',
                                   fontWeight: 900,
                                   color: '#ffffff',
-                                  fontSize: { xs: '16px', sm: '22px', md: '26px' },
+                                  fontSize: { sm: '18px', md: '26px' },
                                   lineHeight: 1.15,
-                                  letterSpacing: '-0.5px',
+                                  letterSpacing: '-0.3px',
                                   textShadow: '0 4px 16px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.8)',
                                   textTransform: 'uppercase',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
                                 }}
                               >
                                 {slide.title}
@@ -569,19 +631,95 @@ const Home: React.FC = () => {
                             </Box>
                           )}
 
-                          {/* Bottom Right: Floating Card */}
+                          {/* Mobile View Only Overlay Bar (xs): Ultra-compact bottom translucent bar */}
+                          <Box
+                            sx={{
+                              display: { xs: 'flex', sm: 'none' },
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 1,
+                              width: '100%',
+                              backgroundColor: 'rgba(18, 22, 31, 0.85)',
+                              backdropFilter: 'blur(10px)',
+                              p: '6px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255, 25, 85, 0.3)',
+                            }}
+                          >
+                            <Box sx={{ overflow: 'hidden', flex: 1 }}>
+                              <Typography
+                                sx={{
+                                  fontFamily: 'Raleway, sans-serif',
+                                  fontWeight: 800,
+                                  color: '#ffffff',
+                                  fontSize: '11px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {slide.title || 'Event'}
+                              </Typography>
+                              {minPrice !== undefined && (
+                                <Typography
+                                  sx={{
+                                    fontFamily: 'Raleway, sans-serif',
+                                    fontWeight: 700,
+                                    color: '#00e676',
+                                    fontSize: '10px',
+                                  }}
+                                >
+                                  From {formatPrice(minPrice)}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (slide.targetUrl) {
+                                  if (slide.targetUrl.startsWith('http')) {
+                                    window.open(slide.targetUrl, '_blank');
+                                  } else {
+                                    navigate(slide.targetUrl);
+                                  }
+                                }
+                              }}
+                              variant="contained"
+                              size="small"
+                              sx={{
+                                background: 'linear-gradient(135deg, #ff1955 0%, #d01443 100%)',
+                                color: '#ffffff',
+                                borderRadius: '12px',
+                                py: 0.2,
+                                px: 1.2,
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                fontFamily: 'Raleway, sans-serif',
+                                textTransform: 'none',
+                                boxShadow: '0 2px 8px rgba(255, 25, 85, 0.4)',
+                                minHeight: 24,
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {slide.buttonText || 'Tickets'} →
+                            </Button>
+                          </Box>
+
+                          {/* Tablet & Desktop View Only Floating Card (sm+) */}
                           {(slide.venueName || slide.buttonText) && (
                             <Box
                               sx={{
-                                width: { xs: '100%', sm: '270px', md: '285px' },
-                                backgroundColor: 'rgba(23, 28, 38, 0.85)',
+                                display: { xs: 'none', sm: 'flex' },
+                                width: { sm: '270px', md: '285px' },
+                                backgroundColor: 'rgba(23, 28, 38, 0.88)',
                                 backdropFilter: 'blur(16px)',
                                 WebkitBackdropFilter: 'blur(16px)',
-                                borderRadius: '14px',
-                                border: '1px solid rgba(255, 25, 85, 0.25)',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255, 25, 85, 0.3)',
                                 p: 1.5,
-                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.65), 0 0 15px rgba(255, 25, 85, 0.15)',
-                                display: 'flex',
+                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.65)',
                                 flexDirection: 'column',
                                 gap: 0.9,
                                 flexShrink: 0,
@@ -592,14 +730,14 @@ const Home: React.FC = () => {
                                 <Box
                                   sx={{
                                     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                    borderRadius: '8px',
+                                    borderRadius: '6px',
                                     p: '6px 10px',
                                     border: '1px solid rgba(255, 255, 255, 0.06)',
                                   }}
                                 >
                                   <Typography
                                     sx={{
-                                      fontSize: '9px',
+                                      fontSize: '8px',
                                       fontWeight: 800,
                                       color: 'rgba(255, 255, 255, 0.5)',
                                       letterSpacing: '1px',
@@ -634,7 +772,7 @@ const Home: React.FC = () => {
                                       sx={{
                                         flex: 1,
                                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                        borderRadius: '8px',
+                                        borderRadius: '6px',
                                         p: '6px 10px',
                                         border: '1px solid rgba(255, 255, 255, 0.06)',
                                         overflow: 'hidden',
@@ -642,7 +780,7 @@ const Home: React.FC = () => {
                                     >
                                       <Typography
                                         sx={{
-                                          fontSize: '9px',
+                                          fontSize: '8px',
                                           fontWeight: 800,
                                           color: 'rgba(255, 255, 255, 0.5)',
                                           letterSpacing: '1px',
@@ -672,7 +810,7 @@ const Home: React.FC = () => {
                                       sx={{
                                         flex: 1,
                                         backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                        borderRadius: '8px',
+                                        borderRadius: '6px',
                                         p: '6px 10px',
                                         border: '1px solid rgba(255, 255, 255, 0.06)',
                                         overflow: 'hidden',
@@ -680,7 +818,7 @@ const Home: React.FC = () => {
                                     >
                                       <Typography
                                         sx={{
-                                          fontSize: '9px',
+                                          fontSize: '8px',
                                           fontWeight: 800,
                                           color: 'rgba(255, 255, 255, 0.5)',
                                           letterSpacing: '1px',
@@ -723,7 +861,7 @@ const Home: React.FC = () => {
                                 sx={{
                                   background: 'linear-gradient(135deg, #ff1955 0%, #d01443 100%)',
                                   color: '#ffffff',
-                                  borderRadius: '8px',
+                                  borderRadius: '6px',
                                   py: 0.9,
                                   fontSize: '13px',
                                   fontWeight: 800,
@@ -756,33 +894,37 @@ const Home: React.FC = () => {
                     onClick={() => setActiveSlide((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1))}
                     sx={{
                       position: 'absolute',
-                      left: { xs: 8, md: 16 },
-                      top: '50%',
+                      left: { xs: 6, md: 16 },
+                      top: { xs: '30%', sm: '38%', md: '50%' },
                       transform: 'translateY(-50%)',
                       zIndex: 10,
                       color: '#ffffff',
-                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.45)',
                       backdropFilter: 'blur(8px)',
+                      width: { xs: 32, md: 40 },
+                      height: { xs: 32, md: 40 },
                       '&:hover': { backgroundColor: '#ff1955' },
                     }}
                   >
-                    <ChevronLeft />
+                    <ChevronLeft sx={{ fontSize: { xs: 20, md: 24 } }} />
                   </IconButton>
                   <IconButton
                     onClick={() => setActiveSlide((prev) => (prev + 1) % heroSlides.length)}
                     sx={{
                       position: 'absolute',
-                      right: { xs: 8, md: 16 },
-                      top: '50%',
+                      right: { xs: 6, md: 16 },
+                      top: { xs: '30%', sm: '38%', md: '50%' },
                       transform: 'translateY(-50%)',
                       zIndex: 10,
                       color: '#ffffff',
-                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.45)',
                       backdropFilter: 'blur(8px)',
+                      width: { xs: 32, md: 40 },
+                      height: { xs: 32, md: 40 },
                       '&:hover': { backgroundColor: '#ff1955' },
                     }}
                   >
-                    <ChevronRight />
+                    <ChevronRight sx={{ fontSize: { xs: 20, md: 24 } }} />
                   </IconButton>
                 </>
               )}
@@ -1145,11 +1287,11 @@ const Home: React.FC = () => {
             sx={{
               fontFamily: 'Raleway, sans-serif',
               fontWeight: 600,
-              fontSize: isMobile ? '0.875rem' : '1rem',
+              fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
               color: timeFilter === 'this-month' ? '#ff1955' : 'rgba(255, 255, 255, 0.7)',
-              padding: '10px 30px',
+              padding: { xs: '6px 16px', sm: '8px 22px', md: '10px 30px' },
               border: timeFilter === 'this-month' ? '2px solid #ff1955' : '2px solid rgba(255, 255, 255, 0.3)',
-              borderRadius: '25px',
+              borderRadius: '20px',
               backgroundColor: timeFilter === 'this-month' ? 'rgba(255, 25, 85, 0.1)' : 'transparent',
               transition: 'all 0.3s ease',
               textTransform: 'none',
@@ -1168,11 +1310,11 @@ const Home: React.FC = () => {
             sx={{
               fontFamily: 'Raleway, sans-serif',
               fontWeight: 600,
-              fontSize: isMobile ? '0.875rem' : '1rem',
+              fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
               color: timeFilter === 'next-month' ? '#ff1955' : 'rgba(255, 255, 255, 0.7)',
-              padding: '10px 30px',
-              border: timeFilter === 'next-month' ? '2px solid #ff1955' : '2px solid rgba(255, 255, 255, 0.3)',
-              borderRadius: '25px',
+              padding: { xs: '6px 16px', sm: '8px 22px', md: '10px 30px' },
+              border: timeFilter === 'next-month' ? '2px solid #ff1955' : '2px solid rgba(255, 25, 85, 0.3)',
+              borderRadius: '20px',
               backgroundColor: timeFilter === 'next-month' ? 'rgba(255, 25, 85, 0.1)' : 'transparent',
               transition: 'all 0.3s ease',
               textTransform: 'none',
@@ -1300,7 +1442,7 @@ const Home: React.FC = () => {
           </Box>
         )}
 
-        <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Box sx={{ textAlign: 'center', mt: { xs: 2.5, sm: 4 } }}>
           <Button
             variant="contained"
             onClick={() => navigate('/events')}
@@ -1309,11 +1451,16 @@ const Home: React.FC = () => {
               color: '#fff',
               fontFamily: 'Raleway, sans-serif',
               fontWeight: 700,
-              fontSize: '1.1rem',
-              px: 4,
-              py: 1.5,
+              fontSize: { xs: '0.82rem', sm: '0.95rem', md: '1.05rem' },
+              px: { xs: 2.5, sm: 3.5, md: 4 },
+              py: { xs: 0.6, sm: 1, md: 1.2 },
+              minHeight: { xs: 32, sm: 40 },
+              borderRadius: '20px',
+              textTransform: 'none',
+              boxShadow: 'none',
               '&:hover': {
                 backgroundColor: '#e01545',
+                boxShadow: 'none',
               },
             }}
           >

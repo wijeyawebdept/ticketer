@@ -159,7 +159,11 @@ async initiatePayment(request: InitiatePaymentRequest): Promise<MPGSSessionRespo
       session: { id: session.sessionId }
     });
 
-    (window as any).Checkout.showPaymentPage();
+    if (typeof (window as any).Checkout.showLightbox === 'function') {
+      (window as any).Checkout.showLightbox();
+    } else {
+      (window as any).Checkout.showPaymentPage();
+    }
   }
 
   /**

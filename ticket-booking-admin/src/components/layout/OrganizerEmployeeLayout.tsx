@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import {
   Box,
   CssBaseline,
@@ -18,7 +18,8 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  useMediaQuery
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -49,18 +50,29 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
 }>(({ theme, open }) => ({
   flexGrow: 1,
   padding: theme.spacing(3),
-  transition: theme.transitions.create('margin', {
+  width: '100%',
+  maxWidth: '100%',
+  minHeight: '100dvh',
+  boxSizing: 'border-box',
+  overflowX: 'auto',
+  transition: theme.transitions.create(['margin', 'width'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  marginLeft: `-${drawerWidth}px`,
-  ...(open && {
-    transition: theme.transitions.create('margin', {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
+  marginLeft: 0,
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1.5),
+  },
+  [theme.breakpoints.up('md')]: {
+    marginLeft: `-${drawerWidth}px`,
+    ...(open && {
+      transition: theme.transitions.create(['margin', 'width'], {
+        easing: theme.transitions.easing.easeOut,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
+      marginLeft: 0,
     }),
-    marginLeft: 0,
-  }),
+  },
 }));
 
 const AppBarStyled = styled(AppBar, {
@@ -70,14 +82,16 @@ const AppBarStyled = styled(AppBar, {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  ...(open && {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: `${drawerWidth}px`,
-    transition: theme.transitions.create(['margin', 'width'], {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
+  [theme.breakpoints.up('md')]: {
+    ...(open && {
+      width: `calc(100% - ${drawerWidth}px)`,
+      marginLeft: `${drawerWidth}px`,
+      transition: theme.transitions.create(['margin', 'width'], {
+        easing: theme.transitions.easing.easeOut,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
     }),
-  }),
+  },
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
   background: 'linear-gradient(135deg, #43a047 0%, #1b5e20 100%)',
 }));
@@ -92,14 +106,22 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 const OrganizerEmployeeLayout: React.FC = () => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  const [open, setOpen] = useState(() => {
+    const saved = localStorage.getItem('ticket_employee_sidebar_open');
+    if (saved !== null) return saved === 'true';
+    return window.innerWidth >= 960;
+  });
+  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -116,7 +138,11 @@ const OrganizerEmployeeLayout: React.FC = () => {
   }, []);
 
   const handleDrawerToggle = () => {
-    setOpen(!open);
+    setOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem('ticket_employee_sidebar_open', String(next));
+      return next;
+    });
   };
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -229,9 +255,10 @@ const OrganizerEmployeeLayout: React.FC = () => {
             borderRight: '1px solid rgba(0,0,0,0.05)',
           },
         }}
-        variant="persistent"
+        variant={isMobile ? "temporary" : "persistent"}
         anchor="left"
         open={open}
+        onClose={() => setOpen(false)}
       >
         <DrawerHeader>
           <IconButton onClick={() => setOpen(false)}>

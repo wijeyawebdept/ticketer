@@ -33,8 +33,17 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClose={onClose}
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-description"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          width: { xs: '92%', sm: '450px' },
+          maxWidth: '100%',
+          m: { xs: 1.5, sm: 2 },
+          p: { xs: 1, sm: 1.5 },
+        },
+      }}
     >
-      <DialogTitle id="confirm-dialog-title">
+      <DialogTitle id="confirm-dialog-title" sx={{ fontWeight: 700 }}>
         {title}
       </DialogTitle>
       <DialogContent>
@@ -42,11 +51,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           {content}
         </DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="primary">
+      <DialogActions sx={{ p: 2, pt: 1, flexDirection: { xs: 'column-reverse', sm: 'row' }, gap: 1 }}>
+        <Button onClick={onClose} color="inherit" sx={{ minHeight: 44, width: { xs: '100%', sm: 'auto' } }}>
           {cancelText}
         </Button>
-        <Button onClick={onConfirm} color="primary" variant="contained" autoFocus>
+        <Button onClick={onConfirm} color="primary" variant="contained" autoFocus sx={{ minHeight: 44, width: { xs: '100%', sm: 'auto' }, fontWeight: 700, backgroundColor: '#ff1955', '&:hover': { backgroundColor: '#d01443' } }}>
           {confirmText}
         </Button>
       </DialogActions>

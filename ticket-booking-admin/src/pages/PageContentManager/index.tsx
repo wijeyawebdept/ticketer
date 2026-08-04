@@ -192,7 +192,19 @@ export default function PageContentManager() {
           value={tabValue}
           onChange={handleTabChange}
           aria-label="page content tabs"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              fontWeight: 600,
+              fontSize: { xs: '0.82rem', sm: '0.9rem' },
+              minWidth: 'auto',
+              px: { xs: 1.5, sm: 2.5 }
+            }
+          }}
         >
           {pageTypes.map((page, index) => (
             <Tab key={page.key} label={page.label} id={`tab-${index}`} aria-controls={`tabpanel-${index}`} />

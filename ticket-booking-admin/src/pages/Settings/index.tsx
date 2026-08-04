@@ -591,10 +591,15 @@ const Settings: React.FC = () => {
             value={activeTab} 
             onChange={handleTabChange} 
             aria-label="settings tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': {
-                fontWeight: 500,
-                fontSize: '1rem'
+                fontWeight: 600,
+                fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                minWidth: 'auto',
+                px: { xs: 2, sm: 3 }
               },
               '& .Mui-selected': {
                 color: '#1976d2'
