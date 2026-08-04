@@ -887,14 +887,32 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
             return (
               <div className="seat-tooltip">
-                <strong>{hoveredSeat.seatId}</strong>
-                <div>{t('sectionLabel', 'Section:')} {hoveredSeat.section}</div>
-                <div>{t('rowLabelText', 'Row:')} {hoveredSeat.rowLabel}, {t('seatLabel', 'Seat:')} {hoveredSeat.seatNumber}</div>
-                <div>{t('categoryLabel', 'Category:')} {hoveredSeat.categoryName}</div>
-                {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
-                  <div>{t('priceLabel', 'Price:')} {formatCurrency(seatStatuses.get(hoveredSeat.seatId)?.currentPrice ?? 0)}</div>
-                )}
-                <div>{t('statusLabel', 'Status:')} {statusText}</div>
+                <div className="seat-tooltip-header">
+                  <strong>{hoveredSeat.seatId}</strong>
+                  {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
+                    <span className="seat-tooltip-price">
+                      {formatCurrency(seatStatuses.get(hoveredSeat.seatId)?.currentPrice ?? 0)}
+                    </span>
+                  )}
+                  <span className={`seat-tooltip-status ${statusText.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {statusText}
+                  </span>
+                  <button
+                    className="seat-tooltip-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHoveredSeat(null);
+                    }}
+                    title="Close tooltip"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="seat-tooltip-details">
+                  <span>{t('sectionLabel', 'Section:')} <strong>{hoveredSeat.section}</strong></span>
+                  <span>{t('rowLabelText', 'Row:')} <strong>{hoveredSeat.rowLabel}</strong>, {t('seatLabel', 'Seat:')} <strong>{hoveredSeat.seatNumber}</strong></span>
+                  <span>{t('categoryLabel', 'Cat:')} <strong>{hoveredSeat.categoryName}</strong></span>
+                </div>
               </div>
             );
       })()}

@@ -613,7 +613,7 @@ const SeatSelectionPage: React.FC = () => {
   return (
     <Box sx={{ backgroundColor: '#242a33', minHeight: '100vh' }}>
       <PublicNavbar />
-      <Container maxWidth="xl" sx={{ pt: { xs: 9, md: 12 }, pb: { xs: 2, md: 6 }, px: { xs: 1.5, md: 3 } }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 7, md: 8.5 }, pb: { xs: 2, md: 6 }, px: { xs: 1.5, md: 3 } }}>
         <div className="seat-selection-page">
       {isRedirecting ? (
         <div className="payment-redirection-view">
@@ -667,21 +667,41 @@ const SeatSelectionPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {message && <div className={`message-notification ${message.type}`}>{message.text}</div>}
+          {/* Centered Event Title Moved Up */}
+          {eventDetails.title && (
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                textAlign: 'center',
+                fontFamily: 'Raleway, sans-serif',
+                fontWeight: 800,
+                color: '#ffffff',
+                fontSize: { xs: '1.25rem', sm: '1.65rem', md: '2.1rem' },
+                letterSpacing: '0.5px',
+                mt: { xs: 0.2, md: 0.4 },
+                mb: { xs: 1.5, md: 2.2 },
+                textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              {eventDetails.title}
+            </Typography>
+          )}
+
           {/* Single-Line Event Details Strip */}
           <Box
             sx={{
               display: 'flex',
               alignItems: { xs: 'flex-start', md: 'center' },
               justifyContent: 'space-between',
-              flexDirection: { xs: 'column', md: 'row' },
+              flexDirection: { xs: 'column', sm: 'row' },
               backgroundColor: '#1b222c',
               border: '1px solid rgba(255, 25, 85, 0.25)',
               borderRadius: { xs: '8px', md: '12px' },
-              px: { xs: 1.5, md: 3 },
-              py: { xs: 1, md: 1.5 },
-              mb: { xs: 2, md: 3 },
-              gap: { xs: 1, md: 0 },
+              px: { xs: 1, md: 3 },
+              py: { xs: 0.6, md: 1.2 },
+              mb: { xs: 1, md: 3 },
+              gap: { xs: 0.6, sm: 0 },
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(12px)',
               width: { xs: '100%', md: '85%' },
@@ -693,7 +713,7 @@ const SeatSelectionPage: React.FC = () => {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: { xs: 1.5, md: 3 },
+                gap: { xs: 1, md: 3 },
                 flexWrap: 'wrap',
                 flex: 1,
               }}
@@ -705,7 +725,7 @@ const SeatSelectionPage: React.FC = () => {
                 sx={{
                   color: '#ffffff',
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  p: 0.8,
+                  p: { xs: 0.5, md: 0.8 },
                   '&:hover': {
                     backgroundColor: '#ff1955',
                     color: '#ffffff',
@@ -718,35 +738,20 @@ const SeatSelectionPage: React.FC = () => {
                 <ArrowBackIcon fontSize="small" />
               </IconButton>
 
-              {/* Event Title */}
-              <Typography
-                variant="h6"
-                sx={{
-                  fontFamily: 'Raleway, sans-serif',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  fontSize: { xs: '0.85rem', md: '1.2rem' },
-                  whiteSpace: { xs: 'normal', md: 'nowrap' },
-                  wordBreak: 'break-word',
-                }}
-              >
-                {eventDetails.title}
-              </Typography>
-
               {/* Date & Time */}
               {(eventDetails.date || eventDetails.time) && (
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 0.6,
+                    gap: 0.5,
                     color: 'rgba(255, 255, 255, 0.85)',
-                    fontSize: '0.875rem',
+                    fontSize: { xs: '0.78rem', md: '0.875rem' },
                     fontFamily: 'Raleway, sans-serif',
                     fontWeight: 500,
                   }}
                 >
-                  <EventIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                  <EventIcon sx={{ fontSize: { xs: 15, md: 18 }, color: '#ff1955' }} />
                   <span>
                     {eventDetails.date}
                     {eventDetails.date && eventDetails.time ? ' • ' : ''}
@@ -761,14 +766,14 @@ const SeatSelectionPage: React.FC = () => {
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 0.6,
+                    gap: 0.5,
                     color: 'rgba(255, 255, 255, 0.85)',
-                    fontSize: '0.875rem',
+                    fontSize: { xs: '0.78rem', md: '0.875rem' },
                     fontFamily: 'Raleway, sans-serif',
                     fontWeight: 500,
                   }}
                 >
-                  <LocationOnIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                  <LocationOnIcon sx={{ fontSize: { xs: 15, md: 18 }, color: '#ff1955' }} />
                   <span>{eventDetails.venue}</span>
                 </Box>
               )}
@@ -780,9 +785,9 @@ const SeatSelectionPage: React.FC = () => {
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1,
-                  px: 2,
-                  py: 0.5,
+                  gap: 0.8,
+                  px: { xs: 1.2, md: 2 },
+                  py: { xs: 0.3, md: 0.5 },
                   borderRadius: '20px',
                   backgroundColor:
                     countdownStatus === 'urgent'
@@ -797,6 +802,7 @@ const SeatSelectionPage: React.FC = () => {
                       ? '1px solid rgba(255, 193, 7, 0.4)'
                       : '1px solid rgba(76, 175, 80, 0.4)',
                   whiteSpace: 'nowrap',
+                  mt: { xs: 0.5, sm: 0 },
                 }}
               >
                 <Typography
@@ -806,7 +812,7 @@ const SeatSelectionPage: React.FC = () => {
                     fontWeight: 800,
                     color: 'rgba(255, 255, 255, 0.6)',
                     letterSpacing: '0.5px',
-                    fontSize: '0.65rem',
+                    fontSize: { xs: '0.6rem', md: '0.65rem' },
                   }}
                 >
                   STARTS IN:
@@ -816,7 +822,7 @@ const SeatSelectionPage: React.FC = () => {
                   sx={{
                     fontFamily: 'Raleway, sans-serif',
                     fontWeight: 800,
-                    fontSize: '0.85rem',
+                    fontSize: { xs: '0.78rem', md: '0.85rem' },
                     color:
                       countdownStatus === 'urgent'
                         ? '#ef5350'

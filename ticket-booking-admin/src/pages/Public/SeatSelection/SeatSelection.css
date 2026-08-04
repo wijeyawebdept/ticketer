@@ -463,20 +463,23 @@
     gap: 8px;
   }
 
-  /* Booking summary as compact full-width bottom sheet on mobile */
+  /* Booking summary as sleek, no-scroll bottom action bar on mobile */
   .booking-summary {
     width: 100%;
     height: auto;
-    max-height: 55vh;
+    max-height: none !important;
     top: auto;
     bottom: 0;
     left: 0;
     right: 0;
     border-left: none;
-    border-top: 2px solid rgba(255, 25, 85, 0.5);
+    border-top: 2px solid rgba(255, 25, 85, 0.6);
     border-radius: 16px 16px 0 0;
-    animation: slideUp 0.4s ease;
-    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+    overflow: visible !important;
+    background: #14181f;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.7);
+    z-index: 1000;
   }
 
   .booking-summary.collapsed {
@@ -493,64 +496,100 @@
   }
 
   .swipe-handle-bar {
-    display: flex !important;
+    display: none !important;
   }
 
   .summary-content {
-    padding: 12px 14px;
+    padding: 8px 12px 10px 12px;
   }
 
   .summary-header {
+    display: flex;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 6px;
-    padding-bottom: 6px;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    border-bottom: none;
   }
 
   .summary-header h3 {
     flex: 1;
-    min-width: 100px;
-    font-size: 15px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
   }
 
   .hold-timer {
-    width: 100%;
-    font-size: 12px;
+    width: auto;
+    font-size: 10px;
   }
 
   .summary-details {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+  }
+
+  .summary-row {
+    margin-bottom: 2px;
+    font-size: 9.5px;
+  }
+
+  .summary-row.total {
+    font-size: 10.5px;
+    margin-top: 2px;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .summary-row.total strong {
+    font-size: 13.5px;
+    color: #ff1955;
   }
 
   .summary-actions {
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 4px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 5px;
+    margin-top: 6px;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .btn {
-    width: 65%;
-    max-width: 190px;
-    min-width: auto;
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
+    flex: 1 1 0px;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0px;
+    padding: 5px 2px;
     height: 30px;
     border-radius: 15px;
+    white-space: nowrap;
+    text-align: center;
   }
 
   .seat-badges {
     max-width: 100%;
     justify-content: flex-start;
     gap: 4px;
+    margin-top: 2px;
+    max-height: 26px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 
   .seat-badge {
-    padding: 2px 6px;
-    font-size: 11px;
+    padding: 1px 5px;
+    font-size: 9px;
+    white-space: nowrap;
   }
 
   .summary-row {
