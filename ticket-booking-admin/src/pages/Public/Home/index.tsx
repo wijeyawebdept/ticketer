@@ -976,7 +976,7 @@ const Home: React.FC = () => {
 
       {/* My Tickets Deals Section */}
       {dealEvents.length > 0 && (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="lg" sx={{ pt: { xs: 3, sm: 4 }, pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography
               variant="h2"
@@ -1032,14 +1032,16 @@ const Home: React.FC = () => {
               ref={dealsScrollRef}
               sx={{
                 display: 'flex',
-                gap: 3,
+                justifyContent: dealEvents.length <= 1 ? 'center' : { xs: 'center', sm: 'flex-start' },
+                gap: { xs: 2, sm: 3 },
                 overflowX: 'auto',
                 overflowY: 'hidden',
                 scrollSnapType: 'x mandatory',
                 scrollBehavior: 'smooth',
+                pt: 1.5,
                 pb: 2,
-                px: 1, // Add padding to avoid cutting off box shadows
-                mx: -1,
+                px: 1.5,
+                mx: -1.5,
                 '&::-webkit-scrollbar': { display: 'none' },
                 msOverflowStyle: 'none',
                 scrollbarWidth: 'none',
@@ -1070,24 +1072,28 @@ const Home: React.FC = () => {
                   <Card
                     key={event.id || event.eventId}
                     sx={{
-                      minWidth: isMobile ? '280px' : '330px',
-                      maxWidth: isMobile ? '280px' : '330px',
-                      scrollSnapAlign: 'start',
+                      minWidth: { xs: '230px', sm: '300px', md: '330px' },
+                      maxWidth: { xs: '230px', sm: '300px', md: '330px' },
+                      scrollSnapAlign: { xs: 'center', sm: 'start' },
                       flexShrink: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      borderRadius: 2,
+                      backgroundColor: '#1b222c',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      boxShadow: 'none',
                       cursor: 'pointer',
                       position: 'relative',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      overflow: 'hidden',
+                      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 24px rgba(255, 25, 85, 0.3)',
+                        borderColor: 'rgba(0, 200, 83, 0.35)',
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
                       },
                     }}
                     onClick={() => navigate(`/event/${event.slug || event.id || event.eventId}`)}
                   >
                     {/* Badges */}
-                    <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', gap: 1 }}>
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, display: 'flex', gap: 0.5 }}>
                       {event.ticketsAvailable === 0 && (
                         <Chip
                           label="Sold Out"
@@ -1096,7 +1102,8 @@ const Home: React.FC = () => {
                             backgroundColor: '#dc3545',
                             color: '#fff',
                             fontWeight: 700,
-                            fontSize: '0.75rem',
+                            fontSize: '0.68rem',
+                            height: 22,
                           }}
                         />
                       )}
@@ -1106,53 +1113,71 @@ const Home: React.FC = () => {
                         sx={{
                           backgroundColor: '#00c853',
                           color: '#fff',
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          fontSize: '0.68rem',
+                          height: 22,
                         }}
                       />
                     </Box>
 
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
-                      alt={event.name}
-                      sx={{ objectFit: 'cover' }}
-                    />
+                    {/* Event Image */}
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: { xs: '150px', sm: '170px', md: '180px' },
+                        overflow: 'hidden',
+                        position: 'relative',
+                        backgroundColor: '#0f131a',
+                      }}
+                    >
+                      <CardMedia
+                        component="img"
+                        image={getAssetUrl(event.imageUrl) || '/images/default-event.jpg'}
+                        alt={event.name}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: 'center center',
+                        }}
+                      />
+                    </Box>
 
-                    <CardContent>
+                    <CardContent sx={{ p: { xs: 1.25, sm: 2 }, display: 'flex', flexDirection: 'column' }}>
                       <Typography
                         variant="h6"
                         sx={{
                           fontFamily: 'Raleway, sans-serif',
                           fontWeight: 700,
-                          color: '#2c3e50',
-                          mb: 1,
+                          color: '#ffffff',
+                          mb: { xs: 0.5, sm: 1 },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
-                          minHeight: '56px',
+                          fontSize: { xs: '0.92rem', sm: '1.1rem' },
+                          lineHeight: 1.25,
                         }}
                       >
                         {event.name}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
-                        <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: '#666' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <CalendarToday sx={{ fontSize: 13, color: '#ff1955', mr: 0.5 }} />
+                        <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem' }}>
                           {formatDate(event.startDateTime)}
                         </Typography>
                       </Box>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <LocationOn sx={{ fontSize: 16, color: '#ff1955', mr: 1 }} />
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, sm: 1.5 } }}>
+                        <LocationOn sx={{ fontSize: 13, color: '#fcd0a5', mr: 0.5 }} />
                         <Typography
                           variant="body2"
                           sx={{
                             fontFamily: 'Raleway, sans-serif',
-                            color: '#666',
+                            color: '#fcd0a5',
+                            fontSize: '0.75rem',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -1162,65 +1187,59 @@ const Home: React.FC = () => {
                         </Typography>
                       </Box>
 
-                      <Box sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.1)', pt: 2 }}>
-                        <Typography variant="body2" sx={{ color: '#999', fontSize: '0.75rem', mb: 0.5 }}>
-                          Starting from
-                        </Typography>
-                        {showDiscountedPrice ? (
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              sx={{ fontFamily: 'Raleway, sans-serif', color: '#aaa', textDecoration: 'line-through', display: 'block', fontSize: '0.8rem' }}
-                            >
-                              {formatPrice(lowestOriginalPrice)} upwards
-                            </Typography>
-                            <Typography
-                              variant="h6"
-                              sx={{
-                                fontFamily: 'Raleway, sans-serif',
-                                fontWeight: 700,
-                                color: '#ff1955',
-                                fontSize: '1.1rem',
-                                mb: 2,
-                              }}
-                            >
-                              {formatPrice(lowestCurrentPrice)}{' '}
-                              <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
-                            </Typography>
-                          </Box>
-                        ) : (
+                      <Box
+                        sx={{
+                          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                          pt: { xs: 0.75, sm: 1 },
+                          mt: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 1,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.62rem', display: 'block', lineHeight: 1 }}>
+                            Starting from
+                          </Typography>
                           <Typography
                             variant="h6"
                             sx={{
                               fontFamily: 'Raleway, sans-serif',
-                              fontWeight: 700,
+                              fontWeight: 800,
                               color: '#ff1955',
-                              fontSize: '1.1rem',
-                              mb: 2,
+                              fontSize: { xs: '0.88rem', sm: '1.05rem' },
+                              lineHeight: 1.2,
                             }}
                           >
-                            {formatPrice(lowestCurrentPrice)} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>upwards</span>
+                            {formatPrice(lowestCurrentPrice)}
                           </Typography>
-                        )}
+                        </Box>
 
                         <Button
-                          fullWidth
                           variant="contained"
                           sx={{
-                            backgroundColor: '#0d6efd',
+                            backgroundColor: '#ff1955',
                             color: '#fff',
                             fontFamily: 'Raleway, sans-serif',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             textTransform: 'none',
-                            py: 1,
-                            '&:hover': { backgroundColor: '#0b5ed7' },
+                            borderRadius: '16px',
+                            py: { xs: 0.3, sm: 0.8 },
+                            px: { xs: 1.25, sm: 2 },
+                            fontSize: { xs: '0.72rem', sm: '0.85rem' },
+                            boxShadow: 'none',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            minHeight: { xs: 26, sm: 34 },
+                            '&:hover': { backgroundColor: '#e01545', boxShadow: '0 4px 12px rgba(255,25,85,0.4)' },
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/event/${event.slug || event.id || event.eventId}`);
                           }}
                         >
-                          {event.dealDescription || 'Book Now •'}
+                          Book Now
                         </Button>
                       </Box>
                     </CardContent>
@@ -1253,7 +1272,7 @@ const Home: React.FC = () => {
       )}
 
       {/* Upcoming Events Section */}
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 1, pb: { xs: 4, sm: 6 } }}>
         <Typography
           variant="h1"
           sx={{
@@ -1263,7 +1282,7 @@ const Home: React.FC = () => {
             fontSize: isMobile ? '32px' : '60px',
             lineHeight: 1.1,
             letterSpacing: 0,
-            marginTop: isMobile ? '30px' : '50px',
+            marginTop: 0,
             marginBottom: isMobile ? '20px' : '30px',
             textAlign: 'center',
           }}

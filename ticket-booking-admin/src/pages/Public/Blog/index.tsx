@@ -9,6 +9,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
 import BlogService, { BlogPostSummary, BlogComment } from '../../../services/BlogService';
 import { useAuth } from '../../../context/AuthContext';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -602,6 +603,8 @@ const Blog: React.FC = () => {
           </Box>
         </Box>
       </Drawer>
+
+      <PublicFooter />
     </Box>
   );
 };

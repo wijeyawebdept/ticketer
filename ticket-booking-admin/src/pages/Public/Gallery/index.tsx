@@ -10,6 +10,7 @@ import {
   Alert,
 } from '@mui/material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
+import PublicFooter from '../../../components/public/PublicFooter';
 import GalleryService, { GalleryImage } from '../../../services/GalleryService';
 
 const Gallery: React.FC = () => {
@@ -61,7 +62,7 @@ const Gallery: React.FC = () => {
     >
       <PublicNavbar />
 
-      <Container maxWidth="lg" sx={{ py: 4, flexGrow: 1 }}>
+      <Container maxWidth="lg" sx={{ pt: { xs: 2, sm: 4 }, pb: { xs: 8, sm: 12 }, flexGrow: 1 }}>
         <Grid container sx={{ mt: 4 }}>
           {/* Page Title */}
           <Grid item xs={12}>
@@ -69,11 +70,11 @@ const Gallery: React.FC = () => {
               <Typography
                 variant="h3"
                 sx={{
-                  fontSize: '36px',
+                  fontSize: { xs: '26px', sm: '36px' },
                   textAlign: 'center',
                   fontWeight: 900,
-                  marginBottom: '30px',
-                  marginTop: '30px',
+                  marginBottom: { xs: '15px', sm: '30px' },
+                  marginTop: { xs: '15px', sm: '30px' },
                   color: '#fff',
                   fontFamily: 'Raleway, sans-serif',
                 }}
@@ -106,23 +107,23 @@ const Gallery: React.FC = () => {
               {/* Filter Buttons */}
               <Grid
                 item xs={12}
-                sx={{ display: 'flex', justifyContent: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}
+                sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 2.5, sm: 4 }, flexWrap: 'wrap', gap: { xs: 1, sm: 2 } }}
               >
                 {filters.map((filter) => (
                   <Button
                     key={filter}
                     onClick={() => handleFilterChange(filter)}
                     sx={{
-                      fontSize: '18px',
+                      fontSize: { xs: '14px', sm: '18px' },
                       border: '1px solid #ff1955',
-                      borderRadius: '5px',
+                      borderRadius: '20px',
                       textAlign: 'center',
                       color: selectedFilter === filter ? '#ffffff' : '#ff1955',
                       backgroundColor: selectedFilter === filter ? '#ff1955' : 'transparent',
                       fontFamily: 'Raleway, sans-serif',
                       textTransform: 'none',
-                      px: 3,
-                      py: 1,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 0.4, sm: 0.8 },
                       transition: 'all 0.3s',
                       '&:hover': {
                         color: '#ffffff',
@@ -210,22 +211,8 @@ const Gallery: React.FC = () => {
         </Grid>
       </Container>
 
-      {/* Footer */}
-      <Box
-        component="footer"
-        sx={{
-          backgroundColor: 'transparent',
-          color: '#fff',
-          py: 3,
-          px: 2,
-          mt: 'auto',
-          textAlign: 'center',
-          fontFamily: 'Raleway, sans-serif',
-        }}
-      >
-        <Typography variant="body2">
-          © 2026 Ticketer.lk - All Rights Reserved
-        </Typography>
+      <Box sx={{ mt: { xs: 4, sm: 8 } }}>
+        <PublicFooter />
       </Box>
     </Box>
   );

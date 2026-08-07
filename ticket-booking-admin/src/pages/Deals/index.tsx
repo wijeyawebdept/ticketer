@@ -237,7 +237,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 2, sm: 0 }, mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <LocalOfferIcon sx={{ color: '#00c853', fontSize: 32 }} />
           <Box>
@@ -247,7 +247,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
           <Tooltip title="Refresh">
             <IconButton onClick={fetchDeals} size="small"><RefreshIcon /></IconButton>
           </Tooltip>
@@ -264,7 +264,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
 
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={6} sm={3}>
           <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #00c853 0%, #00a844 100%)', color: '#fff' }}>
             <CardContent sx={{ py: 2 }}>
               <Typography variant="h4" fontWeight={800}>{activeDeals.length}</Typography>
@@ -272,7 +272,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={6} sm={3}>
           <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #546e7a 0%, #37474f 100%)', color: '#fff' }}>
             <CardContent sx={{ py: 2 }}>
               <Typography variant="h4" fontWeight={800}>{inactiveDeals.length}</Typography>
@@ -280,7 +280,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={6} sm={3}>
           <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #ff6f00 0%, #e65100 100%)', color: '#fff' }}>
             <CardContent sx={{ py: 2 }}>
               <Typography variant="h4" fontWeight={800}>{pctDeals.length}</Typography>
@@ -288,7 +288,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={6} sm={3}>
           <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%)', color: '#fff' }}>
             <CardContent sx={{ py: 2 }}>
               <Typography variant="h4" fontWeight={800}>{buyGetDeals.length}</Typography>

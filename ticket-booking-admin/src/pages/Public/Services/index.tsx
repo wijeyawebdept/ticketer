@@ -105,7 +105,8 @@ const Services: React.FC = () => {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           color: 'white',
-          py: { xs: 6, md: 10 },
+          pt: { xs: 12, md: 16 },
+          pb: { xs: 6, md: 10 },
           position: 'relative',
           '&::before': {
             content: '""',

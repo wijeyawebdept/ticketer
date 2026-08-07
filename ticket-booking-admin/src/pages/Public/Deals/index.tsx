@@ -68,7 +68,7 @@ const Deals: React.FC = () => {
         sx={{
           background: 'linear-gradient(135deg, #1a2035 0%, #242a33 60%, #1a2035 100%)',
           borderBottom: '1px solid rgba(0, 200, 83, 0.2)',
-          pt: { xs: 12, md: 14 },
+          pt: { xs: 10, sm: 12, md: 14 },
           pb: { xs: 4, md: 6 },
           position: 'relative',
           overflow: 'hidden',
@@ -81,16 +81,16 @@ const Deals: React.FC = () => {
           },
         }}
       >
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <LocalOffer sx={{ color: '#00c853', fontSize: 40 }} />
+        <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: 1 }}>
+            <LocalOffer sx={{ color: '#00c853', fontSize: { xs: 32, sm: 40 } }} />
             <Typography
               variant="h1"
               sx={{
                 fontFamily: 'Raleway, sans-serif',
                 fontWeight: 900,
                 color: '#fff',
-                fontSize: isMobile ? '36px' : '56px',
+                fontSize: { xs: '28px', sm: '42px', md: '56px' },
                 lineHeight: 1.1,
               }}
             >
@@ -101,9 +101,10 @@ const Deals: React.FC = () => {
             variant="h6"
             sx={{
               fontFamily: 'Raleway, sans-serif',
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.7)',
               fontWeight: 400,
-              ml: 7,
+              fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' },
+              ml: { xs: 0, sm: 7 },
               mb: 2,
             }}
           >
@@ -112,8 +113,8 @@ const Deals: React.FC = () => {
           {/* Green underline accent */}
           <Box
             sx={{
-              ml: 7,
-              width: 80,
+              ml: { xs: 0, sm: 7 },
+              width: { xs: 60, sm: 80 },
               height: 4,
               borderRadius: 2,
               background: 'linear-gradient(90deg, #00c853, #69f0ae)',
@@ -123,23 +124,36 @@ const Deals: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 6 }, px: { xs: 1.5, sm: 3 } }}>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: { xs: 8, md: 12 } }}>
             <CircularProgress sx={{ color: '#00c853' }} size={56} />
           </Box>
         ) : eventIds.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 12 }}>
-            <LocalOffer sx={{ fontSize: 72, color: 'rgba(255,255,255,0.15)', mb: 3 }} />
+          <Box sx={{ textAlign: 'center', py: { xs: 6, md: 10 }, px: 2 }}>
+            <LocalOffer sx={{ fontSize: { xs: 56, sm: 72 }, color: 'rgba(255,255,255,0.15)', mb: 2.5 }} />
             <Typography
               variant="h5"
-              sx={{ fontFamily: 'Raleway, sans-serif', color: 'rgba(255,255,255,0.5)', mb: 2 }}
+              sx={{
+                fontFamily: 'Raleway, sans-serif',
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                fontWeight: 700,
+                mb: 1.5,
+              }}
             >
               No active deals right now
             </Typography>
             <Typography
               variant="body1"
-              sx={{ fontFamily: 'Raleway, sans-serif', color: 'rgba(255,255,255,0.3)', mb: 4 }}
+              sx={{
+                fontFamily: 'Raleway, sans-serif',
+                color: 'rgba(255,255,255,0.4)',
+                fontSize: { xs: '0.85rem', sm: '1rem' },
+                mb: 3.5,
+                maxWidth: '420px',
+                mx: 'auto',
+              }}
             >
               Check back soon — new deals are added regularly!
             </Typography>
@@ -152,8 +166,9 @@ const Deals: React.FC = () => {
                 fontFamily: 'Raleway, sans-serif',
                 fontWeight: 600,
                 textTransform: 'none',
-                px: 4,
-                py: 1.5,
+                px: { xs: 3, sm: 4 },
+                py: 1.25,
+                borderRadius: '12px',
                 '&:hover': { backgroundColor: 'rgba(0,200,83,0.1)', borderColor: '#00e676' },
               }}
             >
@@ -161,31 +176,34 @@ const Deals: React.FC = () => {
             </Button>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }} justifyContent={{ xs: 'center', sm: 'flex-start' }} sx={{ pt: 1.5 }}>
             {eventIds.map((eventId) => {
               const categoryDeals = eventGroups[eventId];
               const firstDeal = categoryDeals[0];
               const lowestOriginal = firstDeal.eventMinPrice ?? Math.min(...categoryDeals.map((d) => d.originalPrice));
 
               return (
-                <Grid item xs={12} sm={6} md={4} key={eventId}>
+                <Grid item xs={12} sm={6} md={4} key={eventId} sx={{ display: 'flex', justifyContent: { xs: 'center', sm: 'stretch' } }}>
                   <Card
                     sx={{
                       height: '100%',
+                      maxWidth: { xs: '260px', sm: '100%' },
+                      width: '100%',
+                      mx: { xs: 'auto', sm: 0 },
                       display: 'flex',
                       flexDirection: 'column',
                       backgroundColor: '#1b222c',
                       borderRadius: '16px',
                       border: '1px solid rgba(255, 255, 255, 0.08)',
-                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                      boxShadow: 'none',
                       overflow: 'hidden',
                       cursor: 'pointer',
                       position: 'relative',
                       transition: 'transform 0.25s ease, box-shadow 0.25s ease',
                       '&:hover': {
-                        transform: 'translateY(-6px)',
-                        borderColor: 'rgba(0, 200, 83, 0.5)',
-                        boxShadow: '0 16px 40px rgba(0,200,83,0.25)',
+                        transform: 'translateY(-4px)',
+                        borderColor: 'rgba(0, 200, 83, 0.35)',
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
                       },
                     }}
                     onClick={() => navigate(`/event/${firstDeal.eventSlug || eventId}`)}
@@ -194,24 +212,25 @@ const Deals: React.FC = () => {
                     <Box
                       sx={{
                         position: 'absolute',
-                        top: 10,
-                        left: 10,
+                        top: 8,
+                        left: 8,
+                        right: 8,
                         zIndex: 2,
                         display: 'flex',
-                        gap: 0.75,
+                        gap: 0.5,
                         flexWrap: 'wrap',
                       }}
                     >
                       <Chip
-                        icon={<LocalOffer sx={{ fontSize: '14px !important' }} />}
+                        icon={<LocalOffer sx={{ fontSize: '13px !important' }} />}
                         label="Deal"
                         size="small"
                         sx={{
                           backgroundColor: '#00c853',
                           color: '#fff',
                           fontWeight: 800,
-                          fontSize: '0.75rem',
-                          height: 26,
+                          fontSize: '0.7rem',
+                          height: 24,
                           '& .MuiChip-icon': { color: '#fff' },
                         }}
                       />
@@ -225,8 +244,8 @@ const Deals: React.FC = () => {
                               backgroundColor: '#1565c0',
                               color: '#fff',
                               fontWeight: 700,
-                              fontSize: '0.7rem',
-                              height: 26,
+                              fontSize: '0.68rem',
+                              height: 24,
                             }}
                           />
                         ) : (
@@ -238,8 +257,8 @@ const Deals: React.FC = () => {
                               backgroundColor: '#ff6f00',
                               color: '#fff',
                               fontWeight: 700,
-                              fontSize: '0.7rem',
-                              height: 26,
+                              fontSize: '0.68rem',
+                              height: 24,
                             }}
                           />
                         )
@@ -250,9 +269,9 @@ const Deals: React.FC = () => {
                     <Box
                       sx={{
                         width: '100%',
-                        height: { xs: '140px', sm: '180px', md: '200px' },
-                        minHeight: { xs: '140px', sm: '180px', md: '200px' },
-                        maxHeight: { xs: '140px', sm: '180px', md: '200px' },
+                        height: { xs: '160px', sm: '180px', md: '220px' },
+                        minHeight: { xs: '160px', sm: '180px', md: '220px' },
+                        maxHeight: { xs: '160px', sm: '180px', md: '220px' },
                         overflow: 'hidden',
                         position: 'relative',
                         backgroundColor: '#0f131a',
@@ -275,7 +294,7 @@ const Deals: React.FC = () => {
                       />
                     </Box>
 
-                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2.5 }}>
+                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 1.5, sm: 2, md: 2.5 } }}>
                       {/* Event Name */}
                       <Typography
                         variant="h6"
@@ -283,14 +302,14 @@ const Deals: React.FC = () => {
                           fontFamily: 'Raleway, sans-serif',
                           fontWeight: 700,
                           color: '#ffffff',
-                          mb: 1.5,
+                          mb: 0.5,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
-                          minHeight: '52px',
-                          lineHeight: 1.3,
+                          fontSize: { xs: '1rem', sm: '1.15rem' },
+                          lineHeight: 1.25,
                         }}
                       >
                         {firstDeal.eventName}
@@ -299,13 +318,13 @@ const Deals: React.FC = () => {
                       {/* Venue */}
                       {firstDeal.venueName && (
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <LocationOn sx={{ fontSize: 15, color: '#fcd0a5', mr: 0.75 }} />
+                          <LocationOn sx={{ fontSize: 13, color: '#fcd0a5', mr: 0.4 }} />
                           <Typography
                             variant="body2"
                             sx={{
                               fontFamily: 'Raleway, sans-serif',
                               color: '#fcd0a5',
-                              fontSize: '0.8rem',
+                              fontSize: '0.78rem',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -316,31 +335,16 @@ const Deals: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Ticket Category Deals */}
+                      {/* Compact Event Deal Details */}
                       <Box
                         sx={{
-                          mt: 1,
-                          mb: 2,
-                          p: 1.5,
-                          backgroundColor: '#f8fffe',
-                          borderRadius: 2,
-                          border: '1px solid rgba(0,200,83,0.2)',
+                          my: 1,
+                          p: { xs: '6px 10px', sm: '8px 12px' },
+                          backgroundColor: 'rgba(0, 200, 83, 0.08)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(0, 200, 83, 0.3)',
                         }}
                       >
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: '#00c853',
-                            fontWeight: 700,
-                            fontFamily: 'Raleway, sans-serif',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            display: 'block',
-                            mb: 1,
-                          }}
-                        >
-                          {categoryDeals.length} Deal{categoryDeals.length > 1 ? 's' : ''} Available
-                        </Typography>
                         {categoryDeals.map((d) => (
                           <Box
                             key={d.categoryId}
@@ -348,97 +352,91 @@ const Deals: React.FC = () => {
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              py: 0.5,
-                              borderBottom: '1px solid rgba(0,0,0,0.05)',
-                              '&:last-child': { borderBottom: 'none', pb: 0 },
+                              gap: 1,
+                              py: 0.2,
                             }}
                           >
                             <Typography
                               variant="body2"
-                              sx={{ fontFamily: 'Raleway, sans-serif', color: '#333', fontWeight: 600, fontSize: '0.8rem' }}
+                              sx={{
+                                fontFamily: 'Raleway, sans-serif',
+                                color: '#00e676',
+                                fontWeight: 700,
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
                             >
                               {d.categoryName}
                             </Typography>
                             {d.dealType === 'BUY_X_GET_Y_FREE' ? (
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontFamily: 'Raleway, sans-serif',
-                                    color: '#ff1955',
-                                    fontWeight: 800,
-                                    fontSize: '0.8rem',
-                                  }}
-                                >
-                                  Buy {d.dealBuyQuantity} Get {d.dealFreeQuantity} Free
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontFamily: 'Raleway, sans-serif',
-                                    color: '#999',
-                                    display: 'block',
-                                    fontSize: '0.7rem',
-                                  }}
-                                >
-                                  {formatPrice(d.originalPrice)} each
-                                </Typography>
-                              </Box>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontFamily: 'Raleway, sans-serif',
+                                  color: '#ff1955',
+                                  fontWeight: 800,
+                                  fontSize: { xs: '0.72rem', sm: '0.8rem' },
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Buy {d.dealBuyQuantity} Get {d.dealFreeQuantity} Free
+                              </Typography>
                             ) : (
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontFamily: 'Raleway, sans-serif',
-                                    color: '#999',
-                                    textDecoration: 'line-through',
-                                    display: 'block',
-                                    fontSize: '0.7rem',
-                                  }}
-                                >
-                                  {formatPrice(d.originalPrice)}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontFamily: 'Raleway, sans-serif',
-                                    color: '#ff1955',
-                                    fontWeight: 800,
-                                    fontSize: '0.9rem',
-                                  }}
-                                >
-                                  {formatPrice(d.discountedPrice)}
-                                </Typography>
-                              </Box>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontFamily: 'Raleway, sans-serif',
+                                  color: '#ff1955',
+                                  fontWeight: 800,
+                                  fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {d.dealDiscountPercentage}% OFF
+                              </Typography>
                             )}
                           </Box>
                         ))}
                       </Box>
 
-                      {/* Starting From */}
-                      <Box sx={{ mt: 'auto', borderTop: '1px solid rgba(0,0,0,0.08)', pt: 1.5 }}>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: '#999', fontFamily: 'Raleway, sans-serif', display: 'block', mb: 0.25 }}
-                        >
-                          Starting from
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontFamily: 'Raleway, sans-serif',
-                            fontWeight: 800,
-                            color: '#ff1955',
-                            fontSize: '1.1rem',
-                            mb: 1.5,
-                          }}
-                        >
-                          {formatPrice(lowestOriginal)}{' '}
-                          <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#999' }}>upwards</span>
-                        </Typography>
+                      {/* Starting From & Book Button Row */}
+                      <Box
+                        sx={{
+                          mt: 'auto',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                          pt: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 1,
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: 'rgba(255, 255, 255, 0.5)', fontFamily: 'Raleway, sans-serif', display: 'block', fontSize: '0.65rem', lineHeight: 1 }}
+                          >
+                            Starting from
+                          </Typography>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontFamily: 'Raleway, sans-serif',
+                              fontWeight: 800,
+                              color: '#ff1955',
+                              fontSize: { xs: '0.9rem', sm: '1.1rem' },
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {formatPrice(lowestOriginal)}
+                          </Typography>
+                        </Box>
 
                         <Button
-                          fullWidth
                           variant="contained"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -450,14 +448,18 @@ const Deals: React.FC = () => {
                             fontFamily: 'Raleway, sans-serif',
                             fontWeight: 700,
                             textTransform: 'none',
-                            borderRadius: '8px',
-                            py: 1.25,
-                            fontSize: '0.9rem',
+                            borderRadius: '16px',
+                            py: { xs: 0.4, sm: 0.8 },
+                            px: { xs: 1.5, sm: 2.5 },
+                            fontSize: { xs: '0.75rem', sm: '0.9rem' },
                             boxShadow: 'none',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            minHeight: { xs: 28, sm: 36 },
                             '&:hover': { backgroundColor: '#e01545', boxShadow: '0 4px 12px rgba(255,25,85,0.4)' },
                           }}
                         >
-                          Book Now • {categoryDeals.length}+ Deal{categoryDeals.length > 1 ? 's' : ''}
+                          Book Now
                         </Button>
                       </Box>
                     </CardContent>
