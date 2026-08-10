@@ -24,12 +24,13 @@ const PublicFooter: React.FC = () => {
   ];
 
   const groupSites = [
-    { name: 'Lankadeepa', logoUrl: '/images/lankadepa.png', href: 'https://www.lankadeepa.lk/' },
-    { name: 'Life Online', logoUrl: '/images/lifeonline.png', href: 'https://www.life.lk/' },
-    { name: 'Hi Online', logoUrl: '/images/hionline.png', href: 'https://www.hi.lk/' },
-    { name: 'Wijeya', logoUrl: '/images/wijeya.png', href: 'https://www.wijeya.lk/' },
-    { name: 'Hit Ad', logoUrl: '/images/hitad.png', href: 'https://www.hitad.lk/' },
-    { name: 'Saaravita', logoUrl: '/images/saaravita.png', href: 'https://www.saaravita.lk/' },
+    { name: 'Lankadeepa', logoUrl: '/images/lankadeepa.jpeg', href: 'https://www.lankadeepa.lk/' },
+    { name: 'Life Online', logoUrl: '/images/lifeonline.jpeg', href: 'https://www.life.lk/' },
+    { name: 'Hi Online', logoUrl: '/images/hionline.jpeg', href: 'https://www.hi.lk/' },
+    { name: 'Daily FT', logoUrl: '/images/dailyft.jpeg', href: 'https://www.ft.lk' },
+    { name: 'Daily Mirror', logoUrl: '/images/dailymirror.jpeg', href: 'https://www.dailymirror.lk/' },
+    { name: 'Saaravita', logoUrl: '/images/saaravita.jpeg', href: 'https://www.saaravita.lk/' },
+    { name: 'Sunday Times', logoUrl: '/images/sundaytimes.jpeg', href: 'https://www.sundaytimes.lk/' }
   ];
 
   return (
