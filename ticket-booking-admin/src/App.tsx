@@ -215,9 +215,10 @@ function App() {
               {/* Public authentication routes - must come before protected routes */}
               <Route path="/admin/login" element={<Login />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/login/restrictedad" element={<RestrictedLogin mode="admin" />} />
-              <Route path="/login/restrictedorgnemp" element={<RestrictedLogin mode="organizer" />} />
-              <Route path="/login/restricted" element={<Navigate to="/login/restrictedad" replace />} />
+              <Route path="/login/tkadmin" element={<RestrictedLogin mode="admin" />} />
+              <Route path="/login/tkorg" element={<RestrictedLogin mode="organizer" />} />
+              <Route path="/login/tkemp" element={<RestrictedLogin mode="employee" />} />
+              <Route path="/login/restricted" element={<Navigate to="/login/tkadmin" replace />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/integration-test" element={<IntegrationTest />} />

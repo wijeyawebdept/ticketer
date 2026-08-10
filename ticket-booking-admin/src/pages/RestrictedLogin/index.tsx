@@ -47,7 +47,7 @@ interface LoginFormValues {
 }
 
 interface RestrictedLoginProps {
-  mode?: 'admin' | 'organizer';
+  mode?: 'admin' | 'organizer' | 'employee';
 }
 
 const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => {
@@ -98,18 +98,12 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
       if (mode === 'admin') {
         // Mode: ADMIN - Only try admin login
         loginResponse = await AuthService.adminLogin({ email: values.email, password: values.password });
-      } else {
-        // Mode: ORGANIZER - Try organizer, then employee
-        try {
-          loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
-        } catch (organizerError: any) {
-          if (organizerError.response?.status === 403) {
-            // Not an organizer, try organizer employee
-            loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
-          } else {
-            throw organizerError;
-          }
-        }
+      } else if (mode === 'organizer') {
+        // Mode: ORGANIZER - Only try organizer login
+        loginResponse = await AuthService.organizerLogin({ email: values.email, password: values.password });
+      } else if (mode === 'employee') {
+        // Mode: EMPLOYEE - Only try employee login
+        loginResponse = await AuthService.organizerEmployeeLogin({ email: values.email, password: values.password });
       }
       
       if (!loginResponse) {
@@ -163,11 +157,15 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
         } else if (errorCode === 'INSUFFICIENT_PRIVILEGES' || err.response?.status === 403) {
           errorMessage = mode === 'admin' 
             ? ' This portal is for Administrators only. Your account does not have Admin privileges.' 
-            : ' This portal is for Organizers and Employees only. Your account lacks the required permissions.';
+            : mode === 'organizer' 
+              ? ' This portal is for Organizers only. Your account lacks the required permissions.'
+              : ' This portal is for Employees only. Your account lacks the required permissions.';
         } else if (responseMessage.includes('user not found') || responseMessage.includes('no user') || responseMessage.includes('does not exist')) {
           errorMessage = mode === 'admin'
             ? ' No admin account found with this email address.'
-            : ' No organizer or employee account found with this email address.';
+            : mode === 'organizer'
+              ? ' No organizer account found with this email address.'
+              : ' No employee account found with this email address.';
         } else {
           errorMessage = ' Invalid email or password. Please verify your login credentials.';
         }
@@ -224,7 +222,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
       fullWidth
       PaperProps={{ sx: { borderRadius: 2 } }}
     >
-      <DialogTitle sx={{ fontWeight: 700, color: mode === 'admin' ? '#d32f2f' : '#ed6c02' }}>
+      <DialogTitle sx={{ fontWeight: 700, color: mode === 'admin' ? '#d32f2f' : mode === 'organizer' ? '#ed6c02' : '#2e7d32' }}>
         Reset Password
       </DialogTitle>
       <DialogContent>
@@ -269,7 +267,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
             onClick={handleForgotSubmit}
             disabled={forgotLoading}
             variant="contained"
-            color={mode === 'admin' ? "error" : "warning"}
+            color={mode === 'admin' ? "error" : mode === 'organizer' ? "warning" : "success"}
           >
             {forgotLoading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send Reset Link'}
           </Button>
@@ -283,7 +281,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
         sx={{ 
           marginTop: 8, 
           padding: 4,
-          border: `2px solid ${mode === 'admin' ? '#d32f2f' : '#ed6c02'}`,
+          border: `2px solid ${mode === 'admin' ? '#d32f2f' : mode === 'organizer' ? '#ed6c02' : '#2e7d32'}`,
           borderRadius: 2
         }}
       >
@@ -299,13 +297,13 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
           </Typography>
           
           <Chip 
-            label={mode === 'admin' ? "Admin Access" : "Organizer Access"} 
-            color={mode === 'admin' ? "error" : "warning"} 
+            label={mode === 'admin' ? "Admin Access" : mode === 'organizer' ? "Organizer Access" : "Employee Access"} 
+            color={mode === 'admin' ? "error" : mode === 'organizer' ? "warning" : "success"} 
             sx={{ mb: 2, fontWeight: 'bold' }}
           />
           
           <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
-            {mode === 'admin' ? "Administrator Login" : "Organizer & Employee Login"}
+            {mode === 'admin' ? "Administrator Login" : mode === 'organizer' ? "Organizer Login" : "Employee Login"}
           </Typography>
           
           {successMessage && (
@@ -375,7 +373,7 @@ const RestrictedLogin: React.FC<RestrictedLoginProps> = ({ mode = 'admin' }) => 
                   type="submit"
                   fullWidth
                   variant="contained"
-                  color={mode === 'admin' ? "error" : "warning"}
+                  color={mode === 'admin' ? "error" : mode === 'organizer' ? "warning" : "success"}
                   disabled={isSubmitting}
                   sx={{ py: 1.5 }}
                 >

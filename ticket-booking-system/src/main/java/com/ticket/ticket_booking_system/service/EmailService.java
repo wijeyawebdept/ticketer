@@ -481,7 +481,7 @@ public class EmailService {
             ctx.setVariable("assignedByName",    assignedBy.getFirstName() + " " + assignedBy.getLastName());
             ctx.setVariable("roleDescription",   roleDescription);
             ctx.setVariable("notes",             notes);
-            ctx.setVariable("loginUrl",          frontendBaseUrl + "/login");
+            ctx.setVariable("loginUrl",          frontendBaseUrl + "/login/tkemp");
 
             String html    = templateEngine.process("emails/event-assignment", ctx);
             String subject = "Event Assignment: " + event.getName();
@@ -502,7 +502,7 @@ public class EmailService {
             ctx.setVariable("organizerEmail",     organizer.getEmail());
             ctx.setVariable("eventName",          event.getName());
             ctx.setVariable("eventId",            event.getEventId());
-            ctx.setVariable("loginUrl",           frontendBaseUrl + "/organizer/login");
+            ctx.setVariable("loginUrl",           frontendBaseUrl + "/login/tkorg");
 
             String html    = templateEngine.process("emails/organizer-event-assignment", ctx);
             String subject = "New Event Assigned to You: " + event.getName();
@@ -538,7 +538,7 @@ public class EmailService {
             String formattedAmount = "LKR " + (booking.getTotalAmount() != null ? String.format("%.2f", booking.getTotalAmount()) : "0.00");
             ctx.setVariable("totalAmount", formattedAmount);
             
-            ctx.setVariable("loginUrl", frontendBaseUrl + "/organizer/login");
+            ctx.setVariable("loginUrl", frontendBaseUrl + "/login/tkorg");
 
             String html = templateEngine.process("emails/organizer-ticket-purchase", ctx);
             String subject = "New Ticket Purchase: " + booking.getEvent().getName();
