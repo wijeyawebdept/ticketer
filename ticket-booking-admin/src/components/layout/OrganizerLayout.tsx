@@ -36,6 +36,7 @@ import {
   Assignment as AssignmentIcon,
   Delete as DeleteIcon,
   LocalOffer as LocalOfferIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -186,6 +187,7 @@ const OrganizerLayout: React.FC = () => {
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/organizer/recycle-bin' },
     { text: 'Activity Logs', icon: <AssignmentIcon />, path: '/organizer/audit-logs' },
     { text: t('navigation.profile'), icon: <AccountCircleIcon />, path: '/organizer/profile' },
+    { text: 'Event Reports', icon: <AssessmentIcon />, path: '/organizer/reports' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/organizer/settings' },
   ];
 

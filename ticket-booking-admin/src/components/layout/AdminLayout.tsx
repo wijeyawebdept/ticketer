@@ -39,6 +39,7 @@ import {
   Collections as CollectionsIcon,
   Description as DescriptionIcon,
   LocalOffer as LocalOfferIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -199,6 +200,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/admin/bookings' },
     { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/admin/recycle-bin' },
     { text: 'Audit Logs', icon: <AssignmentIcon />, path: '/admin/audit-logs' },
+    { text: 'Event Reports', icon: <AssessmentIcon />, path: '/admin/reports' },
     { text: t('navigation.settings'), icon: <SettingsIcon />, path: '/admin/settings' },
   ];
 

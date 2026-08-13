@@ -47,6 +47,8 @@ import PendingRequests from './pages/Events/PendingRequests';
 import BlogManagement from './pages/BlogManagement';
 import PageContentManager from './pages/PageContentManager';
 import AuditLogs from './pages/AuditLogs';
+import ReportsIndex from './pages/Reports';
+import EventReportView from './pages/Reports/EventReportView';
 import { UserRole } from './types';
 
 // Public pages
@@ -257,6 +259,8 @@ function App() {
                 <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/bookings" element={<Bookings />} />
+                <Route path="/admin/reports" element={<ReportsIndex />} />
+                <Route path="/admin/reports/event/:eventId" element={<EventReportView />} />
                 <Route path="/admin/transactions" element={<Transactions />} />
                 <Route path="/admin/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/admin/profile" element={<Profile />} />
@@ -278,6 +282,8 @@ function App() {
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/organizer/deals" element={<OrganizerDeals />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
+                <Route path="/organizer/reports" element={<ReportsIndex />} />
+                <Route path="/organizer/reports/event/:eventId" element={<EventReportView />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/organizer/employees" element={<Employees />} />
                 <Route path="/organizer/event-assignments" element={<EventAssignments />} />

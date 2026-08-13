@@ -33,7 +33,8 @@ import {
   EventAvailable as EventAvailableIcon,
   Refresh as RefreshIcon,
   Schedule as ScheduleIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
@@ -412,6 +413,43 @@ const Events: React.FC = () => {
             }}
           >
             <ScheduleIcon />
+          </IconButton>
+          <IconButton
+            onClick={() => {
+              const idToUse = params.row.eventId || params.row.id;
+              if (idToUse && idToUse !== 'undefined') {
+                const sessionUserStr = sessionStorage.getItem('user');
+                const localUserStr = localStorage.getItem('user');
+                const userStr = sessionUserStr || localUserStr;
+                
+                let basePath = '/organizer';
+                if (userStr) {
+                  try {
+                    const user = JSON.parse(userStr);
+                    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || 
+                        user.role === 'ROLE_ADMIN' || user.role === 'ROLE_SUPER_ADMIN') {
+                      basePath = '/admin';
+                    } else if (user.role === UserRole.ORGANIZER_EMPLOYEE || user.role === 'ROLE_ORGANIZER_EMPLOYEE') {
+                      basePath = '/employee';
+                    }
+                  } catch (e) {
+                  }
+                }
+                navigate(`${basePath}/reports/event/${idToUse}`);
+              }
+            }}
+            size="small"
+            color="info"
+            title="View Event Report"
+            sx={{
+              backgroundColor: 'rgba(2, 136, 209, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(2, 136, 209, 0.2)',
+              },
+              mr: 1
+            }}
+          >
+            <AssessmentIcon />
           </IconButton>
           <IconButton
             onClick={() => handleEditClick(params.row as Event)}

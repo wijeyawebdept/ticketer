@@ -68,11 +68,15 @@ export const formatDateTime = (dateString: string | null | undefined): string =>
 };
 
 /**
- * Format currency
+ * Format currency (Default: LKR)
  */
-export const formatCurrency = (amount: number | null | undefined, currency: string = 'USD'): string => {
+export const formatCurrency = (amount: number | null | undefined, currency: string = 'LKR'): string => {
   if (amount === null || amount === undefined) return 'N/A';
   
+  if (currency === 'LKR') {
+    return `LKR ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency
@@ -85,12 +89,10 @@ export const formatCurrency = (amount: number | null | undefined, currency: stri
 export const getProfilePictureUrl = (path: string | null | undefined): string | undefined => {
   if (!path) return undefined;
   
-  // If it's already a full URL (google avatar etc.), return as is
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
     return path;
   }
   
-  // Prepend backend URL for relative paths so images always resolve correctly
   const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:8081';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${backendUrl}${normalizedPath}`;
@@ -113,14 +115,13 @@ export const getAssetUrl = (path?: string | null): string | undefined => {
 };
 
 /**
- * Formats a 24-hour time string (e.g., "17:00:00" or "17:00:00 - 22:00:00") into 12-hour AM/PM format (e.g., "05:00 PM - 10:00 PM")
+ * Formats a 24-hour time string into 12-hour AM/PM format
  */
 export const formatTimeString = (timeString: string | null | undefined): string => {
   if (!timeString) return '';
 
   const convertSingleTime = (tStr: string): string => {
     const trimmed = tStr.trim();
-    // Match HH:mm:ss or HH:mm
     const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
     if (!match) return trimmed;
 
