@@ -1,0 +1,15 @@
+User-agent: *
+Disallow: /admin
+Disallow: /organizer
+Disallow: /employee
+Disallow: /user
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /booking
+Disallow: /seat-selection
+Disallow: /integration-test
+Disallow: /auth-debug
+Disallow: /auth-tester
+
+Sitemap: https://ticketer.hitad.lk/sitemap.xml
