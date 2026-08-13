@@ -21,8 +21,7 @@ import {
   Event as EventIcon,
   LocationOn as LocationIcon,
   People as PeopleIcon,
-  ArrowForward as ArrowIcon,
-  BarChart as BarChartIcon
+  ArrowForward as ArrowIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import reportService, { ReportableEvent } from '../../services/report.service';

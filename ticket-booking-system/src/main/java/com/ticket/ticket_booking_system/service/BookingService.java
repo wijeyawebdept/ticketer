@@ -7,11 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +56,50 @@ public class BookingService {
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
     private final AdminAuditService auditService;
+
+    @Value("${booking.pending-timeout-minutes:20}")
+    private int pendingTimeoutMinutes;
+
+    private static final AtomicBoolean pendingCleanupRunning = new AtomicBoolean(false);
+
+    /**
+     * Scheduled task to auto-cancel PENDING bookings whose payment was never completed
+     * (abandoned checkout, silent gateway failure, closed tab, etc.) and release their seats
+     * back to availability for other customers. A booking only ever reaches CONFIRMED via an
+     * explicit successful payment, so anything still PENDING past the timeout never paid.
+     */
+    @Scheduled(fixedDelay = 60000, initialDelay = 30000) // every minute, 30s initial delay
+    public void releaseStalePendingBookings() {
+        if (!pendingCleanupRunning.compareAndSet(false, true)) {
+            log.debug("Stale pending booking cleanup already running, skipping this execution");
+            return;
+        }
+
+        try {
+            LocalDateTime cutoff = LocalDateTime.now().minusMinutes(pendingTimeoutMinutes);
+            List<Booking> staleBookings = bookingRepository.findStalePendingBookings(cutoff);
+
+            if (staleBookings.isEmpty()) {
+                log.debug("No stale PENDING bookings older than {} minutes to release", pendingTimeoutMinutes);
+                return;
+            }
+
+            for (Booking booking : staleBookings) {
+                try {
+                    cancelBookingAfterPaymentFailure(booking.getBookingId(),
+                            "Payment not completed within " + pendingTimeoutMinutes + " minutes - seat released automatically");
+                } catch (Exception e) {
+                    log.error("Failed to auto-release stale pending booking {}", booking.getBookingId(), e);
+                }
+            }
+
+            log.info("Released {} stale PENDING booking(s) older than {} minutes", staleBookings.size(), pendingTimeoutMinutes);
+        } catch (Exception e) {
+            log.error("Error during stale pending booking cleanup", e);
+        } finally {
+            pendingCleanupRunning.set(false);
+        }
+    }
 
     /**
      * Create a PENDING booking before payment is processed

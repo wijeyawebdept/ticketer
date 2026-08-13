@@ -188,6 +188,9 @@ public class EventReportServiceImpl implements EventReportService {
         // Active holds & booked seats for target schedule
         UUID targetScheduleId = scheduleId != null ? scheduleId : (schedules.isEmpty() ? null : schedules.get(0).getScheduleId());
         Set<String> bookedSeatIds = targetScheduleId != null ? bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(targetScheduleId) : Set.of();
+        // Only CONFIRMED (successfully paid) seats should render as "sold" - a PENDING booking
+        // hasn't actually been paid for yet and must show as a temporary hold, not booked.
+        Set<String> confirmedSeatIds = targetScheduleId != null ? bookingSeatRepository.findConfirmedVenueSeatIdsByScheduleId(targetScheduleId) : Set.of();
         List<SeatHold> activeHolds = targetScheduleId != null ? seatHoldRepository.findActiveHoldsByScheduleId(targetScheduleId, LocalDateTime.now()) : List.of();
         Map<String, SeatHold> seatHoldMap = activeHolds.stream().collect(Collectors.toMap(h -> h.getVenueSeatId(), h -> h, (a, b) -> a));
 
@@ -302,9 +305,10 @@ public class EventReportServiceImpl implements EventReportService {
             String notes = seat.getNotes() != null ? seat.getNotes().toLowerCase() : "";
             String status;
 
-            if (bookedSeatIds.contains(seat.getSeatId())) {
+            if (confirmedSeatIds.contains(seat.getSeatId())) {
                 status = "BOOKED";
-            } else if (seatHoldMap.containsKey(seat.getSeatId())) {
+            } else if (bookedSeatIds.contains(seat.getSeatId()) || seatHoldMap.containsKey(seat.getSeatId())) {
+                // Booked by a PENDING (unpaid) booking or an active checkout hold - not sold yet
                 status = "TEMPORARY_HOLD";
             } else if (notes.contains("[locked]")) {
                 status = "LOCKED";

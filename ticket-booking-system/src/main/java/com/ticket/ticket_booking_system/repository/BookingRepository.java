@@ -94,4 +94,9 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
            "LEFT JOIN FETCH b.bookingSeats bs " +
            "WHERE b.bookingId = :bookingId")
     Optional<Booking> findByIdWithDetails(UUID bookingId);
+
+    // Stale PENDING bookings whose payment was never completed (abandoned/failed checkout) -
+    // used to auto-release their seats back to availability.
+    @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND b.bookingTime < :cutoff")
+    List<Booking> findStalePendingBookings(LocalDateTime cutoff);
 }

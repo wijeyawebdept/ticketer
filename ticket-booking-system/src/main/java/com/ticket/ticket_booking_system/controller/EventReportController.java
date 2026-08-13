@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -38,12 +39,24 @@ public class EventReportController {
      * Get report for a specific event
      */
     @GetMapping("/events/{eventId}")
-    public ResponseEntity<EventReportDTO> getEventReport(
+    public ResponseEntity<?> getEventReport(
             @PathVariable UUID eventId,
             @RequestParam(required = false) UUID scheduleId,
             Authentication authentication) {
-        
-        UUID organizerId = getOrganizerIdFromAuth(authentication);
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        boolean admin = isAdmin(authentication);
+        UUID organizerId = admin ? null : resolveOrganizerId(authentication);
+
+        // Non-admin callers whose identity we couldn't resolve must be rejected,
+        // never silently granted the "unrestricted" access that a null organizerId implies.
+        if (!admin && organizerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         EventReportDTO report = eventReportService.generateEventReport(eventId, scheduleId, organizerId);
         return ResponseEntity.ok(report);
     }
@@ -53,28 +66,32 @@ public class EventReportController {
      */
     @GetMapping("/events")
     public ResponseEntity<List<Map<String, Object>>> getReportableEvents(Authentication authentication) {
-        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        boolean admin = isAdmin(authentication);
+        UUID organizerId = admin ? null : resolveOrganizerId(authentication);
+
+        if (!admin && organizerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         List<Map<String, Object>> events = eventReportService.getReportableEvents(organizerId);
         return ResponseEntity.ok(events);
     }
 
-    /**
-     * Helper method to extract organizer ID from authentication.
-     * Returns null if caller is Admin / Super Admin (unrestricted access).
-     */
-    private UUID getOrganizerIdFromAuth(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-
-        // Check if caller is Admin or Super Admin
-        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> 
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream().anyMatch(a ->
             a.getAuthority().contains("ADMIN") || a.getAuthority().contains("SUPER_ADMIN"));
-        
-        if (isAdmin) {
-            return null; // Admin has full access to all events
-        }
+    }
 
+    /**
+     * Resolve the organizer ID for a non-admin caller (Organizer or OrganizerEmployee).
+     * Returns null only when the organizer/employee identity genuinely cannot be resolved -
+     * callers must treat that as "deny", never as "unrestricted access".
+     */
+    private UUID resolveOrganizerId(Authentication authentication) {
         // Try to get from Organizer principal
         if (authentication.getPrincipal() instanceof Organizer) {
             Organizer organizer = (Organizer) authentication.getPrincipal();

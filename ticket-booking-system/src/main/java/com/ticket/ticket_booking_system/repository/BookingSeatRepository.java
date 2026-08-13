@@ -27,6 +27,16 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, UUID> 
     Set<String> findBookedVenueSeatIdsByScheduleId(UUID scheduleId);
 
     /**
+     * Find venue seat IDs with a CONFIRMED (successfully paid) booking only -
+     * used where display must distinguish "actually sold" from "payment still pending".
+     */
+    @Query("SELECT bs.venueSeatId FROM BookingSeat bs " +
+           "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.venueSeatId IS NOT NULL " +
+           "AND bs.booking.status = 'CONFIRMED'")
+    Set<String> findConfirmedVenueSeatIdsByScheduleId(UUID scheduleId);
+
+    /**
      * Find all booking seats for a specific event schedule.
      *
      * @param scheduleId the event schedule UUID
