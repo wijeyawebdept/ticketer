@@ -38,7 +38,8 @@ import {
   TrendingUp as TrendingIcon,
   BarChart as BarChartIcon,
   EventSeat as SeatIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  LocalOffer as LocalOfferIcon
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -313,7 +314,7 @@ const EventReportView: React.FC = () => {
               variant="outlined"
               size="small"
               startIcon={<PdfIcon />}
-              onClick={printPDFReport}
+              onClick={() => printPDFReport(report)}
             >
               Export PDF
             </Button>
@@ -392,11 +393,24 @@ const EventReportView: React.FC = () => {
               <Typography variant="h4" fontWeight={700} sx={{ color: '#333' }}>
                 {formatCurrency(report.totalRevenue, 'LKR')}
               </Typography>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5 }}>
-                Total Revenue
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, mb: 1 }}>
+                Net Revenue (after refunds)
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Confirmed revenue from customer bookings
+              <Divider sx={{ mb: 1 }} />
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">Gross Sales</Typography>
+                <Typography variant="caption" fontWeight={600}>{formatCurrency(report.grossRevenue, 'LKR')}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">Refunds Paid</Typography>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#ef4444' }}>-{formatCurrency(report.totalRefunds, 'LKR')}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">Customer Savings (Deals)*</Typography>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#f59e0b' }}>{formatCurrency(report.totalDiscounts, 'LKR')}</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontStyle: 'italic' }}>
+                *already reflected in Gross Sales, not subtracted again
               </Typography>
             </CardContent>
           </Card>
@@ -649,6 +663,90 @@ const EventReportView: React.FC = () => {
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Deals & Discounts */}
+      {((report.configuredDeals && report.configuredDeals.length > 0) || (report.dealUsageSummaries && report.dealUsageSummaries.length > 0)) && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <LocalOfferIcon color="primary" fontSize="small" />
+            <Typography variant="h6" fontWeight={700}>
+              Deals & Discounts
+            </Typography>
+          </Box>
+
+          {report.configuredDeals && report.configuredDeals.length > 0 && (
+            <Box mb={report.dealUsageSummaries?.length ? 3 : 0}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                Deals Configured for This Event
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Deal</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {report.configuredDeals.map((deal) => (
+                      <TableRow key={deal.categoryId} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{deal.categoryName}</TableCell>
+                        <TableCell>
+                          {deal.dealLabel || (deal.dealType === 'BUY_X_GET_Y_FREE'
+                            ? `Buy ${deal.dealBuyQuantity} Get ${deal.dealFreeQuantity} Free`
+                            : `${deal.dealDiscountPercentage ?? 0}% Off`)}
+                        </TableCell>
+                        <TableCell>{deal.dealType === 'BUY_X_GET_Y_FREE' ? 'Buy X Get Y Free' : 'Percentage Discount'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={deal.dealActive ? 'Active' : 'Inactive'}
+                            size="small"
+                            color={deal.dealActive ? 'success' : 'default'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {report.dealUsageSummaries && report.dealUsageSummaries.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                Deal Usage (Confirmed & Refunded Bookings)
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Grouped by the discount label recorded at checkout - an approximate view, not an exact per-deal ledger.
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Deal / Discount Label</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Times Used</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Total Savings Given (LKR)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {report.dealUsageSummaries.map((usage) => (
+                      <TableRow key={usage.label} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{usage.label}</TableCell>
+                        <TableCell align="right">{usage.timesUsed}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(usage.totalDiscountGiven, 'LKR')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </Paper>
+      )}
 
       {/* Shared Standing Areas Breakdown Table */}
       {report.sharedAreaSummaries && report.sharedAreaSummaries.length > 0 && (

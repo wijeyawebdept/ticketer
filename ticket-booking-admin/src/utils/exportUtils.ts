@@ -36,6 +36,19 @@ export const exportToCSV = (data: any[], fileName: string) => {
 };
 
 /**
+ * Build a filesystem-safe filename stem that includes WHICH show time the report/export is
+ * scoped to, so exporting the same event for different show times never produces identical
+ * filenames (and never silently overwrites a previous export for a different show time).
+ */
+const buildReportFileNameStem = (report: EventReportData): string => {
+  const safeEventName = report.eventTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const scopeLabel = report.selectedScheduleId
+    ? report.selectedScheduleLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+    : 'all_showtimes';
+  return `${safeEventName}_${scopeLabel}`;
+};
+
+/**
  * Export Event Report to multi-sheet Excel (.xlsx)
  */
 export const exportEventReportToExcel = (report: EventReportData) => {
@@ -49,14 +62,17 @@ export const exportEventReportToExcel = (report: EventReportData) => {
     { Property: 'Organizer', Value: report.organizerName },
     { Property: 'Venue', Value: report.venueName },
     { Property: 'Address', Value: `${report.venueAddress}, ${report.venueCity}` },
-    { Property: 'Selected Show Time', Value: report.selectedScheduleLabel },
+    { Property: 'Report Scope', Value: report.selectedScheduleId ? `Single Show Time: ${report.selectedScheduleLabel}` : 'All Show Times (Aggregated)' },
     { Property: 'Total Capacity', Value: report.totalCapacity },
     { Property: 'Tickets Sold', Value: report.totalTicketsSold },
     { Property: 'Tickets Available', Value: report.totalTicketsAvailable },
     { Property: 'Tickets Held', Value: report.totalTicketsHeld },
     { Property: 'Tickets Locked', Value: report.totalTicketsLocked },
     { Property: 'Occupancy Rate (%)', Value: `${report.occupancyRate}%` },
-    { Property: 'Total Revenue (LKR)', Value: report.totalRevenue },
+    { Property: 'Gross Sales (LKR)', Value: report.grossRevenue },
+    { Property: 'Refunds Paid (LKR)', Value: report.totalRefunds },
+    { Property: 'Net Revenue (LKR)', Value: report.totalRevenue },
+    { Property: 'Customer Savings via Deals (LKR)', Value: report.totalDiscounts },
   ];
   const overviewSheet = XLSX.utils.json_to_sheet(overviewData);
   XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Event Overview');
@@ -109,7 +125,32 @@ export const exportEventReportToExcel = (report: EventReportData) => {
     XLSX.utils.book_append_sheet(workbook, sharedAreaSheet, 'Shared Areas');
   }
 
-  // Sheet 5: Customer Bookings List
+  // Sheet 5: Deals configured for this event
+  if (report.configuredDeals && report.configuredDeals.length > 0) {
+    const dealsData = report.configuredDeals.map(deal => ({
+      'Category': deal.categoryName,
+      'Deal': deal.dealLabel || (deal.dealType === 'BUY_X_GET_Y_FREE'
+        ? `Buy ${deal.dealBuyQuantity} Get ${deal.dealFreeQuantity} Free`
+        : `${deal.dealDiscountPercentage ?? 0}% Off`),
+      'Type': deal.dealType === 'BUY_X_GET_Y_FREE' ? 'Buy X Get Y Free' : 'Percentage Discount',
+      'Status': deal.dealActive ? 'Active' : 'Inactive',
+    }));
+    const dealsSheet = XLSX.utils.json_to_sheet(dealsData);
+    XLSX.utils.book_append_sheet(workbook, dealsSheet, 'Deals Configured');
+  }
+
+  // Sheet 6: Deal usage (approximate, grouped by discount label - see report UI for the caveat)
+  if (report.dealUsageSummaries && report.dealUsageSummaries.length > 0) {
+    const dealUsageData = report.dealUsageSummaries.map(usage => ({
+      'Deal / Discount Label': usage.label,
+      'Times Used': usage.timesUsed,
+      'Total Savings Given (LKR)': usage.totalDiscountGiven,
+    }));
+    const dealUsageSheet = XLSX.utils.json_to_sheet(dealUsageData);
+    XLSX.utils.book_append_sheet(workbook, dealUsageSheet, 'Deal Usage');
+  }
+
+  // Sheet 7: Customer Bookings List
   if (report.bookingDetails && report.bookingDetails.length > 0) {
     const bookingData = report.bookingDetails.map(bk => ({
       'Booking Reference': bk.bookingReference,
@@ -128,8 +169,7 @@ export const exportEventReportToExcel = (report: EventReportData) => {
     XLSX.utils.book_append_sheet(workbook, bookingSheet, 'Customer Bookings');
   }
 
-  const safeFileName = report.eventTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  XLSX.writeFile(workbook, `Event_Report_${safeFileName}.xlsx`);
+  XLSX.writeFile(workbook, `Event_Report_${buildReportFileNameStem(report)}.xlsx`);
 };
 
 /**
@@ -155,13 +195,25 @@ export const exportEventReportToCSV = (report: EventReportData) => {
     'Payment Status': bk.paymentMethod,
   }));
 
-  const safeFileName = report.eventTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  exportToCSV(bookingData, `Event_Bookings_${safeFileName}`);
+  exportToCSV(bookingData, `Event_Bookings_${buildReportFileNameStem(report)}`);
 };
 
 /**
- * Trigger print dialog for formatted PDF Report export
+ * Trigger print dialog for formatted PDF Report export.
+ * Browsers default the "Save as PDF" filename to document.title, so we temporarily set it to
+ * something that identifies the event AND the specific show time being reported on - otherwise
+ * every export for every show time suggests the same generic filename and is easy to mix up.
  */
-export const printPDFReport = () => {
+export const printPDFReport = (report: EventReportData) => {
+  const previousTitle = document.title;
+  const scopeLabel = report.selectedScheduleId ? report.selectedScheduleLabel : 'All Show Times';
+  document.title = `${report.eventTitle} - ${scopeLabel} - Event Report`;
+
+  const restoreTitle = () => {
+    document.title = previousTitle;
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+  window.addEventListener('afterprint', restoreTitle);
+
   window.print();
 };

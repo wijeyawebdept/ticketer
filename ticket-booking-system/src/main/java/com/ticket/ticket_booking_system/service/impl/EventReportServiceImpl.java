@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ticket.ticket_booking_system.dto.EventReportDTO;
 import com.ticket.ticket_booking_system.dto.EventReportDTO.CategorySummaryDTO;
 import com.ticket.ticket_booking_system.dto.EventReportDTO.CustomerBookingRowDTO;
+import com.ticket.ticket_booking_system.dto.EventReportDTO.DealConfigDTO;
+import com.ticket.ticket_booking_system.dto.EventReportDTO.DealUsageDTO;
 import com.ticket.ticket_booking_system.dto.EventReportDTO.ScheduleSummaryDTO;
 import com.ticket.ticket_booking_system.dto.EventReportDTO.SeatStatusDTO;
 import com.ticket.ticket_booking_system.dto.EventReportDTO.SharedAreaSummaryDTO;
@@ -27,6 +29,7 @@ import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.SeatHold;
 import com.ticket.ticket_booking_system.entity.TicketCategory;
+import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.entity.Venue;
 import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
@@ -35,6 +38,7 @@ import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
 import com.ticket.ticket_booking_system.repository.SeatHoldRepository;
 import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
+import com.ticket.ticket_booking_system.repository.TransactionRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
 import com.ticket.ticket_booking_system.service.EventReportService;
 
@@ -51,6 +55,7 @@ public class EventReportServiceImpl implements EventReportService {
     private final BookingSeatRepository bookingSeatRepository;
     private final SeatHoldRepository seatHoldRepository;
     private final TicketCategoryRepository ticketCategoryRepository;
+    private final TransactionRepository transactionRepository;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy - hh:mm a");
 
@@ -81,6 +86,15 @@ public class EventReportServiceImpl implements EventReportService {
             allEventBookings = bookingRepository.findAll().stream()
                     .filter(b -> b.getEvent() != null && eventId.equals(b.getEvent().getEventId()))
                     .collect(Collectors.toList());
+        }
+
+        // Successful refunds for this event, keyed by booking so both the per-schedule table
+        // and the overall KPI can subtract exactly what was actually paid back (Booking.refundAmount
+        // is never written anywhere in the codebase - Transaction rows are the only source of truth).
+        Map<UUID, BigDecimal> refundedAmountByBookingId = new HashMap<>();
+        for (Transaction refundTx : transactionRepository.findSuccessfulRefundsForEvent(eventId)) {
+            if (refundTx.getBooking() == null || refundTx.getAmount() == null) continue;
+            refundedAmountByBookingId.merge(refundTx.getBooking().getBookingId(), refundTx.getAmount(), (a, b) -> a.add(b));
         }
 
         // Build Shared Areas Breakdown
@@ -134,7 +148,6 @@ public class EventReportServiceImpl implements EventReportService {
         List<ScheduleSummaryDTO> scheduleSummaries = new ArrayList<>();
         int totalEventCapacity = 0;
         int totalEventTicketsSold = 0;
-        BigDecimal totalEventRevenue = BigDecimal.ZERO;
 
         for (EventSchedule sch : schedules) {
             LocalDateTime startDateTime = LocalDateTime.of(sch.getScheduleDate(), sch.getStartTime());
@@ -146,10 +159,17 @@ public class EventReportServiceImpl implements EventReportService {
                     .mapToInt(b -> b.getBookingSeats() != null ? b.getBookingSeats().size() : 1)
                     .sum();
 
-            BigDecimal schRev = schBookings.stream()
-                    .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
+            // Gross (confirmed + later-refunded charges) minus what was actually refunded for
+            // this schedule's bookings - keeps this table consistent with the overall KPI's
+            // gross/refund treatment instead of a partial refund erasing the whole booking.
+            BigDecimal schGross = schBookings.stream()
+                    .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.REFUNDED)
                     .map(b -> b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+            BigDecimal schRefunds = schBookings.stream()
+                    .map(b -> refundedAmountByBookingId.getOrDefault(b.getBookingId(), BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+            BigDecimal schRev = schGross.subtract(schRefunds);
 
             int schCapacity = (venueSeats.isEmpty() ? (sch.getCapacity() != null ? sch.getCapacity() : 100) : venueSeats.size()) + sharedAreaTotalCapacity;
             int schAvailable = Math.max(0, schCapacity - soldCount);
@@ -157,7 +177,6 @@ public class EventReportServiceImpl implements EventReportService {
 
             totalEventCapacity += schCapacity;
             totalEventTicketsSold += soldCount;
-            totalEventRevenue = totalEventRevenue.add(schRev);
 
             scheduleSummaries.add(ScheduleSummaryDTO.builder()
                     .scheduleId(sch.getScheduleId())
@@ -338,9 +357,67 @@ public class EventReportServiceImpl implements EventReportService {
         // Total KPIs
         int totalCap = (scheduleId != null ? (venueSeats.isEmpty() ? 100 : venueSeats.size()) : totalEventCapacity) + sharedAreaTotalCapacity;
         int totalSold = (scheduleId != null ? (int) customerBookings.stream().filter(cb -> "CONFIRMED".equalsIgnoreCase(cb.getStatus())).count() : totalEventTicketsSold) + sharedAreaTicketsSold;
-        BigDecimal totalRev = (scheduleId != null ? customerBookings.stream().filter(cb -> "CONFIRMED".equalsIgnoreCase(cb.getStatus())).map(cb -> cb.getTotalAmount()).reduce(BigDecimal.ZERO, (a, b) -> a.add(b)) : totalEventRevenue).add(sharedAreaTotalRevenue);
         int totalAvail = Math.max(0, totalCap - totalSold);
         double overallOccupancy = totalCap > 0 ? (totalSold * 100.0 / totalCap) : 0.0;
+
+        // Financial breakdown: Gross (confirmed + later-refunded bookings' charged amount)
+        // minus Refunds actually paid out = Net revenue. Booking.refundAmount is never
+        // written anywhere in the codebase, so refunds must come from Transaction records.
+        // A refund (full or partial dollar amount) always flips the booking to REFUNDED, so
+        // "confirmed-only" summing would wrongly zero out bookings that were only partially
+        // refunded - including REFUNDED bookings' original charge here fixes that.
+        BigDecimal grossBookingRevenue = allEventBookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.REFUNDED)
+                .map(b -> b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+
+        BigDecimal totalDiscounts = allEventBookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.REFUNDED)
+                .map(b -> b.getDiscountAmount() != null ? b.getDiscountAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+
+        BigDecimal totalRefunds = allEventBookings.stream()
+                .map(b -> refundedAmountByBookingId.getOrDefault(b.getBookingId(), BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+
+        BigDecimal grossRev = grossBookingRevenue.add(sharedAreaTotalRevenue);
+        BigDecimal totalRev = grossRev.subtract(totalRefunds);
+
+        // Deals configured for this event (reliable, from TicketCategory deal columns)
+        List<DealConfigDTO> configuredDeals = ticketCategoryRepository.findAllDealsForEvent(eventId).stream()
+                .map(tc -> DealConfigDTO.builder()
+                        .categoryId(tc.getCategoryId())
+                        .categoryName(tc.getCategoryName())
+                        .dealActive(Boolean.TRUE.equals(tc.getDealActive()))
+                        .dealType(tc.getDealType())
+                        .dealLabel(tc.getDealLabel())
+                        .dealDiscountPercentage(tc.getDealDiscountPercentage())
+                        .dealBuyQuantity(tc.getDealBuyQuantity())
+                        .dealFreeQuantity(tc.getDealFreeQuantity())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Best-effort deal usage, grouped by the discount label recorded at booking time (see
+        // DealUsageDTO javadoc for why this can't be a precise per-deal-ID breakdown).
+        Map<String, long[]> dealUsageCounts = new HashMap<>(); // label -> [count]
+        Map<String, BigDecimal> dealUsageAmounts = new HashMap<>();
+        for (Booking b : allEventBookings) {
+            if (b.getStatus() != BookingStatus.CONFIRMED && b.getStatus() != BookingStatus.REFUNDED) continue;
+            String label = b.getDiscountInfo();
+            BigDecimal discount = b.getDiscountAmount();
+            if (label == null || label.isBlank() || discount == null || discount.signum() <= 0) continue;
+
+            dealUsageCounts.computeIfAbsent(label, k -> new long[]{0})[0]++;
+            dealUsageAmounts.merge(label, discount, (existing, added) -> existing.add(added));
+        }
+        List<DealUsageDTO> dealUsageSummaries = dealUsageCounts.entrySet().stream()
+                .map(e -> DealUsageDTO.builder()
+                        .label(e.getKey())
+                        .timesUsed((int) e.getValue()[0])
+                        .totalDiscountGiven(dealUsageAmounts.getOrDefault(e.getKey(), BigDecimal.ZERO))
+                        .build())
+                .sorted((a, c) -> c.getTotalDiscountGiven().compareTo(a.getTotalDiscountGiven()))
+                .collect(Collectors.toList());
 
         return EventReportDTO.builder()
                 .eventId(event.getEventId())
@@ -361,6 +438,9 @@ public class EventReportServiceImpl implements EventReportService {
                 .selectedScheduleId(scheduleId)
                 .selectedScheduleLabel(selectedScheduleLabel)
                 .totalRevenue(totalRev)
+                .grossRevenue(grossRev)
+                .totalDiscounts(totalDiscounts)
+                .totalRefunds(totalRefunds)
                 .totalCapacity(totalCap)
                 .totalTicketsSold(totalSold)
                 .totalTicketsAvailable(totalAvail)
@@ -372,6 +452,8 @@ public class EventReportServiceImpl implements EventReportService {
                 .sharedAreaSummaries(sharedAreaSummaries)
                 .bookingDetails(customerBookings)
                 .seatAvailabilityMap(seatStatusMap)
+                .configuredDeals(configuredDeals)
+                .dealUsageSummaries(dealUsageSummaries)
                 .build();
     }
 

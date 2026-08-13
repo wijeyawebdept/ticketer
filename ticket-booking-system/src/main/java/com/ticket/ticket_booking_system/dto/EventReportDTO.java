@@ -40,7 +40,14 @@ public class EventReportDTO {
     private String selectedScheduleLabel;
 
     // Overall KPI Stats
+    // totalRevenue is NET revenue actually kept: (confirmed + refunded bookings' charged amount) - refunds paid out.
     private BigDecimal totalRevenue;
+    // Gross amount actually charged/captured (before refunds), for confirmed and later-refunded bookings.
+    private BigDecimal grossRevenue;
+    // Total value of deals/coupons applied (informational - already baked into totalAmount, not subtracted again).
+    private BigDecimal totalDiscounts;
+    // Total successfully refunded (from Transaction records, not the unused Booking.refundAmount column).
+    private BigDecimal totalRefunds;
     private Integer totalCapacity;
     private Integer totalTicketsSold;
     private Integer totalTicketsAvailable;
@@ -67,6 +74,16 @@ public class EventReportDTO {
     // Seat Map Layout Availability (For SVG rendering)
     @Builder.Default
     private List<SeatStatusDTO> seatAvailabilityMap = new ArrayList<>();
+
+    // Deals configured for this event (active or previously active) - reliable, from TicketCategory
+    @Builder.Default
+    private List<DealConfigDTO> configuredDeals = new ArrayList<>();
+
+    // Best-effort usage breakdown grouped by the discount label recorded at booking time.
+    // Bookings don't carry a real FK to a Deal record, so this is grouped by label text, not a
+    // structured deal ID - see DealUsageDTO javadoc for the caveat.
+    @Builder.Default
+    private List<DealUsageDTO> dealUsageSummaries = new ArrayList<>();
 
     @Data
     @Builder
@@ -152,5 +169,37 @@ public class EventReportDTO {
         private String status; // BOOKED, AVAILABLE, LOCKED, TEMPORARY_HOLD, VIP_RESERVED
         private BigDecimal price;
         private String customerName; // Optional for tooltips on seat map
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DealConfigDTO {
+        private UUID categoryId;
+        private String categoryName;
+        private Boolean dealActive;
+        private String dealType; // PERCENTAGE_DISCOUNT | BUY_X_GET_Y_FREE
+        private String dealLabel;
+        private BigDecimal dealDiscountPercentage;
+        private Integer dealBuyQuantity;
+        private Integer dealFreeQuantity;
+    }
+
+    /**
+     * Best-effort deal usage breakdown grouped by the discount label recorded on the booking
+     * at checkout time (Booking.discountInfo). There is no FK from Booking back to a specific
+     * TicketCategory/deal row, so this groups by label TEXT - two different categories that
+     * happen to produce the same auto-generated label (e.g. two "20% OFF" deals) will be merged
+     * under one row here. Treat this as an approximate usage view, not an exact per-deal ledger.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DealUsageDTO {
+        private String label;
+        private Integer timesUsed;
+        private BigDecimal totalDiscountGiven;
     }
 }

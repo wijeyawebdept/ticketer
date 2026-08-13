@@ -88,4 +88,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
         @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.type = 'REFUND' AND t.status = 'SUCCESS'")
         BigDecimal findTotalRefunds();
+
+        // Successful refunds for one event, fetched with the booking eagerly loaded so callers
+        // can filter/group by booking (e.g. by schedule) without extra queries.
+        @Query("SELECT t FROM Transaction t JOIN FETCH t.booking b " +
+               "WHERE b.event.eventId = :eventId AND t.type = 'REFUND' AND t.status = 'SUCCESS'")
+        List<Transaction> findSuccessfulRefundsForEvent(UUID eventId);
 }

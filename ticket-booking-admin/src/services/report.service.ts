@@ -66,6 +66,23 @@ export interface SeatStatus {
   customerName?: string;
 }
 
+export interface DealConfig {
+  categoryId: string;
+  categoryName: string;
+  dealActive: boolean;
+  dealType: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE' | string;
+  dealLabel: string;
+  dealDiscountPercentage: number | null;
+  dealBuyQuantity: number | null;
+  dealFreeQuantity: number | null;
+}
+
+export interface DealUsage {
+  label: string;
+  timesUsed: number;
+  totalDiscountGiven: number;
+}
+
 export interface EventReportData {
   eventId: string;
   eventTitle: string;
@@ -85,6 +102,9 @@ export interface EventReportData {
   selectedScheduleId: string | null;
   selectedScheduleLabel: string;
   totalRevenue: number;
+  grossRevenue: number;
+  totalDiscounts: number;
+  totalRefunds: number;
   totalCapacity: number;
   totalTicketsSold: number;
   totalTicketsAvailable: number;
@@ -96,6 +116,8 @@ export interface EventReportData {
   sharedAreaSummaries: SharedAreaSummary[];
   bookingDetails: CustomerBookingRow[];
   seatAvailabilityMap: SeatStatus[];
+  configuredDeals: DealConfig[];
+  dealUsageSummaries: DealUsage[];
 }
 
 export interface ReportableEvent {
