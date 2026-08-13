@@ -378,11 +378,13 @@ public class EventReportServiceImpl implements EventReportService {
     @Override
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getReportableEvents(UUID organizerId) {
+        // Exclude soft-deleted (recycle bin) events - a deleted/abandoned test event
+        // should never be reportable, matching what the main Events list already shows.
         List<Event> events;
         if (organizerId != null) {
-            events = eventRepository.findByOrganizer_OrganizerId(organizerId);
+            events = eventRepository.findByOrganizer_OrganizerIdAndIsDeletedFalse(organizerId);
         } else {
-            events = eventRepository.findAll();
+            events = eventRepository.findAllByIsDeletedFalse();
         }
 
         List<Map<String, Object>> result = new ArrayList<>();

@@ -99,4 +99,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     // used to auto-release their seats back to availability.
     @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND b.bookingTime < :cutoff")
     List<Booking> findStalePendingBookings(LocalDateTime cutoff);
+
+    // Used when permanently deleting an event (recycle bin) - its bookings must be
+    // removed first (cascades to BookingSeat/Transaction) to avoid an FK violation.
+    List<Booking> findByEvent_EventId(UUID eventId);
+
+    // Used when permanently deleting a user (recycle bin) - their bookings are kept
+    // for revenue/audit history but detached from the user record being removed.
+    List<Booking> findByUser_Id(UUID userId);
 }

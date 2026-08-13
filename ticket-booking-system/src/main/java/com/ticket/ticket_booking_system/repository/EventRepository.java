@@ -60,6 +60,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
        // Find all events by organizer ID
        List<Event> findByOrganizer_OrganizerId(UUID organizerId);
 
+       // Same as above, excluding soft-deleted (recycle bin) events - used for reporting/listing
+       List<Event> findByOrganizer_OrganizerIdAndIsDeletedFalse(UUID organizerId);
+
+       // All events excluding soft-deleted (recycle bin) ones - used for reporting/listing
+       List<Event> findAllByIsDeletedFalse();
+
        // Delete all events of a specific organizer
        void deleteByOrganizer_OrganizerId(UUID organizerId);
 
