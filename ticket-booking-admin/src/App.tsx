@@ -46,6 +46,7 @@ import RequestEvent from './pages/Events/RequestEvent';
 import PendingRequests from './pages/Events/PendingRequests';
 import BlogManagement from './pages/BlogManagement';
 import PageContentManager from './pages/PageContentManager';
+import HandlingFeeManager from './pages/Admin/HandlingFeeManager';
 import AuditLogs from './pages/AuditLogs';
 import ReportsIndex from './pages/Reports';
 import EventReportView from './pages/Reports/EventReportView';
@@ -65,6 +66,7 @@ import PublicEvents from './pages/Public/Events';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import CookiePolicy from './pages/Public/CookiePolicy';
 import TermsAndConditions from './pages/Public/TermsAndConditions';
+import PaymentTerms from './pages/Public/PaymentTerms';
 import FAQ from './pages/Public/FAQ';
 import RefundPolicy from './pages/Public/RefundPolicy';
 import UserProfile from './pages/Public/UserProfile';
@@ -249,6 +251,8 @@ function App() {
                   <Route path="/admin/blog" element={<BlogManagement />} />
                   <Route path="/admin/banners" element={<Banners />} />
                   <Route path="/admin/page-content" element={<PageContentManager />} />
+                  <Route path="/admin/handling-fee" element={<HandlingFeeManager />} />
+                  <Route path="/admin/payment-terms" element={<Navigate to="/admin/page-content" replace />} />
                   <Route path="/admin/users" element={<Users />} />
                   <Route path="/admin/admins" element={<Admins />} />
                   <Route path="/admin/organizers" element={<Organizers />} />
@@ -345,6 +349,8 @@ function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/payment-terms-and-conditions" element={<PaymentTerms />} />
+              <Route path="/payment-terms" element={<PaymentTerms />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
               {/* Payment Result Pages */}

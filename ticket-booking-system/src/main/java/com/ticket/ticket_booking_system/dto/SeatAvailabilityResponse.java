@@ -39,6 +39,7 @@ public class SeatAvailabilityResponse {
         private UUID categoryId;
         private String categoryName;
         private BigDecimal price;
+        private BigDecimal earlyBirdPrice;
         private Integer capacity;
         private Integer sharedAreaNumber;
         private Integer availableTickets;

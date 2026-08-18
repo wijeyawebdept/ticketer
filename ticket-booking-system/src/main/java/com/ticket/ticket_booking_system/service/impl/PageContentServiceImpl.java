@@ -9,11 +9,13 @@ import com.ticket.ticket_booking_system.dto.response.PageContentResponse;
 import com.ticket.ticket_booking_system.entity.CookiePolicy;
 import com.ticket.ticket_booking_system.entity.FAQ;
 import com.ticket.ticket_booking_system.entity.PageType;
+import com.ticket.ticket_booking_system.entity.PaymentTerms;
 import com.ticket.ticket_booking_system.entity.PrivacyPolicy;
 import com.ticket.ticket_booking_system.entity.RefundPolicy;
 import com.ticket.ticket_booking_system.entity.TermsAndConditions;
 import com.ticket.ticket_booking_system.repository.CookiePolicyRepository;
 import com.ticket.ticket_booking_system.repository.FAQRepository;
+import com.ticket.ticket_booking_system.repository.PaymentTermsRepository;
 import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
 import com.ticket.ticket_booking_system.repository.RefundPolicyRepository;
 import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
@@ -39,6 +41,7 @@ public class PageContentServiceImpl implements PageContentService {
 
     private final PrivacyPolicyRepository privacyPolicyRepository;
     private final TermsAndConditionsRepository termsAndConditionsRepository;
+    private final PaymentTermsRepository paymentTermsRepository;
     private final CookiePolicyRepository cookiePolicyRepository;
     private final FAQRepository faqRepository;
     private final RefundPolicyRepository refundPolicyRepository;
@@ -80,6 +83,12 @@ public class PageContentServiceImpl implements PageContentService {
                             .findFirst()
                             .orElse(RefundPolicy.builder().title("Refund Policy").content("").build());
                     yield convertToResponse(content, "REFUND_POLICY");
+                }
+                case "PAYMENT_TERMS", "PAYMENT_TERMS_AND_CONDITIONS" -> {
+                    PaymentTerms content = paymentTermsRepository.findAll().stream()
+                            .findFirst()
+                            .orElse(PaymentTerms.builder().title("Payment Terms and Conditions").content("").build());
+                    yield convertToResponse(content, "PAYMENT_TERMS");
                 }
                 default -> throw new RuntimeException("Invalid page type: " + pageType);
             };
@@ -158,6 +167,19 @@ public class PageContentServiceImpl implements PageContentService {
                     auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Refund Policy content");
                     yield convertToResponse(content, "REFUND_POLICY");
                 }
+                case "PAYMENT_TERMS", "PAYMENT_TERMS_AND_CONDITIONS" -> {
+                    PaymentTerms content = paymentTermsRepository.findAll().stream()
+                            .findFirst()
+                            .orElse(PaymentTerms.builder().build());
+                    content.setTitle(request.getTitle());
+                    content.setContent(request.getContent());
+                    content.setUpdatedBy(updatedBy);
+                    content.setUpdatedAt(LocalDateTime.now());
+                    content = paymentTermsRepository.save(content);
+                    log.info("Payment Terms updated");
+                    auditService.logAction(getCurrentUserId(), "UPDATE_PAGE_CONTENT", "PAGE_CONTENT", content.getId(), "Updated Payment Terms and Conditions content");
+                    yield convertToResponse(content, "PAYMENT_TERMS");
+                }
                 default -> throw new RuntimeException("Invalid page type: " + pageType);
             };
         } catch (Exception e) {
@@ -193,6 +215,11 @@ public class PageContentServiceImpl implements PageContentService {
             var refundPolicy = refundPolicyRepository.findById(contentId);
             if (refundPolicy.isPresent()) {
                 return convertToResponse(refundPolicy.get(), "REFUND_POLICY");
+            }
+
+            var paymentTerms = paymentTermsRepository.findById(contentId);
+            if (paymentTerms.isPresent()) {
+                return convertToResponse(paymentTerms.get(), "PAYMENT_TERMS");
             }
 
             throw new RuntimeException("Page content not found with ID: " + contentId);
@@ -252,6 +279,16 @@ public class PageContentServiceImpl implements PageContentService {
                     .createdAt(r.getCreatedAt())
                     .updatedAt(r.getUpdatedAt())
                     .updatedBy(r.getUpdatedBy())
+                    .build();
+        } else if (content instanceof PaymentTerms pt) {
+            return PageContentResponse.builder()
+                    .contentId(pt.getId())
+                    .pageType(PageType.PAYMENT_TERMS)
+                    .title(pt.getTitle())
+                    .content(pt.getContent())
+                    .createdAt(pt.getCreatedAt())
+                    .updatedAt(pt.getUpdatedAt())
+                    .updatedBy(pt.getUpdatedBy())
                     .build();
         }
         throw new RuntimeException("Unknown content type");

@@ -51,4 +51,10 @@ public class TicketCategoryResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    // Sales timeline support (e.g. for Early Bird tickets)
+    private LocalDateTime salesStartDate;
+    private LocalDateTime salesEndDate;
+    private BigDecimal earlyBirdPrice;
+    private Integer earlyBirdCapacity;
 }

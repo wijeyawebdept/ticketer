@@ -8,5 +8,6 @@ public enum PageType {
     COOKIE_POLICY,
     TERMS_AND_CONDITIONS,
     FAQ,
-    REFUND_POLICY
+    REFUND_POLICY,
+    PAYMENT_TERMS
 }

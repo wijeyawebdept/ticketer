@@ -42,6 +42,36 @@ import { venueSeatService } from '../../../services/venueSeatService';
 import { useAuth } from '../../../context/AuthContext';
 import { getAssetUrl } from '../../../utils/formatters';
 
+// Helper function to sort ticket categories based on business rules
+const sortTicketCategories = (categories: TicketCategory[]): TicketCategory[] => {
+  return [...categories].sort((a, b) => {
+    // 1. Seated categories first, Shared areas second
+    if (a.isSharedArea !== b.isSharedArea) {
+      return a.isSharedArea ? 1 : -1;
+    }
+    
+    // 2. If both are shared areas, sort by sharedAreaNumber
+    if (a.isSharedArea && b.isSharedArea) {
+      return (a.sharedAreaNumber || 0) - (b.sharedAreaNumber || 0);
+    }
+    
+    // 3. If both are seated categories, use custom tier logic
+    const tierOrder = ["vip platinum", "vip gold", "vip silver"];
+    const aName = (a.categoryName || '').toLowerCase();
+    const bName = (b.categoryName || '').toLowerCase();
+    
+    const aIndex = tierOrder.findIndex(tier => aName.includes(tier));
+    const bIndex = tierOrder.findIndex(tier => bName.includes(tier));
+    
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1; // a is in tier, b is not, a comes first
+    if (bIndex !== -1) return 1;  // b is in tier, a is not, b comes first
+    
+    // Fallback to alphabetical
+    return aName.localeCompare(bName);
+  });
+};
+
 // Define the form values type
 interface FormValues {
   name: string;
@@ -376,8 +406,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         ticketCutoffTime: event?.ticketCutoffTime ? event.ticketCutoffTime.slice(0, 16) : '',
         imageFile: null,
         ticketCategories: event?.ticketCategories && event.ticketCategories.length > 0 
-          ? event.ticketCategories 
-          : [{ categoryName: '', price: '' as any, capacity: '' as any }]
+          ? sortTicketCategories(event.ticketCategories).map(cat => ({
+              ...cat,
+              salesStartDate: cat.salesStartDate ? cat.salesStartDate.slice(0, 16) : '',
+              salesEndDate: cat.salesEndDate ? cat.salesEndDate.slice(0, 16) : ''
+            }))
+          : [{ categoryName: '', price: '' as any, capacity: '' as any, salesStartDate: '', salesEndDate: '' }]
       }}
       validationSchema={Yup.object({
         name: Yup.string()
@@ -469,6 +503,29 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
               .max(100000, 'Capacity cannot exceed 100,000'),
             description: Yup.string()
               .max(500, 'Description must not exceed 500 characters')
+              .optional(),
+            earlyBirdPrice: Yup.number()
+              .nullable()
+              .transform((_, val) => (val === "" ? null : Number(val)))
+              .typeError('Early Bird Price must be a valid number')
+              .min(0.01, 'Early Bird Price must be greater than LKR 0')
+              .test('less-than-price', 'Early Bird Price must be less than regular price', function(value) {
+                const { price } = this.parent;
+                if (value === null || value === undefined || !price) return true;
+                return value < price;
+              })
+              .optional(),
+            earlyBirdCapacity: Yup.number()
+              .nullable()
+              .transform((_, val) => (val === "" ? null : Number(val)))
+              .typeError('Early Bird Capacity must be a valid number')
+              .integer('Early Bird Capacity must be a whole number')
+              .min(1, 'Early Bird Capacity must be at least 1')
+              .test('less-than-capacity', 'Early Bird Capacity cannot exceed total capacity', function(value) {
+                const { capacity } = this.parent;
+                if (value === null || value === undefined || !capacity) return true;
+                return value <= capacity;
+              })
               .optional()
           })
         )
@@ -477,8 +534,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
         .test('unique-categories', 'Category names must be unique', function(categories) {
           if (!categories || categories.length === 0) return true;
           const names = categories
-            .filter((cat: TicketCategory) => cat.categoryName && cat.categoryName.trim())
-            .map((cat: TicketCategory) => cat.categoryName.toLowerCase().trim());
+            .filter((cat: any) => cat.categoryName && cat.categoryName.trim())
+            .map((cat: any) => cat.categoryName.toLowerCase().trim());
           const uniqueNames = new Set(names);
           return names.length === uniqueNames.size;
         })
@@ -571,6 +628,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
               sharedAreaNumber: category.sharedAreaNumber || null,
               // Links this ticket to a venue seat zone (e.g. "Platinum") for price mapping on the seat map
               venueSeatCategoryName: category.venueSeatCategoryName?.trim() || null,
+              salesStartDate: category.salesStartDate ? category.salesStartDate + ':00' : null,
+              salesEndDate: category.salesEndDate ? category.salesEndDate + ':00' : null,
+              earlyBirdPrice: category.earlyBirdPrice ? Number(category.earlyBirdPrice) : null,
+              earlyBirdCapacity: category.earlyBirdCapacity ? Number(category.earlyBirdCapacity) : null,
             }))
           };
           
@@ -857,10 +918,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                   sharedAreaNumber: i
                                 });
                               }
-                              setFieldValue('ticketCategories', [...seatedCategories, ...sharedAreaCategories]);
+                              setFieldValue('ticketCategories', sortTicketCategories([...seatedCategories, ...sharedAreaCategories]));
                             } else {
                               setFieldValue('ticketCategories', seatedCategories.length > 0
-                                ? seatedCategories
+                                ? sortTicketCategories(seatedCategories)
                                 : [{ categoryName: '', price: '' as any, capacity: '' as any }]
                               );
                             }
@@ -1091,7 +1152,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 if (!category.isSharedArea) return null;
                                 
                                 return (
-                                  <Grid item xs={12} sm={6} md={4} key={`shared-${index}`}>
+                                  <Grid item xs={12} sm={6} key={`shared-${index}`}>
                                     <Paper sx={{ p: 2, borderRadius: 2, bgcolor: 'white', border: '1px solid', borderColor: 'secondary.200' }}>
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                         <Chip 
@@ -1143,6 +1204,71 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                         }}
                                         required
                                       />
+
+                                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                                        <Grid item xs={12}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].salesStartDate`}
+                                            label="Sales Start Date"
+                                            type="datetime-local"
+                                            value={category.salesStartDate || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            InputLabelProps={{ shrink: true }}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                          />
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].salesEndDate`}
+                                            label="Sales End Date (Early Bird)"
+                                            type="datetime-local"
+                                            value={category.salesEndDate || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            InputLabelProps={{ shrink: true }}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                            helperText="Leave empty if it doesn't expire"
+                                          />
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].earlyBirdPrice`}
+                                            label="Early Bird Price (LKR)"
+                                            type="number"
+                                            value={category.earlyBirdPrice || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                            helperText="Leave empty if no early bird phase"
+                                          />
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].earlyBirdCapacity`}
+                                            label="Early Bird Ticket Amount"
+                                            type="number"
+                                            value={category.earlyBirdCapacity || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                            helperText="Leave empty for all tickets"
+                                          />
+                                        </Grid>
+
+                                      </Grid>
                                     </Paper>
                                   </Grid>
                                 );
@@ -1352,6 +1478,69 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                                 rows={2}
                               />
                             </Grid>
+                            
+                            {/* Sales Window */}
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                name={`ticketCategories[${index}].salesStartDate`}
+                                label="Sales Start Date"
+                                type="datetime-local"
+                                value={category.salesStartDate || ''}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
+                                InputLabelProps={{ shrink: true }}
+                                variant="outlined"
+                                margin="normal"
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                fullWidth
+                                name={`ticketCategories[${index}].salesEndDate`}
+                                label="Sales End Date (Early Bird)"
+                                type="datetime-local"
+                                value={category.salesEndDate || ''}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
+                                InputLabelProps={{ shrink: true }}
+                                variant="outlined"
+                                margin="normal"
+                                helperText="Leave empty if ticket does not expire before event"
+                              />
+                            </Grid>
+                                        <Grid item xs={12} md={6}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].earlyBirdPrice`}
+                                            label="Early Bird Price (LKR)"
+                                            type="number"
+                                            value={category.earlyBirdPrice || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                            helperText="Leave empty if no early bird phase"
+                                          />
+                                        </Grid>
+                                        <Grid item xs={12} md={6}>
+                                          <TextField
+                                            fullWidth
+                                            name={`ticketCategories[${index}].earlyBirdCapacity`}
+                                            label="Early Bird Ticket Amount"
+                                            type="number"
+                                            value={category.earlyBirdCapacity || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            variant="outlined"
+                                            size="small"
+                                            margin="dense"
+                                            helperText="Leave empty for all tickets"
+                                          />
+                                        </Grid>
+
+                            
                           </Grid>
                         </Paper>
                       </Grid>

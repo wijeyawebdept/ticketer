@@ -70,7 +70,7 @@ const Transactions: React.FC = () => {
     { 
       field: 'userName', 
       headerName: 'Customer', 
-      flex: 1, 
+      flex: 1, minWidth: 150, 
       valueGetter: (params) => {
         const user = params.row.booking?.user;
         return user ? `${user.firstName} ${user.lastName}` : 'N/A';

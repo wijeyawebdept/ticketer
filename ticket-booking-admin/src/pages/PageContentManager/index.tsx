@@ -45,6 +45,7 @@ const pageTypes = [
   { key: 'TERMS_AND_CONDITIONS', label: 'Terms and Conditions' },
   { key: 'FAQ', label: 'FAQ' },
   { key: 'REFUND_POLICY', label: 'Refund Policy' },
+  { key: 'PAYMENT_TERMS', label: 'Payment Terms & Conditions' },
 ];
 
 export default function PageContentManager() {
@@ -60,6 +61,7 @@ export default function PageContentManager() {
     TERMS_AND_CONDITIONS: { title: '', content: '' },
     FAQ: { title: '', content: '' },
     REFUND_POLICY: { title: '', content: '' },
+    PAYMENT_TERMS: { title: '', content: '' },
   });
 
   // Load all page contents

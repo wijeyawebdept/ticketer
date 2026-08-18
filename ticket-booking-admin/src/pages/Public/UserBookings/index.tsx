@@ -163,7 +163,7 @@ const UserBookings: React.FC = () => {
   const columns: GridColDef[] = [
     { field: 'bookingReference', headerName: 'Booking Ref', width: 160 },
     {
-      field: 'eventName', headerName: 'Event', flex: 1,
+      field: 'eventName', headerName: 'Event', flex: 1, minWidth: 150,
       valueGetter: (params: any) => params.row.eventName || params.row.event?.name || 'N/A'
     },
     { field: 'ticketCount', headerName: 'Tickets', width: 90 },

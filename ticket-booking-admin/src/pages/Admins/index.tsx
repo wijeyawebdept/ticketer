@@ -318,7 +318,7 @@ const Admins: React.FC = () => {
     { 
       field: 'firstName', 
       headerName: 'First Name', 
-      flex: 1,
+      flex: 1, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {params.value}
@@ -333,11 +333,11 @@ const Admins: React.FC = () => {
         </Box>
       )
     },
-    { field: 'lastName', headerName: 'Last Name', flex: 1 },
+    { field: 'lastName', headerName: 'Last Name', flex: 1, minWidth: 150 },
     { 
       field: 'email', 
       headerName: 'Email', 
-      flex: 1.5,
+      flex: 1.5, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2">{params.value}</Typography>
@@ -356,7 +356,7 @@ const Admins: React.FC = () => {
     { 
       field: 'phoneNumber', 
       headerName: 'Phone', 
-      flex: 1,
+      flex: 1, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Typography variant="body2">
           {formatPhoneNumber(params.value)}
@@ -366,7 +366,7 @@ const Admins: React.FC = () => {
     { 
       field: 'role', 
       headerName: 'Role', 
-      flex: 1,
+      flex: 1, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Tooltip title={getRoleTooltip(params.value as string)} arrow>
           <Chip 
@@ -382,7 +382,7 @@ const Admins: React.FC = () => {
     {
       field: 'active',
       headerName: 'Status',
-      flex: 0.8,
+      flex: 0.8, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
           label={params.value ? 'Active' : 'Inactive'}
@@ -395,7 +395,7 @@ const Admins: React.FC = () => {
     {
       field: 'lastLoginAt',
       headerName: 'Last Login',
-      flex: 1.2,
+      flex: 1.2, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => {
         const fullTimestamp = formatDateTime(params.value);
         const shortDate = formatDateShort(params.value);
@@ -417,7 +417,7 @@ const Admins: React.FC = () => {
     {
       field: 'createdAt',
       headerName: 'Created At',
-      flex: 1.2,
+      flex: 1.2, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => {
         const fullTimestamp = formatDateTime(params.value);
         const shortDate = formatDateShort(params.value);
@@ -436,7 +436,7 @@ const Admins: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1.2,
+      flex: 1.2, minWidth: 250,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
@@ -646,7 +646,7 @@ const Admins: React.FC = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, minWidth: 150 }}
           />
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Status</InputLabel>

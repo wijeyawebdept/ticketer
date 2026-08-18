@@ -215,13 +215,13 @@ const Bookings: React.FC = () => {
     { 
       field: 'eventName', 
       headerName: 'Event', 
-      flex: 1, 
+      flex: 1, minWidth: 150, 
       valueGetter: (params) => params.row.eventName || params.row.event?.name || 'N/A' 
     },
     {
       field: 'showtimeSlot',
       headerName: 'Showtime Slot',
-      flex: 1.2,
+      flex: 1.2, minWidth: 150,
       valueGetter: (params) => {
         const b = params.row;
         const sched = b.eventSchedule || b.event?.eventSchedules?.find((s: any) => s.scheduleId === b.scheduleId);
@@ -243,7 +243,7 @@ const Bookings: React.FC = () => {
     { 
       field: 'userName', 
       headerName: 'Customer', 
-      flex: 1, 
+      flex: 1, minWidth: 150, 
       valueGetter: (params) => {
         if (params.row.userFirstName && params.row.userLastName) {
           return `${params.row.userFirstName} ${params.row.userLastName}`;

@@ -63,6 +63,7 @@ public class SecurityConfig {
                                 "/api/venue-seats/layout/**",
                                 "/api/venue-seats/availability/**",
                                 "/api/payments/webhook",
+                                "/api/pages/**",
                                 "/api/contact",
                                 "/api/admin/banners/**",
                                 "/contact",

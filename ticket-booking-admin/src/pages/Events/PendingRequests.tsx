@@ -98,11 +98,11 @@ const PendingRequests: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'name', headerName: 'Event Name', flex: 1 },
+    { field: 'name', headerName: 'Event Name', flex: 1, minWidth: 150 },
     { 
       field: 'venue', 
       headerName: 'Venue', 
-      flex: 1,
+      flex: 1, minWidth: 150,
       valueFormatter: (params) => {
         if (params.value && typeof params.value === 'object') {
           return params.value.name || 'N/A';

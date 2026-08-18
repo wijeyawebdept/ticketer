@@ -20,7 +20,7 @@ const PublicFooter: React.FC = () => {
     { icon: <LinkedIn sx={{ fontSize: { xs: 15, md: 20 } }} />, href: '#' },
     { icon: FaTiktok({ size: 15 }), href: '#' },
     { icon: <YouTube sx={{ fontSize: { xs: 15, md: 20 } }} />, href: '#' },
-    { icon: <WhatsApp sx={{ fontSize: { xs: 15, md: 20 } }} />, href: '#' },
+    { icon: <WhatsApp sx={{ fontSize: { xs: 15, md: 20 } }} />, href: 'https://wa.me/94765006748' },
   ];
 
   const groupSites = [
@@ -107,7 +107,9 @@ const PublicFooter: React.FC = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <WhatsApp sx={{ mr: 1, color: '#fff', fontSize: { xs: 16, md: 20 } }} />
-                <Typography variant="body2" sx={{ fontFamily: 'Raleway, sans-serif', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>WhatsApp (Text-only service)</Typography>
+                <Link href="https://wa.me/94765006748" target="_blank" rel="noopener noreferrer" color="inherit" sx={{ textDecoration: 'none', fontFamily: 'Raleway, sans-serif', fontSize: { xs: '0.78rem', md: '0.88rem' }, '&:hover': { color: '#fff' } }}>
+                  WhatsApp (Text-only service)
+                </Link>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <MailOutline sx={{ mr: 1, color: '#fff', fontSize: { xs: 16, md: 20 } }} />

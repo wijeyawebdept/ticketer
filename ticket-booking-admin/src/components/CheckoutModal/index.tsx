@@ -14,10 +14,13 @@ import {
   FormControlLabel,
   Button,
   IconButton,
+  Link,
+  CircularProgress,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services';
+import PageContentService from '../../services/pageContent.service';
 import { useCurrency } from '../../context/CurrencyContext';
 import {
   Event as EventIcon,
@@ -25,6 +28,8 @@ import {
   LocationOn as LocationOnIcon,
   ConfirmationNumber as TicketIcon,
   Edit as EditIcon,
+  Close as CloseIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 
 export interface CheckoutModalProps {
@@ -59,6 +64,7 @@ export interface CheckoutModalProps {
   discountInfoString?: string;
   handlingFee?: number;
   hideChangeSeats?: boolean;
+  ticketMode?: string;
   children?: React.ReactNode;
 }
 
@@ -76,6 +82,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   discountInfoString = '',
   handlingFee = 100,
   hideChangeSeats = false,
+  ticketMode,
   children,
 }) => {
   const { t } = useTranslation();
@@ -86,7 +93,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
   const [deliveryMethod, setDeliveryMethod] = useState('online');
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [bookingForSomeoneElse, setBookingForSomeoneElse] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [termsContent, setTermsContent] = useState('');
+  const [termsTitle, setTermsTitle] = useState('Payment Terms & Conditions');
+  const [termsLoading, setTermsLoading] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
     lastName: '',
@@ -95,6 +105,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     email: '',
   });
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleOpenTerms = async () => {
+    setTermsModalOpen(true);
+    setTermsLoading(true);
+    try {
+      const data = await PageContentService.getPageContent('PAYMENT_TERMS');
+      setTermsTitle(data.title || 'Payment Terms & Conditions');
+      setTermsContent(data.content || '');
+    } catch (err) {
+      setTermsContent('');
+    } finally {
+      setTermsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -160,11 +184,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       deliveryMethod,
       customerInfo,
       acceptTerms,
-      bookingForSomeoneElse,
+      bookingForSomeoneElse: false,
     });
   };
 
   return (
+    <>
     <Dialog
       open={isOpen}
       onClose={(event, reason) => {
@@ -233,7 +258,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </Select>
               </FormControl>
               <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block', fontSize: '0.75rem' }}>
-                {t('handlingFeeNotice', "Ha. Ha. Ha. we're gonna charge u more 100/=")}
+                {handlingFee > 0
+                  ? t('handlingFeeNotice', `Standard handling fee of ${formatCurrency(handlingFee)} applies per transaction.`)
+                  : t('freeDelivery', 'No handling fee applies to this transaction.')}
               </Typography>
             </Box>
 
@@ -291,17 +318,41 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </Grid>
             </Box>
 
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
               <FormControlLabel
-                control={<input type="checkbox" checked={bookingForSomeoneElse} onChange={(e) => setBookingForSomeoneElse(e.target.checked)} style={{ marginRight: '8px' }} />}
-                label={<Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{t('bookingForSomeoneElse', 'I am booking for someone else')}</Typography>}
+                control={<input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} style={{ marginRight: '8px' }} />}
+                label={
+                  <Typography component="span" variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: '#334155' }}>
+                    {t('acceptTermsText', 'I accept and agree to')}{' '}
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{t('termsAndConditions', 'Terms and Conditions')}</span>
+                  </Typography>
+                }
+                sx={{ mr: 0.5, mb: 0 }}
               />
-              <Box sx={{ mt: 0.5 }}>
-                <FormControlLabel
-                  control={<input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} style={{ marginRight: '8px' }} />}
-                  label={<Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{t('acceptTerms', 'I accept and agree to Terms and Conditions')}</Typography>}
-                />
-              </Box>
+              <Link
+                component="button"
+                type="button"
+                variant="caption"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenTerms();
+                }}
+                sx={{
+                  color: '#ff1955',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: 'none',
+                  p: 0,
+                  fontFamily: 'inherit',
+                  '&:hover': { color: '#e0144c' },
+                }}
+              >
+                (Read More)
+              </Link>
             </Box>
 
             {localError && (
@@ -405,32 +456,80 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </Box>
                     ))}
                   </Box>
-                  {selectedSeatDetails.map((seat, index) => (
-                    <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.4, borderBottom: '1px dashed #f1f5f9' }}>
-                      <Typography variant="caption" sx={{ color: '#475569', fontWeight: 500 }}>
-                        {(seat?.seatId || selectedSeats.find((_, i) => i === index))} • {seat?.categoryName || t('standard', 'Standard')}
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#0f172a' }}>
-                        {formatCurrency(seat?.currentPrice || seat?.price || 0)}
-                      </Typography>
-                    </Box>
-                  ))}
+                  {selectedSeatDetails.map((seat, index) => {
+                    const isEarlyBird = ticketMode === 'early_bird' && Boolean(seat?.earlyBirdPrice);
+                    const seatPrice = isEarlyBird ? seat.earlyBirdPrice : (seat?.currentPrice || seat?.price || 0);
+
+                    return (
+                      <Box key={seat?.seatId || (selectedSeats.find((_, i) => i === index) || index)} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px dashed #f1f5f9' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, flexWrap: 'wrap' }}>
+                          <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>
+                            {(seat?.seatId || selectedSeats.find((_, i) => i === index))} • {seat?.categoryName || t('standard', 'Standard')}
+                          </Typography>
+                          {isEarlyBird && (
+                            <Box
+                              component="span"
+                              sx={{
+                                backgroundColor: 'rgba(255, 25, 85, 0.1)',
+                                color: '#ff1955',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                px: 0.8,
+                                py: 0.1,
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255, 25, 85, 0.3)',
+                                letterSpacing: '0.5px'
+                              }}
+                            >
+                              EARLY BIRD
+                            </Box>
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: isEarlyBird ? '#ff1955' : '#0f172a' }}>
+                          {formatCurrency(seatPrice)}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
                 </Box>
               )}
 
               {/* Shared Area Tickets */}
-              {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => (
-                <Box key={`shared-${selection.areaNumber || selection.categoryName}`} sx={{ py: 0.5, borderBottom: '1px dashed #f1f5f9' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                      {selection.categoryName} <span style={{ color: '#64748b', fontWeight: 400 }}>× {selection.ticketCount}</span>
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
-                      {formatCurrency(selection.ticketCount * (selection.pricePerTicket || selection.price || 0))}
-                    </Typography>
+              {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => {
+                const isEarlyBird = ticketMode === 'early_bird';
+                return (
+                  <Box key={`shared-${selection.areaNumber || selection.categoryName}`} sx={{ py: 0.6, borderBottom: '1px dashed #f1f5f9' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, flexWrap: 'wrap' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                          {selection.categoryName} <span style={{ color: '#64748b', fontWeight: 400 }}>× {selection.ticketCount}</span>
+                        </Typography>
+                        {isEarlyBird && (
+                          <Box
+                            component="span"
+                            sx={{
+                              backgroundColor: 'rgba(255, 25, 85, 0.1)',
+                              color: '#ff1955',
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              px: 0.8,
+                              py: 0.1,
+                              borderRadius: '4px',
+                              border: '1px solid rgba(255, 25, 85, 0.3)',
+                              letterSpacing: '0.5px'
+                            }}
+                          >
+                            EARLY BIRD
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: isEarlyBird ? '#ff1955' : '#0f172a' }}>
+                        {formatCurrency(selection.ticketCount * (selection.pricePerTicket || selection.price || 0))}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
 
               {selectedSeatDetails.length === 0 && sharedAreaSelections.length === 0 && (
                 <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
@@ -444,8 +543,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
                 {t('amount', 'Amount Breakdown')}
               </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem' }}>
-                <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('subTotal', 'Sub Total')}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                  <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('subTotal', 'Sub Total')}</Typography>
+                  {ticketMode === 'early_bird' && (
+                    <Box
+                      component="span"
+                      sx={{
+                        backgroundColor: 'rgba(255, 25, 85, 0.2)',
+                        color: '#ff4d79',
+                        fontSize: '0.65rem',
+                        fontWeight: 800,
+                        px: 0.8,
+                        py: 0.1,
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 25, 85, 0.4)',
+                        letterSpacing: '0.5px'
+                      }}
+                    >
+                      EARLY BIRD
+                    </Box>
+                  )}
+                </Box>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: '#ffffff' }}>
                   {formatCurrency(totalDiscount > 0 ? totalPrice + totalDiscount : totalPrice)}
                 </Typography>
@@ -460,10 +579,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </Typography>
                 </Box>
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, fontSize: '0.875rem' }}>
-                <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('handlingFee', 'Handling fee')}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4ade80' }}>{formatCurrency(handlingFee)}</Typography>
-              </Box>
+              {handlingFee > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('handlingFee', 'Handling fee')}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#4ade80' }}>{formatCurrency(handlingFee)}</Typography>
+                </Box>
+              )}
               <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.15)', pt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#ffffff', fontFamily: 'Raleway, sans-serif' }}>
                   {t('total', 'Total Pay')}
@@ -485,6 +606,82 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       <DialogActions />
     </Dialog>
+
+    {/* Terms & Conditions Read More Modal */}
+    <Dialog
+      open={termsModalOpen}
+      onClose={() => setTermsModalOpen(false)}
+      maxWidth="md"
+      fullWidth
+      sx={{
+        zIndex: 1400,
+        '& .MuiDialog-paper': {
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 24px 48px -12px rgba(0,0,0,0.3)',
+        },
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e293b', color: '#fff', py: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: 'Raleway, sans-serif', color: '#fcd0a5' }}>
+          {termsTitle}
+        </Typography>
+        <IconButton onClick={() => setTermsModalOpen(false)} sx={{ color: '#94a3b8', '&:hover': { color: '#fff' } }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ p: { xs: 2.5, sm: 3.5 }, backgroundColor: '#ffffff', minHeight: '280px', maxHeight: '65vh', overflowY: 'auto' }}>
+        {termsLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+            <CircularProgress sx={{ color: '#ff1955' }} />
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              color: '#334155',
+              fontFamily: 'Raleway, sans-serif',
+              lineHeight: 1.7,
+              fontSize: '0.9rem',
+              '& h4': {
+                color: '#0f172a',
+                fontWeight: 700,
+                mt: 2.5,
+                mb: 1,
+                fontSize: '1.05rem',
+              },
+              '& p': {
+                mb: 1.5,
+              },
+              '& ul': {
+                pl: 2.5,
+                mb: 1.5,
+              },
+              '& li': {
+                mb: 0.5,
+              },
+            }}
+            dangerouslySetInnerHTML={{ __html: termsContent }}
+          />
+        )}
+      </DialogContent>
+      <DialogActions sx={{ px: 3, py: 1.5, backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', justifyContent: 'space-between' }}>
+        <Button
+          startIcon={<OpenInNewIcon sx={{ fontSize: '16px !important' }} />}
+          onClick={() => window.open('/payment-terms-and-conditions', '_blank')}
+          sx={{ color: '#64748b', textTransform: 'none', fontWeight: 600, fontSize: '0.85rem' }}
+        >
+          Open in New Tab
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => setTermsModalOpen(false)}
+          sx={{ backgroundColor: '#ff1955', textTransform: 'none', fontWeight: 700, px: 3, '&:hover': { backgroundColor: '#e0144c' } }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </>
   );
 };
 

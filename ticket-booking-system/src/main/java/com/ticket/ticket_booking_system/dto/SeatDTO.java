@@ -32,6 +32,7 @@ public class SeatDTO {
     private Boolean isAccessible;
     private String status;
     private BigDecimal currentPrice;
+    private BigDecimal earlyBirdPrice;
     private String notes;
     
     // Hold/Booking information for admin real-time view

@@ -29,6 +29,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import { formatTimeString } from '../../../utils/formatters';
 import CheckoutModal from '../../../components/CheckoutModal';
+import systemSettingService from '../../../services/systemSetting.service';
 import { useCurrency } from '../../../context/CurrencyContext';
 import './SeatSelection.css';
 
@@ -50,7 +51,7 @@ const SeatSelectionPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
   const { formatCurrency, currency, convertAmount } = useCurrency();
-  const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string } | null;
+  const eventDetailsFromState = location.state as { eventTitle?: string; venueName?: string; venueAddress?: string; eventDate?: string; eventTime?: string; eventId?: string; ticketMode?: string } | null;
 
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [selectedSeatDetails, setSelectedSeatDetails] = useState<any[]>([]);
@@ -60,6 +61,7 @@ const SeatSelectionPage: React.FC = () => {
   const [isSalesClosed, setIsSalesClosed] = useState(false);
   const [venueId, setVenueId] = useState<string | undefined>(undefined);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [handlingFee, setHandlingFee] = useState<number>(100);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showBookingSummary, setShowBookingSummary] = useState(false);
@@ -265,7 +267,24 @@ const SeatSelectionPage: React.FC = () => {
     }
   }, [eventDetails]);
 
-  // Countdown timer effect - Update countdown every second
+  // Fetch dynamic handling fee
+  useEffect(() => {
+    const fetchFee = async () => {
+      try {
+        const feeSetting = await systemSettingService.getHandlingFee();
+        if (feeSetting && feeSetting.isEnabled !== false) {
+          setHandlingFee(feeSetting.handlingFee !== undefined ? feeSetting.handlingFee : 100);
+        } else {
+          setHandlingFee(0);
+        }
+      } catch {
+        setHandlingFee(100);
+      }
+    };
+    fetchFee();
+  }, []);
+
+  // Dynamic countdown timer based on ticketCutoffTime from backend schedule
   useEffect(() => {
     if (!eventDetails || !eventDetails.date || !eventDetails.time || !showCountdown) {
       return;
@@ -408,7 +427,10 @@ const SeatSelectionPage: React.FC = () => {
       const count = categorySeats.length;
       if (count === 0) return;
       const sample = categorySeats[0];
-      const basePrice = sample.currentPrice || 0;
+      let basePrice = sample.currentPrice || 0;
+      if (eventDetailsFromState?.ticketMode === 'early_bird' && sample.earlyBirdPrice) {
+        basePrice = sample.earlyBirdPrice;
+      }
 
       if (sample.dealActive) {
         if (sample.dealType === 'PERCENTAGE_DISCOUNT' && sample.dealDiscountPercentage) {
@@ -539,8 +561,7 @@ const SeatSelectionPage: React.FC = () => {
       return showMessage('error', 'Event details are still loading. Please wait a moment and try again.');
     }
 
-    const HANDLING_FEE = 100;
-    const finalAmount = totalPrice + HANDLING_FEE;
+    const finalAmount = totalPrice + handlingFee;
 
     setLoading(true);
 
@@ -720,7 +741,19 @@ const SeatSelectionPage: React.FC = () => {
             >
               {/* Back Arrow Button */}
               <IconButton
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  const targetEventId = eventDetails?.eventId || eventDetailsFromState?.eventId;
+                  if (targetEventId) {
+                    navigate(`/event/${targetEventId}`, {
+                      state: {
+                        selectedShowtime: eventScheduleId,
+                        ticketMode: eventDetailsFromState?.ticketMode
+                      }
+                    });
+                  } else {
+                    navigate(-1);
+                  }
+                }}
                 size="small"
                 sx={{
                   color: '#ffffff',
@@ -855,6 +888,7 @@ const SeatSelectionPage: React.FC = () => {
           selectedSeats={selectedSeats}
           bookedSeats={[]}
           isHolding={isHolding}
+          ticketMode={eventDetailsFromState?.ticketMode}
         />
       </div>
 
@@ -893,7 +927,14 @@ const SeatSelectionPage: React.FC = () => {
                 onTouchMove={handleSummaryTouchMove}
                 onTouchEnd={handleSummaryTouchEnd}
               >
-                <h3>{t('bookingSummary', 'Booking Summary')}</h3>
+                <h3>
+                  {t('bookingSummary', 'Booking Summary')}
+                  {eventDetailsFromState?.ticketMode === 'early_bird' && (
+                    <span style={{ marginLeft: '8px', fontSize: '10px', fontWeight: 800, backgroundColor: 'rgba(255, 25, 85, 0.2)', color: '#ff4d79', border: '1px solid rgba(255, 25, 85, 0.4)', padding: '2px 8px', borderRadius: '12px', verticalAlign: 'middle', letterSpacing: '0.5px' }}>
+                      EARLY BIRD
+                    </span>
+                  )}
+                </h3>
                 <button 
                   className="close-panel-btn"
                   onClick={(e) => { e.stopPropagation(); setIsCollapsed(true); }}
@@ -1008,7 +1049,8 @@ const SeatSelectionPage: React.FC = () => {
         totalPrice={totalPrice}
         totalDiscount={totalDiscount}
         discountInfoString={discountInfoString}
-        handlingFee={100}
+        handlingFee={handlingFee}
+        ticketMode={eventDetailsFromState?.ticketMode}
       />
 
       {/* Sign In Required Modal */}

@@ -2,7 +2,7 @@ import api from './api';
 
 export interface PageContentResponse {
   contentId: string;
-  pageType: 'PRIVACY_POLICY' | 'COOKIE_POLICY' | 'TERMS_AND_CONDITIONS' | 'FAQ' | 'REFUND_POLICY';
+  pageType: 'PRIVACY_POLICY' | 'COOKIE_POLICY' | 'TERMS_AND_CONDITIONS' | 'FAQ' | 'REFUND_POLICY' | 'PAYMENT_TERMS';
   title: string;
   content: string;
   createdAt: string;

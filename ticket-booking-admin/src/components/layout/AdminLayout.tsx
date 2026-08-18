@@ -193,6 +193,7 @@ const AdminLayout: React.FC = () => {
     { text: 'Blog Management', icon: <DescriptionIcon />, path: '/admin/blog' },
     { text: 'Banners', icon: <CollectionsIcon />, path: '/admin/banners' },
     { text: 'Page Content Manager', icon: <DescriptionIcon />, path: '/admin/page-content' },
+    { text: 'Handling Fee Manager', icon: <ReceiptIcon />, path: '/admin/handling-fee' },
     { text: 'Employee Assignment', icon: <AssignmentIcon />, path: '/admin/event-assignments' },
     { text: 'Organizer Assignment', icon: <PersonAddIcon />, path: '/admin/organizer-assignment' },
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/admin/venues' },

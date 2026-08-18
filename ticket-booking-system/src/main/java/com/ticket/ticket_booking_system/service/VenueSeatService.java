@@ -174,6 +174,7 @@ public class VenueSeatService {
                     .isAccessible(seat.getIsAccessible())
                     .status(seatStatus)
                     .currentPrice(currentPrice)
+                    .earlyBirdPrice(eventCategory != null ? eventCategory.getEarlyBirdPrice() : null)
                     .notes(seat.getNotes());
 
             if (eventCategory != null) {
@@ -224,6 +225,7 @@ public class VenueSeatService {
                     .categoryId(category.getCategoryId())
                     .categoryName(category.getCategoryName())
                     .price(category.getPrice())
+                    .earlyBirdPrice(category.getEarlyBirdPrice())
                     .capacity(category.getCapacity())
                     .sharedAreaNumber(category.getSharedAreaNumber())
                     .availableTickets(availableTickets)

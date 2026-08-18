@@ -172,19 +172,17 @@ const EventCategories: React.FC = () => {
     {
       field: 'categoryName',
       headerName: 'Category Name',
-      flex: 1,
-      minWidth: 150,
+      flex: 1, minWidth: 150,
     },
     {
       field: 'description',
       headerName: 'Description',
-      flex: 2,
-      minWidth: 200,
+      flex: 2, minWidth: 200,
     },
     {
       field: 'active',
       headerName: 'Status',
-      flex: 0.7,
+      flex: 0.7, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
           label={params.value === 1 ? 'Active' : params.value === 0 ? 'Inactive' : 'Deleted'}
@@ -197,7 +195,7 @@ const EventCategories: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      flex: 1,
+      flex: 1, minWidth: 250,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => {
         const category = params.row as EventCategory;

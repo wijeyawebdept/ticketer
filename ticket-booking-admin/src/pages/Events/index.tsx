@@ -275,11 +275,12 @@ const Events: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'name', headerName: 'Event Name', flex: 1 },
+    { field: 'name', headerName: 'Event Name', flex: 1, minWidth: 150 },
     { 
       field: 'venue', 
       headerName: 'Venue', 
       flex: 1,
+      minWidth: 150,
       valueFormatter: (params) => {
         // Handle both frontend Event type and backend response format
         if (params.value && typeof params.value === 'object') {
@@ -292,6 +293,7 @@ const Events: React.FC = () => {
       field: 'categoryName',
       headerName: 'Category',
       flex: 0.8,
+      minWidth: 120,
       renderCell: (params: GridRenderCellParams) => {
         const categoryName = params.row.category?.categoryName;
         if (!categoryName) {
@@ -313,6 +315,7 @@ const Events: React.FC = () => {
       field: 'availableSeats', 
       headerName: 'Seats', 
       flex: 1,
+      minWidth: 150,
       valueGetter: (params) => {
         const total = params.row.totalCapacity || 0;
         const available = params.row.availableSeats ?? total;
@@ -325,6 +328,7 @@ const Events: React.FC = () => {
       field: 'status',
       headerName: 'Event Status',
       flex: 1,
+      minWidth: 130,
       renderCell: (params: GridRenderCellParams) => (
         <Chip 
           label={params.value} 
@@ -339,6 +343,7 @@ const Events: React.FC = () => {
       field: 'active',
       headerName: 'Active Status',
       flex: 0.8,
+      minWidth: 120,
       renderCell: (params: GridRenderCellParams) => {
         // Only PUBLISHED events are considered Active
         const isActive = params.row.status === EventStatus.PUBLISHED;
@@ -356,6 +361,7 @@ const Events: React.FC = () => {
       field: 'actions',
       headerName: 'Actions',
       flex: 1,
+      minWidth: 260,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>

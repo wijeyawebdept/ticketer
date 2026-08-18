@@ -59,6 +59,19 @@ public class TicketCategory {
     @Column(name = "shared_area_number")
     private Integer sharedAreaNumber;
 
+    // Sales timeline support (e.g. for Early Bird tickets)
+    @Column(name = "sales_start_date")
+    private LocalDateTime salesStartDate;
+
+    @Column(name = "sales_end_date")
+    private LocalDateTime salesEndDate;
+
+    @Column(name = "early_bird_price")
+    private BigDecimal earlyBirdPrice;
+
+    @Column(name = "early_bird_capacity")
+    private Integer earlyBirdCapacity;
+
     /**
      * Links this ticket category to the venue's SeatCategory by name.
      * e.g. ticketCategoryName="Phase 1", venueSeatCategoryName="Platinum"

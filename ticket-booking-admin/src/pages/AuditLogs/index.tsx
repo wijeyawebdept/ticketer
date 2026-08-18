@@ -152,7 +152,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ isMyLogs = false }) => {
     { 
       field: 'performedByName', 
       headerName: t('auditLogs.performedBy'), 
-      flex: 1,
+      flex: 1, minWidth: 150,
       renderCell: (params) => (
         <Box>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{params.row.performedByName || t('auditLogs.system', 'System')}</Typography>

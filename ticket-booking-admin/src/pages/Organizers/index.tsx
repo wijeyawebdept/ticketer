@@ -212,15 +212,15 @@ const Organizers: React.FC = () => {
   };
 
   const columns: GridColDef[] = [
-    { field: 'firstName', headerName: 'First Name', flex: 1 },
-    { field: 'lastName', headerName: 'Last Name', flex: 1 },
-    { field: 'email', headerName: 'Email', flex: 1.5 },
+    { field: 'firstName', headerName: 'First Name', flex: 1, minWidth: 150 },
+    { field: 'lastName', headerName: 'Last Name', flex: 1, minWidth: 150 },
+    { field: 'email', headerName: 'Email', flex: 1.5, minWidth: 150 },
     { 
-      field: 'phoneNumber', headerName: 'Phone', flex: 1,
+      field: 'phoneNumber', headerName: 'Phone', flex: 1, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => <Typography variant="body2">{formatPhoneNumber(params.value)}</Typography>
     },
     { 
-      field: 'organizationName', headerName: 'Organization', flex: 1,
+      field: 'organizationName', headerName: 'Organization', flex: 1, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Tooltip title={params.value || 'N/A'} arrow placement="top">
           <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'help' }}>
@@ -230,17 +230,17 @@ const Organizers: React.FC = () => {
       )
     },
     { 
-      field: 'role', headerName: 'Role', flex: 0.8,
+      field: 'role', headerName: 'Role', flex: 0.8, minWidth: 150,
       renderCell: () => <Chip label="ORGANIZER" color="warning" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
     },
     {
-      field: 'active', headerName: 'Status', flex: 0.8,
+      field: 'active', headerName: 'Status', flex: 0.8, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Chip label={params.value ? 'Active' : 'Inactive'} color={params.value ? 'success' : 'default'} size="small" sx={{ fontWeight: 500 }} />
       )
     },
     {
-      field: 'lastLoginAt', headerName: 'Last Login', flex: 1.2,
+      field: 'lastLoginAt', headerName: 'Last Login', flex: 1.2, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Tooltip title={formatDateTime(params.value)} arrow placement="top">
           <Typography variant="body2" sx={{ color: params.value ? 'text.primary' : 'text.secondary', cursor: params.value ? 'help' : 'default' }}>
@@ -250,7 +250,7 @@ const Organizers: React.FC = () => {
       )
     },
     {
-      field: 'createdAt', headerName: 'Created At', flex: 1.2,
+      field: 'createdAt', headerName: 'Created At', flex: 1.2, minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Tooltip title={formatDateTime(params.value)} arrow placement="top">
           <Typography variant="body2" sx={{ cursor: 'help' }}>{formatDateShort(params.value)}</Typography>
@@ -258,7 +258,7 @@ const Organizers: React.FC = () => {
       )
     },
     {
-      field: 'actions', headerName: 'Actions', flex: 1.2, sortable: false,
+      field: 'actions', headerName: 'Actions', flex: 1.2, minWidth: 250, sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
           {/* View Details */}
@@ -355,7 +355,7 @@ const Organizers: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField placeholder="Search by name, email, or organization..." value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)} size="small" fullWidth
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ flex: 1 }} />
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ flex: 1, minWidth: 150 }} />
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Status</InputLabel>
             <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>

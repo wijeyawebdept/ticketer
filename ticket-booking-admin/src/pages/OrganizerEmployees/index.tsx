@@ -572,7 +572,7 @@ const OrganizerEmployees: React.FC = () => {
               ),
             }}
           />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ minWidth: 250 }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={statusFilter}

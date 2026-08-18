@@ -20,8 +20,12 @@ import {
   Alert,
   Snackbar,
   Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import PublicFooter from '../../../components/public/PublicFooter';
 import { getAssetUrl } from '../../../utils/formatters';
@@ -40,6 +44,8 @@ import './EventDetails.css';
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as { selectedShowtime?: string; ticketMode?: 'early_bird' | 'standard' } | null;
   const { isAuthenticated } = useAuth();
   const { formatCurrency, currency, convertAmount } = useCurrency();
   
@@ -50,8 +56,9 @@ const EventDetails: React.FC = () => {
   
   const [selectedShowtime, setSelectedShowtime] = useState('');
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [ticketMode, setTicketMode] = useState<'early_bird' | 'standard' | ''>('early_bird');
 
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -153,18 +160,30 @@ const EventDetails: React.FC = () => {
         try {
           const schedulesData = await EventScheduleService.getPublicBookableSchedulesForEvent(eventData.id);
           setSchedules(schedulesData);
-          // Set the first non-past schedule as default selected
-          if (schedulesData.length > 0) {
-            const firstFutureSchedule = schedulesData.find(schedule => {
-              const scheduleDate = new Date(schedule.scheduleDate);
-              const [hours, minutes] = schedule.endTime.split(':');
-              scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-              return scheduleDate >= new Date();
-            });
-            if (firstFutureSchedule) {
-              // Intentionally not auto-selecting to force user choice
-              // setSelectedShowtime(firstFutureSchedule.scheduleId);
-            }
+
+          // Restore previously selected showtime & ticketMode (from location state or sessionStorage)
+          let savedShowtime = locationState?.selectedShowtime || '';
+          let savedMode: 'early_bird' | 'standard' | '' = locationState?.ticketMode || '';
+
+          if (!savedShowtime) {
+            try {
+              const saved = JSON.parse(sessionStorage.getItem(`event_selection_${id}`) || '{}');
+              if (saved.selectedShowtime) savedShowtime = saved.selectedShowtime;
+              if (saved.ticketMode) savedMode = saved.ticketMode;
+              if (saved.ticketQuantities) setTicketQuantities(saved.ticketQuantities);
+            } catch (err) {}
+          }
+
+          if (savedShowtime && schedulesData.some(s => s.scheduleId === savedShowtime)) {
+            setSelectedShowtime(savedShowtime);
+          } else if (schedulesData.length === 1) {
+            const single = schedulesData[0];
+            // Assuming getScheduleAvailability check is not required or handled elsewhere for this logic
+            setSelectedShowtime(single.scheduleId);
+          }
+
+          if (savedMode === 'early_bird' || savedMode === 'standard') {
+            setTicketMode(savedMode);
           }
         } catch (schedErr) {
           // Don't fail the whole page if schedules can't be loaded
@@ -283,18 +302,45 @@ const EventDetails: React.FC = () => {
   // Get ticket categories from event data
   const ticketCategories = event?.ticketCategories || [];
 
-  const handleShowtimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedShowtime(event.target.value);
+  const handleShowtimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const showtimeId = e.target.value;
+    setSelectedShowtime(showtimeId);
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(`event_selection_${id}`) || '{}');
+      sessionStorage.setItem(`event_selection_${id}`, JSON.stringify({
+        ...existing,
+        selectedShowtime: showtimeId,
+      }));
+    } catch (err) {}
+  };
+
+  const handleTicketModeToggle = (mode: 'early_bird' | 'standard' | '') => {
+    setTicketMode(mode);
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(`event_selection_${id}`) || '{}');
+      sessionStorage.setItem(`event_selection_${id}`, JSON.stringify({
+        ...existing,
+        ticketMode: mode,
+      }));
+    } catch (err) {}
   };
 
   const handleQuantityChange = (categoryName: string, value: string) => {
-    setTicketQuantities({
+    const updated = {
       ...ticketQuantities,
       [categoryName]: parseInt(value) || 0,
-    });
+    };
+    setTicketQuantities(updated);
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(`event_selection_${id}`) || '{}');
+      sessionStorage.setItem(`event_selection_${id}`, JSON.stringify({
+        ...existing,
+        ticketQuantities: updated,
+      }));
+    } catch (err) {}
   };
 
-  const handleNextClick = () => {
+  const handleNextClick = (overrideMode?: 'early_bird' | 'standard' | React.MouseEvent) => {
     // Validate that a showtime is selected if there are schedules
     if (schedules.length > 0 && !selectedShowtime) {
       setValidationModalOpen(true);
@@ -313,7 +359,17 @@ const EventDetails: React.FC = () => {
     if (hasSeatingLayout) {
       // Find the selected schedule details
       const selectedSchedule = schedules.find((s: EventSchedule) => s.scheduleId === selectedShowtime);
+      const effectiveMode = (typeof overrideMode === 'string') ? overrideMode : (ticketMode === 'early_bird' ? 'early_bird' : 'standard');
       
+      // Save state in sessionStorage
+      try {
+        sessionStorage.setItem(`event_selection_${id}`, JSON.stringify({
+          selectedShowtime: selectedShowtime,
+          ticketMode: effectiveMode,
+          ticketQuantities: ticketQuantities,
+        }));
+      } catch (err) {}
+
       // Navigate to seat selection page with schedule ID and event details via state
       navigate(`/seat-selection/${selectedShowtime}`, {
         state: {
@@ -322,6 +378,7 @@ const EventDetails: React.FC = () => {
           eventDate: selectedSchedule?.scheduleDate || '',
           eventTime: selectedSchedule?.startTime || '',
           eventId: id, // Pass the event ID
+          ticketMode: effectiveMode,
         }
       });
       return;
@@ -352,6 +409,10 @@ const EventDetails: React.FC = () => {
       const categoryName = category.categoryName || category.name;
       const categoryPrice = category.price || 0;
       total += categoryPrice * (ticketQuantities[categoryName] || 0);
+      
+      if (category.earlyBirdPrice) {
+        total += category.earlyBirdPrice * (ticketQuantities[`${categoryName}_EB`] || 0);
+      }
     });
     return total;
   };
@@ -381,15 +442,31 @@ const EventDetails: React.FC = () => {
       const returnUrl = `${window.location.origin}/booking/payment-success`;
       const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
 
-      const sharedAreaTickets = ticketCategories
-        .filter((cat: any) => (ticketQuantities[cat.categoryName || cat.name] || 0) > 0)
-        .map((cat: any) => ({
-          categoryId: cat.id,
-          categoryName: cat.categoryName || cat.name,
-          sharedAreaNumber: 1,
-          ticketCount: ticketQuantities[cat.categoryName || cat.name],
-          pricePerTicket: convertAmount(cat.price || 0)
-        }));
+      const sharedAreaTickets: any[] = [];
+      ticketCategories.forEach((cat: any) => {
+        const categoryName = cat.categoryName || cat.name;
+        const regCount = ticketQuantities[categoryName] || 0;
+        if (regCount > 0) {
+          sharedAreaTickets.push({
+            categoryId: cat.id,
+            categoryName: categoryName,
+            sharedAreaNumber: cat.sharedAreaNumber || 1,
+            ticketCount: regCount,
+            pricePerTicket: convertAmount(cat.price || 0)
+          });
+        }
+        
+        const ebCount = ticketQuantities[`${categoryName}_EB`] || 0;
+        if (ebCount > 0) {
+          sharedAreaTickets.push({
+            categoryId: cat.id,
+            categoryName: categoryName,
+            sharedAreaNumber: cat.sharedAreaNumber || 1,
+            ticketCount: ebCount,
+            pricePerTicket: convertAmount(cat.earlyBirdPrice || 0)
+          });
+        }
+      });
 
       if (sharedAreaTickets.length === 0) {
         setIsRedirecting(false);
@@ -967,150 +1044,366 @@ const EventDetails: React.FC = () => {
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
-                {/* Table Header */}
-                <Grid
-                  container
-                  sx={{
-                    borderBottom: '2px solid #ff1955',
-                    pb: 1,
-                    mb: 1.5,
-                  }}
-                >
-                  <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
-                      SEAT TYPE
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
-                      PRICE (RS.)
-                    </Typography>
-                  </Grid>
-                  {!hasSeatingLayout && (
-                    <Grid item xs={4}>
+                {/* Table Header - only shown for non-accordion layouts */}
+                {!(hasSeatingLayout && ticketCategories.some((cat: any) => {
+                  const now = new Date();
+                  const salesStart = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
+                  const salesEnd = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
+                  return Boolean(cat.earlyBirdPrice) && (!salesStart || now >= salesStart) && (!salesEnd || now <= salesEnd);
+                })) && (
+                  <Grid
+                    container
+                    sx={{
+                      borderBottom: '2px solid #ff1955',
+                      pb: 1,
+                      mb: 1.5,
+                    }}
+                  >
+                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
                       <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
-                        TICKETS
+                        SEAT TYPE
                       </Typography>
                     </Grid>
-                  )}
-                </Grid>
+                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
+                        PRICE (RS.)
+                      </Typography>
+                    </Grid>
+                    {!hasSeatingLayout && (
+                      <Grid item xs={4}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
+                          TICKETS
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                )}
 
               {/* Ticket Categories */}
               {ticketCategories.length > 0 ? (
-                ticketCategories.map((category: any, index: number) => {
+                ((): React.ReactNode => {
+                  const now = new Date();
+                  const hasAnyActiveEarlyBird = ticketCategories.some((cat: any) => {
+                    const salesStart = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
+                    const salesEnd = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
+                    return Boolean(cat.earlyBirdPrice) && (!salesStart || now >= salesStart) && (!salesEnd || now <= salesEnd);
+                  });
+
+                  // If it's a seated event with early bird options, show the interactive Accordion sections
+                  if (hasSeatingLayout && hasAnyActiveEarlyBird) {
+                    return (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {/* EARLY BIRD SECTION */}
+                        <Accordion 
+                          expanded={ticketMode === 'early_bird'}
+                          onChange={(e, isExpanded) => handleTicketModeToggle(isExpanded ? 'early_bird' : '')}
+                          sx={{ 
+                            backgroundColor: 'transparent', 
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px !important',
+                            '&:before': { display: 'none' },
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <AccordionSummary 
+                            expandIcon={<ExpandMoreIcon sx={{ color: ticketMode === 'early_bird' ? '#ff1955' : '#fff' }} />}
+                            sx={{
+                              backgroundColor: ticketMode === 'early_bird' ? 'rgba(255, 25, 85, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                              borderBottom: ticketMode === 'early_bird' ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                              '& .MuiAccordionSummary-content': { my: 1.5 }
+                            }}
+                          >
+                            <Typography sx={{ color: ticketMode === 'early_bird' ? '#ff1955' : '#fff', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.5px' }}>
+                              Early Bird Tickets
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 0, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
+                              <Grid container sx={{ borderBottom: '2px solid #ff1955', pb: 1, mb: 1.5 }}>
+                                <Grid item xs={6}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
+                                    SEAT TYPE
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                    PRICE (RS.)
+                                  </Typography>
+                                </Grid>
+                              </Grid>
+                              {ticketCategories.filter((c: any) => Boolean(c.earlyBirdPrice)).map((category: any, index: number, arr: any[]) => {
+                                const categoryName = category.categoryName || category.name;
+                                return (
+                                  <Grid container key={index} sx={{ borderBottom: index !== arr.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none', py: 1.5, alignItems: 'center' }}>
+                                    <Grid item xs={6}>
+                                      <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
+                                        {categoryName}
+                                      </Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="body2" sx={{ color: '#00e676', fontWeight: 600, fontSize: { xs: '0.85rem', md: '0.95rem' }, textAlign: 'right' }}>
+                                        {formatCurrency(category.earlyBirdPrice)}
+                                      </Typography>
+                                    </Grid>
+                                  </Grid>
+                                );
+                              })}
+                              <Button
+                                variant="contained"
+                                fullWidth
+                                onClick={() => handleNextClick('early_bird')}
+                                sx={{
+                                  mt: 3, mb: 1,
+                                  fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                  borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                  boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
+                                }}
+                              >
+                                NEXT
+                              </Button>
+                            </Box>
+                          </AccordionDetails>
+                        </Accordion>
+                        
+                        {/* STANDARD SECTION */}
+                        <Accordion 
+                          expanded={ticketMode === 'standard'}
+                          onChange={(e, isExpanded) => handleTicketModeToggle(isExpanded ? 'standard' : '')}
+                          sx={{ 
+                            backgroundColor: 'transparent', 
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px !important',
+                            '&:before': { display: 'none' },
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <AccordionSummary 
+                            expandIcon={<ExpandMoreIcon sx={{ color: ticketMode === 'standard' ? '#ff1955' : '#fff' }} />}
+                            sx={{
+                              backgroundColor: ticketMode === 'standard' ? 'rgba(255, 25, 85, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                              borderBottom: ticketMode === 'standard' ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                              '& .MuiAccordionSummary-content': { my: 1.5 }
+                            }}
+                          >
+                            <Typography sx={{ color: ticketMode === 'standard' ? '#ff1955' : '#fff', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.5px' }}>
+                              Standard Tickets
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 0, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                            <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
+                              <Grid container sx={{ borderBottom: '2px solid #ff1955', pb: 1, mb: 1.5 }}>
+                                <Grid item xs={6}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
+                                    SEAT TYPE
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                    PRICE (RS.)
+                                  </Typography>
+                                </Grid>
+                              </Grid>
+                              {ticketCategories.map((category: any, index: number, arr: any[]) => {
+                                const categoryName = category.categoryName || category.name;
+                                return (
+                                  <Grid container key={index} sx={{ borderBottom: index !== arr.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none', py: 1.5, alignItems: 'center' }}>
+                                    <Grid item xs={6}>
+                                      <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
+                                        {categoryName}
+                                      </Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' }, textAlign: 'right' }}>
+                                        {formatCurrency(category.price || 0)}
+                                      </Typography>
+                                    </Grid>
+                                  </Grid>
+                                );
+                              })}
+                              <Button
+                                variant="contained"
+                                fullWidth
+                                onClick={() => handleNextClick('standard')}
+                                sx={{
+                                  mt: 3, mb: 1,
+                                  fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                  borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                  boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
+                                }}
+                              >
+                                NEXT
+                              </Button>
+                            </Box>
+                          </AccordionDetails>
+                        </Accordion>
+                      </Box>
+                    );
+                  }
+
+                  // Non-seated event OR seated event with no early bird
+                  return ticketCategories.map((category: any, index: number) => {
                   const categoryName = category.categoryName || category.name;
                   const categoryPrice = category.price || 0;
                   const hasActiveDeal = Boolean(category.dealActive);
+                  const now = new Date();
+                  
+                  // Early Bird phase logic
+                  const hasEarlyBird = Boolean(category.earlyBirdPrice);
+                  const salesStart = category.salesStartDate ? new Date(category.salesStartDate) : null;
+                  const salesEnd = category.salesEndDate ? new Date(category.salesEndDate) : null;
+                  const isFutureEBSales = salesStart && now < salesStart;
+                  const isExpiredEBSales = salesEnd && now > salesEnd;
+                  // TODO: in a real app, we'd also check if earlyBirdCapacity is reached via an API.
+                  // For now, if capacity is present, we assume it's enforced by checkout backend.
+                  const isEBSalesActive = hasEarlyBird && !isFutureEBSales && !isExpiredEBSales;
+                  
                   const isPctDeal = hasActiveDeal && (!category.dealType || category.dealType === 'PERCENTAGE_DISCOUNT') && category.dealDiscountPercentage > 0;
                   const isBuyGetDeal = hasActiveDeal && category.dealType === 'BUY_X_GET_Y_FREE';
                   const discountedPrice = isPctDeal
                     ? categoryPrice * (1 - (category.dealDiscountPercentage || 0) / 100)
                     : categoryPrice;
-                  const maxCapacity = Math.min(category.capacity || 10, 10);
                   
-                  // Build badge label
-                  const badgeLabel = category.dealLabel
-                    || (isPctDeal ? `${category.dealDiscountPercentage}% OFF`
-                    : isBuyGetDeal ? `Buy ${category.dealBuyQuantity} Get ${category.dealFreeQuantity} Free`
-                    : 'Deal');
+                  const badgeLabel = category.dealLabel || (isPctDeal ? `${category.dealDiscountPercentage}% OFF` : isBuyGetDeal ? `Buy ${category.dealBuyQuantity} Get ${category.dealFreeQuantity} Free` : 'Deal');
                   const badgeColor = isBuyGetDeal ? '#7b1fa2' : '#00c853';
+
                   return (
-                    <Grid
-                      key={index}
-                      container
-                      sx={{
-                        borderBottom: index !== ticketCategories.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none',
-                        py: 1.5,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                        <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{categoryName}</Typography>
-                        {hasActiveDeal && (
-                          <Box
-                            sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 0.5,
-                              backgroundColor: badgeColor,
-                              color: '#fff',
-                              borderRadius: '4px',
-                              px: 0.75,
-                              py: 0.2,
-                              mt: 0.5,
-                              fontSize: '9px',
-                              fontWeight: 700,
-                              letterSpacing: '0.5px',
-                            }}
-                          >
-                            🏷 {badgeLabel}
-                          </Box>
-                        )}
-                      </Grid>
-                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                        {isPctDeal ? (
-                          <Box>
-                            <Typography
-                              variant="caption"
-                              sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}
-                            >
-                              {formatCurrency(categoryPrice)}
+                    <React.Fragment key={index}>
+                      {/* EARLY BIRD ROW */}
+                      {hasEarlyBird && (
+                        <Grid
+                          container
+                          sx={{
+                            borderBottom: '1px dashed rgba(255, 255, 255, 0.1)',
+                            py: 1.5,
+                            alignItems: 'center',
+                            opacity: isEBSalesActive ? 1 : 0.5,
+                            filter: isEBSalesActive ? 'none' : 'grayscale(100%)',
+                          }}
+                        >
+                          <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                            <Typography variant="body2" fontWeight={600} sx={{ 
+                              color: '#ffffff', 
+                              fontSize: { xs: '0.78rem', md: '0.88rem' },
+                              textDecoration: isExpiredEBSales ? 'line-through' : 'none'
+                            }}>
+                              {categoryName} <span style={{ color: '#ff1955', marginLeft: '4px' }}>(Early Bird)</span>
                             </Typography>
-                            <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>
-                              {formatCurrency(discountedPrice)}
-                            </Typography>
-                          </Box>
-                        ) : isBuyGetDeal ? (
-                          <Box>
-                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
-                            <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
-                              {category.dealFreeQuantity} free with {category.dealBuyQuantity}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
-                        )}
-                      </Grid>
-                      {!hasSeatingLayout && (
-                        <Grid item xs={4}>
-                          <FormControl fullWidth size="small">
-                            <Select
-                              value={ticketQuantities[categoryName]?.toString() || '0'}
-                              onChange={(e: SelectChangeEvent) => {
-                                handleQuantityChange(categoryName, e.target.value);
-                              }}
-                              sx={{
-                                color: '#ffffff',
-                                backgroundColor: '#121620',
-                                '& .MuiSelect-select': {
-                                  backgroundColor: '#121620',
-                                  color: '#ffffff',
-                                  py: '4px',
-                                  fontSize: { xs: '0.78rem', md: '0.88rem' },
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: 'rgba(255, 255, 255, 0.4)',
-                                },
-                                '& .MuiSvgIcon-root': {
-                                  color: '#ffffff',
-                                },
-                              }}
-                            >
-                              {Array.from({ length: maxCapacity + 1 }, (_, i) => i).map((num) => (
-                                <MenuItem key={num} value={num.toString()}>
-                                  {num}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
+                            {isFutureEBSales && (
+                              <Box sx={{ color: '#ffb74d', fontSize: '0.7rem', fontWeight: 'bold', mt: 0.5 }}>Sales start: {salesStart?.toLocaleDateString()}</Box>
+                            )}
+                            {isExpiredEBSales && (
+                              <Box sx={{ color: '#ef5350', fontSize: '0.7rem', fontWeight: 'bold', mt: 0.5 }}>Sales ended</Box>
+                            )}
+                          </Grid>
+                          <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(category.earlyBirdPrice)}</Typography>
+                          </Grid>
+                          {!hasSeatingLayout && (
+                            <Grid item xs={4}>
+                              <FormControl fullWidth size="small">
+                                <Select
+                                  disabled={!isEBSalesActive}
+                                  value={ticketQuantities[`${categoryName}_EB`]?.toString() || '0'}
+                                  onChange={(e: SelectChangeEvent) => {
+                                    handleQuantityChange(`${categoryName}_EB`, e.target.value);
+                                  }}
+                                  sx={{
+                                    color: '#ffffff',
+                                    backgroundColor: '#121620',
+                                    '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                                    '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
+                                  }}
+                                  MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
+                                >
+                                  {Array.from({ length: Math.min(category.earlyBirdCapacity || 10, 10) + 1 }, (_, i) => (
+                                    <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </Grid>
+                          )}
                         </Grid>
                       )}
-                    </Grid>
+
+                      {/* STANDARD ROW */}
+                      <Grid
+                        container
+                        sx={{
+                          borderBottom: index !== ticketCategories.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none',
+                          py: 1.5,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                          <Typography variant="body2" fontWeight={600} sx={{ 
+                            color: '#ffffff', 
+                            fontSize: { xs: '0.78rem', md: '0.88rem' },
+                          }}>
+                            {categoryName} {hasEarlyBird && <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>(Standard)</span>}
+                          </Typography>
+                          {hasActiveDeal && (
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, backgroundColor: badgeColor, color: '#fff', borderRadius: '4px', px: 0.75, py: 0.2, mt: 0.5, fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                              🏷 {badgeLabel}
+                            </Box>
+                          )}
+                        </Grid>
+                        <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                          {isPctDeal ? (
+                            <Box>
+                              <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}>
+                                {formatCurrency(categoryPrice)}
+                              </Typography>
+                              <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>
+                                {formatCurrency(discountedPrice)}
+                              </Typography>
+                            </Box>
+                          ) : isBuyGetDeal ? (
+                            <Box>
+                              <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                              <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
+                                {category.dealFreeQuantity} free with {category.dealBuyQuantity}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                          )}
+                        </Grid>
+                        {!hasSeatingLayout && (
+                          <Grid item xs={4}>
+                            <FormControl fullWidth size="small">
+                              <Select
+                                value={ticketQuantities[categoryName]?.toString() || '0'}
+                                onChange={(e: SelectChangeEvent) => handleQuantityChange(categoryName, e.target.value)}
+                                sx={{
+                                  color: '#ffffff',
+                                  backgroundColor: '#121620',
+                                  '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
+                                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                                  '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
+                                }}
+                                MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
+                              >
+                                {Array.from({ length: 11 }, (_, i) => (
+                                  <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </React.Fragment>
                   );
-                })
+                });
+                })()
               ) : (
                   <Typography variant="body2" sx={{ textAlign: 'center', py: 3, color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>
                     No ticket categories available for this event
@@ -1148,10 +1441,11 @@ const EventDetails: React.FC = () => {
               )}
 
               {/* Next Button */}
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleNextClick}
+              {!(hasSeatingLayout && ticketCategories.some((c: any) => Boolean(c.earlyBirdPrice))) && (
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={handleNextClick}
                 sx={{
                   fontFamily: 'Raleway, sans-serif',
                   fontWeight: 800,
@@ -1171,8 +1465,9 @@ const EventDetails: React.FC = () => {
                   },
                 }}
               >
-                {hasSeatingLayout ? 'NEXT' : 'PROCEED TO PAYMENT'}
-              </Button>
+                  {hasSeatingLayout ? 'NEXT' : 'PROCEED TO PAYMENT'}
+                </Button>
+              )}
             </Box>
           </Grid>
         </Grid>
@@ -1201,6 +1496,7 @@ const EventDetails: React.FC = () => {
         totalPrice={calculateTotal()}
         handlingFee={100}
         hideChangeSeats={true}
+        ticketMode={ticketMode}
       />
 
       {/* Validation Modal */}

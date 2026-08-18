@@ -1,6 +1,7 @@
 package com.ticket.ticket_booking_system.dto.request;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,4 +30,10 @@ public class TicketCategoryRequest {
 
     /** The venue's SeatCategory name this ticket covers (e.g. "Platinum"). Used for seat price mapping. */
     private String venueSeatCategoryName;
+
+    // Sales timeline support (e.g. for Early Bird tickets)
+    private LocalDateTime salesStartDate;
+    private LocalDateTime salesEndDate;
+    private BigDecimal earlyBirdPrice;
+    private Integer earlyBirdCapacity;
 }

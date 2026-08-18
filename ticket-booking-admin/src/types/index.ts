@@ -73,6 +73,11 @@ export interface TicketCategory {
   sharedAreaNumber?: number;
   /** The venue's SeatCategory name this ticket covers (e.g. "Platinum"). Used for seat price lookup. */
   venueSeatCategoryName?: string;
+  // Sales timeline support (e.g. for Early Bird tickets)
+  salesStartDate?: string;
+  salesEndDate?: string;
+  earlyBirdPrice?: number | string;
+  earlyBirdCapacity?: number | string;
   // Deal fields
   dealActive?: boolean;
   dealType?: 'PERCENTAGE_DISCOUNT' | 'BUY_X_GET_Y_FREE';

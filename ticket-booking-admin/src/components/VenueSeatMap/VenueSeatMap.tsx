@@ -29,6 +29,7 @@ interface SeatStatus {
   seatId: string;
   status: 'AVAILABLE' | 'BOOKED' | 'HELD' | 'LOCKED' | 'NOT_FOR_SALE' | 'SELECTED' | 'VIP_RESERVED';
   currentPrice: number;
+  earlyBirdPrice?: number;
   notes?: string;
   heldByUserId?: string;
 }
@@ -38,6 +39,7 @@ interface SharedAreaCategory {
   categoryId: string;
   categoryName: string;
   price: number;
+  earlyBirdPrice?: number;
   capacity: number;
   sharedAreaNumber: number;
   availableTickets: number;
@@ -63,6 +65,7 @@ interface SeatAvailabilityResponse {
     isAccessible: boolean;
     status: 'AVAILABLE' | 'BOOKED' | 'HELD' | 'LOCKED' | 'NOT_FOR_SALE' | 'VIP_RESERVED';
     currentPrice: number;
+    earlyBirdPrice?: number;
     notes?: string;
   }[];
   totalSeats: number;
@@ -95,6 +98,7 @@ interface VenueSeatMapProps {
   selectedSeats?: string[];
   bookedSeats?: string[];
   isHolding?: boolean;
+  ticketMode?: string;
 }
 
 const getAreaColor = (index: number): string => {
@@ -125,6 +129,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   selectedSeats = [],
   bookedSeats = [],
   isHolding = false,
+  ticketMode = 'standard',
 }) => {
   const { isRestrictedUser, user } = useAuth();
   const { t } = useTranslation();
@@ -138,6 +143,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [loading, setLoading] = useState(true);
   const [showSharedAreaDialog, setShowSharedAreaDialog] = useState(false);
   const [selectedSharedArea, setSelectedSharedArea] = useState<SharedAreaCategory | null>(null);
+
+  const getDisplayPrice = (status: SeatStatus | undefined | null) => {
+    if (!status) return 0;
+    return (ticketMode === 'early_bird' && status.earlyBirdPrice) ? status.earlyBirdPrice : status.currentPrice;
+  };
+
   const [sharedAreaTicketCount, setSharedAreaTicketCount] = useState<number | null>(null);
   const [sharedAreas, setSharedAreas] = useState<SharedAreaCategory[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -204,6 +215,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           seatId: seat.seatId,
           status: seat.status,
           currentPrice: seat.currentPrice,
+          earlyBirdPrice: seat.earlyBirdPrice,
           notes: seat.notes,
           heldByUserId: seat.heldByUserId,
         });
@@ -466,10 +478,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
   const handleSharedAreaConfirm = () => {
     if (sharedAreaTicketCount && selectedSharedArea) {
+      const priceToUse = (ticketMode === 'early_bird' && selectedSharedArea.earlyBirdPrice) ? selectedSharedArea.earlyBirdPrice : selectedSharedArea.price;
       onSharedAreaSelect?.(
         selectedSharedArea.sharedAreaNumber,
         sharedAreaTicketCount,
-        selectedSharedArea.price,
+        priceToUse,
         selectedSharedArea.categoryName,
         {
           dealActive: selectedSharedArea.dealActive,
@@ -826,7 +839,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                           fill="#cbd5e1"
                           style={{ cursor: 'pointer', pointerEvents: 'none' }}
                         >
-                          {formatCurrency(area.price)} • {area.availableTickets} {t('availableLower', 'available')}
+                          {formatCurrency((ticketMode === 'early_bird' && area.earlyBirdPrice) ? area.earlyBirdPrice : area.price)} • {area.availableTickets} {t('availableLower', 'available')}
                         </text>
                       </g>
                     );
@@ -846,11 +859,12 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               const seatsInCategory = venueSeats.filter(s => s.categoryName === categoryName);
               const seatWithPrice = seatsInCategory.find(s => {
                 const status = seatStatuses.get(s.seatId);
-                return status && status.currentPrice > 0;
+                return status && getDisplayPrice(status) > 0;
               });
               const representativeSeat = seatsInCategory[0];
               const status = seatWithPrice ? seatStatuses.get(seatWithPrice.seatId) : null;
-              const priceStr = status?.currentPrice ? ` - ${formatCurrency(status.currentPrice)}` : '';
+              const displayPrice = getDisplayPrice(status);
+              const priceStr = displayPrice > 0 ? ` - ${formatCurrency(displayPrice)}` : '';
               return (
                 <div key={`cat-${index}`} className="legend-item">
                   <span className="legend-color" style={{ backgroundColor: representativeSeat?.colorCode || '#4CAF50' }} />
@@ -889,9 +903,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               <div className="seat-tooltip">
                 <div className="seat-tooltip-header">
                   <strong>{hoveredSeat.seatId}</strong>
-                  {seatStatuses.get(hoveredSeat.seatId)?.currentPrice && (
+                  {getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)) > 0 && (
                     <span className="seat-tooltip-price">
-                      {formatCurrency(seatStatuses.get(hoveredSeat.seatId)?.currentPrice ?? 0)}
+                      {formatCurrency(getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)))}
                     </span>
                   )}
                   <span className={`seat-tooltip-status ${statusText.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -961,7 +975,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               </Typography>
 
               <Typography variant="body2" sx={{ mb: 0.5, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{formatCurrency(selectedSharedArea?.price ?? 0)}</strong>
+                {t('pricePerTicket', 'Price per ticket:')} <strong style={{ color: '#ffffff' }}>{formatCurrency((ticketMode === 'early_bird' && selectedSharedArea?.earlyBirdPrice) ? selectedSharedArea.earlyBirdPrice : (selectedSharedArea?.price ?? 0))}</strong>
               </Typography>
 
               <Typography variant="body2" sx={{ mb: { xs: 1.5, sm: 3 }, color: 'rgba(255, 255, 255, 0.7)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
@@ -1000,7 +1014,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
               {sharedAreaTicketCount && selectedSharedArea && (
                 <Typography variant="h6" sx={{ mb: { xs: 1.5, sm: 3 }, color: '#ff1955', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                  {t('totalLabel', 'Total:')} {t('lkr', 'LKR')} {(sharedAreaTicketCount * selectedSharedArea.price).toLocaleString()}
+                  {t('totalLabel', 'Total:')} {t('lkr', 'LKR')} {(sharedAreaTicketCount * ((ticketMode === 'early_bird' && selectedSharedArea.earlyBirdPrice) ? selectedSharedArea.earlyBirdPrice : selectedSharedArea.price)).toLocaleString()}
                 </Typography>
               )}
 
