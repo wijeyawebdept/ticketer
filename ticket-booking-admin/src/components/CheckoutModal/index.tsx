@@ -19,7 +19,6 @@ import {
   Chip,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services';
 import PageContentService from '../../services/pageContent.service';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -97,9 +96,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const { t } = useTranslation();
   const { formatCurrency } = useCurrency();
   
-  useAuth();
-  
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('visa');
+  const [selectedPaymentMethod] = useState('visa');
   const [deliveryMethod, setDeliveryMethod] = useState('online');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
@@ -354,39 +351,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </Typography>
             </Box>
 
-            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                {t('paymentMethodSelect', 'Payment Method')} <span style={{ color: '#d32f2f' }}>({t('selectOne', 'Select one')})</span>
-              </Typography>
-              <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                {[
-                  { value: 'visa', img: '/images/visa.jpg', alt: 'Visa' },
-                  { value: 'master', img: '/images/master.jpg', alt: 'Mastercard' },
-                  { value: 'amex', img: '/images/amex.jpg', alt: 'American Express' },
-                  { value: 'ezcash', img: '/images/ezcash.jpg', alt: 'EZ Cash' },
-                  { value: 'hnb', img: '/images/hnb.jpg', alt: 'HNB' },
-                  { value: 'koko', img: '/images/koko.jpeg', alt: 'Koko' },
-                ].map((method) => (
-                  <Box
-                    key={method.value}
-                    onClick={() => setSelectedPaymentMethod(method.value)}
-                    sx={{
-                      width: { xs: '62px', sm: '80px' },
-                      height: { xs: '42px', sm: '50px' },
-                      border: selectedPaymentMethod === method.value ? '3px solid #ff1955' : '2px solid #ddd',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Box component="img" src={method.img} alt={method.alt} sx={{ width: '100%', height: '100%', objectFit: 'contain', padding: { xs: '4px', sm: '8px' } }} />
-                  </Box>
-                ))}
+            {deliveryMethod === 'online' && (
+              <Box sx={{ mb: { xs: 1.5, sm: 2 }, display: 'flex', alignItems: 'center' }}>
+                <Box
+                  component="img"
+                  src="/images/new_payment_logos.jpg"
+                  alt="Accepted Payment Methods"
+                  sx={{
+                    maxWidth: '100%',
+                    height: { xs: '38px', sm: '48px' },
+                    objectFit: 'contain',
+                    display: 'block',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                    p: 0.5,
+                    backgroundColor: '#ffffff',
+                  }}
+                />
               </Box>
-            </Box>
+            )}
 
             <Box sx={{ mb: { xs: 2, sm: 3 } }}>
               <Grid container spacing={{ xs: 1.5, sm: 2 }}>
