@@ -547,7 +547,7 @@ const SeatSelectionPage: React.FC = () => {
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
 
   const handleConfirmBooking = async (paymentData: any) => {
-    const { paymentMethod, customerInfo, acceptTerms } = paymentData;
+    const { paymentMethod, customerInfo, acceptTerms, promoCode, promoDiscountAmount } = paymentData;
 
     if (!paymentMethod) return showMessage('error', 'Please select a payment method');
     if (!acceptTerms) return showMessage('error', 'Please accept terms and conditions');
@@ -556,12 +556,13 @@ const SeatSelectionPage: React.FC = () => {
     }
 
     // Guard: eventId must be loaded before proceeding
-    const resolvedEventId = eventDetails?.eventId;
+    const resolvedEventId = eventDetails?.eventId || eventDetails?.id;
     if (!resolvedEventId) {
       return showMessage('error', 'Event details are still loading. Please wait a moment and try again.');
     }
 
-    const finalAmount = totalPrice + handlingFee;
+    const promoDiscount = promoDiscountAmount || 0;
+    const finalAmount = Math.max(0, totalPrice - promoDiscount + handlingFee);
 
     setLoading(true);
 
@@ -570,7 +571,7 @@ const SeatSelectionPage: React.FC = () => {
       const cancelUrl = `${window.location.origin}/booking/payment-cancel`;
 
       const paymentRequest: InitiatePaymentRequest = {
-        eventId: resolvedEventId,
+        eventId: String(resolvedEventId),
         scheduleId: eventScheduleId || '',
         seatIds: selectedSeatDetails.map(seat => seat.seatId).filter((id: string) => id),
         sharedAreaTickets: sharedAreaSelections.map(selection => ({
@@ -582,8 +583,10 @@ const SeatSelectionPage: React.FC = () => {
         })),
         totalAmount: convertAmount(finalAmount),
         amountInLkr: finalAmount,
-        discountAmount: convertAmount(totalDiscount || 0),
-        discountInfo: discountInfoString,
+        discountAmount: convertAmount((totalDiscount || 0) + promoDiscount),
+        discountInfo: promoCode ? (discountInfoString ? `${discountInfoString}, Promo: ${promoCode}` : `Promo: ${promoCode}`) : discountInfoString,
+        promoCode: promoCode || undefined,
+        promoDiscountAmount: promoDiscount > 0 ? convertAmount(promoDiscount) : undefined,
         currency: currency,
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -1042,6 +1045,7 @@ const SeatSelectionPage: React.FC = () => {
         onClose={handleClosePaymentModal}
         loading={loading}
         onConfirmBooking={handleConfirmBooking}
+        eventId={eventDetails?.eventId ? String(eventDetails.eventId) : (eventDetails as any)?.id ? String((eventDetails as any).id) : eventDetailsFromState?.eventId ? String(eventDetailsFromState.eventId) : undefined}
         eventDetails={eventDetails}
         selectedSeatDetails={selectedSeatDetails}
         selectedSeats={selectedSeats}

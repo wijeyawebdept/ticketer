@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,12 +16,15 @@ import {
   IconButton,
   Link,
   CircularProgress,
+  Chip,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { profileService } from '../../services';
 import PageContentService from '../../services/pageContent.service';
 import { useCurrency } from '../../context/CurrencyContext';
+import promoCodeService from '../../services/promoCodeService';
+import { ValidatePromoCodeResponse } from '../../types';
 import {
   Event as EventIcon,
   AccessTime as AccessTimeIcon,
@@ -30,6 +33,7 @@ import {
   Edit as EditIcon,
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
+  LocalOffer as LocalOfferIcon,
 } from '@mui/icons-material';
 
 export interface CheckoutModalProps {
@@ -48,8 +52,12 @@ export interface CheckoutModalProps {
     };
     acceptTerms: boolean;
     bookingForSomeoneElse: boolean;
+    promoCode?: string;
+    promoDiscountAmount?: number;
   }) => void;
+  eventId?: string;
   eventDetails?: {
+    eventId?: string;
     title: string;
     date: string;
     time: string;
@@ -73,6 +81,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   loading,
   onConfirmBooking,
+  eventId,
   eventDetails,
   selectedSeatDetails = [],
   selectedSeats = [],
@@ -80,7 +89,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   totalPrice,
   totalDiscount = 0,
   discountInfoString = '',
-  handlingFee = 100,
+  handlingFee = 0,
   hideChangeSeats = false,
   ticketMode,
   children,
@@ -105,6 +114,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     email: '',
   });
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Promo Code States
+  const [promoInput, setPromoInput] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<ValidatePromoCodeResponse | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const effectivePromoDiscount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    if (appliedPromo.discountAmount !== undefined && appliedPromo.discountAmount !== null && Number(appliedPromo.discountAmount) > 0) {
+      return Number(appliedPromo.discountAmount);
+    }
+    const pct = appliedPromo.discountPercentage || 0;
+    if (pct > 0 && totalPrice > 0) {
+      return Number(((totalPrice * pct) / 100).toFixed(2));
+    }
+    return 0;
+  }, [appliedPromo, totalPrice]);
 
   const handleOpenTerms = async () => {
     setTermsModalOpen(true);
@@ -156,12 +183,73 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     if (isOpen) {
       setLocalError(null);
+      setPromoError(null);
+      setAppliedPromo(null);
+      setPromoInput('');
       loadProfileData();
     }
   }, [isOpen]);
 
   const handleCustomerInfoChange = (field: keyof typeof customerInfo, value: string) => {
     setCustomerInfo(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleApplyPromo = async () => {
+    const cleanCode = promoInput.trim().toUpperCase();
+    if (!cleanCode) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+
+    const resolvedEventId = eventId || eventDetails?.eventId;
+    if (!resolvedEventId) {
+      setPromoError('Unable to identify event for promo validation');
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoError(null);
+
+    try {
+      const result = await promoCodeService.validatePromoCode({
+        code: cleanCode,
+        eventId: resolvedEventId,
+        seats: selectedSeatDetails.map(s => ({
+          seatId: s?.seatId || '',
+          categoryId: s?.categoryId || s?.category_id || undefined,
+          categoryName: s?.categoryName || s?.category || '',
+          venueSeatCategoryName: s?.venueSeatCategoryName || s?.categoryName || '',
+          price: (ticketMode === 'early_bird' && s?.earlyBirdPrice) ? s.earlyBirdPrice : (s?.currentPrice || s?.price || 0),
+        })),
+        sharedAreas: sharedAreaSelections.map(a => ({
+          categoryId: a?.categoryId || a?.id || undefined,
+          categoryName: a?.categoryName || a?.name || '',
+          sharedAreaNumber: a?.areaNumber || a?.sharedAreaNumber || 1,
+          ticketCount: a?.ticketCount || a?.count || 1,
+          pricePerTicket: (ticketMode === 'early_bird' && a?.earlyBirdPrice) ? a.earlyBirdPrice : (a?.pricePerTicket || a?.price || 0),
+        })),
+        subTotal: totalPrice,
+      });
+
+      if (result.valid) {
+        setAppliedPromo(result);
+        setPromoError(null);
+      } else {
+        setAppliedPromo(null);
+        setPromoError(result.message || 'Invalid promo code');
+      }
+    } catch (err: any) {
+      setAppliedPromo(null);
+      setPromoError(err?.response?.data?.message || 'Failed to validate promo code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput('');
+    setPromoError(null);
   };
 
   const handleConfirm = () => {
@@ -185,6 +273,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       customerInfo,
       acceptTerms,
       bookingForSomeoneElse: false,
+      promoCode: appliedPromo?.code,
+      promoDiscountAmount: effectivePromoDiscount,
     });
   };
 
@@ -496,7 +586,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
               {/* Shared Area Tickets */}
               {sharedAreaSelections.length > 0 && sharedAreaSelections.map((selection) => {
-                const isEarlyBird = ticketMode === 'early_bird';
+                const isEarlyBird = Boolean(selection.isEarlyBird);
                 return (
                   <Box key={`shared-${selection.areaNumber || selection.categoryName}`} sx={{ py: 0.6, borderBottom: '1px dashed #f1f5f9' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -538,6 +628,97 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               )}
             </Box>
 
+            {/* Promo Code Input Card */}
+            <Box sx={{ mb: 2, p: 1.8, borderRadius: '12px', border: '1px dashed #cbd5e1', bgcolor: '#f8fafc' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: 0.8, fontSize: '0.82rem' }}>
+                  <LocalOfferIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                  {t('havePromoCode', 'Have a Promo Code?')}
+                </Typography>
+                {appliedPromo && (
+                  <Chip
+                    label="Applied"
+                    size="small"
+                    color="success"
+                    sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }}
+                  />
+                )}
+              </Box>
+
+              {appliedPromo ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'rgba(34, 197, 94, 0.1)', p: 1, px: 1.5, borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#15803d', letterSpacing: '0.5px' }}>
+                      {appliedPromo.code} ({appliedPromo.discountPercentage}% OFF)
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#166534', display: 'block' }}>
+                      {appliedPromo.appliedTarget ? `Applied on ${appliedPromo.appliedTarget}` : appliedPromo.message}
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    onClick={handleRemovePromo}
+                    sx={{ color: '#dc2626', textTransform: 'none', fontWeight: 700, minWidth: 'auto', p: 0.5 }}
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    placeholder={t('enterPromoCode', 'Enter promo code')}
+                    value={promoInput}
+                    onChange={(e) => {
+                      setPromoInput(e.target.value.toUpperCase());
+                      setPromoError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyPromo();
+                      }
+                    }}
+                    disabled={promoLoading}
+                    sx={{
+                      bgcolor: '#ffffff',
+                      '& .MuiInputBase-input': {
+                        fontWeight: 700,
+                        letterSpacing: '1px',
+                        fontSize: '0.85rem',
+                        textTransform: 'uppercase',
+                        py: 0.9,
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleApplyPromo}
+                    disabled={promoLoading || !promoInput.trim()}
+                    sx={{
+                      bgcolor: '#0f172a',
+                      '&:hover': { bgcolor: '#1e293b' },
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      textTransform: 'none',
+                      px: 2.5,
+                      borderRadius: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {promoLoading ? <CircularProgress size={16} color="inherit" /> : t('apply', 'Apply')}
+                  </Button>
+                </Box>
+              )}
+
+              {promoError && (
+                <Typography variant="caption" sx={{ color: '#dc2626', fontWeight: 600, mt: 0.8, display: 'block' }}>
+                  {promoError}
+                </Typography>
+              )}
+            </Box>
+
             {/* Total Payment Breakdown Card */}
             <Box sx={{ p: 2, borderRadius: '12px', background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)', color: '#ffffff', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' }}>
@@ -546,7 +727,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                   <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('subTotal', 'Sub Total')}</Typography>
-                  {ticketMode === 'early_bird' && (
+                  {((ticketMode === 'early_bird' && selectedSeatDetails.some(s => Boolean(s?.earlyBirdPrice || s?.isEarlyBird))) || sharedAreaSelections.some(s => Boolean(s?.isEarlyBird))) && (
                     <Box
                       component="span"
                       sx={{
@@ -579,6 +760,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </Typography>
                 </Box>
               )}
+              {appliedPromo && effectivePromoDiscount > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ color: '#4ade80' }}>
+                    Promo ({appliedPromo.code} - {appliedPromo.discountPercentage}%)
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#4ade80' }}>
+                    -{formatCurrency(effectivePromoDiscount)}
+                  </Typography>
+                </Box>
+              )}
               {handlingFee > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, fontSize: '0.875rem' }}>
                   <Typography variant="body2" sx={{ color: '#cbd5e1' }}>{t('handlingFee', 'Handling fee')}</Typography>
@@ -590,7 +781,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   {t('total', 'Total Pay')}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 800, color: '#ff1955', fontFamily: 'Raleway, sans-serif', fontSize: '1.25rem' }}>
-                  {formatCurrency(totalPrice + handlingFee)}
+                  {formatCurrency(Math.max(0, totalPrice - effectivePromoDiscount + handlingFee))}
                 </Typography>
               </Box>
             </Box>

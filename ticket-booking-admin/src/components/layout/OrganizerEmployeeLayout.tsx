@@ -175,6 +175,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
     { text: t('navigation.dashboard'), icon: <DashboardIcon />, path: '/employee/dashboard' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/employee/events' },
     { text: 'Deals', icon: <LocalOfferIcon />, path: '/employee/deals' },
+    { text: 'Promo Codes', icon: <LocalOfferIcon />, path: '/employee/promocodes' },
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/employee/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/employee/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/employee/bookings' },

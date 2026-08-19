@@ -56,6 +56,7 @@ public class BookingService {
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
     private final AdminAuditService auditService;
+    private final com.ticket.ticket_booking_system.repository.PromoCodeRepository promoCodeRepository;
 
     @Value("${booking.pending-timeout-minutes:20}")
     private int pendingTimeoutMinutes;
@@ -518,6 +519,20 @@ public class BookingService {
         
         Booking savedBooking = bookingRepository.save(booking);
         log.info("Booking created successfully with reference: {}", savedBooking.getBookingReference());
+        
+        // If promo code was applied, increment its usage count
+        if (request.getPromoCode() != null && !request.getPromoCode().trim().isEmpty()) {
+            try {
+                promoCodeRepository.findByCodeIgnoreCase(request.getPromoCode().trim().toUpperCase())
+                        .ifPresent(promo -> {
+                            promo.setUsageCount(promo.getUsageCount() + 1);
+                            promoCodeRepository.save(promo);
+                            log.info("Incremented usage for promo code {}. Count is now: {}", promo.getCode(), promo.getUsageCount());
+                        });
+            } catch (Exception e) {
+                log.warn("Failed to increment promo code usage for code {}: {}", request.getPromoCode(), e.getMessage());
+            }
+        }
         
         return savedBooking;
     }

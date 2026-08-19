@@ -398,3 +398,80 @@ export interface Role {
   createdAt: string;
   updatedAt: string;
 }
+
+// Promo Code types
+export type PromoCodeScope = 'ALL_EVENTS' | 'EVENT' | 'TICKET_CATEGORY';
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description?: string;
+  discountPercentage: number;
+  maxDiscountAmount?: number;
+  scope: PromoCodeScope;
+  eventId?: string;
+  eventName?: string;
+  ticketCategoryId?: string;
+  ticketCategoryName?: string;
+  organizerId?: string;
+  organizerName?: string;
+  createdByRole: 'ADMIN' | 'ORGANIZER';
+  startDate?: string;
+  endDate?: string;
+  usageLimit?: number;
+  usageCount: number;
+  minOrderAmount?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface PromoCodeRequest {
+  code: string;
+  description?: string;
+  discountPercentage: number;
+  maxDiscountAmount?: number;
+  scope: PromoCodeScope;
+  eventId?: string;
+  ticketCategoryId?: string;
+  ticketCategoryName?: string;
+  startDate?: string;
+  endDate?: string;
+  usageLimit?: number;
+  minOrderAmount?: number;
+  isActive?: boolean;
+}
+
+export interface ValidatePromoCodeRequest {
+  code: string;
+  eventId: string;
+  seats?: Array<{
+    seatId: string;
+    categoryId?: string;
+    categoryName?: string;
+    venueSeatCategoryName?: string;
+    price: number;
+  }>;
+  sharedAreas?: Array<{
+    categoryId?: string;
+    categoryName?: string;
+    sharedAreaNumber?: number;
+    ticketCount: number;
+    pricePerTicket: number;
+  }>;
+  subTotal: number;
+}
+
+export interface ValidatePromoCodeResponse {
+  valid: boolean;
+  code?: string;
+  description?: string;
+  discountPercentage?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  message: string;
+  scope?: string;
+  appliedTarget?: string;
+}

@@ -79,6 +79,7 @@ import PublicDeals from './pages/Public/Deals';
 import AdminDeals from './pages/Deals';
 import OrganizerDeals from './pages/OrganizerDeals';
 import EmployeeDeals from './pages/EmployeeDeals';
+import PromoCodesPage from './pages/PromoCodes';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -260,6 +261,7 @@ function App() {
                   <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
                   <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
                   <Route path="/admin/deals" element={<AdminDeals role="admin" />} />
+                  <Route path="/admin/promocodes" element={<PromoCodesPage role="admin" />} />
                 <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/bookings" element={<Bookings />} />
@@ -285,6 +287,7 @@ function App() {
                 <Route path="/organizer/venues" element={<Venues />} />
                 <Route path="/organizer/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/organizer/deals" element={<OrganizerDeals />} />
+                <Route path="/organizer/promocodes" element={<PromoCodesPage role="organizer" />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
                 <Route path="/organizer/reports" element={<ReportsIndex />} />
                 <Route path="/organizer/reports/event/:eventId" element={<EventReportView />} />
@@ -308,6 +311,7 @@ function App() {
                 <Route path="/employee/venues" element={<Venues />} />
                 <Route path="/employee/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/employee/deals" element={<EmployeeDeals />} />
+                <Route path="/employee/promocodes" element={<PromoCodesPage role="employee" />} />
                 <Route path="/employee/bookings" element={<Bookings />} />
                 <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/employee/recycle-bin" element={<RecycleBin />} />

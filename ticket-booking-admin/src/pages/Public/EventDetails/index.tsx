@@ -38,6 +38,7 @@ import paymentService, { InitiatePaymentRequest } from '../../../services/paymen
 import '../SeatSelection/SeatSelection.css';
 import { calculateTimeRemaining, formatCountdown, getCountdownStatus } from '../../../utils/countdownFormatter';
 import CheckoutModal from '../../../components/CheckoutModal';
+import systemSettingService from '../../../services/systemSetting.service';
 import { useCurrency } from '../../../context/CurrencyContext';
 import './EventDetails.css';
 
@@ -53,12 +54,13 @@ const EventDetails: React.FC = () => {
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [handlingFee, setHandlingFee] = useState<number>(0);
   
   const [selectedShowtime, setSelectedShowtime] = useState('');
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({});
   const [hasSeatingLayout, setHasSeatingLayout] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [ticketMode, setTicketMode] = useState<'early_bird' | 'standard' | ''>('early_bird');
+  const [ticketMode, setTicketMode] = useState<'early_bird' | 'standard' | ''>('');
 
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -182,8 +184,19 @@ const EventDetails: React.FC = () => {
             setSelectedShowtime(single.scheduleId);
           }
 
-          if (savedMode === 'early_bird' || savedMode === 'standard') {
-            setTicketMode(savedMode);
+          const now = new Date();
+          const hasActiveEB = (eventData.ticketCategories || []).some((cat: any) => {
+            const salesStart = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
+            const salesEnd = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
+            return Boolean(cat.earlyBirdPrice) && (!salesStart || now >= salesStart) && (!salesEnd || now <= salesEnd);
+          });
+
+          if (savedMode === 'early_bird' && hasActiveEB) {
+            setTicketMode('early_bird');
+          } else if (savedMode === 'standard') {
+            setTicketMode('standard');
+          } else {
+            setTicketMode(hasActiveEB ? 'early_bird' : 'standard');
           }
         } catch (schedErr) {
           // Don't fail the whole page if schedules can't be loaded
@@ -200,6 +213,23 @@ const EventDetails: React.FC = () => {
 
     fetchEvent();
   }, [id]);
+
+  // Fetch dynamic handling fee from system settings
+  useEffect(() => {
+    const fetchFee = async () => {
+      try {
+        const feeSetting = await systemSettingService.getHandlingFee();
+        if (feeSetting && feeSetting.isEnabled !== false) {
+          setHandlingFee(feeSetting.handlingFee !== undefined ? feeSetting.handlingFee : 100);
+        } else {
+          setHandlingFee(0);
+        }
+      } catch {
+        setHandlingFee(100);
+      }
+    };
+    fetchFee();
+  }, []);
 
   // Restore booking state after login
   useEffect(() => {
@@ -418,7 +448,7 @@ const EventDetails: React.FC = () => {
   };
 
   const handleConfirmBooking = async (paymentData: any) => {
-    const { paymentMethod, customerInfo, acceptTerms } = paymentData;
+    const { paymentMethod, customerInfo, acceptTerms, promoCode, promoDiscountAmount } = paymentData;
 
     if (!paymentMethod) return alert('Please select a payment method');
     if (!acceptTerms) return alert('Please accept terms and conditions');
@@ -432,8 +462,8 @@ const EventDetails: React.FC = () => {
 
     let targetScheduleId = selectedShowtime || (schedules.length > 0 ? schedules[0].scheduleId : '');
 
-    const HANDLING_FEE = 100;
-    const finalAmount = calculateTotal() + HANDLING_FEE;
+    const promoDiscount = promoDiscountAmount || 0;
+    const finalAmount = Math.max(0, calculateTotal() - promoDiscount + handlingFee);
 
     setIsRedirecting(true);
     setCheckoutModalOpen(false);
@@ -481,6 +511,10 @@ const EventDetails: React.FC = () => {
         sharedAreaTickets,
         totalAmount: convertAmount(finalAmount),
         amountInLkr: finalAmount,
+        discountAmount: promoDiscount > 0 ? convertAmount(promoDiscount) : undefined,
+        discountInfo: promoCode ? `Promo: ${promoCode}` : undefined,
+        promoCode: promoCode || undefined,
+        promoDiscountAmount: promoDiscount > 0 ? convertAmount(promoDiscount) : undefined,
         currency: currency,
         customerInfo: {
           firstName: customerInfo.firstName,
@@ -1479,7 +1513,9 @@ const EventDetails: React.FC = () => {
         onClose={handleCloseModal}
         loading={loading}
         onConfirmBooking={handleConfirmBooking}
+        eventId={event?.id || event?.eventId}
         eventDetails={{
+          eventId: event?.id || event?.eventId,
           title: event?.name || 'Event',
           date: formatDate(event?.startDateTime),
           time: formatTime(event?.startDateTime),
@@ -1489,12 +1525,13 @@ const EventDetails: React.FC = () => {
         sharedAreaSelections={ticketCategories
           .filter((cat: any) => (ticketQuantities[cat.categoryName || cat.name] || 0) > 0)
           .map((cat: any) => ({
+            categoryId: cat.id,
             categoryName: cat.categoryName || cat.name,
             ticketCount: ticketQuantities[cat.categoryName || cat.name],
-            pricePerTicket: cat.price || 0
+            pricePerTicket: (ticketMode === 'early_bird' && cat.earlyBirdPrice) ? cat.earlyBirdPrice : (cat.price || 0)
           }))}
         totalPrice={calculateTotal()}
-        handlingFee={100}
+        handlingFee={handlingFee}
         hideChangeSeats={true}
         ticketMode={ticketMode}
       />

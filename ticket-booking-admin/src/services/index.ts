@@ -16,6 +16,8 @@ import OrganizerService from './organizer.service';
 import BannerService from './banner.service';
 import GalleryService from './GalleryService';
 import paymentService from './payment.service';
+import dealService from './deal.service';
+import promoCodeService from './promoCodeService';
 
 export {
   AuthService,
@@ -35,5 +37,7 @@ export {
   EmployeeService,
   BannerService,
   GalleryService,
-  paymentService
+  paymentService,
+  dealService,
+  promoCodeService
 };

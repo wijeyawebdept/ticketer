@@ -188,6 +188,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/admin/organizer-employees' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/admin/events' },
     { text: 'Deals', icon: <LocalOfferIcon />, path: '/admin/deals' },
+    { text: 'Promo Codes', icon: <LocalOfferIcon />, path: '/admin/promocodes' },
     { text: 'Event Categories', icon: <EventIcon />, path: '/admin/event-categories' },
     { text: 'Gallery Management', icon: <CollectionsIcon />, path: '/admin/gallery' },
     { text: 'Blog Management', icon: <DescriptionIcon />, path: '/admin/blog' },

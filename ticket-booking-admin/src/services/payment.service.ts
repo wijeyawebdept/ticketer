@@ -26,6 +26,8 @@ export interface InitiatePaymentRequest {
   amountInLkr?: number;
   discountAmount?: number;
   discountInfo?: string;
+  promoCode?: string;
+  promoDiscountAmount?: number;
   currency: string;
   customerInfo: CustomerInfo;
 
