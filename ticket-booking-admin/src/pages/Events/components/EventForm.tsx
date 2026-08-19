@@ -42,33 +42,52 @@ import { venueSeatService } from '../../../services/venueSeatService';
 import { useAuth } from '../../../context/AuthContext';
 import { getAssetUrl } from '../../../utils/formatters';
 
-// Helper function to sort ticket categories based on business rules
-const sortTicketCategories = (categories: TicketCategory[]): TicketCategory[] => {
+// Helper function to rank categories strictly by tier: Platinum (1st) -> Gold (2nd) -> Silver (3rd) -> etc.
+const getCategoryTierRank = (cat: TicketCategory): number => {
+  const venueZone = (cat.venueSeatCategoryName || '').toLowerCase();
+  const catLabel = (cat.categoryName || '').toLowerCase();
+  const desc = (cat.description || '').toLowerCase();
+  const combined = `${venueZone} ${catLabel} ${desc}`;
+
+  if (combined.includes('vvip')) return 1;
+  if (combined.includes('platinum')) return 2;
+  if (combined.includes('gold')) return 3;
+  if (combined.includes('silver')) return 4;
+  if (combined.includes('bronze')) return 5;
+  if (combined.includes('vip')) return 6;
+  if (combined.includes('premium')) return 7;
+  if (combined.includes('balcony')) return 8;
+  if (combined.includes('general') || combined.includes('standard')) return 9;
+  return 50; // other custom categories
+};
+
+// Helper function to sort ticket categories based on business rules:
+// 1. Seated categories always first (Platinum -> Gold -> Silver -> Bronze -> ...)
+// 2. Standing / Shared areas always after seated categories (Area 1 -> Area 2 -> Area 3...)
+export const sortTicketCategories = (categories: TicketCategory[]): TicketCategory[] => {
   return [...categories].sort((a, b) => {
     // 1. Seated categories first, Shared areas second
-    if (a.isSharedArea !== b.isSharedArea) {
+    if (Boolean(a.isSharedArea) !== Boolean(b.isSharedArea)) {
       return a.isSharedArea ? 1 : -1;
     }
     
-    // 2. If both are shared areas, sort by sharedAreaNumber
+    // 2. If both are shared areas, sort strictly by sharedAreaNumber
     if (a.isSharedArea && b.isSharedArea) {
       return (a.sharedAreaNumber || 0) - (b.sharedAreaNumber || 0);
     }
     
-    // 3. If both are seated categories, use custom tier logic
-    const tierOrder = ["vip platinum", "vip gold", "vip silver"];
-    const aName = (a.categoryName || '').toLowerCase();
-    const bName = (b.categoryName || '').toLowerCase();
+    // 3. If both are seated categories, rank strictly: Platinum (1st), Gold (2nd), Silver (3rd)...
+    const rankA = getCategoryTierRank(a);
+    const rankB = getCategoryTierRank(b);
     
-    const aIndex = tierOrder.findIndex(tier => aName.includes(tier));
-    const bIndex = tierOrder.findIndex(tier => bName.includes(tier));
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
     
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1; // a is in tier, b is not, a comes first
-    if (bIndex !== -1) return 1;  // b is in tier, a is not, b comes first
-    
-    // Fallback to alphabetical
-    return aName.localeCompare(bName);
+    // Fallback: alphabetical by venueSeatCategoryName or categoryName
+    const nameA = a.venueSeatCategoryName || a.categoryName || '';
+    const nameB = b.venueSeatCategoryName || b.categoryName || '';
+    return nameA.localeCompare(nameB);
   });
 };
 
@@ -409,9 +428,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
           ? sortTicketCategories(event.ticketCategories).map(cat => ({
               ...cat,
               salesStartDate: cat.salesStartDate ? cat.salesStartDate.slice(0, 16) : '',
-              salesEndDate: cat.salesEndDate ? cat.salesEndDate.slice(0, 16) : ''
+              salesEndDate: cat.salesEndDate ? cat.salesEndDate.slice(0, 16) : '',
+              earlyBirdPrice: cat.earlyBirdPrice !== undefined && cat.earlyBirdPrice !== null ? cat.earlyBirdPrice : '',
+              earlyBirdCapacity: cat.earlyBirdCapacity !== undefined && cat.earlyBirdCapacity !== null ? cat.earlyBirdCapacity : ''
             }))
-          : [{ categoryName: '', price: '' as any, capacity: '' as any, salesStartDate: '', salesEndDate: '' }]
+          : [{ categoryName: '', price: '' as any, capacity: '' as any, salesStartDate: '', salesEndDate: '', earlyBirdPrice: '', earlyBirdCapacity: '' }]
       }}
       validationSchema={Yup.object({
         name: Yup.string()
@@ -628,10 +649,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
               sharedAreaNumber: category.sharedAreaNumber || null,
               // Links this ticket to a venue seat zone (e.g. "Platinum") for price mapping on the seat map
               venueSeatCategoryName: category.venueSeatCategoryName?.trim() || null,
-              salesStartDate: category.salesStartDate ? category.salesStartDate + ':00' : null,
-              salesEndDate: category.salesEndDate ? category.salesEndDate + ':00' : null,
-              earlyBirdPrice: category.earlyBirdPrice ? Number(category.earlyBirdPrice) : null,
-              earlyBirdCapacity: category.earlyBirdCapacity ? Number(category.earlyBirdCapacity) : null,
+              salesStartDate: category.salesStartDate 
+                ? (category.salesStartDate.length === 16 ? category.salesStartDate + ':00' : category.salesStartDate.slice(0, 19)) 
+                : null,
+              salesEndDate: category.salesEndDate 
+                ? (category.salesEndDate.length === 16 ? category.salesEndDate + ':00' : category.salesEndDate.slice(0, 19)) 
+                : null,
+              earlyBirdPrice: category.earlyBirdPrice && Number(category.earlyBirdPrice) > 0 ? Number(category.earlyBirdPrice) : null,
+              earlyBirdCapacity: category.earlyBirdCapacity && Number(category.earlyBirdCapacity) > 0 ? Number(category.earlyBirdCapacity) : null,
             }))
           };
           
@@ -1079,7 +1104,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, onClose, onSuccess }) => {
                 
                 // Add shared areas to ticket categories (don't trigger infinite loop)
                 setTimeout(() => {
-                  setFieldValue('ticketCategories', [...values.ticketCategories, ...newSharedAreaCategories]);
+                  setFieldValue('ticketCategories', sortTicketCategories([...values.ticketCategories, ...newSharedAreaCategories]));
                 }, 0);
               }
               

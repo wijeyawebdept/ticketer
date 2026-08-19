@@ -485,7 +485,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             </Box>
                           )}
                         </Box>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: isEarlyBird ? '#ff1955' : '#0f172a' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#0f172a' }}>
                           {formatCurrency(seatPrice)}
                         </Typography>
                       </Box>
@@ -523,7 +523,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           </Box>
                         )}
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: isEarlyBird ? '#ff1955' : '#0f172a' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
                         {formatCurrency(selection.ticketCount * (selection.pricePerTicket || selection.price || 0))}
                       </Typography>
                     </Box>
