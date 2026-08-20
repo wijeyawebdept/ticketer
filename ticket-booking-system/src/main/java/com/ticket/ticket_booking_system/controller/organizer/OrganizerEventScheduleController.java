@@ -55,7 +55,7 @@ public class OrganizerEventScheduleController {
             @Valid @RequestBody EventScheduleRequest request,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to create schedules for this event");
         }
@@ -67,7 +67,14 @@ public class OrganizerEventScheduleController {
      * Get all schedules for an event
      */
     @GetMapping
-    public ResponseEntity<List<EventScheduleResponse>> getSchedulesForEvent(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getSchedulesForEvent(
+            @PathVariable UUID eventId,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view schedules for this event");
+        }
         List<EventScheduleResponse> schedules = eventScheduleService.getSchedulesForEvent(eventId);
         return ResponseEntity.ok(schedules);
     }
@@ -76,9 +83,15 @@ public class OrganizerEventScheduleController {
      * Get schedule by ID
      */
     @GetMapping("/{scheduleId}")
-    public ResponseEntity<EventScheduleResponse> getScheduleById(
+    public ResponseEntity<?> getScheduleById(
             @PathVariable UUID eventId,
-            @PathVariable UUID scheduleId) {
+            @PathVariable UUID scheduleId,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyScheduleOwnership(scheduleId, organizerId))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view this schedule");
+        }
         EventScheduleResponse schedule = eventScheduleService.getScheduleById(scheduleId);
         return ResponseEntity.ok(schedule);
     }
@@ -93,7 +106,7 @@ public class OrganizerEventScheduleController {
             @Valid @RequestBody EventScheduleRequest request,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyScheduleOwnership(scheduleId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyScheduleOwnership(scheduleId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to update this schedule");
         }
@@ -110,7 +123,7 @@ public class OrganizerEventScheduleController {
             @PathVariable UUID scheduleId,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyScheduleOwnership(scheduleId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyScheduleOwnership(scheduleId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to delete this schedule");
         }
@@ -127,7 +140,7 @@ public class OrganizerEventScheduleController {
             @PathVariable UUID scheduleId,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to restore schedules for this event");
         }
@@ -144,7 +157,7 @@ public class OrganizerEventScheduleController {
             @PathVariable UUID scheduleId,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyScheduleOwnership(scheduleId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyScheduleOwnership(scheduleId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to permanently delete this schedule");
         }
@@ -162,7 +175,7 @@ public class OrganizerEventScheduleController {
             @RequestParam ScheduleStatus status,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyScheduleOwnership(scheduleId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyScheduleOwnership(scheduleId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to change the status of this schedule");
         }
@@ -174,10 +187,16 @@ public class OrganizerEventScheduleController {
      * Get schedules by date range
      */
     @GetMapping("/range")
-    public ResponseEntity<List<EventScheduleResponse>> getSchedulesByDateRange(
+    public ResponseEntity<?> getSchedulesByDateRange(
             @PathVariable UUID eventId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view schedules for this event");
+        }
         List<EventScheduleResponse> schedules = eventScheduleService.getSchedulesByDateRange(eventId, startDate, endDate);
         return ResponseEntity.ok(schedules);
     }
@@ -186,7 +205,12 @@ public class OrganizerEventScheduleController {
      * Get total capacity across all schedules
      */
     @GetMapping("/total-capacity")
-    public ResponseEntity<Integer> getTotalCapacity(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getTotalCapacity(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view capacity for this event");
+        }
         Integer totalCapacity = eventScheduleService.getTotalCapacityForEvent(eventId);
         return ResponseEntity.ok(totalCapacity);
     }
@@ -195,7 +219,12 @@ public class OrganizerEventScheduleController {
      * Get total available seats across all schedules
      */
     @GetMapping("/total-available")
-    public ResponseEntity<Integer> getTotalAvailableSeats(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getTotalAvailableSeats(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view available seats for this event");
+        }
         Integer totalAvailable = eventScheduleService.getTotalAvailableSeatsForEvent(eventId);
         return ResponseEntity.ok(totalAvailable);
     }

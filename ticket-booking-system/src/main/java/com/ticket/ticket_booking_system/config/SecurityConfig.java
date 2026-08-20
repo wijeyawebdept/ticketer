@@ -83,8 +83,27 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // For H2 Console (development only)
-        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
+        http.headers(headers -> headers
+                // Clickjacking protection. H2 console (the only historical reason this was
+                // ever disabled) is already off via spring.h2.console.enabled=false, so there's
+                // no reason to weaken this app-wide.
+                .frameOptions(frameOptions -> frameOptions.deny())
+                // X-Content-Type-Options: nosniff is on by default and kept implicit here.
+                // Strict-Transport-Security is on by default for HTTPS requests; made explicit
+                // below with the standard 1-year max-age + subdomains + preload.
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(31536000))
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                        "default-src 'self'; " +
+                        "script-src 'self' 'unsafe-inline'; " +
+                        "style-src 'self' 'unsafe-inline'; " +
+                        "img-src 'self' data: https://res.cloudinary.com; " +
+                        "connect-src 'self'; " +
+                        "frame-ancestors 'none'; " +
+                        "object-src 'none'; " +
+                        "base-uri 'self'")));
 
         return http.build();
     }
@@ -112,11 +131,18 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(s -> s.trim())
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
-        
+
+        boolean anyLocalhost = origins.stream()
+                .anyMatch(o -> o.contains("localhost") || o.contains("127.0.0.1"));
+        if (anyLocalhost) {
+            logger.warn("CORS_ALLOWED_ORIGINS includes a localhost/127.0.0.1 entry ({}). " +
+                    "This must NOT be present in a production deployment.", origins);
+        }
         logger.info("Configuring CORS with allowed origins: {}", origins);
-        
+
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));

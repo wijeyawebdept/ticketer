@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ticket.ticket_booking_system.dto.AssignEmployeesToEventRequest;
 import com.ticket.ticket_booking_system.dto.EventEmployeeAssignmentDTO;
 import com.ticket.ticket_booking_system.entity.Organizer;
+import com.ticket.ticket_booking_system.repository.EventRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EventEmployeeAssignmentService;
 
@@ -35,6 +37,8 @@ public class OrganizerEventAssignmentController {
 
     private final EventEmployeeAssignmentService assignmentService;
     private final OrganizerRepository organizerRepository;
+    private final EventRepository eventRepository;
+    private final OrganizerEmployeeRepository employeeRepository;
 
     /**
      * Assign employees to an event
@@ -63,7 +67,12 @@ public class OrganizerEventAssignmentController {
      * Get all employees assigned to a specific event
      */
     @GetMapping("/events/{eventId}/employees")
-    public ResponseEntity<List<EventEmployeeAssignmentDTO>> getEmployeesForEvent(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getEmployeesForEvent(@PathVariable UUID eventId) {
+        UUID organizerId = getAuthenticatedOrganizerId();
+        if (!verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view employees for this event");
+        }
         List<EventEmployeeAssignmentDTO> assignments = assignmentService.getEmployeesForEvent(eventId);
         return ResponseEntity.ok(assignments);
     }
@@ -72,7 +81,12 @@ public class OrganizerEventAssignmentController {
      * Get all events assigned to a specific employee
      */
     @GetMapping("/employees/{employeeId}/events")
-    public ResponseEntity<List<EventEmployeeAssignmentDTO>> getEventsForEmployee(@PathVariable UUID employeeId) {
+    public ResponseEntity<?> getEventsForEmployee(@PathVariable UUID employeeId) {
+        UUID organizerId = getAuthenticatedOrganizerId();
+        if (!verifyEmployeeOwnership(employeeId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view this employee's events");
+        }
         List<EventEmployeeAssignmentDTO> assignments = assignmentService.getEventsForEmployee(employeeId);
         return ResponseEntity.ok(assignments);
     }
@@ -107,5 +121,19 @@ public class OrganizerEventAssignmentController {
         Organizer organizer = organizerRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Organizer not found"));
         return organizer.getOrganizerId();
+    }
+
+    private boolean verifyEventOwnership(UUID eventId, UUID organizerId) {
+        return eventRepository.findById(eventId)
+                .map(event -> event.getOrganizer() != null &&
+                              event.getOrganizer().getOrganizerId().equals(organizerId))
+                .orElse(false);
+    }
+
+    private boolean verifyEmployeeOwnership(UUID employeeId, UUID organizerId) {
+        return employeeRepository.findById(employeeId)
+                .map(employee -> employee.getOrganizer() != null &&
+                                  employee.getOrganizer().getOrganizerId().equals(organizerId))
+                .orElse(false);
     }
 }

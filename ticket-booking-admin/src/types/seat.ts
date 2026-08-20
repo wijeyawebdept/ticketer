@@ -37,13 +37,6 @@ export interface HoldSeatsRequest {
 }
 
 // Request to confirm booking
-export interface ConfirmBookingRequest {
-  eventId: string;
-  seatIds: string[];
-  paymentId: string;
-  paymentMethod: string;
-}
-
 // API response for hold/confirm
 export interface BookingResponse {
   success: boolean;

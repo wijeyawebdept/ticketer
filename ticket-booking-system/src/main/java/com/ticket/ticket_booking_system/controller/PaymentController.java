@@ -71,7 +71,9 @@ public class PaymentController {
                     + (request.getCancelUrl().contains("?") ? "&" : "?")
                     + "bookingId=" + booking.getBookingId().toString();
 
-            BigDecimal gatewayAmount = request.getAmountInLkr() != null ? request.getAmountInLkr() : request.getTotalAmount();
+            // SECURITY: charge the amount the server just calculated from DB ticket prices for
+            // this booking — never the client-supplied totalAmount/amountInLkr from the request.
+            BigDecimal gatewayAmount = booking.getTotalAmount();
 
             MPGSSessionResponse sessionResponse = mpgsPaymentService.createCheckoutSession(
                     booking.getBookingId(),

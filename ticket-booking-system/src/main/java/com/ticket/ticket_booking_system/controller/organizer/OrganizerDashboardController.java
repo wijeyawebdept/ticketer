@@ -47,6 +47,9 @@ public class OrganizerDashboardController {
     @GetMapping("/overview")
     public ResponseEntity<Map<String, Object>> getDashboardOverview(Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getDashboardOverview(organizerId));
     }
 
@@ -58,6 +61,9 @@ public class OrganizerDashboardController {
             @RequestParam(defaultValue = "week") String period,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getAnalyticsByPeriod(period, organizerId));
     }
 
@@ -71,6 +77,9 @@ public class OrganizerDashboardController {
             @RequestParam(required = false) String endDate,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getRevenueChartData(period, startDate, endDate, organizerId));
     }
 
@@ -82,6 +91,9 @@ public class OrganizerDashboardController {
             @RequestParam(defaultValue = "10") int count,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getRecentTransactions(count, organizerId));
     }
 
@@ -93,6 +105,9 @@ public class OrganizerDashboardController {
             @RequestParam(defaultValue = "5") int count,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getUpcomingEvents(count, organizerId));
     }
 
@@ -104,6 +119,9 @@ public class OrganizerDashboardController {
             @RequestParam(defaultValue = "5") int count,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getTopSellingEvents(count, organizerId));
     }
 
@@ -129,6 +147,9 @@ public class OrganizerDashboardController {
     @GetMapping("/trends")
     public ResponseEntity<Map<String, Object>> getTrendData(Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(dashboardService.getTrendData(organizerId));
     }
 

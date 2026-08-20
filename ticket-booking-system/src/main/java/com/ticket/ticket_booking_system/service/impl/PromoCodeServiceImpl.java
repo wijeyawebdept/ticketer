@@ -296,6 +296,21 @@ public class PromoCodeServiceImpl implements PromoCodeService {
     }
 
     @Override
+    @Transactional
+    public PromoCodeResponse toggleOrganizerPromoCodeStatus(UUID id, UUID organizerId, String organizerEmail) {
+        PromoCode promoCode = promoCodeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("PromoCode", "id", id.toString()));
+
+        if (promoCode.getOrganizer() == null || !promoCode.getOrganizer().getOrganizerId().equals(organizerId)) {
+            throw new IllegalArgumentException("You do not have permission to modify this promo code");
+        }
+
+        promoCode.setIsActive(!Boolean.TRUE.equals(promoCode.getIsActive()));
+        promoCode.setUpdatedBy(organizerEmail);
+        return mapToResponse(promoCodeRepository.save(promoCode));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ValidatePromoCodeResponse validateAndCalculateDiscount(ValidatePromoCodeRequest request) {
         if (request.getCode() == null || request.getCode().trim().isEmpty()) {

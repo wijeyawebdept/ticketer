@@ -1,6 +1,7 @@
 package com.ticket.ticket_booking_system.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,21 +19,23 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.dto.request.InitiatePaymentRequest;
+import com.ticket.ticket_booking_system.dto.request.ValidatePromoCodeRequest;
 import com.ticket.ticket_booking_system.dto.response.BookingResponse;
+import com.ticket.ticket_booking_system.dto.response.ValidatePromoCodeResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
-import com.ticket.ticket_booking_system.entity.Seat;
+import com.ticket.ticket_booking_system.entity.TicketCategory;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.entity.Transaction;
+import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.TransactionRepository;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
-import com.ticket.ticket_booking_system.repository.SeatRepository;
+import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
 
@@ -51,12 +54,13 @@ public class BookingService {
     private final EventScheduleRepository eventScheduleRepository;
     private final EventScheduleService eventScheduleService;
     private final UserRepository userRepository;
-    private final SeatRepository seatRepository;
     private final VenueSeatRepository venueSeatRepository;
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
     private final AdminAuditService auditService;
     private final com.ticket.ticket_booking_system.repository.PromoCodeRepository promoCodeRepository;
+    private final TicketCategoryRepository ticketCategoryRepository;
+    private final PromoCodeService promoCodeService;
 
     @Value("${booking.pending-timeout-minutes:20}")
     private int pendingTimeoutMinutes;
@@ -140,32 +144,27 @@ public class BookingService {
             throw new RuntimeException("Online ticket sales for this event have closed.");
         }
 
+        // ─── SECURITY: recompute the charge from ticket prices stored in the DB. ───
+        // request.getTotalAmount()/getDiscountAmount() are attacker-controlled — a client could
+        // request real, valid seats/tickets while declaring an arbitrary (e.g. near-zero) amount.
+        // The only trustworthy inputs from the request are WHICH seats/tickets were selected;
+        // the price for each of them is always looked up server-side.
+        BookingPricing pricing = calculateBookingPricing(event, request, nowLK);
+
         // Create PENDING booking (not confirmed yet)
         Booking booking = Booking.builder()
                 .user(user)
                 .event(event)
                 .eventSchedule(schedule)
-                .totalAmount(request.getTotalAmount())
+                .totalAmount(pricing.totalAmount)
                 .status(Booking.BookingStatus.PENDING)
                 .bookingReference(generateBookingReference())
                 .attended(false)
                 .currency(request.getCurrency())
                 .build();
 
-        // Calculate average price per ticket based on total amount to include taxes and deals
-        int totalTickets = 0;
-        if (request.getSeatIds() != null) totalTickets += request.getSeatIds().size();
-        if (request.getSharedAreaTickets() != null) {
-            for (InitiatePaymentRequest.SharedAreaTicketRequest sa : request.getSharedAreaTickets()) {
-                totalTickets += sa.getTicketCount();
-            }
-        }
-        
-        BigDecimal pricePerTicket = totalTickets > 0 
-            ? request.getTotalAmount().divide(new BigDecimal(totalTickets), 2, java.math.RoundingMode.HALF_UP) 
-            : BigDecimal.ZERO;
-
-        // Add seat bookings if any (using VenueSeat with String ID)
+        // Add seat bookings if any (using VenueSeat with String ID), priced from the
+        // server-side calculation above — never from the client-supplied total.
         if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
             for (String seatId : request.getSeatIds()) {
                 venueSeatRepository.findById(seatId)
@@ -174,7 +173,7 @@ public class BookingService {
                 BookingSeat bookingSeat = BookingSeat.builder()
                         .event(event) // Set the event (required by database constraint)
                         .venueSeatId(seatId) // Store the VenueSeat ID
-                        .priceAtBooking(pricePerTicket)
+                        .priceAtBooking(pricing.seatPrices.getOrDefault(seatId, BigDecimal.ZERO))
                         .ticketCode(generateTicketCode())
                         .isSharedAreaTicket(false)
                         .build();
@@ -185,11 +184,13 @@ public class BookingService {
 
         // Add shared area tickets if any
         if (request.getSharedAreaTickets() != null && !request.getSharedAreaTickets().isEmpty()) {
+            int sharedAreaTicketIndex = 0;
             for (InitiatePaymentRequest.SharedAreaTicketRequest sharedAreaTicket : request.getSharedAreaTickets()) {
                 for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
+                    BigDecimal price = pricing.sharedAreaPrices.get(sharedAreaTicketIndex++);
                     BookingSeat bookingSeat = BookingSeat.builder()
                             .event(event) // Set the event (required by database constraint)
-                            .priceAtBooking(pricePerTicket)
+                            .priceAtBooking(price != null ? price : BigDecimal.ZERO)
                             .ticketCode(generateTicketCode())
                             .isSharedAreaTicket(true)
                             .sharedAreaNumber(sharedAreaTicket.getSharedAreaNumber())
@@ -216,16 +217,245 @@ public class BookingService {
             booking.setCustomerEmail(user.getEmail());
             booking.setCustomerPhone(user.getPhoneNumber());
         }
-        
+
         booking.setNumberOfTickets(booking.getBookingSeats().size());
-        booking.setFinalAmount(request.getTotalAmount());
-        booking.setDiscountAmount(request.getDiscountAmount());
+        booking.setFinalAmount(pricing.totalAmount);
+        booking.setDiscountAmount(pricing.discountAmount);
 
         Booking savedBooking = bookingRepository.save(booking);
-        log.info("PENDING booking created with reference: {} for customer: {}", 
-                savedBooking.getBookingReference(), user.getEmail());
+        log.info("PENDING booking created with reference: {} for customer: {}, server-calculated amount: {}",
+                savedBooking.getBookingReference(), user.getEmail(), pricing.totalAmount);
 
         return savedBooking;
+    }
+
+    /**
+     * Result of a server-side price calculation for a booking request.
+     */
+    private static class BookingPricing {
+        BigDecimal totalAmount;
+        BigDecimal discountAmount;
+        final Map<String, BigDecimal> seatPrices = new HashMap<>();
+        final List<BigDecimal> sharedAreaPrices = new ArrayList<>();
+    }
+
+    /**
+     * Recalculates what a booking should cost purely from TicketCategory prices stored in the
+     * database (base price, early-bird price if currently active, and any active deal), plus a
+     * server-revalidated promo code discount. Nothing here is taken from the client's declared
+     * amounts — only which seats/shared-area tickets were selected is trusted from the request.
+     */
+    private BookingPricing calculateBookingPricing(Event event, InitiatePaymentRequest request, LocalDateTime now) {
+        BookingPricing pricing = new BookingPricing();
+
+        List<TicketCategory> eventCategories = ticketCategoryRepository.findByEventId(event.getEventId());
+
+        // venueSeatCategoryName -> TicketCategory (falls back to categoryName), same resolution
+        // rule used to price seats on the seat-availability endpoint the customer sees.
+        Map<String, TicketCategory> seatCategoryMap = new HashMap<>();
+        for (TicketCategory tc : eventCategories) {
+            if (!Boolean.TRUE.equals(tc.getIsSharedArea())) {
+                if (tc.getVenueSeatCategoryName() != null && !tc.getVenueSeatCategoryName().isBlank()) {
+                    seatCategoryMap.put(tc.getVenueSeatCategoryName(), tc);
+                }
+                seatCategoryMap.putIfAbsent(tc.getCategoryName(), tc);
+            }
+        }
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<ValidatePromoCodeRequest.SelectedSeatItem> promoSeatItems = new ArrayList<>();
+        List<ValidatePromoCodeRequest.SelectedSharedAreaItem> promoSharedAreaItems = new ArrayList<>();
+
+        // ── Seated tickets: group by resolved ticket category so a buy-x-get-y-free deal
+        // applies across the whole selection rather than seat-by-seat ──
+        if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
+            Map<UUID, TicketCategory> categoryById = new HashMap<>();
+            Map<UUID, List<String>> seatIdsByCategory = new HashMap<>();
+
+            for (String seatId : request.getSeatIds()) {
+                VenueSeat venueSeat = venueSeatRepository.findById(seatId)
+                        .orElseThrow(() -> new RuntimeException("VenueSeat not found with ID: " + seatId));
+                String categoryName = venueSeat.getCategory() != null ? venueSeat.getCategory().getCategoryName() : null;
+                TicketCategory tc = categoryName != null ? seatCategoryMap.get(categoryName) : null;
+                if (tc == null) {
+                    throw new RuntimeException("No pricing configured for seat category of seat: " + seatId);
+                }
+                categoryById.put(tc.getCategoryId(), tc);
+                seatIdsByCategory.computeIfAbsent(tc.getCategoryId(), k -> new ArrayList<>()).add(seatId);
+            }
+
+            for (Map.Entry<UUID, List<String>> entry : seatIdsByCategory.entrySet()) {
+                TicketCategory tc = categoryById.get(entry.getKey());
+                List<String> seatIds = entry.getValue();
+                BigDecimal unitPrice = resolveUnitPrice(tc, now);
+                int paidUnits = resolvePaidUnits(tc, seatIds.size());
+
+                for (int i = 0; i < seatIds.size(); i++) {
+                    BigDecimal seatPrice = i < paidUnits ? unitPrice : BigDecimal.ZERO;
+                    pricing.seatPrices.put(seatIds.get(i), seatPrice);
+                    subtotal = subtotal.add(seatPrice);
+
+                    promoSeatItems.add(ValidatePromoCodeRequest.SelectedSeatItem.builder()
+                            .seatId(seatIds.get(i))
+                            .categoryId(tc.getCategoryId())
+                            .categoryName(tc.getCategoryName())
+                            .venueSeatCategoryName(tc.getVenueSeatCategoryName())
+                            .price(unitPrice)
+                            .build());
+                }
+            }
+        }
+
+        // ── Shared area tickets: group by resolved category across all request lines ──
+        List<InitiatePaymentRequest.SharedAreaTicketRequest> sharedAreaRequests = request.getSharedAreaTickets();
+        if (sharedAreaRequests != null && !sharedAreaRequests.isEmpty()) {
+            List<TicketCategory> sharedAreaCategories =
+                    ticketCategoryRepository.findSharedAreaCategoriesByEventId(event.getEventId());
+
+            Map<UUID, TicketCategory> sharedCategoryById = new HashMap<>();
+            Map<UUID, Integer> quantityByCategory = new HashMap<>();
+            List<UUID> resolvedCategoryPerLine = new ArrayList<>();
+
+            for (InitiatePaymentRequest.SharedAreaTicketRequest line : sharedAreaRequests) {
+                TicketCategory tc = resolveSharedAreaCategory(sharedAreaCategories, line);
+                if (tc == null) {
+                    throw new RuntimeException("No pricing configured for shared area: " + line.getSharedAreaNumber());
+                }
+                sharedCategoryById.put(tc.getCategoryId(), tc);
+                resolvedCategoryPerLine.add(tc.getCategoryId());
+                quantityByCategory.merge(tc.getCategoryId(), line.getTicketCount(), Integer::sum);
+            }
+
+            Map<UUID, Integer> paidUnitsByCategory = new HashMap<>();
+            for (Map.Entry<UUID, Integer> entry : quantityByCategory.entrySet()) {
+                paidUnitsByCategory.put(entry.getKey(), resolvePaidUnits(sharedCategoryById.get(entry.getKey()), entry.getValue()));
+            }
+
+            Map<UUID, Integer> issuedSoFarByCategory = new HashMap<>();
+            for (int lineIdx = 0; lineIdx < sharedAreaRequests.size(); lineIdx++) {
+                InitiatePaymentRequest.SharedAreaTicketRequest line = sharedAreaRequests.get(lineIdx);
+                UUID categoryId = resolvedCategoryPerLine.get(lineIdx);
+                TicketCategory tc = sharedCategoryById.get(categoryId);
+                BigDecimal unitPrice = resolveUnitPrice(tc, now);
+                int paidUnitsTotal = paidUnitsByCategory.get(categoryId);
+
+                for (int i = 0; i < line.getTicketCount(); i++) {
+                    int issuedSoFar = issuedSoFarByCategory.merge(categoryId, 1, Integer::sum) - 1;
+                    BigDecimal ticketPrice = issuedSoFar < paidUnitsTotal ? unitPrice : BigDecimal.ZERO;
+                    pricing.sharedAreaPrices.add(ticketPrice);
+                    subtotal = subtotal.add(ticketPrice);
+                }
+
+                promoSharedAreaItems.add(ValidatePromoCodeRequest.SelectedSharedAreaItem.builder()
+                        .categoryId(tc.getCategoryId())
+                        .categoryName(tc.getCategoryName())
+                        .sharedAreaNumber(tc.getSharedAreaNumber())
+                        .ticketCount(line.getTicketCount())
+                        .pricePerTicket(unitPrice)
+                        .build());
+            }
+        }
+
+        subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
+
+        // ── Promo code discount: re-validated against the DB (scope, dates, usage limit,
+        // min order amount) — never trusted from request.getPromoDiscountAmount() ──
+        BigDecimal discount = BigDecimal.ZERO;
+        if (request.getPromoCode() != null && !request.getPromoCode().trim().isEmpty()) {
+            try {
+                ValidatePromoCodeResponse promoResult = promoCodeService.validateAndCalculateDiscount(
+                        ValidatePromoCodeRequest.builder()
+                                .code(request.getPromoCode())
+                                .eventId(event.getEventId())
+                                .seats(promoSeatItems)
+                                .sharedAreas(promoSharedAreaItems)
+                                .subTotal(subtotal)
+                                .build());
+                if (promoResult.isValid() && promoResult.getDiscountAmount() != null
+                        && promoResult.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    discount = promoResult.getDiscountAmount();
+                } else {
+                    log.warn("Promo code '{}' supplied at payment initiation is not currently valid: {}",
+                            request.getPromoCode(), promoResult.getMessage());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to re-validate promo code '{}' at payment initiation: {}",
+                        request.getPromoCode(), e.getMessage());
+            }
+        }
+
+        if (discount.compareTo(subtotal) > 0) {
+            discount = subtotal;
+        }
+
+        pricing.discountAmount = discount.setScale(2, RoundingMode.HALF_UP);
+        pricing.totalAmount = subtotal.subtract(discount).setScale(2, RoundingMode.HALF_UP);
+        return pricing;
+    }
+
+    private TicketCategory resolveSharedAreaCategory(List<TicketCategory> sharedAreaCategories,
+            InitiatePaymentRequest.SharedAreaTicketRequest line) {
+        if (line.getCategoryId() != null) {
+            for (TicketCategory tc : sharedAreaCategories) {
+                if (tc.getCategoryId().equals(line.getCategoryId())) {
+                    return tc;
+                }
+            }
+        }
+        if (line.getSharedAreaNumber() != null) {
+            for (TicketCategory tc : sharedAreaCategories) {
+                if (line.getSharedAreaNumber().equals(tc.getSharedAreaNumber())) {
+                    return tc;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Effective per-unit price for a ticket category: early-bird price if currently within its
+     * sales window, otherwise the standard price, with an active PERCENTAGE_DISCOUNT deal applied
+     * on top. (BUY_X_GET_Y_FREE is handled separately in {@link #resolvePaidUnits}.)
+     */
+    private BigDecimal resolveUnitPrice(TicketCategory tc, LocalDateTime now) {
+        boolean earlyBirdActive = isEarlyBirdActive(tc.getEarlyBirdPrice(), tc.getSalesStartDate(), tc.getSalesEndDate(), now);
+        BigDecimal base = earlyBirdActive ? tc.getEarlyBirdPrice() : tc.getPrice();
+        if (base == null) {
+            base = BigDecimal.ZERO;
+        }
+
+        String dealType = tc.getDealType() != null ? tc.getDealType() : "PERCENTAGE_DISCOUNT";
+        if (Boolean.TRUE.equals(tc.getDealActive()) && "PERCENTAGE_DISCOUNT".equals(dealType)
+                && tc.getDealDiscountPercentage() != null) {
+            BigDecimal factor = BigDecimal.ONE.subtract(
+                    tc.getDealDiscountPercentage().divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP));
+            base = base.multiply(factor).setScale(2, RoundingMode.HALF_UP);
+        }
+        return base;
+    }
+
+    private boolean isEarlyBirdActive(BigDecimal earlyBirdPrice, LocalDateTime startDate, LocalDateTime endDate, LocalDateTime now) {
+        if (earlyBirdPrice == null || earlyBirdPrice.compareTo(BigDecimal.ZERO) <= 0) return false;
+        if (startDate != null && now.isBefore(startDate)) return false;
+        if (endDate != null && now.isAfter(endDate)) return false;
+        return true;
+    }
+
+    /**
+     * How many of {@code quantity} tickets in this category are actually paid for, applying an
+     * active BUY_X_GET_Y_FREE deal (grouped across the whole requested quantity for the category).
+     */
+    private int resolvePaidUnits(TicketCategory tc, int quantity) {
+        String dealType = tc.getDealType() != null ? tc.getDealType() : "PERCENTAGE_DISCOUNT";
+        if (Boolean.TRUE.equals(tc.getDealActive()) && "BUY_X_GET_Y_FREE".equals(dealType)
+                && tc.getDealBuyQuantity() != null && tc.getDealFreeQuantity() != null
+                && tc.getDealBuyQuantity() > 0 && tc.getDealFreeQuantity() > 0) {
+            int groupSize = tc.getDealBuyQuantity() + tc.getDealFreeQuantity();
+            int fullGroups = quantity / groupSize;
+            int remainder = quantity % groupSize;
+            return fullGroups * tc.getDealBuyQuantity() + Math.min(remainder, tc.getDealBuyQuantity());
+        }
+        return quantity;
     }
 
     /**
@@ -436,105 +666,6 @@ public class BookingService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Page<Booking> getAllBookingsForOrganizer(java.util.UUID organizerId, Pageable pageable) {
         return getAllBookingsForOrganizer(organizerId, null, null, null, null, pageable);
-    }
-    
-    /**
-     * Create a booking with seats and/or shared area tickets
-     */
-    public Booking createBookingWithSeatsAndSharedAreas(
-            UUID userId, 
-            ConfirmBookingRequest request, 
-            String paymentId) {
-        
-        log.info("Creating booking for user {} with event {} and schedule {}", 
-                userId, request.getEventId(), request.getScheduleId());
-        
-        // Fetch required entities
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-        
-        Event event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new RuntimeException("Event not found with ID: " + request.getEventId()));
-        
-        EventSchedule schedule = eventScheduleRepository.findById(request.getScheduleId())
-                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + request.getScheduleId()));
-        
-        // Create booking
-        Booking booking = Booking.builder()
-                .user(user)
-                .event(event)
-                .eventSchedule(schedule)
-                .totalAmount(request.getTotalAmount())
-                .status(Booking.BookingStatus.CONFIRMED)
-                .bookingReference(generateBookingReference())
-                .attended(false)
-                .discountAmount(request.getDiscountAmount())
-                .discountInfo(request.getDiscountInfo())
-                .build();
-        
-        // Add seat bookings if any
-        if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
-            for (UUID seatId : request.getSeatIds()) {
-                Seat seat = seatRepository.findById(seatId)
-                        .orElseThrow(() -> new RuntimeException("Seat not found with ID: " + seatId));
-                
-                BookingSeat bookingSeat = BookingSeat.builder()
-                        .event(event)
-                        .venueSeatId(seatId.toString())
-                        .priceAtBooking(seat.getPrice())
-                        .ticketCode(generateTicketCode())
-                        .isSharedAreaTicket(false)
-                        .build();
-                
-                booking.addSeat(bookingSeat);
-            }
-        }
-        
-        // Add shared area tickets if any
-        if (request.getSharedAreaTickets() != null && !request.getSharedAreaTickets().isEmpty()) {
-            for (ConfirmBookingRequest.SharedAreaTicketRequest sharedAreaTicket : request.getSharedAreaTickets()) {
-                // Create one BookingSeat entry per ticket
-                for (int i = 0; i < sharedAreaTicket.getTicketCount(); i++) {
-                    BookingSeat bookingSeat = BookingSeat.builder()
-                            .event(event) // No seat for shared area tickets
-                            .priceAtBooking(sharedAreaTicket.getPricePerTicket())
-                            .ticketCode(generateTicketCode())
-                            .isSharedAreaTicket(true)
-                            .sharedAreaNumber(sharedAreaTicket.getSharedAreaNumber())
-                            .build();
-                    
-                    booking.addSeat(bookingSeat);
-                }
-                
-                log.info("Added {} shared area tickets for area {} ({})", 
-                        sharedAreaTicket.getTicketCount(), 
-                        sharedAreaTicket.getSharedAreaNumber(),
-                        sharedAreaTicket.getCategoryName());
-            }
-        }
-        
-        // Update schedule availability
-        int totalTickets = booking.getBookingSeats().size();
-        eventScheduleService.reserveSeats(schedule.getScheduleId(), totalTickets);
-        
-        Booking savedBooking = bookingRepository.save(booking);
-        log.info("Booking created successfully with reference: {}", savedBooking.getBookingReference());
-        
-        // If promo code was applied, increment its usage count
-        if (request.getPromoCode() != null && !request.getPromoCode().trim().isEmpty()) {
-            try {
-                promoCodeRepository.findByCodeIgnoreCase(request.getPromoCode().trim().toUpperCase())
-                        .ifPresent(promo -> {
-                            promo.setUsageCount(promo.getUsageCount() + 1);
-                            promoCodeRepository.save(promo);
-                            log.info("Incremented usage for promo code {}. Count is now: {}", promo.getCode(), promo.getUsageCount());
-                        });
-            } catch (Exception e) {
-                log.warn("Failed to increment promo code usage for code {}: {}", request.getPromoCode(), e.getMessage());
-            }
-        }
-        
-        return savedBooking;
     }
     
     /**

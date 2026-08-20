@@ -17,11 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ticket.ticket_booking_system.dto.request.ConfirmBookingRequest;
 import com.ticket.ticket_booking_system.dto.request.HoldSeatsRequest;
 import com.ticket.ticket_booking_system.dto.response.BookingResponse;
 import com.ticket.ticket_booking_system.dto.response.SeatResponse;
-import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.service.BookingService;
@@ -106,66 +104,6 @@ public class BookingFlowController {
 
         } catch (IllegalStateException e) {
             log.error("Failed to hold seats: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-        }
-    }
-
-    /**
-     * Confirm booking after successful payment
-     * POST /api/bookings/confirm
-     * 
-     * This finalizes the booking and marks seats as booked
-     */
-    @PostMapping("/confirm")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<Map<String, Object>> confirmBooking(
-            @Valid @RequestBody ConfirmBookingRequest request,
-            Authentication authentication) {
-
-        log.info("User {} confirming booking for event {} schedule {} with payment {}",
-                authentication.getName(), request.getEventId(), request.getScheduleId(), request.getPaymentId());
-
-        try {
-            // Extract user ID from authentication
-            UUID userId = extractUserIdFromAuth(authentication);
-
-            // Verify payment (this should integrate with your payment service)
-            // For now, we'll assume payment is valid if paymentId is provided
-
-            // Reserve the seats (mark as booked) if any seat IDs provided
-            if (request.getSeatIds() != null && !request.getSeatIds().isEmpty()) {
-                seatService.reserveSeats(request.getSeatIds());
-            }
-
-            // Create booking record with seats and shared area tickets
-            Booking booking = bookingService.createBookingWithSeatsAndSharedAreas(
-                    userId, request, request.getPaymentId());
-
-            int seatCount = request.getSeatIds() != null ? request.getSeatIds().size() : 0;
-            int sharedAreaTicketCount = 0;
-            if (request.getSharedAreaTickets() != null) {
-                sharedAreaTicketCount = request.getSharedAreaTickets().stream()
-                        .mapToInt(req -> req.getTicketCount())
-                        .sum();
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Booking confirmed successfully");
-            response.put("bookedSeats", seatCount);
-            response.put("sharedAreaTickets", sharedAreaTicketCount);
-            response.put("totalTickets", seatCount + sharedAreaTicketCount);
-            response.put("paymentId", request.getPaymentId());
-            response.put("bookingReference", booking.getBookingReference());
-            response.put("bookingId", booking.getBookingId());
-
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalStateException e) {
-            log.error("Failed to confirm booking: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());

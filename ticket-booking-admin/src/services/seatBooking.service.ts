@@ -4,7 +4,6 @@ import type {
   SeatDTO,
   SeatWithStatus,
   HoldSeatsRequest,
-  ConfirmBookingRequest,
   BookingResponse,
   SeatAvailabilityStats,
   SeatAvailabilityWithSharedAreas,
@@ -35,14 +34,6 @@ class SeatBookingService {
    */
   async holdSeats(request: HoldSeatsRequest): Promise<BookingResponse> {
     const response = await api.post<BookingResponse>('/api/bookings/hold-seats', request);
-    return response.data;
-  }
-
-  /**
-   * Confirm booking after payment
-   */
-  async confirmBooking(request: ConfirmBookingRequest): Promise<BookingResponse> {
-    const response = await api.post<BookingResponse>('/api/bookings/confirm', request);
     return response.data;
   }
 

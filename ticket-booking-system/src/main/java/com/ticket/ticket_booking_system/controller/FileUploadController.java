@@ -29,7 +29,10 @@ public class FileUploadController {
     @PostMapping("/image")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> uploadImage(@RequestPart("file") MultipartFile file) {
-        log.info("Received request to upload image: {}", file.getOriginalFilename());
+        String safeFilenameForLogging = file.getOriginalFilename() != null
+                ? file.getOriginalFilename().replaceAll("[\\r\\n]", "_")
+                : "unknown";
+        log.info("Received request to upload image: {}", safeFilenameForLogging);
         try {
             CloudinaryUploadResult result = fileUploadService.uploadImage(file);
             Map<String, String> response = new HashMap<>();

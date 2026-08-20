@@ -64,8 +64,10 @@ public class OrganizerPromoCodeController {
 
     @PatchMapping("/{id}/toggle")
     public ResponseEntity<PromoCodeResponse> togglePromoCodeStatus(@PathVariable UUID id, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         String email = authentication != null ? authentication.getName() : "ORGANIZER";
-        return ResponseEntity.ok(promoCodeService.togglePromoCodeStatus(id, email));
+        return ResponseEntity.ok(promoCodeService.toggleOrganizerPromoCodeStatus(id, organizerId, email));
     }
 
     @DeleteMapping("/{id}")
