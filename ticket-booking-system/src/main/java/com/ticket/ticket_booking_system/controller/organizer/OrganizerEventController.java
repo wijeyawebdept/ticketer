@@ -137,7 +137,7 @@ public class OrganizerEventController {
     @GetMapping("/{eventId}")
     public ResponseEntity<?> getEventById(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to access this event");
         }
@@ -155,7 +155,7 @@ public class OrganizerEventController {
             Authentication authentication) {
         try {
             UUID organizerId = getOrganizerIdFromAuth(authentication);
-            if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body("You do not have permission to update this event");
             }
@@ -176,7 +176,7 @@ public class OrganizerEventController {
     @DeleteMapping("/{eventId}")
     public ResponseEntity<?> deleteEvent(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to delete this event");
         }
@@ -191,7 +191,7 @@ public class OrganizerEventController {
     @DeleteMapping("/{eventId}/soft")
     public ResponseEntity<?> softDeleteEvent(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to delete this event");
         }
@@ -209,7 +209,7 @@ public class OrganizerEventController {
             @RequestParam String status,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to change the status of this event");
         }
@@ -226,7 +226,7 @@ public class OrganizerEventController {
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws IOException {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to upload images for this event");
         }
@@ -244,7 +244,7 @@ public class OrganizerEventController {
             @PathVariable UUID eventId,
             Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to view statistics for this event");
         }
@@ -352,7 +352,7 @@ public class OrganizerEventController {
     @PutMapping("/{eventId}/activate")
     public ResponseEntity<?> activateEvent(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to activate this event");
         }
@@ -366,7 +366,7 @@ public class OrganizerEventController {
     @PutMapping("/{eventId}/deactivate")
     public ResponseEntity<?> deactivateEvent(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to deactivate this event");
         }

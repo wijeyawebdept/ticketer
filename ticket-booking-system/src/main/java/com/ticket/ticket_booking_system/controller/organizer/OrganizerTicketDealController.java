@@ -63,7 +63,7 @@ public class OrganizerTicketDealController {
     @GetMapping("/event/{eventId}")
     public ResponseEntity<?> getCategoriesForEvent(@PathVariable UUID eventId, Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
-        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+        if (!isAdminAuth(authentication) && (organizerId == null || !verifyEventOwnership(eventId, organizerId))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("You do not have permission to view deals for this event");
         }

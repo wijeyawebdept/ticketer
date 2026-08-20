@@ -30,6 +30,8 @@ public interface PromoCodeService {
 
     void deleteOrganizerPromoCode(UUID id, UUID organizerId, String organizerEmail);
 
+    PromoCodeResponse toggleOrganizerPromoCodeStatus(UUID id, UUID organizerId, String organizerEmail);
+
     // Public / Validation methods
     ValidatePromoCodeResponse validateAndCalculateDiscount(ValidatePromoCodeRequest request);
 
