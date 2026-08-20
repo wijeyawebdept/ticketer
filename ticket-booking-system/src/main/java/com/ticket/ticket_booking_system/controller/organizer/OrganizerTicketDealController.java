@@ -19,8 +19,10 @@ import com.ticket.ticket_booking_system.dto.request.TicketDealRequest;
 import com.ticket.ticket_booking_system.dto.response.TicketCategoryDealResponse;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
+import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
+import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.service.TicketDealService;
 
 /**
@@ -34,18 +36,24 @@ public class OrganizerTicketDealController {
     private final TicketDealService dealService;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
+    private final EventRepository eventRepository;
+    private final TicketCategoryRepository ticketCategoryRepository;
 
     public OrganizerTicketDealController(TicketDealService dealService,
                                           OrganizerRepository organizerRepository,
-                                          OrganizerEmployeeRepository employeeRepository) {
+                                          OrganizerEmployeeRepository employeeRepository,
+                                          EventRepository eventRepository,
+                                          TicketCategoryRepository ticketCategoryRepository) {
         this.dealService = dealService;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
+        this.eventRepository = eventRepository;
+        this.ticketCategoryRepository = ticketCategoryRepository;
     }
 
     /** GET /api/organizer/deals — all deals (active + inactive) for this organizer's events */
     @GetMapping
-    public ResponseEntity<List<TicketCategoryDealResponse>> getMyDeals(Authentication authentication) {
+    public ResponseEntity<?> getMyDeals(Authentication authentication) {
         UUID organizerId = getOrganizerIdFromAuth(authentication);
         if (organizerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         return ResponseEntity.ok(dealService.getDealsForOrganizer(organizerId));
@@ -53,21 +61,60 @@ public class OrganizerTicketDealController {
 
     /** GET /api/organizer/deals/event/{eventId} — ticket categories for a specific event */
     @GetMapping("/event/{eventId}")
-    public ResponseEntity<List<TicketCategoryDealResponse>> getCategoriesForEvent(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getCategoriesForEvent(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view deals for this event");
+        }
         return ResponseEntity.ok(dealService.getAllCategoriesForEvent(eventId));
     }
 
     /** POST /api/organizer/deals/apply — apply or update a deal */
     @PostMapping("/apply")
-    public ResponseEntity<TicketCategoryDealResponse> applyDeal(@RequestBody TicketDealRequest request) {
+    public ResponseEntity<?> applyDeal(@RequestBody TicketDealRequest request, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        // Verify the category's event belongs to the caller organizer
+        if (!isAdminAuth(authentication)) {
+            boolean owns = ticketCategoryRepository.findById(request.getCategoryId())
+                    .map(tc -> tc.getEvent() != null
+                            && tc.getEvent().getOrganizer() != null
+                            && tc.getEvent().getOrganizer().getOrganizerId().equals(organizerId))
+                    .orElse(false);
+            if (!owns) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to apply a deal to this ticket category");
+            }
+        }
+
         return ResponseEntity.ok(dealService.applyDeal(request));
     }
 
     /** DELETE /api/organizer/deals/{categoryId} — remove a deal */
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<TicketCategoryDealResponse> removeDeal(@PathVariable UUID categoryId) {
+    public ResponseEntity<?> removeDeal(@PathVariable UUID categoryId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        // Verify the category's event belongs to the caller organizer
+        if (!isAdminAuth(authentication)) {
+            boolean owns = ticketCategoryRepository.findById(categoryId)
+                    .map(tc -> tc.getEvent() != null
+                            && tc.getEvent().getOrganizer() != null
+                            && tc.getEvent().getOrganizer().getOrganizerId().equals(organizerId))
+                    .orElse(false);
+            if (!owns) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to remove a deal from this ticket category");
+            }
+        }
+
         return ResponseEntity.ok(dealService.removeDeal(categoryId));
     }
+
+    // ─────────────────── helpers ───────────────────
 
     private UUID getOrganizerIdFromAuth(Authentication authentication) {
         if (authentication == null) return null;
@@ -87,5 +134,21 @@ public class OrganizerTicketDealController {
                 .orElse(null);
         }
         return null;
+    }
+
+    private boolean isAdminAuth(Authentication authentication) {
+        if (authentication == null) return false;
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                        || a.getAuthority().equals("ROLE_SUPER_ADMIN")
+                        || a.getAuthority().equals("ADMIN")
+                        || a.getAuthority().equals("SUPER_ADMIN"));
+    }
+
+    private boolean verifyEventOwnership(UUID eventId, UUID organizerId) {
+        return eventRepository.findById(eventId)
+                .map(event -> event.getOrganizer() != null &&
+                              event.getOrganizer().getOrganizerId().equals(organizerId))
+                .orElse(false);
     }
 }

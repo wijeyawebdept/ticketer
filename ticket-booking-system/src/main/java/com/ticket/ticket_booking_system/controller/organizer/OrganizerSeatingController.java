@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -43,11 +44,14 @@ public class OrganizerSeatingController {
     /**
      * Update seating layout for a venue
      * PUT /api/organizer/venues/{venueId}/seating
+     * Restricted to admins — venues are shared infrastructure with no organizer owner.
      */
     @PutMapping
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> updateSeatingLayout(
             @PathVariable UUID venueId,
-            @RequestBody Map<String, Object> seatingLayout) {
+            @RequestBody Map<String, Object> seatingLayout,
+            Authentication authentication) {
 
         venueService.updateSeatingLayout(venueId, seatingLayout);
         return ResponseEntity.ok(new java.util.HashMap<>());

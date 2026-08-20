@@ -32,6 +32,7 @@ import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EventService;
@@ -51,13 +52,16 @@ public class OrganizerEventController {
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository employeeRepository;
     private final BookingRepository bookingRepository;
+    private final EventRepository eventRepository;
 
     public OrganizerEventController(EventService eventService, OrganizerRepository organizerRepository,
-            OrganizerEmployeeRepository employeeRepository, BookingRepository bookingRepository) {
+            OrganizerEmployeeRepository employeeRepository, BookingRepository bookingRepository,
+            EventRepository eventRepository) {
         this.eventService = eventService;
         this.organizerRepository = organizerRepository;
         this.employeeRepository = employeeRepository;
         this.bookingRepository = bookingRepository;
+        this.eventRepository = eventRepository;
     }
 
     /**
@@ -128,9 +132,15 @@ public class OrganizerEventController {
 
     /**
      * Get event by ID - Organizer perspective
+     * Only the owning organizer (or admin) may read the event.
      */
     @GetMapping("/{eventId}")
-    public ResponseEntity<EventResponse> getEventById(@PathVariable UUID eventId) {
+    public ResponseEntity<?> getEventById(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to access this event");
+        }
         EventResponse event = eventService.getEventById(eventId);
         return ResponseEntity.ok(event);
     }
@@ -139,11 +149,16 @@ public class OrganizerEventController {
      * Update event - Organizer can update their own events
      */
     @PutMapping("/{eventId}")
-    public ResponseEntity<EventResponse> updateEvent(
+    public ResponseEntity<?> updateEvent(
             @PathVariable UUID eventId,
             @Valid @RequestBody EventUpdateRequest request,
             Authentication authentication) {
         try {
+            UUID organizerId = getOrganizerIdFromAuth(authentication);
+            if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You do not have permission to update this event");
+            }
             System.out.println("=== OrganizerEventController: Updating event " + eventId + " ===");
             EventResponse updatedEvent = eventService.updateEvent(eventId, request);
             return ResponseEntity.ok(updatedEvent);
@@ -159,7 +174,12 @@ public class OrganizerEventController {
      * Delete event - Organizer can delete their own events
      */
     @DeleteMapping("/{eventId}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable UUID eventId, Authentication authentication) {
+    public ResponseEntity<?> deleteEvent(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to delete this event");
+        }
         System.out.println("OrganizerEventController: Deleting event " + eventId);
         eventService.deleteEvent(eventId);
         return ResponseEntity.noContent().build();
@@ -169,7 +189,12 @@ public class OrganizerEventController {
      * Soft delete event - Organizer can soft delete their own events
      */
     @DeleteMapping("/{eventId}/soft")
-    public ResponseEntity<Void> softDeleteEvent(@PathVariable UUID eventId, Authentication authentication) {
+    public ResponseEntity<?> softDeleteEvent(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to delete this event");
+        }
         System.out.println("OrganizerEventController: Soft deleting event " + eventId);
         eventService.softDeleteEvent(eventId);
         return ResponseEntity.noContent().build();
@@ -179,10 +204,15 @@ public class OrganizerEventController {
      * Change event status (published/draft/cancelled)
      */
     @PatchMapping("/{eventId}/status")
-    public ResponseEntity<EventResponse> changeEventStatus(
+    public ResponseEntity<?> changeEventStatus(
             @PathVariable UUID eventId,
             @RequestParam String status,
             Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to change the status of this event");
+        }
         EventResponse event = eventService.changeEventStatus(eventId, status);
         return ResponseEntity.ok(event);
     }
@@ -191,11 +221,15 @@ public class OrganizerEventController {
      * Upload event image
      */
     @PostMapping("/{eventId}/image")
-    public ResponseEntity<Map<String, String>> uploadEventImage(
+    public ResponseEntity<?> uploadEventImage(
             @PathVariable UUID eventId,
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws IOException {
-
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to upload images for this event");
+        }
         String imageUrl = eventService.uploadEventImage(eventId, file);
         Map<String, String> response = new HashMap<>();
         response.put("imageUrl", imageUrl);
@@ -206,9 +240,14 @@ public class OrganizerEventController {
      * Get event statistics - Organizer perspective
      */
     @GetMapping("/{eventId}/statistics")
-    public ResponseEntity<Map<String, Object>> getEventStatistics(
+    public ResponseEntity<?> getEventStatistics(
             @PathVariable UUID eventId,
             Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to view statistics for this event");
+        }
 
         EventResponse eventResponse = eventService.getEventById(eventId);
 
@@ -308,6 +347,36 @@ public class OrganizerEventController {
     }
 
     /**
+     * Activate event - Organizer can activate their own events
+     */
+    @PutMapping("/{eventId}/activate")
+    public ResponseEntity<?> activateEvent(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to activate this event");
+        }
+        EventResponse event = eventService.activateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
+
+    /**
+     * Deactivate event - Organizer can deactivate their own events
+     */
+    @PutMapping("/{eventId}/deactivate")
+    public ResponseEntity<?> deactivateEvent(@PathVariable UUID eventId, Authentication authentication) {
+        UUID organizerId = getOrganizerIdFromAuth(authentication);
+        if (organizerId != null && !isAdminAuth(authentication) && !verifyEventOwnership(eventId, organizerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to deactivate this event");
+        }
+        EventResponse event = eventService.deactivateEvent(eventId);
+        return ResponseEntity.ok(event);
+    }
+
+    // ─────────────────── helpers ───────────────────
+
+    /**
      * Helper method to extract organizer ID from authentication
      */
     private UUID getOrganizerIdFromAuth(Authentication authentication) {
@@ -349,20 +418,25 @@ public class OrganizerEventController {
     }
 
     /**
-     * Activate event - Organizer can activate their own events
+     * Returns true if the authenticated user holds an ADMIN or SUPER_ADMIN role,
+     * in which case ownership checks are bypassed.
      */
-    @PutMapping("/{eventId}/activate")
-    public ResponseEntity<EventResponse> activateEvent(@PathVariable UUID eventId, Authentication authentication) {
-        EventResponse event = eventService.activateEvent(eventId);
-        return ResponseEntity.ok(event);
+    private boolean isAdminAuth(Authentication authentication) {
+        if (authentication == null) return false;
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                        || a.getAuthority().equals("ROLE_SUPER_ADMIN")
+                        || a.getAuthority().equals("ADMIN")
+                        || a.getAuthority().equals("SUPER_ADMIN"));
     }
 
     /**
-     * Deactivate event - Organizer can deactivate their own events
+     * Verify that an event belongs to the organizer
      */
-    @PutMapping("/{eventId}/deactivate")
-    public ResponseEntity<EventResponse> deactivateEvent(@PathVariable UUID eventId, Authentication authentication) {
-        EventResponse event = eventService.deactivateEvent(eventId);
-        return ResponseEntity.ok(event);
+    private boolean verifyEventOwnership(UUID eventId, UUID organizerId) {
+        return eventRepository.findById(eventId)
+                .map(event -> event.getOrganizer() != null &&
+                              event.getOrganizer().getOrganizerId().equals(organizerId))
+                .orElse(false);
     }
 }
