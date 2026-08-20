@@ -1078,13 +1078,8 @@ const EventDetails: React.FC = () => {
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
-                {/* Table Header - only shown for non-accordion layouts */}
-                {!(hasSeatingLayout && ticketCategories.some((cat: any) => {
-                  const now = new Date();
-                  const salesStart = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
-                  const salesEnd = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
-                  return Boolean(cat.earlyBirdPrice) && (!salesStart || now >= salesStart) && (!salesEnd || now <= salesEnd);
-                })) && (
+                {/* Table Header - only shown when NO early bird is configured */}
+                {!ticketCategories.some((cat: any) => Boolean(cat.earlyBirdPrice)) && (
                   <Grid
                     container
                     sx={{
@@ -1117,17 +1112,18 @@ const EventDetails: React.FC = () => {
               {ticketCategories.length > 0 ? (
                 ((): React.ReactNode => {
                   const now = new Date();
+                  const hasAnyEarlyBirdConfigured = ticketCategories.some((cat: any) => Boolean(cat.earlyBirdPrice));
                   const hasAnyActiveEarlyBird = ticketCategories.some((cat: any) => {
                     const salesStart = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
                     const salesEnd = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
                     return Boolean(cat.earlyBirdPrice) && (!salesStart || now >= salesStart) && (!salesEnd || now <= salesEnd);
                   });
 
-                  // If it's a seated event with early bird options, show the interactive Accordion sections
-                  if (hasSeatingLayout && hasAnyActiveEarlyBird) {
+                  // If early bird is configured, ALWAYS display the two separate interactive Accordion sections
+                  if (hasAnyEarlyBirdConfigured) {
                     return (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {/* EARLY BIRD SECTION */}
+                        {/* 1. EARLY BIRD ACCORDION */}
                         <Accordion 
                           expanded={ticketMode === 'early_bird'}
                           onChange={(e, isExpanded) => handleTicketModeToggle(isExpanded ? 'early_bird' : '')}
@@ -1154,54 +1150,169 @@ const EventDetails: React.FC = () => {
                           <AccordionDetails sx={{ p: 0, backgroundColor: 'rgba(0,0,0,0.1)' }}>
                             <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
                               <Grid container sx={{ borderBottom: '2px solid #ff1955', pb: 1, mb: 1.5 }}>
-                                <Grid item xs={6}>
+                                <Grid item xs={hasSeatingLayout ? 6 : 4}>
                                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
                                     SEAT TYPE
                                   </Typography>
                                 </Grid>
-                                <Grid item xs={6}>
-                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: hasSeatingLayout ? 'right' : 'left', display: 'block' }}>
                                     PRICE (RS.)
                                   </Typography>
                                 </Grid>
+                                {!hasSeatingLayout && (
+                                  <Grid item xs={4}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                      TICKETS
+                                    </Typography>
+                                  </Grid>
+                                )}
                               </Grid>
                               {ticketCategories.filter((c: any) => Boolean(c.earlyBirdPrice)).map((category: any, index: number, arr: any[]) => {
                                 const categoryName = category.categoryName || category.name;
+                                const salesStart = category.salesStartDate ? new Date(category.salesStartDate) : null;
+                                const salesEnd = category.salesEndDate ? new Date(category.salesEndDate) : null;
+                                const isFutureEB = salesStart && now < salesStart;
+                                const isExpiredEB = salesEnd && now > salesEnd;
+                                const isEBActive = !isFutureEB && !isExpiredEB;
+
                                 return (
-                                  <Grid container key={index} sx={{ borderBottom: index !== arr.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none', py: 1.5, alignItems: 'center' }}>
-                                    <Grid item xs={6}>
-                                      <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
+                                  <Grid 
+                                    container 
+                                    key={index} 
+                                    sx={{ 
+                                      borderBottom: index !== arr.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none', 
+                                      py: 1.5, 
+                                      alignItems: 'center',
+                                      opacity: isEBActive ? 1 : 0.6
+                                    }}
+                                  >
+                                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                                      <Typography 
+                                        variant="body2" 
+                                        fontWeight={600} 
+                                        sx={{ 
+                                          color: isEBActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)', 
+                                          fontSize: { xs: '0.85rem', md: '0.95rem' },
+                                          textDecoration: isExpiredEB ? 'line-through' : 'none'
+                                        }}
+                                      >
                                         {categoryName}
                                       </Typography>
+                                      {isExpiredEB && (
+                                        <Box sx={{ color: '#ef5350', fontSize: '0.72rem', fontWeight: 700, mt: 0.3 }}>Sales ended</Box>
+                                      )}
+                                      {isFutureEB && (
+                                        <Box sx={{ color: '#ffb74d', fontSize: '0.72rem', fontWeight: 700, mt: 0.3 }}>Starts {salesStart?.toLocaleDateString()}</Box>
+                                      )}
                                     </Grid>
-                                    <Grid item xs={6}>
-                                      <Typography variant="body2" sx={{ color: '#00e676', fontWeight: 600, fontSize: { xs: '0.85rem', md: '0.95rem' }, textAlign: 'right' }}>
+                                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          color: isEBActive ? '#00e676' : 'rgba(255, 255, 255, 0.5)', 
+                                          fontWeight: 600, 
+                                          fontSize: { xs: '0.85rem', md: '0.95rem' }, 
+                                          textAlign: hasSeatingLayout ? 'right' : 'left',
+                                          textDecoration: isExpiredEB ? 'line-through' : 'none'
+                                        }}
+                                      >
                                         {formatCurrency(category.earlyBirdPrice)}
                                       </Typography>
                                     </Grid>
+                                    {!hasSeatingLayout && (
+                                      <Grid item xs={4}>
+                                        <FormControl fullWidth size="small">
+                                          <Select
+                                            disabled={!isEBActive}
+                                            value={ticketQuantities[`${categoryName}_EB`]?.toString() || '0'}
+                                            onChange={(e: SelectChangeEvent) => {
+                                              handleQuantityChange(`${categoryName}_EB`, e.target.value);
+                                            }}
+                                            sx={{
+                                              color: '#ffffff',
+                                              backgroundColor: '#121620',
+                                              '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
+                                              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
+                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
+                                            }}
+                                            MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
+                                          >
+                                            {Array.from({ length: Math.min(category.earlyBirdCapacity || 10, 10) + 1 }, (_, i) => (
+                                              <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
+                                            ))}
+                                          </Select>
+                                        </FormControl>
+                                      </Grid>
+                                    )}
                                   </Grid>
                                 );
                               })}
-                              <Button
-                                variant="contained"
-                                fullWidth
-                                onClick={() => handleNextClick('early_bird')}
-                                sx={{
-                                  mt: 3, mb: 1,
-                                  fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
-                                  borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
-                                  boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
-                                }}
-                              >
-                                NEXT
-                              </Button>
+
+                              {/* Early Bird Action Area */}
+                              {hasAnyActiveEarlyBird ? (
+                                hasSeatingLayout ? (
+                                  <Button
+                                    variant="contained"
+                                    fullWidth
+                                    onClick={() => handleNextClick('early_bird')}
+                                    sx={{
+                                      mt: 3, mb: 1,
+                                      fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                      borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                      boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                      transition: 'all 0.3s ease',
+                                      '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
+                                    }}
+                                  >
+                                    NEXT
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="contained"
+                                    fullWidth
+                                    onClick={() => handleNextClick('early_bird')}
+                                    sx={{
+                                      mt: 3, mb: 1,
+                                      fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                      borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                      boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                      '&:hover': { backgroundColor: '#e01545' },
+                                    }}
+                                  >
+                                    PROCEED TO PAYMENT
+                                  </Button>
+                                )
+                              ) : (
+                                <Box sx={{ mt: 2.5, p: 2, backgroundColor: 'rgba(239, 83, 80, 0.08)', border: '1px solid rgba(239, 83, 80, 0.25)', borderRadius: '8px', textAlign: 'center' }}>
+                                  <Typography sx={{ color: '#ff8a80', fontWeight: 600, fontSize: { xs: '0.82rem', md: '0.9rem' } }}>
+                                    Early Bird booking period has ended for this event.
+                                  </Typography>
+                                  <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    onClick={() => handleTicketModeToggle('standard')}
+                                    sx={{
+                                      mt: 1.5,
+                                      borderColor: '#ff1955',
+                                      color: '#ff1955',
+                                      fontWeight: 700,
+                                      borderRadius: '20px',
+                                      py: 1,
+                                      '&:hover': { borderColor: '#e01545', bgcolor: 'rgba(255, 25, 85, 0.1)' }
+                                    }}
+                                  >
+                                    Switch to Standard Tickets
+                                  </Button>
+                                </Box>
+                              )}
                             </Box>
                           </AccordionDetails>
                         </Accordion>
                         
-                        {/* STANDARD SECTION */}
+                        {/* 2. STANDARD ACCORDION */}
                         <Accordion 
                           expanded={ticketMode === 'standard'}
                           onChange={(e, isExpanded) => handleTicketModeToggle(isExpanded ? 'standard' : '')}
@@ -1228,49 +1339,130 @@ const EventDetails: React.FC = () => {
                           <AccordionDetails sx={{ p: 0, backgroundColor: 'rgba(0,0,0,0.1)' }}>
                             <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
                               <Grid container sx={{ borderBottom: '2px solid #ff1955', pb: 1, mb: 1.5 }}>
-                                <Grid item xs={6}>
+                                <Grid item xs={hasSeatingLayout ? 6 : 4}>
                                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' } }}>
                                     SEAT TYPE
                                   </Typography>
                                 </Grid>
-                                <Grid item xs={6}>
-                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: hasSeatingLayout ? 'right' : 'left', display: 'block' }}>
                                     PRICE (RS.)
                                   </Typography>
                                 </Grid>
+                                {!hasSeatingLayout && (
+                                  <Grid item xs={4}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#fcd0a5', letterSpacing: 1, fontSize: { xs: '10px', md: '12px' }, textAlign: 'right', display: 'block' }}>
+                                      TICKETS
+                                    </Typography>
+                                  </Grid>
+                                )}
                               </Grid>
                               {ticketCategories.map((category: any, index: number, arr: any[]) => {
                                 const categoryName = category.categoryName || category.name;
+                                const categoryPrice = category.price || 0;
+                                const hasActiveDeal = Boolean(category.dealActive);
+                                const isPctDeal = hasActiveDeal && (!category.dealType || category.dealType === 'PERCENTAGE_DISCOUNT') && category.dealDiscountPercentage > 0;
+                                const isBuyGetDeal = hasActiveDeal && category.dealType === 'BUY_X_GET_Y_FREE';
+                                const discountedPrice = isPctDeal
+                                  ? categoryPrice * (1 - (category.dealDiscountPercentage || 0) / 100)
+                                  : categoryPrice;
+                                const badgeLabel = category.dealLabel || (isPctDeal ? `${category.dealDiscountPercentage}% OFF` : isBuyGetDeal ? `Buy ${category.dealBuyQuantity} Get ${category.dealFreeQuantity} Free` : 'Deal');
+                                const badgeColor = isBuyGetDeal ? '#7b1fa2' : '#00c853';
+
                                 return (
                                   <Grid container key={index} sx={{ borderBottom: index !== arr.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none', py: 1.5, alignItems: 'center' }}>
-                                    <Grid item xs={6}>
+                                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
                                       <Typography variant="body2" fontWeight={600} sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
                                         {categoryName}
                                       </Typography>
+                                      {hasActiveDeal && (
+                                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, backgroundColor: badgeColor, color: '#fff', borderRadius: '4px', px: 0.75, py: 0.2, mt: 0.5, fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                          🏷 {badgeLabel}
+                                        </Box>
+                                      )}
                                     </Grid>
-                                    <Grid item xs={6}>
-                                      <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' }, textAlign: 'right' }}>
-                                        {formatCurrency(category.price || 0)}
-                                      </Typography>
+                                    <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                                      {isPctDeal ? (
+                                        <Box sx={{ textAlign: hasSeatingLayout ? 'right' : 'left' }}>
+                                          <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}>
+                                            {formatCurrency(categoryPrice)}
+                                          </Typography>
+                                          <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
+                                            {formatCurrency(discountedPrice)}
+                                          </Typography>
+                                        </Box>
+                                      ) : isBuyGetDeal ? (
+                                        <Box sx={{ textAlign: hasSeatingLayout ? 'right' : 'left' }}>
+                                          <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                                          <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
+                                            {category.dealFreeQuantity} free with {category.dealBuyQuantity}
+                                          </Typography>
+                                        </Box>
+                                      ) : (
+                                        <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.85rem', md: '0.95rem' }, textAlign: hasSeatingLayout ? 'right' : 'left' }}>
+                                          {formatCurrency(categoryPrice)}
+                                        </Typography>
+                                      )}
                                     </Grid>
+                                    {!hasSeatingLayout && (
+                                      <Grid item xs={4}>
+                                        <FormControl fullWidth size="small">
+                                          <Select
+                                            value={ticketQuantities[categoryName]?.toString() || '0'}
+                                            onChange={(e: SelectChangeEvent) => handleQuantityChange(categoryName, e.target.value)}
+                                            sx={{
+                                              color: '#ffffff',
+                                              backgroundColor: '#121620',
+                                              '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
+                                              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
+                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
+                                            }}
+                                            MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
+                                          >
+                                            {Array.from({ length: 11 }, (_, i) => (
+                                              <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
+                                            ))}
+                                          </Select>
+                                        </FormControl>
+                                      </Grid>
+                                    )}
                                   </Grid>
                                 );
                               })}
-                              <Button
-                                variant="contained"
-                                fullWidth
-                                onClick={() => handleNextClick('standard')}
-                                sx={{
-                                  mt: 3, mb: 1,
-                                  fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
-                                  borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
-                                  boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
-                                }}
-                              >
-                                NEXT
-                              </Button>
+                              {hasSeatingLayout ? (
+                                <Button
+                                  variant="contained"
+                                  fullWidth
+                                  onClick={() => handleNextClick('standard')}
+                                  sx={{
+                                    mt: 3, mb: 1,
+                                    fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                    borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                    boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': { backgroundColor: '#e01545', transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(255, 25, 85, 0.6)' },
+                                  }}
+                                >
+                                  NEXT
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="contained"
+                                  fullWidth
+                                  onClick={() => handleNextClick('standard')}
+                                  sx={{
+                                    mt: 3, mb: 1,
+                                    fontFamily: 'Raleway, sans-serif', fontWeight: 800, color: '#ffffff', backgroundColor: '#ff1955',
+                                    borderRadius: '25px', py: 1.5, fontSize: '0.95rem', letterSpacing: '1px', textTransform: 'uppercase',
+                                    boxShadow: '0 4px 14px rgba(255, 25, 85, 0.4)',
+                                    '&:hover': { backgroundColor: '#e01545' },
+                                  }}
+                                >
+                                  PROCEED TO PAYMENT
+                                </Button>
+                              )}
                             </Box>
                           </AccordionDetails>
                         </Accordion>
@@ -1278,22 +1470,11 @@ const EventDetails: React.FC = () => {
                     );
                   }
 
-                  // Non-seated event OR seated event with no early bird
+                  // Non-early-bird event (Standard single table)
                   return ticketCategories.map((category: any, index: number) => {
                   const categoryName = category.categoryName || category.name;
                   const categoryPrice = category.price || 0;
                   const hasActiveDeal = Boolean(category.dealActive);
-                  const now = new Date();
-                  
-                  // Early Bird phase logic
-                  const hasEarlyBird = Boolean(category.earlyBirdPrice);
-                  const salesStart = category.salesStartDate ? new Date(category.salesStartDate) : null;
-                  const salesEnd = category.salesEndDate ? new Date(category.salesEndDate) : null;
-                  const isFutureEBSales = salesStart && now < salesStart;
-                  const isExpiredEBSales = salesEnd && now > salesEnd;
-                  // TODO: in a real app, we'd also check if earlyBirdCapacity is reached via an API.
-                  // For now, if capacity is present, we assume it's enforced by checkout backend.
-                  const isEBSalesActive = hasEarlyBird && !isFutureEBSales && !isExpiredEBSales;
                   
                   const isPctDeal = hasActiveDeal && (!category.dealType || category.dealType === 'PERCENTAGE_DISCOUNT') && category.dealDiscountPercentage > 0;
                   const isBuyGetDeal = hasActiveDeal && category.dealType === 'BUY_X_GET_Y_FREE';
@@ -1305,136 +1486,74 @@ const EventDetails: React.FC = () => {
                   const badgeColor = isBuyGetDeal ? '#7b1fa2' : '#00c853';
 
                   return (
-                    <React.Fragment key={index}>
-                      {/* EARLY BIRD ROW */}
-                      {hasEarlyBird && (
-                        <Grid
-                          container
-                          sx={{
-                            borderBottom: '1px dashed rgba(255, 255, 255, 0.1)',
-                            py: 1.5,
-                            alignItems: 'center',
-                            opacity: isEBSalesActive ? 1 : 0.5,
-                            filter: isEBSalesActive ? 'none' : 'grayscale(100%)',
-                          }}
-                        >
-                          <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                            <Typography variant="body2" fontWeight={600} sx={{ 
-                              color: '#ffffff', 
-                              fontSize: { xs: '0.78rem', md: '0.88rem' },
-                              textDecoration: isExpiredEBSales ? 'line-through' : 'none'
-                            }}>
-                              {categoryName} <span style={{ color: '#ff1955', marginLeft: '4px' }}>(Early Bird)</span>
-                            </Typography>
-                            {isFutureEBSales && (
-                              <Box sx={{ color: '#ffb74d', fontSize: '0.7rem', fontWeight: 'bold', mt: 0.5 }}>Sales start: {salesStart?.toLocaleDateString()}</Box>
-                            )}
-                            {isExpiredEBSales && (
-                              <Box sx={{ color: '#ef5350', fontSize: '0.7rem', fontWeight: 'bold', mt: 0.5 }}>Sales ended</Box>
-                            )}
-                          </Grid>
-                          <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(category.earlyBirdPrice)}</Typography>
-                          </Grid>
-                          {!hasSeatingLayout && (
-                            <Grid item xs={4}>
-                              <FormControl fullWidth size="small">
-                                <Select
-                                  disabled={!isEBSalesActive}
-                                  value={ticketQuantities[`${categoryName}_EB`]?.toString() || '0'}
-                                  onChange={(e: SelectChangeEvent) => {
-                                    handleQuantityChange(`${categoryName}_EB`, e.target.value);
-                                  }}
-                                  sx={{
-                                    color: '#ffffff',
-                                    backgroundColor: '#121620',
-                                    '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
-                                    '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
-                                  }}
-                                  MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
-                                >
-                                  {Array.from({ length: Math.min(category.earlyBirdCapacity || 10, 10) + 1 }, (_, i) => (
-                                    <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                          )}
-                        </Grid>
-                      )}
-
-                      {/* STANDARD ROW */}
-                      <Grid
-                        container
-                        sx={{
-                          borderBottom: index !== ticketCategories.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none',
-                          py: 1.5,
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                          <Typography variant="body2" fontWeight={600} sx={{ 
-                            color: '#ffffff', 
-                            fontSize: { xs: '0.78rem', md: '0.88rem' },
-                          }}>
-                            {categoryName} {hasEarlyBird && <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>(Standard)</span>}
-                          </Typography>
-                          {hasActiveDeal && (
-                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, backgroundColor: badgeColor, color: '#fff', borderRadius: '4px', px: 0.75, py: 0.2, mt: 0.5, fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px' }}>
-                              🏷 {badgeLabel}
-                            </Box>
-                          )}
-                        </Grid>
-                        <Grid item xs={hasSeatingLayout ? 6 : 4}>
-                          {isPctDeal ? (
-                            <Box>
-                              <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}>
-                                {formatCurrency(categoryPrice)}
-                              </Typography>
-                              <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>
-                                {formatCurrency(discountedPrice)}
-                              </Typography>
-                            </Box>
-                          ) : isBuyGetDeal ? (
-                            <Box>
-                              <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
-                              <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
-                                {category.dealFreeQuantity} free with {category.dealBuyQuantity}
-                              </Typography>
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
-                          )}
-                        </Grid>
-                        {!hasSeatingLayout && (
-                          <Grid item xs={4}>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={ticketQuantities[categoryName]?.toString() || '0'}
-                                onChange={(e: SelectChangeEvent) => handleQuantityChange(categoryName, e.target.value)}
-                                sx={{
-                                  color: '#ffffff',
-                                  backgroundColor: '#121620',
-                                  '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
-                                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
-                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
-                                  '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
-                                }}
-                                MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
-                              >
-                                {Array.from({ length: 11 }, (_, i) => (
-                                  <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </Grid>
+                    <Grid
+                      container
+                      key={index}
+                      sx={{
+                        borderBottom: index !== ticketCategories.length - 1 ? '1px dashed rgba(255, 255, 255, 0.1)' : 'none',
+                        py: 1.5,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                        <Typography variant="body2" fontWeight={600} sx={{ 
+                          color: '#ffffff', 
+                          fontSize: { xs: '0.78rem', md: '0.88rem' },
+                        }}>
+                          {categoryName}
+                        </Typography>
+                        {hasActiveDeal && (
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, backgroundColor: badgeColor, color: '#fff', borderRadius: '4px', px: 0.75, py: 0.2, mt: 0.5, fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                            🏷 {badgeLabel}
+                          </Box>
                         )}
                       </Grid>
-                    </React.Fragment>
+                      <Grid item xs={hasSeatingLayout ? 6 : 4}>
+                        {isPctDeal ? (
+                          <Box>
+                            <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'rgba(255, 255, 255, 0.4)', display: 'block', fontSize: '0.72rem' }}>
+                              {formatCurrency(categoryPrice)}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: '#00e676', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>
+                              {formatCurrency(discountedPrice)}
+                            </Typography>
+                          </Box>
+                        ) : isBuyGetDeal ? (
+                          <Box>
+                            <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#b388ff', fontWeight: 600, fontSize: '0.72rem' }}>
+                              {category.dealFreeQuantity} free with {category.dealBuyQuantity}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" sx={{ color: '#ffffff', fontSize: { xs: '0.78rem', md: '0.88rem' } }}>{formatCurrency(categoryPrice)}</Typography>
+                        )}
+                      </Grid>
+                      {!hasSeatingLayout && (
+                        <Grid item xs={4}>
+                          <FormControl fullWidth size="small">
+                            <Select
+                              value={ticketQuantities[categoryName]?.toString() || '0'}
+                              onChange={(e: SelectChangeEvent) => handleQuantityChange(categoryName, e.target.value)}
+                              sx={{
+                                color: '#ffffff',
+                                backgroundColor: '#121620',
+                                '& .MuiSelect-select': { backgroundColor: '#121620', color: '#ffffff', py: '4px', fontSize: { xs: '0.78rem', md: '0.88rem' } },
+                                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.4)' },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                                '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.5)' }
+                              }}
+                              MenuProps={{ PaperProps: { sx: { bgcolor: '#1a1f2e', border: '1px solid rgba(255, 255, 255, 0.1)', '& .MuiMenuItem-root': { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.85rem', '&:hover': { bgcolor: 'rgba(255, 25, 85, 0.1)' }, '&.Mui-selected': { bgcolor: 'rgba(255, 25, 85, 0.2)', color: '#ff1955' } } } } }}
+                            >
+                              {Array.from({ length: 11 }, (_, i) => (
+                                <MenuItem key={i} value={i.toString()}>{i}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      )}
+                    </Grid>
                   );
                 });
                 })()
@@ -1474,8 +1593,8 @@ const EventDetails: React.FC = () => {
                 </Box>
               )}
 
-              {/* Next Button */}
-              {!(hasSeatingLayout && ticketCategories.some((c: any) => Boolean(c.earlyBirdPrice))) && (
+              {/* Next Button - only for events WITHOUT early bird configured */}
+              {!ticketCategories.some((c: any) => Boolean(c.earlyBirdPrice)) && (
                 <Button
                   variant="contained"
                   fullWidth
