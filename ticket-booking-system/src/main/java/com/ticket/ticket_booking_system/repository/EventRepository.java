@@ -57,6 +57,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
        Page<Event> findByOrganizer_OrganizerIdAndStatus(UUID organizerId, Event.EventStatus status, Pageable pageable);
 
+       // Used for the dashboard's event-creation trend (current vs previous period)
+       long countByCreatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+       long countByOrganizer_OrganizerIdAndCreatedAtBetween(UUID organizerId, java.time.LocalDateTime start,
+                     java.time.LocalDateTime end);
+
        // Find all events by organizer ID
        List<Event> findByOrganizer_OrganizerId(UUID organizerId);
 
