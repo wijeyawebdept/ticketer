@@ -36,7 +36,8 @@ interface StatCardProps {
   value: string | number;
   icon: React.ReactNode;
   color: string;
-  trend?: number; // Changed from string to number for dynamic trends
+  // null means "no prior-period data to compare against" (distinct from an actual 0% change)
+  trend?: number | null;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend }) => (
@@ -71,7 +72,16 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend })
         >
           {icon}
         </Box>
-        {trend !== undefined && (
+        {trend === null && (
+          <Chip
+            label="New"
+            size="small"
+            color="default"
+            variant="outlined"
+            sx={{ fontWeight: 600 }}
+          />
+        )}
+        {trend !== undefined && trend !== null && (
           <Chip
             icon={trend >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
             label={`${trend >= 0 ? '+' : ''}${trend.toFixed(2)}%`}
@@ -115,12 +125,13 @@ interface DashboardEvent {
   createdAt?: string;
 }
 
-// Interface for trend data
+// Interface for trend data. Each field is null when there's no prior-period
+// data to compare against (e.g. a brand-new instance) rather than a real 0% change.
 interface TrendData {
-  userGrowthTrend: number;
-  revenueTrend: number;
-  bookingTrend: number;
-  eventTrend: number;
+  userGrowthTrend: number | null;
+  revenueTrend: number | null;
+  bookingTrend: number | null;
+  eventTrend: number | null;
 }
 
 const Dashboard: React.FC = () => {

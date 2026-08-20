@@ -407,11 +407,7 @@ public class DashboardServiceImpl implements DashboardService {
                             user.getCreatedAt().isBefore(oneWeekAgo))
                     .count();
 
-            double userGrowthTrend = previousWeekUsers > 0
-                    ? ((double) (currentWeekUsers - previousWeekUsers) / previousWeekUsers) * 100
-                    : 0;
-
-            trendData.put("userGrowthTrend", Math.round(userGrowthTrend * 100.0) / 100.0);
+            trendData.put("userGrowthTrend", calculatePercentageTrend(previousWeekUsers, currentWeekUsers));
         }
 
         // Revenue trend
@@ -422,13 +418,13 @@ public class DashboardServiceImpl implements DashboardService {
                 ? transactionRepository.findRevenueForPeriod(twoMonthsAgo, oneMonthAgo)
                 : transactionRepository.findRevenueForPeriodByOrganizer(twoMonthsAgo, oneMonthAgo, organizerId);
 
-        double revenueTrend = previousMonthRevenue != null && previousMonthRevenue.compareTo(BigDecimal.ZERO) > 0
-                ? ((currentMonthRevenue.subtract(previousMonthRevenue))
-                        .divide(previousMonthRevenue, 4, java.math.RoundingMode.HALF_UP))
-                        .multiply(BigDecimal.valueOf(100)).doubleValue()
-                : 0;
+        Double revenueTrend = previousMonthRevenue != null && previousMonthRevenue.compareTo(BigDecimal.ZERO) > 0
+                ? Math.round((currentMonthRevenue.subtract(previousMonthRevenue))
+                        .divide(previousMonthRevenue, 4, java.math.RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue() * 100.0) / 100.0
+                : null; // no revenue in the prior period — nothing meaningful to compare against
 
-        trendData.put("revenueTrend", Math.round(revenueTrend * 100.0) / 100.0);
+        trendData.put("revenueTrend", revenueTrend);
 
         // Booking trend
         Long currentWeekBookings = (organizerId == null)
@@ -438,16 +434,32 @@ public class DashboardServiceImpl implements DashboardService {
                 ? bookingRepository.countBookingsBetweenDates(twoWeeksAgo, oneWeekAgo)
                 : bookingRepository.countBookingsBetweenDatesByOrganizer(twoWeeksAgo, oneWeekAgo, organizerId);
 
-        double bookingTrend = previousWeekBookings != null && previousWeekBookings > 0
-                ? ((double) (currentWeekBookings - previousWeekBookings) / previousWeekBookings) * 100
-                : 0;
+        trendData.put("bookingTrend", calculatePercentageTrend(
+                previousWeekBookings != null ? previousWeekBookings : 0,
+                currentWeekBookings != null ? currentWeekBookings : 0));
 
-        trendData.put("bookingTrend", Math.round(bookingTrend * 100.0) / 100.0);
+        // Event trend: events created this week vs the week before
+        long currentWeekEvents = (organizerId == null)
+                ? eventRepository.countByCreatedAtBetween(oneWeekAgo, now)
+                : eventRepository.countByOrganizer_OrganizerIdAndCreatedAtBetween(organizerId, oneWeekAgo, now);
+        long previousWeekEvents = (organizerId == null)
+                ? eventRepository.countByCreatedAtBetween(twoWeeksAgo, oneWeekAgo)
+                : eventRepository.countByOrganizer_OrganizerIdAndCreatedAtBetween(organizerId, twoWeeksAgo, oneWeekAgo);
 
-        // Event trend
-        // Simplified for now - we can implement more complex growth tracking later
-        trendData.put("eventTrend", 0.0);
+        trendData.put("eventTrend", calculatePercentageTrend(previousWeekEvents, currentWeekEvents));
 
         return trendData;
+    }
+
+    /**
+     * Percentage change from {@code previous} to {@code current}, or null when there's no
+     * prior-period baseline to compare against (division by zero is undefined, not 0%).
+     */
+    private Double calculatePercentageTrend(long previous, long current) {
+        if (previous <= 0) {
+            return null;
+        }
+        double trend = ((double) (current - previous) / previous) * 100;
+        return Math.round(trend * 100.0) / 100.0;
     }
 }
