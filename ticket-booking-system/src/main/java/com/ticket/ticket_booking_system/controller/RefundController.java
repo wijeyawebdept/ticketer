@@ -19,6 +19,8 @@ import com.ticket.ticket_booking_system.dto.response.PaymentVerificationResponse
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
+import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.EventScheduleService;
 import com.ticket.ticket_booking_system.service.MPGSPaymentService;
@@ -42,6 +44,8 @@ public class RefundController {
         private final BookingRepository bookingRepository;
         private final EmailService emailService;
         private final EventScheduleService eventScheduleService;
+        private final OrganizerRepository organizerRepository;
+        private final OrganizerEmployeeRepository organizerEmployeeRepository;
 
         /**
          * Initiate a refund
@@ -236,10 +240,14 @@ public class RefundController {
         /**
          * Get refund status for a booking
          * GET /api/refunds/booking/{bookingId}
+         * - Users: only their own bookings
+         * - Organizers: only bookings on their events
+         * - Admins: unrestricted
          */
         @GetMapping("/booking/{bookingId}")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'USER')")
-        public ResponseEntity<?> getRefundStatus(@PathVariable UUID bookingId) {
+        public ResponseEntity<?> getRefundStatus(@PathVariable UUID bookingId,
+                        org.springframework.security.core.Authentication authentication) {
 
                 log.info("Getting refund status for booking: {}", bookingId);
 
@@ -247,6 +255,43 @@ public class RefundController {
                         // Get booking
                         Booking booking = bookingRepository.findById(bookingId)
                                         .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+                        // Ownership / scope check
+                        boolean isAdmin = authentication.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                        || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+                        if (!isAdmin) {
+                                String currentEmail = authentication.getName();
+                                boolean allowed = false;
+
+                                // Check USER: owns the booking
+                                if (booking.getUser() != null && booking.getUser().getEmail().equals(currentEmail)) {
+                                        allowed = true;
+                                }
+                                // Check ORGANIZER: owns the event
+                                if (!allowed && booking.getEvent() != null
+                                                && booking.getEvent().getOrganizer() != null
+                                                && booking.getEvent().getOrganizer().getEmail().equals(currentEmail)) {
+                                        allowed = true;
+                                }
+                                // Check ORGANIZER_EMPLOYEE: assigned to the event
+                                if (!allowed && booking.getEvent() != null
+                                                && booking.getEvent().getEmployeeAssignments() != null) {
+                                        allowed = booking.getEvent().getEmployeeAssignments().stream()
+                                                        .anyMatch(asgn -> asgn.getEmployee() != null
+                                                                        && asgn.getEmployee().getEmail().equals(currentEmail));
+                                }
+
+                                if (!allowed) {
+                                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                                        .body(PaymentVerificationResponse.builder()
+                                                                        .success(false)
+                                                                        .status("FORBIDDEN")
+                                                                        .message("You do not have permission to view the refund status of this booking")
+                                                                        .build());
+                                }
+                        }
 
                         // Get all transactions for this booking
                         List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
@@ -293,14 +338,36 @@ public class RefundController {
         /**
          * Get all refund transactions for a booking
          * GET /api/refunds/booking/{bookingId}/transactions
+         * - Admins: unrestricted
+         * - Organizers: only for their own events
          */
         @GetMapping("/booking/{bookingId}/transactions")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER')")
-        public ResponseEntity<List<Transaction>> getRefundTransactions(@PathVariable UUID bookingId) {
+        public ResponseEntity<List<Transaction>> getRefundTransactions(@PathVariable UUID bookingId,
+                        org.springframework.security.core.Authentication authentication) {
 
                 log.info("Getting refund transactions for booking: {}", bookingId);
 
                 try {
+                        // Ownership check for organizers
+                        boolean isAdmin = authentication.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                        || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+                        if (!isAdmin) {
+                                Booking booking = bookingRepository.findById(bookingId)
+                                                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                                String currentEmail = authentication.getName();
+                                boolean isOrganizerOfEvent = booking.getEvent() != null
+                                                && booking.getEvent().getOrganizer() != null
+                                                && booking.getEvent().getOrganizer().getEmail().equals(currentEmail);
+                                if (!isOrganizerOfEvent) {
+                                        log.warn("Organizer {} attempted to read transactions for booking {} owned by another organizer",
+                                                        currentEmail, bookingId);
+                                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+                                }
+                        }
+
                         List<Transaction> transactions = transactionService.getTransactionsByBookingId(bookingId);
 
                         List<Transaction> refundTransactions = transactions.stream()

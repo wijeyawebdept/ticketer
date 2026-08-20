@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -73,23 +74,26 @@ public class OrganizerVenueController {
     }
 
     /**
-     * Update venue - Organizer
-     * Allows organizers to modify venue details
+     * Update venue - Admin only
+     * Venues are shared infrastructure with no organizer owner; restricted to admins.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<VenueResponse> updateVenue(@PathVariable UUID id,
-            @Valid @RequestBody VenueUpdateRequest request) {
+            @Valid @RequestBody VenueUpdateRequest request,
+            Authentication authentication) {
         Venue venue = convertToEntity(request);
         Venue updatedVenue = venueService.updateVenue(id, venue);
         return ResponseEntity.ok(convertToResponse(updatedVenue));
     }
 
     /**
-     * Delete venue - Organizer
-     * Allows organizers to remove venues from the system
+     * Delete venue - Admin only
+     * Venues are shared infrastructure with no organizer owner; restricted to admins.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVenue(@PathVariable UUID id) {
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN') or hasAuthority('ADMIN') or hasAuthority('SUPER_ADMIN') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<Void> deleteVenue(@PathVariable UUID id, Authentication authentication) {
         venueService.deleteVenue(id);
         return ResponseEntity.noContent().build();
     }

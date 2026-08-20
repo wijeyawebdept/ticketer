@@ -135,6 +135,16 @@ public class PaymentController {
 
             Booking booking = transaction.getBooking();
 
+            UUID userId = extractUserIdFromAuth(authentication);
+            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("FORBIDDEN")
+                        .message("Not authorized to view this payment")
+                        .build());
+            }
+
             // Idempotency: if booking is already confirmed (e.g. page refresh), return
             // success immediately
             if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
@@ -247,6 +257,16 @@ public class PaymentController {
                         .success(false)
                         .status("ERROR")
                         .message("Booking not found. Please contact support.")
+                        .build());
+            }
+
+            UUID userId = extractUserIdFromAuth(authentication);
+            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("FORBIDDEN")
+                        .message("Not authorized to view this payment")
                         .build());
             }
 
@@ -463,6 +483,17 @@ public class PaymentController {
             }
 
             Booking booking = transaction.getBooking();
+
+            UUID userId = extractUserIdFromAuth(authentication);
+            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("FORBIDDEN")
+                        .message("Not authorized to view this payment")
+                        .build());
+            }
+
             boolean isSuccess = transaction.getStatus() == Transaction.TransactionStatus.SUCCESS;
 
             return ResponseEntity.ok(PaymentVerificationResponse.builder()
