@@ -48,12 +48,20 @@ public class EventReportDTO {
     private BigDecimal totalDiscounts;
     // Total successfully refunded (from Transaction records, not the unused Booking.refundAmount column).
     private BigDecimal totalRefunds;
+    private BigDecimal totalPromoDiscounts;
+    private BigDecimal earlyBirdTotalSavings;
     private Integer totalCapacity;
     private Integer totalTicketsSold;
+    private Integer earlyBirdTotalTicketsSold;
+    private BigDecimal earlyBirdTotalRevenue;
     private Integer totalTicketsAvailable;
     private Integer totalTicketsHeld;
     private Integer totalTicketsLocked;
     private Double occupancyRate; // percentage (e.g. 75.5)
+
+    // Daily Sales Timeline Breakdown
+    @Builder.Default
+    private List<SalesByDateReportDTO.DailySalesSummaryDTO> dailySales = new ArrayList<>();
 
     // Schedules (Show Times) Breakdown
     @Builder.Default
@@ -84,6 +92,14 @@ public class EventReportDTO {
     // structured deal ID - see DealUsageDTO javadoc for the caveat.
     @Builder.Default
     private List<DealUsageDTO> dealUsageSummaries = new ArrayList<>();
+
+    // Promo codes configured for this event (event-scoped, category-scoped, and global)
+    @Builder.Default
+    private List<PromoCodeConfigDTO> configuredPromoCodes = new ArrayList<>();
+
+    // Promo code usage summaries
+    @Builder.Default
+    private List<PromoCodeUsageDTO> promoCodeUsageSummaries = new ArrayList<>();
 
     @Data
     @Builder
@@ -116,6 +132,13 @@ public class EventReportDTO {
         private Integer ticketsHeld;
         private BigDecimal categoryRevenue;
         private Double occupancyRate;
+        // Early Bird fields
+        private BigDecimal earlyBirdPrice;
+        private Integer earlyBirdCapacity;
+        private Integer earlyBirdTicketsSold;
+        private LocalDateTime salesStartDate;
+        private LocalDateTime salesEndDate;
+        private Boolean earlyBirdActive;
     }
 
     @Data
@@ -132,6 +155,13 @@ public class EventReportDTO {
         private Integer ticketsAvailable;
         private BigDecimal totalRevenue;
         private Double occupancyRate;
+        // Early Bird fields
+        private BigDecimal earlyBirdPrice;
+        private Integer earlyBirdCapacity;
+        private Integer earlyBirdTicketsSold;
+        private LocalDateTime salesStartDate;
+        private LocalDateTime salesEndDate;
+        private Boolean earlyBirdActive;
     }
 
     @Data
@@ -148,9 +178,13 @@ public class EventReportDTO {
         private String ticketCategory;
         private Integer ticketCount;
         private BigDecimal totalAmount;
+        private BigDecimal discountAmount;
+        private String discountInfo;
+        private String promoCode;
         private LocalDateTime bookingDate;
         private String status;
         private String paymentMethod;
+        private Boolean isEarlyBird;
     }
 
     @Data
@@ -186,19 +220,42 @@ public class EventReportDTO {
         private Integer dealFreeQuantity;
     }
 
-    /**
-     * Best-effort deal usage breakdown grouped by the discount label recorded on the booking
-     * at checkout time (Booking.discountInfo). There is no FK from Booking back to a specific
-     * TicketCategory/deal row, so this groups by label TEXT - two different categories that
-     * happen to produce the same auto-generated label (e.g. two "20% OFF" deals) will be merged
-     * under one row here. Treat this as an approximate usage view, not an exact per-deal ledger.
-     */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class DealUsageDTO {
         private String label;
+        private Integer timesUsed;
+        private BigDecimal totalDiscountGiven;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PromoCodeConfigDTO {
+        private UUID id;
+        private String code;
+        private String description;
+        private String scope; // ALL_EVENTS, EVENT, TICKET_CATEGORY
+        private BigDecimal discountPercentage;
+        private BigDecimal maxDiscountAmount;
+        private String ticketCategoryName;
+        private Integer usageLimit;
+        private Integer usageCount;
+        private LocalDateTime startDate;
+        private LocalDateTime endDate;
+        private Boolean isActive;
+        private String statusLabel; // ACTIVE, EXPIRED, EXHAUSTED, UPCOMING, INACTIVE
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PromoCodeUsageDTO {
+        private String code;
         private Integer timesUsed;
         private BigDecimal totalDiscountGiven;
     }

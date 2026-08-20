@@ -209,7 +209,7 @@ const AdminLayout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBarStyled position="fixed" open={open}>
+      <AppBarStyled position="fixed" open={open} className="no-print">
         <Toolbar>
           <IconButton
             color="inherit"
@@ -272,6 +272,7 @@ const AdminLayout: React.FC = () => {
         </Toolbar>
       </AppBarStyled>
       <Drawer
+        className="no-print"
         sx={{
           width: drawerWidth,
           flexShrink: 0,

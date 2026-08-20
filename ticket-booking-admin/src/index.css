@@ -73,3 +73,91 @@ iframe[src*="cbcmpgs"],
   max-width: 100vw !important;
   border: none !important;
 }
+
+/* ==========================================================================
+   Global Print Styles for Clean, High-Quality PDF Reports
+   ========================================================================== */
+@media print {
+  /* Hide navigation sidebar, app bar, headers, and UI controls */
+  .no-print,
+  .MuiDrawer-root,
+  .MuiAppBar-root,
+  header,
+  nav,
+  aside,
+  .MuiToolbar-root,
+  .MuiTabs-root,
+  .MuiButtonGroup-root,
+  button:not(.print-keep),
+  .MuiIconButton-root,
+  .MuiSelect-root,
+  .MuiInputBase-root,
+  .MuiChip-deleteIcon,
+  footer {
+    display: none !important;
+  }
+
+  /* Reset body and root container to 100% width and plain white background */
+  html, body, #root {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Reset main layout container - remove sidebar margins and full width */
+  main,
+  .MuiBox-root {
+    margin: 0 !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    display: block !important;
+    box-shadow: none !important;
+  }
+
+  /* Page & Paper settings */
+  .MuiPaper-root {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Ensure colors, gradients, and backgrounds are printed accurately */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent awkward page cuts */
+  .MuiCard-root,
+  .MuiPaper-root,
+  tr,
+  canvas,
+  svg,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  /* Print Header visibility */
+  .print-only-header {
+    display: block !important;
+  }
+}
+
+@media screen {
+  .print-only-header {
+    display: none !important;
+  }
+}

@@ -81,6 +81,32 @@ public class EventReportController {
         return ResponseEntity.ok(events);
     }
 
+    /**
+     * Get Sales by Date report (daily sales, event breakdowns, and overall KPIs)
+     */
+    @GetMapping("/sales-by-date")
+    public ResponseEntity<?> getSalesByDateReport(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
+            @RequestParam(required = false) UUID eventId,
+            Authentication authentication) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        boolean admin = isAdmin(authentication);
+        UUID organizerId = admin ? null : resolveOrganizerId(authentication);
+
+        if (!admin && organizerId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        com.ticket.ticket_booking_system.dto.SalesByDateReportDTO report =
+                eventReportService.generateSalesByDateReport(startDate, endDate, eventId, organizerId);
+        return ResponseEntity.ok(report);
+    }
+
     private boolean isAdmin(Authentication authentication) {
         return authentication.getAuthorities().stream().anyMatch(a ->
             a.getAuthority().contains("ADMIN") || a.getAuthority().contains("SUPER_ADMIN"));

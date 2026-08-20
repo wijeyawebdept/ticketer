@@ -187,7 +187,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBarStyled position="fixed" open={open}>
+      <AppBarStyled position="fixed" open={open} className="no-print">
         <Toolbar>
           <IconButton
             color="inherit"
@@ -246,6 +246,7 @@ const OrganizerEmployeeLayout: React.FC = () => {
         </Toolbar>
       </AppBarStyled>
       <Drawer
+        className="no-print"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
