@@ -242,7 +242,9 @@ public class OrganizerEventScheduleController {
         }
         String email = authentication.getName();
         if (email != null && !email.isEmpty()) {
-            UUID id = organizerRepository.findByEmail(email).map(Organizer::getOrganizerId).orElse(null);
+            UUID id = organizerRepository.findByEmail(email)
+                    .map(org -> org.getOrganizerId())
+                    .orElse(null);
             if (id != null) return id;
             return employeeRepository.findByEmail(email)
                     .map(e -> e.getOrganizer() != null ? e.getOrganizer().getOrganizerId() : null)

@@ -19,8 +19,6 @@ import com.ticket.ticket_booking_system.dto.response.PaymentVerificationResponse
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Transaction;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
-import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
-import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.service.EmailService;
 import com.ticket.ticket_booking_system.service.EventScheduleService;
 import com.ticket.ticket_booking_system.service.MPGSPaymentService;
@@ -44,8 +42,6 @@ public class RefundController {
         private final BookingRepository bookingRepository;
         private final EmailService emailService;
         private final EventScheduleService eventScheduleService;
-        private final OrganizerRepository organizerRepository;
-        private final OrganizerEmployeeRepository organizerEmployeeRepository;
 
         /**
          * Initiate a refund

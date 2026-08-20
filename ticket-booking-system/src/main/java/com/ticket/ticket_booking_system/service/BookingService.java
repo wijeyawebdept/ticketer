@@ -58,7 +58,6 @@ public class BookingService {
     private final TransactionRepository transactionRepository;
     private final EmailService emailService;
     private final AdminAuditService auditService;
-    private final com.ticket.ticket_booking_system.repository.PromoCodeRepository promoCodeRepository;
     private final TicketCategoryRepository ticketCategoryRepository;
     private final PromoCodeService promoCodeService;
 
@@ -323,7 +322,7 @@ public class BookingService {
                 }
                 sharedCategoryById.put(tc.getCategoryId(), tc);
                 resolvedCategoryPerLine.add(tc.getCategoryId());
-                quantityByCategory.merge(tc.getCategoryId(), line.getTicketCount(), Integer::sum);
+                quantityByCategory.merge(tc.getCategoryId(), line.getTicketCount(), (a, b) -> a + b);
             }
 
             Map<UUID, Integer> paidUnitsByCategory = new HashMap<>();
@@ -340,7 +339,7 @@ public class BookingService {
                 int paidUnitsTotal = paidUnitsByCategory.get(categoryId);
 
                 for (int i = 0; i < line.getTicketCount(); i++) {
-                    int issuedSoFar = issuedSoFarByCategory.merge(categoryId, 1, Integer::sum) - 1;
+                    int issuedSoFar = issuedSoFarByCategory.merge(categoryId, 1, (a, b) -> a + b) - 1;
                     BigDecimal ticketPrice = issuedSoFar < paidUnitsTotal ? unitPrice : BigDecimal.ZERO;
                     pricing.sharedAreaPrices.add(ticketPrice);
                     subtotal = subtotal.add(ticketPrice);

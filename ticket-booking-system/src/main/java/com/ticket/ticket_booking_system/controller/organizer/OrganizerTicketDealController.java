@@ -1,6 +1,5 @@
 package com.ticket.ticket_booking_system.controller.organizer;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.request.TicketDealRequest;
-import com.ticket.ticket_booking_system.dto.response.TicketCategoryDealResponse;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.repository.EventRepository;
