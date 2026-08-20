@@ -62,14 +62,14 @@ spring.servlet.multipart.max-request-size=5MB
 app.upload.profile-pictures=uploads/profile-pictures
 
 # Google OAuth Configuration
-google.oauth.client-id=${GOOGLE_OAUTH_CLIENT_ID:930448322888-i5vhfaq98795o1b1ktton4hdudvlag99.apps.googleusercontent.com}
+google.oauth.client-id=${GOOGLE_OAUTH_CLIENT_ID:YOUR_GOOGLE_OAUTH_CLIENT_ID_HERE}
 google.oauth.client-secret=${GOOGLE_OAUTH_CLIENT_SECRET}
 
 # Auto-release seats for bookings stuck in PENDING (payment never completed) past this many minutes
 booking.pending-timeout-minutes=5
 
 # MPGS Payment Gateway Configuration
-mpgs.merchant.id=TESTWIJEYHITALKR
+mpgs.merchant.id=YOUR_MPGS_MERCHANT_ID_HERE
 mpgs.api.url=https://cbcmpgs.gateway.mastercard.com/api/rest
 mpgs.api.version=100
 mpgs.api.password=${MPGS_API_PASSWORD}
@@ -85,17 +85,17 @@ app.frontend.base-url=http://localhost:3000
 
 
 # Email Configuration for Booking Notifications
-spring.mail.host=smtp.email.ap-singapore-1.oci.oraclecloud.com
+spring.mail.host=YOUR_SMTP_HOST_HERE
 spring.mail.port=587
-spring.mail.username=ocid1.user.oc1..aaaaaaaab5apok4girjw5emsvk6kn6mnqonokmb2xfgg2xzpfh4wvbvprr4a@ocid1.tenancy.oc1..aaaaaaaatfckrwydrgbytnvccyc44p3jkuk3du2qlbkfwappocrssg224bva.mi.com
+spring.mail.username=YOUR_MAIL_USERNAME_HERE
 spring.mail.password=${SPRING_MAIL_PASSWORD}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.transport.protocol=smtp
 spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true
-app.mail.fromEmail=noreply@dailymirror.lk
+app.mail.fromEmail=YOUR_FROM_EMAIL_HERE
 app.mail.fromName=Ticketer
-app.mail.toEmail=ishanf@wijeya.lk, wijeyawebdept@gmail.com
+app.mail.toEmail=YOUR_NOTIFICATION_RECIPIENTS_HERE
 
 # Optional: Set timeouts for email sending
 spring.mail.properties.mail.smtp.connectiontimeout=5000
