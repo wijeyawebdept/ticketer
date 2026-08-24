@@ -37,6 +37,7 @@ import {
   Delete as DeleteIcon,
   LocalOffer as LocalOfferIcon,
   Assessment as AssessmentIcon,
+  QrCodeScanner as QrCodeScannerIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -183,6 +184,7 @@ const OrganizerLayout: React.FC = () => {
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/organizer/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/organizer/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/organizer/bookings' },
+    { text: 'Live Check-In & Gate', icon: <QrCodeScannerIcon />, path: '/organizer/checkin' },
     { text: t('navigation.organizerEmployees'), icon: <PeopleIcon />, path: '/organizer/employees' },
     { text: 'Event Assignments', icon: <AssignmentIcon />, path: '/organizer/event-assignments' },
     { text: t('navigation.recycleBin'), icon: <DeleteIcon />, path: '/organizer/recycle-bin' },

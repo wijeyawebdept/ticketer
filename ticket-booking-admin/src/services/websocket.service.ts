@@ -2,10 +2,27 @@ import { Client, IMessage } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { SeatUpdateMessage, SeatHoldNotification, SeatAvailabilityStats } from './seat.service';
 
+export interface CheckInEventMessage {
+  eventId: string;
+  scheduleId: string;
+  bookingReference: string;
+  customerName: string;
+  ticketCodes: string[];
+  venueSeatIds: string[];
+  sharedAreaNumbers: number[];
+  checkedInTickets: number;
+  totalTicketsInBooking: number;
+  totalScheduleBooked: number;
+  totalScheduleCheckedIn: number;
+  action: 'CHECKED_IN' | 'UNCHECKED' | string;
+  timestamp: number;
+}
+
 export interface WebSocketCallbacks {
   onSeatUpdate?: (message: SeatUpdateMessage) => void;
   onHoldNotification?: (notification: SeatHoldNotification) => void;
   onStatsUpdate?: (stats: SeatAvailabilityStats) => void;
+  onCheckIn?: (message: CheckInEventMessage) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: any) => void;
@@ -127,6 +144,15 @@ class SeatWebSocketService {
       }
     });
 
+    // Subscribe to real-time check-in updates for this event
+    this.client.subscribe(`/topic/events/${eventId}/checkin`, (message: IMessage) => {
+      try {
+        const checkInMessage: CheckInEventMessage = JSON.parse(message.body);
+        this.callbacks.onCheckIn?.(checkInMessage);
+      } catch (error) {
+      }
+    });
+
     // Subscribe to personal seat hold notifications
     this.client.subscribe('/user/queue/seat-holds', (message: IMessage) => {
       try {
@@ -135,6 +161,20 @@ class SeatWebSocketService {
       } catch (error) {
       }
     });
+  }
+
+  // Subscribe to schedule-specific checkin updates
+  subscribeToSchedule(scheduleId: string, onCheckIn: (msg: CheckInEventMessage) => void): () => void {
+    if (!this.client || !this.isConnected) {
+      return () => {};
+    }
+    const sub = this.client.subscribe(`/topic/schedules/${scheduleId}/checkin`, (message: IMessage) => {
+      try {
+        const msg: CheckInEventMessage = JSON.parse(message.body);
+        onCheckIn(msg);
+      } catch (e) {}
+    });
+    return () => sub.unsubscribe();
   }
 
   // Send a message (for testing purposes)

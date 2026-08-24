@@ -90,6 +90,7 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
            "LEFT JOIN FETCH b.user " +
            "LEFT JOIN FETCH b.event e " +
            "LEFT JOIN FETCH e.venue " +
+           "LEFT JOIN FETCH e.organizer " +
            "LEFT JOIN FETCH b.eventSchedule " +
            "LEFT JOIN FETCH b.bookingSeats bs " +
            "WHERE b.bookingId = :bookingId")

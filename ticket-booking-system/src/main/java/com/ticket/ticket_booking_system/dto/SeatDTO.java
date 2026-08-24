@@ -43,9 +43,14 @@ public class SeatDTO {
     private LocalDateTime holdCreatedAt;
     private Boolean isPermanentHold;
     
-    // Booking information
+    // Booking & Check-In information
     private String bookingReference;
     private LocalDateTime bookedAt;
+    private String ticketCode;
+    private Boolean checkedIn;
+    private LocalDateTime checkedInAt;
+    private Boolean isSharedAreaTicket;
+    private Integer sharedAreaNumber;
     
     // Deal properties for checkout calculation
     private Boolean dealActive;

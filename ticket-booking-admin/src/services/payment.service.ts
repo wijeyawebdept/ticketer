@@ -30,6 +30,7 @@ export interface InitiatePaymentRequest {
   promoDiscountAmount?: number;
   currency: string;
   customerInfo: CustomerInfo;
+  requestSeparateTickets?: boolean;
 
   returnUrl: string;
   cancelUrl: string;

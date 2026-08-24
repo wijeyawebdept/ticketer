@@ -595,6 +595,7 @@ const SeatSelectionPage: React.FC = () => {
           phone: customerInfo.phone,
           nic: customerInfo.nic,
         },
+        requestSeparateTickets: Boolean(paymentData.requestSeparateTickets),
         returnUrl,
         cancelUrl,
       };

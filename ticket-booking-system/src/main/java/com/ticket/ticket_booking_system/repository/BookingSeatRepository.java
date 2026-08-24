@@ -55,7 +55,6 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, UUID> 
      */
     @Query("SELECT COUNT(bs) FROM BookingSeat bs " +
            "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
-           "AND bs.venueSeatId IS NOT NULL " +
            "AND bs.booking.status IN ('CONFIRMED', 'PENDING')")
     Long countBookedSeatsForSchedule(UUID scheduleId);
 
@@ -96,4 +95,42 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, UUID> 
            "WHERE bs.venueSeatId = :venueSeatId " +
            "AND bs.booking.eventSchedule.scheduleId = :scheduleId")
     void deleteByVenueSeatIdAndScheduleId(String venueSeatId, UUID scheduleId);
+
+    /**
+     * Find booking seat by its unique ticket code
+     */
+    java.util.Optional<BookingSeat> findByTicketCode(String ticketCode);
+
+    /**
+     * Find all booking seats for a booking reference
+     */
+    List<BookingSeat> findByBooking_BookingReference(String bookingReference);
+
+    /**
+     * Find all checked-in venue seat IDs for a schedule
+     */
+    @Query("SELECT bs.venueSeatId FROM BookingSeat bs " +
+           "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.venueSeatId IS NOT NULL " +
+           "AND bs.checkedIn = true")
+    Set<String> findCheckedInVenueSeatIdsByScheduleId(UUID scheduleId);
+
+    /**
+     * Count checked-in seats for a schedule
+     */
+    @Query("SELECT COUNT(bs) FROM BookingSeat bs " +
+           "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.checkedIn = true")
+    Long countCheckedInSeatsForSchedule(UUID scheduleId);
+
+    /**
+     * Count checked-in shared area tickets for a schedule and area number
+     */
+    @Query("SELECT COUNT(bs) FROM BookingSeat bs " +
+           "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.isSharedAreaTicket = true " +
+           "AND bs.sharedAreaNumber = :sharedAreaNumber " +
+           "AND bs.checkedIn = true")
+    Long countCheckedInSharedAreaSeatsForSchedule(UUID scheduleId, Integer sharedAreaNumber);
 }
+

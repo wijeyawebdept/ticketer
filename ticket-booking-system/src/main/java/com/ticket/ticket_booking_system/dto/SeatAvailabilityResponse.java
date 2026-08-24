@@ -18,6 +18,7 @@ public class SeatAvailabilityResponse {
     private Long availableSeats;
     private Long bookedSeats;
     private Long heldSeats;
+    private Long checkedInSeats;
     
     // Shared area data - ticket categories marked as shared areas
     private List<SharedAreaDTO> sharedAreas;
@@ -43,6 +44,8 @@ public class SeatAvailabilityResponse {
         private Integer capacity;
         private Integer sharedAreaNumber;
         private Integer availableTickets;
+        private Integer bookedTickets;
+        private Integer checkedInTickets;
         
         // Deal properties for checkout calculation
         private Boolean dealActive;

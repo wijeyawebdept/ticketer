@@ -136,9 +136,23 @@ public class PaymentController {
             }
 
             Booking booking = transaction.getBooking();
+            if (booking != null) {
+                try {
+                    booking = bookingService.getBookingByIdWithDetails(booking.getBookingId());
+                } catch (Exception ignored) {}
+            }
+
+            if (booking == null) {
+                return ResponseEntity.ok(PaymentVerificationResponse.builder()
+                        .success(false)
+                        .status("ERROR")
+                        .message("Booking associated with transaction not found. Please contact support.")
+                        .build());
+            }
 
             UUID userId = extractUserIdFromAuth(authentication);
-            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+            UUID bookingUserId = (booking.getUser() != null) ? booking.getUser().getUserId() : null;
+            if (bookingUserId != null && !bookingUserId.equals(userId) && !authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
                         .success(false)
@@ -176,15 +190,24 @@ public class PaymentController {
             if (result.isSuccess()) {
                 Booking confirmedBooking = bookingService.confirmBookingAfterPayment(booking.getBookingId());
 
-                String customerEmail = booking.getUser().getEmail();
-                emailService.sendBookingConfirmationEmail(
-                        confirmedBooking,
-                        customerEmail,
-                        transaction.getTransactionId().toString(),
-                        result.getCardType());
+                String customerEmail = confirmedBooking.getCustomerEmail() != null
+                        ? confirmedBooking.getCustomerEmail()
+                        : (confirmedBooking.getUser() != null ? confirmedBooking.getUser().getEmail() : null);
 
-                if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
-                    emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                try {
+                    if (customerEmail != null) {
+                        emailService.sendBookingConfirmationEmail(
+                                confirmedBooking,
+                                customerEmail,
+                                transaction.getTransactionId().toString(),
+                                result.getCardType());
+                    }
+
+                    if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
+                        emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                    }
+                } catch (Exception emailEx) {
+                    log.warn("Non-fatal email notification error: {}", emailEx.getMessage());
                 }
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
@@ -253,7 +276,7 @@ public class PaymentController {
         try {
             Booking booking;
             try {
-                booking = bookingService.getBookingById(bookingId.toString());
+                booking = bookingService.getBookingByIdWithDetails(bookingId);
             } catch (RuntimeException e) {
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()
                         .success(false)
@@ -263,7 +286,8 @@ public class PaymentController {
             }
 
             UUID userId = extractUserIdFromAuth(authentication);
-            if (!booking.getUser().getUserId().equals(userId) && !authentication.getAuthorities().stream()
+            UUID bookingUserId = (booking.getUser() != null) ? booking.getUser().getUserId() : null;
+            if (bookingUserId != null && !bookingUserId.equals(userId) && !authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(PaymentVerificationResponse.builder()
                         .success(false)
@@ -385,15 +409,24 @@ public class PaymentController {
                 String paymentDate = java.time.LocalDateTime.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy, hh:mm a"));
 
-                String customerEmail = confirmedBooking.getUser().getEmail();
-                emailService.sendBookingConfirmationEmail(
-                        confirmedBooking,
-                        customerEmail,
-                        transaction.getTransactionId().toString(),
-                        null);
+                String customerEmail = confirmedBooking.getCustomerEmail() != null
+                        ? confirmedBooking.getCustomerEmail()
+                        : (confirmedBooking.getUser() != null ? confirmedBooking.getUser().getEmail() : null);
 
-                if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
-                    emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                try {
+                    if (customerEmail != null) {
+                        emailService.sendBookingConfirmationEmail(
+                                confirmedBooking,
+                                customerEmail,
+                                transaction.getTransactionId().toString(),
+                                null);
+                    }
+
+                    if (confirmedBooking.getEvent() != null && confirmedBooking.getEvent().getOrganizer() != null) {
+                        emailService.sendOrganizerTicketPurchaseEmail(confirmedBooking, confirmedBooking.getEvent().getOrganizer());
+                    }
+                } catch (Exception emailEx) {
+                    log.warn("Non-fatal email notification error in verify-by-booking: {}", emailEx.getMessage());
                 }
 
                 return ResponseEntity.ok(PaymentVerificationResponse.builder()

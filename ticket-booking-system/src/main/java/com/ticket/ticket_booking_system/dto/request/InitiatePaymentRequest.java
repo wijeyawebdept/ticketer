@@ -51,6 +51,9 @@ public class InitiatePaymentRequest {
     @Builder.Default
     private String currency = "LKR";
 
+    @Builder.Default
+    private Boolean requestSeparateTickets = false;
+
     // Customer information for booking
     @NotNull(message = "Customer info is required")
     @Valid

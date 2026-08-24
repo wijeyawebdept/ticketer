@@ -371,13 +371,13 @@ const UserBookings: React.FC = () => {
                   <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Tickets</Typography>
                   <Typography sx={{ color: '#fff', fontSize: '0.9rem' }}>{receiptBooking.ticketCount}</Typography>
                 </Box>
-                {receiptBooking.discountAmount && receiptBooking.discountAmount > 0 && (
+                {Boolean(Number(receiptBooking.discountAmount || 0) > 0) && (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
                       Discount {receiptBooking.discountInfo ? `(${receiptBooking.discountInfo})` : ''}
                     </Typography>
                     <Typography sx={{ color: '#4caf50', fontSize: '0.9rem' }}>
-                      - LKR {receiptBooking.discountAmount.toLocaleString()}
+                      - LKR {receiptBooking.discountAmount?.toLocaleString()}
                     </Typography>
                   </Box>
                 )}

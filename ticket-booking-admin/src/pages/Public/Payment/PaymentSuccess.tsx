@@ -186,10 +186,10 @@ const PaymentSuccess: React.FC = () => {
                     </Typography>
                     <Box sx={{ mb: 1 }}>
                       <ReceiptRow label="Amount Paid" value={formatCurrency(r.amount ?? 0)} bold />
-                      {r.discountAmount && r.discountAmount > 0 && (
+                      {Boolean(Number(r.discountAmount || 0) > 0) && (
                         <ReceiptRow 
                           label={`Discount${r.discountInfo ? ` (${r.discountInfo})` : ''}`} 
-                          value={`- ${formatCurrency(r.discountAmount)}`} 
+                          value={`- ${formatCurrency(r.discountAmount!)}`} 
                         />
                       )}
                       <ReceiptRow label="Status" value="✓ PAID" />
