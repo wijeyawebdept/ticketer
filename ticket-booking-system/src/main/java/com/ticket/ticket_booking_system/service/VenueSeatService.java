@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticket.ticket_booking_system.dto.SeatAvailabilityResponse;
 import com.ticket.ticket_booking_system.dto.SeatDTO;
+import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.Seat.SeatStatus;
@@ -110,10 +111,19 @@ public class VenueSeatService {
 
         // Get booked and held seat IDs for this schedule
         Set<String> bookedSeatIds = bookingSeatRepository.findBookedVenueSeatIdsByScheduleId(eventScheduleUuid);
+        List<BookingSeat> scheduleBookingSeats = bookingSeatRepository.findByScheduleId(eventScheduleUuid);
+        java.util.Map<String, BookingSeat> venueSeatBookingMap = new java.util.HashMap<>();
+        for (BookingSeat bs : scheduleBookingSeats) {
+            if (bs.getVenueSeatId() != null) {
+                venueSeatBookingMap.put(bs.getVenueSeatId(), bs);
+            }
+        }
+
         List<SeatHold> activeHolds = seatHoldRepository.findActiveHoldsByScheduleId(eventScheduleUuid,
                 LocalDateTime.now());
         Long bookedCount = bookingSeatRepository.countBookedSeatsForSchedule(eventScheduleUuid);
         Long heldCount = seatHoldRepository.countActiveHoldsByScheduleId(eventScheduleUuid, LocalDateTime.now());
+        Long checkedInCount = bookingSeatRepository.countCheckedInSeatsForSchedule(eventScheduleUuid);
 
         // Build a map of seat IDs to their hold info for quick lookup
         java.util.Map<String, SeatHold> seatHoldMap = new java.util.HashMap<>();
@@ -160,7 +170,7 @@ public class VenueSeatService {
             java.math.BigDecimal currentPrice = eventCategory != null ?
                     eventCategory.getPrice() : null;
 
-            // Build SeatDTO with hold information
+            // Build SeatDTO with hold and check-in information
             SeatDTO.SeatDTOBuilder builder = SeatDTO.builder()
                     .seatId(seat.getSeatId())
                     .section(seat.getSection())
@@ -176,6 +186,25 @@ public class VenueSeatService {
                     .currentPrice(currentPrice)
                     .earlyBirdPrice(eventCategory != null ? eventCategory.getEarlyBirdPrice() : null)
                     .notes(seat.getNotes());
+
+            // Add booking & check-in details if booked
+            BookingSeat bs = venueSeatBookingMap.get(seat.getSeatId());
+            if (bs != null) {
+                builder.ticketCode(bs.getTicketCode())
+                       .checkedIn(Boolean.TRUE.equals(bs.getCheckedIn()))
+                       .checkedInAt(bs.getCheckedInAt());
+
+                if (bs.getBooking() != null) {
+                    builder.bookingReference(bs.getBooking().getBookingReference())
+                           .bookedAt(bs.getBooking().getBookingTime());
+                    if (bs.getBooking().getUser() != null) {
+                        builder.heldByUserName(bs.getBooking().getUser().getFirstName() + " " + bs.getBooking().getUser().getLastName())
+                               .heldByUserEmail(bs.getBooking().getUser().getEmail());
+                    } else if (bs.getBooking().getCustomerEmail() != null) {
+                        builder.heldByUserEmail(bs.getBooking().getCustomerEmail());
+                    }
+                }
+            }
 
             if (eventCategory != null) {
                 builder.dealActive(eventCategory.getDealActive())
@@ -199,21 +228,23 @@ public class VenueSeatService {
         }
 
         // Fetch shared area categories for the event
-        System.out.println("DEBUG: Looking for shared areas for eventId: " + eventId);
         List<TicketCategory> sharedAreaCategories = ticketCategoryRepository.findSharedAreaCategoriesByEventId(eventId);
-        System.out.println("DEBUG: Found " + sharedAreaCategories.size() + " shared area categories");
         List<SeatAvailabilityResponse.SharedAreaDTO> sharedAreas = new ArrayList<>();
 
         for (TicketCategory category : sharedAreaCategories) {
-            System.out.println("DEBUG: Processing shared area: " + category.getCategoryName() +
-                    ", isSharedArea=" + category.getIsSharedArea() +
-                    ", sharedAreaNumber=" + category.getSharedAreaNumber());
             // Count booked tickets for this shared area
             Long bookedTickets = bookingRepository.countBookedSharedAreaTickets(
                     eventScheduleUuid,
                     category.getSharedAreaNumber());
             if (bookedTickets == null) {
                 bookedTickets = 0L;
+            }
+
+            Long checkedInShared = bookingSeatRepository.countCheckedInSharedAreaSeatsForSchedule(
+                    eventScheduleUuid,
+                    category.getSharedAreaNumber());
+            if (checkedInShared == null) {
+                checkedInShared = 0L;
             }
 
             int availableTickets = category.getCapacity() - bookedTickets.intValue();
@@ -229,6 +260,8 @@ public class VenueSeatService {
                     .capacity(category.getCapacity())
                     .sharedAreaNumber(category.getSharedAreaNumber())
                     .availableTickets(availableTickets)
+                    .bookedTickets(bookedTickets.intValue())
+                    .checkedInTickets(checkedInShared.intValue())
                     .dealActive(category.getDealActive())
                     .dealType(category.getDealType())
                     .dealDiscountPercentage(category.getDealDiscountPercentage())
@@ -251,6 +284,7 @@ public class VenueSeatService {
                 confirmedBooked - heldSeats, // Confirmed bookings (excluding pending/held)
                 heldSeats // Pending/held seats
         );
+        response.setCheckedInSeats(checkedInCount != null ? checkedInCount : 0L);
         response.setSharedAreas(sharedAreas);
 
         return response;

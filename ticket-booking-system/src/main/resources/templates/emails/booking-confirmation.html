@@ -223,12 +223,27 @@
                 </div>
             </div>
 
-            <div class="qr-section" th:if="${qrCodeBase64 != null}">
-                <div class="qr-title">Scan at Entry</div>
-                <div class="qr-sub" style="margin-bottom:14px;">Present this QR code at the venue gate</div>
+            <!-- Individual Tickets if requested -->
+            <div th:if="${requestSeparateTickets == true && emailTickets != null && !emailTickets.isEmpty()}">
+                <div class="section-title">Individual Entry Tickets</div>
+                <div th:each="tkt, iterStat : ${emailTickets}" class="qr-section" style="margin-bottom: 18px; border: 2px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span class="paid-badge" style="background: #e3f2fd; color: #1565c0; border-color: #90caf9;" th:text="|Pass ${iterStat.count} of ${#lists.size(emailTickets)}|">Pass 1 of 1</span>
+                        <strong style="color: #1b5e20; font-size: 14px;" th:text="${tkt.seatLabel}">Seat 1</strong>
+                    </div>
+                    <img th:if="${tkt.qrCodeBase64 != null}" th:src="|data:image/png;base64,${tkt.qrCodeBase64}|" alt="Ticket QR Code" style="width: 160px; height: 160px; display: block; margin: 8px auto;"/>
+                    <div class="qr-title" style="font-family: monospace; font-size: 13px; color: #555;" th:text="|Ticket Code: ${tkt.ticketCode}|">TK-XXXXXXXXXXXX</div>
+                    <div class="qr-sub">Present this QR code for entry at the gate</div>
+                </div>
+            </div>
+
+            <!-- Master Group Ticket if not separate -->
+            <div class="qr-section" th:if="${requestSeparateTickets != true && qrCodeBase64 != null}">
+                <div class="qr-title">Scan at Entry (Group Pass)</div>
+                <div class="qr-sub" style="margin-bottom:14px;">Present this QR code at the venue gate for all attendees</div>
                 <img th:src="|data:image/png;base64,${qrCodeBase64}|" alt="Booking QR Code"/>
                 <div class="qr-title" th:text="${bookingReference}">BK-XXXXXXXX</div>
-                <div class="qr-sub">This QR code contains your booking and payment details</div>
+                <div class="qr-sub">This QR code admits all booked seats for this reference</div>
             </div>
 
         </div>

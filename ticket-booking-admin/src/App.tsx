@@ -80,6 +80,9 @@ import AdminDeals from './pages/Deals';
 import OrganizerDeals from './pages/OrganizerDeals';
 import EmployeeDeals from './pages/EmployeeDeals';
 import PromoCodesPage from './pages/PromoCodes';
+import GateSecurityLayout from './layouts/GateSecurityLayout';
+import GateScanner from './pages/GateScanner';
+import CheckInDashboard from './pages/CheckIn';
 
 // Lazy-loaded components
 const AuthDebugPage = lazy(() => import('./pages/AuthDebug'));
@@ -265,6 +268,7 @@ function App() {
                 <Route path="/admin/venues" element={<Venues />} />
                 <Route path="/admin/venues/:id/seating" element={<SeatingArrangement />} />
                 <Route path="/admin/bookings" element={<Bookings />} />
+                <Route path="/admin/checkin" element={<CheckInDashboard />} />
                 <Route path="/admin/reports" element={<ReportsIndex />} />
                 <Route path="/admin/reports/event/:eventId" element={<EventReportView />} />
                 <Route path="/admin/transactions" element={<Transactions />} />
@@ -289,6 +293,7 @@ function App() {
                 <Route path="/organizer/deals" element={<OrganizerDeals />} />
                 <Route path="/organizer/promocodes" element={<PromoCodesPage role="organizer" />} />
                 <Route path="/organizer/bookings" element={<Bookings />} />
+                <Route path="/organizer/checkin" element={<CheckInDashboard />} />
                 <Route path="/organizer/reports" element={<ReportsIndex />} />
                 <Route path="/organizer/reports/event/:eventId" element={<EventReportView />} />
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
@@ -313,12 +318,20 @@ function App() {
                 <Route path="/employee/deals" element={<EmployeeDeals />} />
                 <Route path="/employee/promocodes" element={<PromoCodesPage role="employee" />} />
                 <Route path="/employee/bookings" element={<Bookings />} />
+                <Route path="/employee/checkin" element={<CheckInDashboard />} />
                 <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/employee/recycle-bin" element={<RecycleBin />} />
                 <Route path="/employee/profile" element={<Profile />} />
                 <Route path="/employee/audit-logs" element={<AuditLogs isMyLogs={true} />} />
                 <Route path="/employee/settings" element={<Settings />} />
               </Route>
+            </Route>
+
+            {/* Standalone Security Gate Scanner Routes (Clean, No Admin/Financial Nav) */}
+            <Route element={<GateSecurityLayout />}>
+              <Route path="/gate" element={<GateScanner />} />
+              <Route path="/gate/:eventId" element={<GateScanner />} />
+              <Route path="/gate/:eventId/:scheduleId" element={<GateScanner />} />
             </Route>
 
             {/* User routes - ONLY for USER users */}

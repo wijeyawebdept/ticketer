@@ -40,6 +40,7 @@ import {
   Description as DescriptionIcon,
   LocalOffer as LocalOfferIcon,
   Assessment as AssessmentIcon,
+  QrCodeScanner as QrCodeScannerIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -200,6 +201,7 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.venues'), icon: <LocationOnIcon />, path: '/admin/venues' },
     { text: t('navigation.seatManagement'), icon: <EventSeatIcon />, path: '/admin/seats' },
     { text: t('navigation.bookings'), icon: <ReceiptIcon />, path: '/admin/bookings' },
+    { text: 'Live Check-In & Gate', icon: <QrCodeScannerIcon />, path: '/admin/checkin' },
     { text: t('navigation.recycleBin'), icon: <RecycleBinIcon />, path: '/admin/recycle-bin' },
     { text: 'Audit Logs', icon: <AssignmentIcon />, path: '/admin/audit-logs' },
     { text: 'Event Reports', icon: <AssessmentIcon />, path: '/admin/reports' },

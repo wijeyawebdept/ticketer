@@ -121,6 +121,10 @@ public class Booking {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "request_separate_tickets")
+    @Builder.Default
+    private Boolean requestSeparateTickets = false;
+
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @org.hibernate.annotations.BatchSize(size = 20)

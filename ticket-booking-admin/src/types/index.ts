@@ -272,20 +272,30 @@ export interface Booking {
   // Booking seats
   seats?: BookingSeatInfo[];
   
-  // Cancellation info
-  cancelledAt?: string;
-  cancellationReason?: string;
+  requestSeparateTickets?: boolean;
+  qrCodeBase64?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  finalAmount?: number;
   
   // Legacy field for backward compatibility
   id?: string;
 }
 
 export interface BookingSeatInfo {
+  bookingSeatId?: string;
   seatId?: string;
+  ticketCode?: string;
+  venueSeatId?: string;
   seatNumber?: string;
   seatRow?: string;
   section?: string;
   price: number;
+  isSharedAreaTicket?: boolean;
+  sharedAreaNumber?: number;
+  checkedIn?: boolean;
+  checkedInAt?: string;
+  ticketQrCodeBase64?: string;
 }
 
 export enum BookingStatus {

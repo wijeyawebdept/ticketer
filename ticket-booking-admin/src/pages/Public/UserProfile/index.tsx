@@ -47,10 +47,16 @@ import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { 
-  ReceiptLong as ReceiptIcon, 
   Refresh as RefreshIcon, 
   Print as PrintIcon, 
-  Close as CloseIcon 
+  Close as CloseIcon,
+  QrCode as QrCodeIcon,
+  ConfirmationNumber as TicketIcon,
+  Event as EventIcon,
+  LocationOn as LocationIcon,
+  AccessTime as TimeIcon,
+  CheckCircleOutline as CheckedInIcon,
+  HourglassEmpty as PendingIcon
 } from '@mui/icons-material';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import { ProfileDTO, ProfileUpdateDTO, Booking, BookingStatus } from '../../../types';
@@ -260,38 +266,59 @@ const UserProfile: React.FC = () => {
   };
 
   const bookingColumns: GridColDef[] = [
-    { field: 'bookingReference', headerName: 'Booking Ref', width: 160 },
+    { field: 'bookingReference', headerName: 'Booking Ref', width: 150 },
     {
       field: 'eventName', headerName: 'Event', flex: 1, minWidth: 150,
       valueGetter: (params: any) => params.row.eventName || params.row.event?.name || 'N/A'
     },
-    { field: 'ticketCount', headerName: 'Tickets', width: 90 },
+    { field: 'ticketCount', headerName: 'Tickets', width: 85 },
     {
-      field: 'totalAmount', headerName: 'Amount', width: 130,
+      field: 'totalAmount', headerName: 'Amount', width: 120,
       renderCell: (params: any) => formatReceiptPrice(params.value, params.row.currency)
     },
     {
-      field: 'bookingTime', headerName: 'Booking Date', width: 160,
+      field: 'bookingTime', headerName: 'Date', width: 110,
       valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A'
     },
     {
-      field: 'status', headerName: 'Status', width: 140,
+      field: 'status', headerName: 'Status', width: 130,
       renderCell: (params: any) => renderStatusChip(params.value)
     },
     {
-      field: 'actions', headerName: 'Receipt', width: 120, sortable: false,
+      field: 'attended', headerName: 'Entry / Check-In', width: 145,
+      renderCell: (params: any) => {
+        const isAttended = Boolean(params.row.attended);
+        return (
+          <Chip
+            size="small"
+            icon={isAttended ? <CheckedInIcon style={{ color: '#10b981', fontSize: 16 }} /> : <PendingIcon style={{ color: '#f59e0b', fontSize: 16 }} />}
+            label={isAttended ? 'Checked In' : 'Pending Entry'}
+            sx={{
+              bgcolor: isAttended ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+              color: isAttended ? '#10b981' : '#f59e0b',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              border: `1px solid ${isAttended ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+            }}
+          />
+        );
+      }
+    },
+    {
+      field: 'actions', headerName: 'E-Tickets', width: 145, sortable: false,
       renderCell: (params: any) => (
         <Button
           size="small"
-          variant="outlined"
-          startIcon={<ReceiptIcon sx={{ fontSize: '14px !important' }} />}
+          variant="contained"
+          startIcon={<QrCodeIcon sx={{ fontSize: '15px !important' }} />}
           onClick={() => setReceiptBooking(params.row as Booking)}
           sx={{
-            borderColor: '#ff1955', color: '#ff1955', fontSize: '0.75rem',
-            '&:hover': { bgcolor: 'rgba(255,25,85,0.08)', borderColor: '#ff1955' }
+            bgcolor: '#ff1955', color: '#fff', fontSize: '0.75rem', textTransform: 'none', fontWeight: 700,
+            borderRadius: '6px',
+            '&:hover': { bgcolor: '#e0144c' }
           }}
         >
-          Receipt
+          E-Ticket & QR
         </Button>
       )
     },
@@ -1891,87 +1918,255 @@ const UserProfile: React.FC = () => {
         )}
       </Container>
 
-      {/* Receipt Dialog */}
+      {/* E-Ticket & Receipt Dialog */}
       <Dialog
         open={!!receiptBooking}
         onClose={() => setReceiptBooking(null)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#1a1f28', color: '#fff', borderRadius: 3,
+            bgcolor: '#121620', color: '#fff', borderRadius: 3,
             border: '1px solid rgba(255,25,85,0.3)',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.8)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.85)',
           }
         }}
       >
-        <DialogTitle sx={{ pb: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ReceiptIcon sx={{ color: '#ff1955' }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff' }}>Booking Receipt</Typography>
+            <TicketIcon sx={{ color: '#ff1955' }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1.1rem' }}>
+              Official Digital E-Ticket & Pass
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton onClick={handlePrintReceipt} size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff' } }}>
+            <IconButton onClick={handlePrintReceipt} size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' } }}>
               <PrintIcon fontSize="small" />
             </IconButton>
-            <IconButton onClick={() => setReceiptBooking(null)} size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff' } }}>
+            <IconButton onClick={() => setReceiptBooking(null)} size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' } }}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogContent sx={{ pt: 3, pb: 4 }}>
           {receiptBooking && (
             <Box ref={receiptRef}>
+              {/* Ticket Banner Header */}
               <Box sx={{
                 background: 'linear-gradient(135deg, #ff1955 0%, #c8002f 100%)',
-                borderRadius: 2, p: 2.5, mb: 3, textAlign: 'center'
+                borderRadius: 2.5, p: { xs: 2, sm: 3 }, mb: 3, textAlign: 'center',
+                boxShadow: '0 8px 24px rgba(255,25,85,0.3)'
               }}>
-                <Typography sx={{ fontWeight: 900, fontSize: '1.4rem', color: '#fff', letterSpacing: 1 }}>
-                  Ticketer.lk
+                <Typography sx={{ fontWeight: 900, fontSize: '1.5rem', color: '#fff', letterSpacing: 1 }}>
+                  TICKETER.LK
                 </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
-                  Official Booking Confirmation
+                <Typography sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 600, mt: 0.3 }}>
+                  Verified Entry Pass & Receipt
                 </Typography>
               </Box>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+              {/* Booking Reference & Status */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1.5, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
                 <Box>
                   <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                     Booking Reference
                   </Typography>
-                  <Typography sx={{ color: '#fcd0a5', fontWeight: 700, fontSize: '1.1rem', fontFamily: 'monospace' }}>
+                  <Typography sx={{ color: '#fcd0a5', fontWeight: 800, fontSize: '1.25rem', fontFamily: 'monospace' }}>
                     {receiptBooking.bookingReference || receiptBooking.bookingId?.slice(0, 8).toUpperCase()}
                   </Typography>
                 </Box>
-                {renderStatusChip(receiptBooking.status)}
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {renderStatusChip(receiptBooking.status)}
+                  <Chip
+                    size="small"
+                    icon={receiptBooking.attended ? <CheckedInIcon style={{ color: '#10b981', fontSize: 16 }} /> : <PendingIcon style={{ color: '#f59e0b', fontSize: 16 }} />}
+                    label={receiptBooking.attended ? 'Checked In' : 'Gate Pending'}
+                    sx={{
+                      bgcolor: receiptBooking.attended ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                      color: receiptBooking.attended ? '#10b981' : '#f59e0b',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      border: `1px solid ${receiptBooking.attended ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`
+                    }}
+                  />
+                </Box>
               </Box>
 
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
-
-              <Typography sx={{ color: '#ff1955', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
-                Event Details
-              </Typography>
-              <Box sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: 2, p: 2, mb: 3 }}>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem', mb: 0.5 }}>
-                  {receiptBooking.eventName || 'N/A'}
+              {/* Event & Schedule Details */}
+              <Box sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: 2, p: 2.5, mb: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.2rem', mb: 1 }}>
+                  {receiptBooking.eventName || 'Event Details'}
                 </Typography>
-                {receiptBooking.bookingTime && (
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                    Date: {new Date(receiptBooking.bookingTime).toLocaleDateString()}
+                
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                      <EventIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                      <span>{receiptBooking.scheduleDate ? new Date(receiptBooking.scheduleDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : (receiptBooking.bookingTime ? new Date(receiptBooking.bookingTime).toLocaleDateString() : 'N/A')}</span>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                      <TimeIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                      <span>{receiptBooking.scheduleStartTime || 'Doors Open Early'}</span>
+                    </Box>
+                  </Grid>
+                  {receiptBooking.venueName && (
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                        <LocationIcon sx={{ fontSize: 18, color: '#ff1955', mt: 0.2 }} />
+                        <Box>
+                          <Typography sx={{ fontWeight: 600, color: '#fff', fontSize: '0.9rem' }}>{receiptBooking.venueName}</Typography>
+                          {receiptBooking.venueAddress && (
+                            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>{receiptBooking.venueAddress}</Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+
+              {/* Individual / Master QR Codes & Ticket Details */}
+              <Typography sx={{ color: '#ff1955', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
+                Entry Passes & QR Codes ({receiptBooking.seats?.length || receiptBooking.ticketCount || 1})
+              </Typography>
+
+              {/* If individual tickets requested and available */}
+              {receiptBooking.requestSeparateTickets && receiptBooking.seats && receiptBooking.seats.length > 0 ? (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  {receiptBooking.seats.map((seat, idx) => (
+                    <Grid item xs={12} sm={receiptBooking.seats!.length > 1 ? 6 : 12} key={seat.bookingSeatId || idx}>
+                      <Box sx={{
+                        p: 2, bgcolor: '#1a1f2c', borderRadius: 2.5,
+                        border: '1px solid rgba(255, 25, 85, 0.2)', textAlign: 'center',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 1 }}>
+                          <Chip size="small" label={`Pass ${idx + 1} of ${receiptBooking.seats!.length}`} sx={{ bgcolor: 'rgba(255,25,85,0.1)', color: '#ff1955', fontWeight: 700, fontSize: '0.7rem' }} />
+                          <Chip
+                            size="small"
+                            label={seat.checkedIn ? 'Checked In' : 'Pending Entry'}
+                            sx={{
+                              bgcolor: seat.checkedIn ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                              color: seat.checkedIn ? '#10b981' : '#f59e0b',
+                              fontWeight: 700, fontSize: '0.7rem'
+                            }}
+                          />
+                        </Box>
+
+                        <Typography sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem', mb: 0.3 }}>
+                          {seat.isSharedAreaTicket ? `Shared Area #${seat.sharedAreaNumber || 1}` : (seat.seatNumber ? `Seat ${seat.seatNumber}${seat.seatRow ? ` (Row ${seat.seatRow})` : ''}` : seat.venueSeatId || 'Seat')}
+                        </Typography>
+                        {seat.section && (
+                          <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mb: 1.5 }}>
+                            Section: {seat.section}
+                          </Typography>
+                        )}
+
+                        {seat.ticketQrCodeBase64 ? (
+                          <Box sx={{ p: 1, bgcolor: '#fff', borderRadius: 2, mb: 1.5, display: 'inline-block' }}>
+                            <img
+                              src={`data:image/png;base64,${seat.ticketQrCodeBase64}`}
+                              alt={`QR for ${seat.ticketCode || 'seat'}`}
+                              style={{ width: 140, height: 140, display: 'block' }}
+                            />
+                          </Box>
+                        ) : receiptBooking.qrCodeBase64 ? (
+                          <Box sx={{ p: 1, bgcolor: '#fff', borderRadius: 2, mb: 1.5, display: 'inline-block' }}>
+                            <img
+                              src={`data:image/png;base64,${receiptBooking.qrCodeBase64}`}
+                              alt="Booking QR"
+                              style={{ width: 140, height: 140, display: 'block' }}
+                            />
+                          </Box>
+                        ) : null}
+
+                        <Typography sx={{ fontFamily: 'monospace', color: '#fcd0a5', fontWeight: 700, fontSize: '0.85rem' }}>
+                          {seat.ticketCode || 'TK-XXXX'}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', mt: 0.3 }}>
+                          Scan this QR at gate entrance
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                /* Master Group QR Code */
+                <Box sx={{
+                  p: 2.5, bgcolor: '#1a1f2c', borderRadius: 2.5,
+                  border: '1px solid rgba(255, 25, 85, 0.25)', textAlign: 'center', mb: 3,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center'
+                }}>
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem', mb: 0.5 }}>
+                    Group Entry Pass ({receiptBooking.ticketCount || receiptBooking.seats?.length || 1} Tickets)
                   </Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', mb: 2 }}>
+                    Present this QR code at the venue gate to check in all attendees together
+                  </Typography>
+
+                  {receiptBooking.qrCodeBase64 && (
+                    <Box sx={{ p: 1.5, bgcolor: '#fff', borderRadius: 2.5, mb: 2, display: 'inline-block', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                      <img
+                        src={`data:image/png;base64,${receiptBooking.qrCodeBase64}`}
+                        alt="Master Booking QR"
+                        style={{ width: 190, height: 190, display: 'block' }}
+                      />
+                    </Box>
+                  )}
+
+                  <Typography sx={{ fontFamily: 'monospace', color: '#fcd0a5', fontWeight: 800, fontSize: '1.1rem' }}>
+                    {receiptBooking.bookingReference}
+                  </Typography>
+
+                  {/* Seat Roster list inside group card */}
+                  {receiptBooking.seats && receiptBooking.seats.length > 0 && (
+                    <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.5, mb: 1, textAlign: 'left' }}>
+                        Included Seats & Passes
+                      </Typography>
+                      {receiptBooking.seats.map((seat, i) => (
+                        <Box key={seat.bookingSeatId || i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.6, borderBottom: '1px dashed rgba(255,255,255,0.06)' }}>
+                          <Typography sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>
+                            {seat.isSharedAreaTicket ? `Shared Area #${seat.sharedAreaNumber || 1}` : (seat.seatNumber ? `Seat ${seat.seatNumber}${seat.seatRow ? ` (Row ${seat.seatRow})` : ''}` : seat.venueSeatId || 'Seat')}
+                            <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', marginLeft: 8 }}>({seat.ticketCode})</span>
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={seat.checkedIn ? 'Checked In' : 'Pending'}
+                            sx={{
+                              height: 20, fontSize: '0.65rem', fontWeight: 700,
+                              bgcolor: seat.checkedIn ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                              color: seat.checkedIn ? '#10b981' : '#f59e0b'
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Payment Receipt Summary */}
+              <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>Total Tickets</Typography>
+                  <Typography sx={{ color: '#fff', fontWeight: 600 }}>{receiptBooking.ticketCount || 1}</Typography>
+                </Box>
+                {Boolean(Number(receiptBooking.discountAmount || 0) > 0) && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography sx={{ color: '#4ade80', fontSize: '0.85rem' }}>Discount Applied</Typography>
+                    <Typography sx={{ color: '#4ade80', fontWeight: 600 }}>-{formatReceiptPrice(receiptBooking.discountAmount!, receiptBooking.currency)}</Typography>
+                  </Box>
                 )}
-              </Box>
-
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Tickets ({receiptBooking.ticketCount || 1})</Typography>
-                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{formatReceiptPrice(receiptBooking.totalAmount ?? 0, receiptBooking.currency)}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 2, mt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>Total Amount</Typography>
-                <Typography sx={{ color: '#ff1955', fontWeight: 800, fontSize: '1.2rem' }}>{formatReceiptPrice(receiptBooking.totalAmount ?? 0, receiptBooking.currency)}</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1.5, mt: 1, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Total Paid</Typography>
+                  <Typography sx={{ color: '#ff1955', fontWeight: 900, fontSize: '1.25rem' }}>
+                    {formatReceiptPrice(receiptBooking.totalAmount ?? 0, receiptBooking.currency)}
+                  </Typography>
+                </Box>
               </Box>
             </Box>
           )}

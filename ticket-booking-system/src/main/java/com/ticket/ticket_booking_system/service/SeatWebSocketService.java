@@ -56,6 +56,98 @@ public class SeatWebSocketService {
     }
 
     /**
+     * Notify about a check-in event in real time
+     */
+    public void notifyCheckIn(UUID eventId, UUID scheduleId, CheckInEventMessage message) {
+        if (eventId != null) {
+            messagingTemplate.convertAndSend("/topic/events/" + eventId + "/checkin", message);
+        }
+        if (scheduleId != null) {
+            messagingTemplate.convertAndSend("/topic/schedules/" + scheduleId + "/checkin", message);
+        }
+    }
+
+    /**
+     * Real-time Check-In Event Message
+     */
+    public static class CheckInEventMessage {
+        private UUID eventId;
+        private UUID scheduleId;
+        private String bookingReference;
+        private String customerName;
+        private java.util.List<String> ticketCodes;
+        private java.util.List<String> venueSeatIds;
+        private java.util.List<Integer> sharedAreaNumbers;
+        private int checkedInTickets;
+        private int totalTicketsInBooking;
+        private long totalScheduleBooked;
+        private long totalScheduleCheckedIn;
+        private String action; // "CHECKED_IN", "UNCHECKED"
+        private long timestamp;
+
+        public CheckInEventMessage() {
+        }
+
+        public CheckInEventMessage(UUID eventId, UUID scheduleId, String bookingReference, String customerName,
+                java.util.List<String> ticketCodes, java.util.List<String> venueSeatIds,
+                java.util.List<Integer> sharedAreaNumbers, int checkedInTickets, int totalTicketsInBooking,
+                long totalScheduleBooked, long totalScheduleCheckedIn, String action) {
+            this.eventId = eventId;
+            this.scheduleId = scheduleId;
+            this.bookingReference = bookingReference;
+            this.customerName = customerName;
+            this.ticketCodes = ticketCodes;
+            this.venueSeatIds = venueSeatIds;
+            this.sharedAreaNumbers = sharedAreaNumbers;
+            this.checkedInTickets = checkedInTickets;
+            this.totalTicketsInBooking = totalTicketsInBooking;
+            this.totalScheduleBooked = totalScheduleBooked;
+            this.totalScheduleCheckedIn = totalScheduleCheckedIn;
+            this.action = action;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public UUID getEventId() { return eventId; }
+        public void setEventId(UUID eventId) { this.eventId = eventId; }
+
+        public UUID getScheduleId() { return scheduleId; }
+        public void setScheduleId(UUID scheduleId) { this.scheduleId = scheduleId; }
+
+        public String getBookingReference() { return bookingReference; }
+        public void setBookingReference(String bookingReference) { this.bookingReference = bookingReference; }
+
+        public String getCustomerName() { return customerName; }
+        public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+        public java.util.List<String> getTicketCodes() { return ticketCodes; }
+        public void setTicketCodes(java.util.List<String> ticketCodes) { this.ticketCodes = ticketCodes; }
+
+        public java.util.List<String> getVenueSeatIds() { return venueSeatIds; }
+        public void setVenueSeatIds(java.util.List<String> venueSeatIds) { this.venueSeatIds = venueSeatIds; }
+
+        public java.util.List<Integer> getSharedAreaNumbers() { return sharedAreaNumbers; }
+        public void setSharedAreaNumbers(java.util.List<Integer> sharedAreaNumbers) { this.sharedAreaNumbers = sharedAreaNumbers; }
+
+        public int getCheckedInTickets() { return checkedInTickets; }
+        public void setCheckedInTickets(int checkedInTickets) { this.checkedInTickets = checkedInTickets; }
+
+        public int getTotalTicketsInBooking() { return totalTicketsInBooking; }
+        public void setTotalTicketsInBooking(int totalTicketsInBooking) { this.totalTicketsInBooking = totalTicketsInBooking; }
+
+        public long getTotalScheduleBooked() { return totalScheduleBooked; }
+        public void setTotalScheduleBooked(long totalScheduleBooked) { this.totalScheduleBooked = totalScheduleBooked; }
+
+        public long getTotalScheduleCheckedIn() { return totalScheduleCheckedIn; }
+        public void setTotalScheduleCheckedIn(long totalScheduleCheckedIn) { this.totalScheduleCheckedIn = totalScheduleCheckedIn; }
+
+        public String getAction() { return action; }
+        public void setAction(String action) { this.action = action; }
+
+        public long getTimestamp() { return timestamp; }
+        public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+
+    /**
      * Message class for seat updates
      */
     public static class SeatUpdateMessage {

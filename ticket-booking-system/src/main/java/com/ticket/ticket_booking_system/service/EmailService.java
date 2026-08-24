@@ -20,6 +20,7 @@ import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.ticket.ticket_booking_system.entity.Booking;
+import com.ticket.ticket_booking_system.entity.BookingSeat;
 import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
@@ -211,6 +212,32 @@ public class EmailService {
                     + "PAID: " + paymentDate;
             String qrCodeBase64 = generateQrCodeBase64(qrContent);
 
+            // Check if separate tickets were requested
+            boolean separateTickets = Boolean.TRUE.equals(booking.getRequestSeparateTickets());
+            java.util.List<EmailTicketItem> emailTickets = new java.util.ArrayList<>();
+
+            for (BookingSeat bs : booking.getBookingSeats()) {
+                String seatLabel;
+                if (Boolean.TRUE.equals(bs.getIsSharedAreaTicket())) {
+                    seatLabel = "Shared Area #" + bs.getSharedAreaNumber();
+                } else {
+                    seatLabel = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat";
+                }
+
+                String individualQrContent = "{\"app\":\"TICKETER\",\"type\":\"TICKET\",\"ref\":\"" 
+                        + booking.getBookingReference() + "\",\"ticket\":\"" + bs.getTicketCode() 
+                        + "\",\"seat\":\"" + seatLabel + "\"}";
+                String individualQrBase64 = generateQrCodeBase64(individualQrContent);
+
+                emailTickets.add(new EmailTicketItem(
+                        bs.getTicketCode(),
+                        seatLabel,
+                        Boolean.TRUE.equals(bs.getIsSharedAreaTicket()),
+                        bs.getSharedAreaNumber(),
+                        individualQrBase64
+                ));
+            }
+
             Context ctx = new Context();
             ctx.setVariable("bookingReference", booking.getBookingReference());
             ctx.setVariable("eventName", booking.getEvent() != null ? booking.getEvent().getName() : "N/A");
@@ -225,6 +252,8 @@ public class EmailService {
             ctx.setVariable("paymentMethod", paymentMethod);
             ctx.setVariable("paymentDate", paymentDate);
             ctx.setVariable("qrCodeBase64", qrCodeBase64);
+            ctx.setVariable("requestSeparateTickets", separateTickets);
+            ctx.setVariable("emailTickets", emailTickets);
 
             String htmlBody = templateEngine.process("emails/booking-confirmation", ctx);
             String subject = "Payment Confirmed - " + booking.getBookingReference();
@@ -234,6 +263,30 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send payment confirmation email to {}: {}", customerEmail, e.getMessage());
         }
+    }
+
+    // ── Email Ticket Item Data Class ──────────────────────────────────────────
+
+    public static class EmailTicketItem {
+        private String ticketCode;
+        private String seatLabel;
+        private boolean isSharedArea;
+        private Integer sharedAreaNumber;
+        private String qrCodeBase64;
+
+        public EmailTicketItem(String ticketCode, String seatLabel, boolean isSharedArea, Integer sharedAreaNumber, String qrCodeBase64) {
+            this.ticketCode = ticketCode;
+            this.seatLabel = seatLabel;
+            this.isSharedArea = isSharedArea;
+            this.sharedAreaNumber = sharedAreaNumber;
+            this.qrCodeBase64 = qrCodeBase64;
+        }
+
+        public String getTicketCode() { return ticketCode; }
+        public String getSeatLabel() { return seatLabel; }
+        public boolean isSharedArea() { return isSharedArea; }
+        public Integer getSharedAreaNumber() { return sharedAreaNumber; }
+        public String getQrCodeBase64() { return qrCodeBase64; }
     }
 
     // ── Event Notifications ───────────────────────────────────────────────────
@@ -297,7 +350,7 @@ public class EmailService {
 
     // ── QR Code helper ────────────────────────────────────────────────────────
 
-    private String generateQrCodeBase64(String content) {
+    public String generateQrCodeBase64(String content) {
         try {
             BitMatrix matrix = new MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, 280, 280);
             ByteArrayOutputStream out = new ByteArrayOutputStream();

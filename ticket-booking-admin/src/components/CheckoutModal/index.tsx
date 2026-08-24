@@ -53,6 +53,7 @@ export interface CheckoutModalProps {
     bookingForSomeoneElse: boolean;
     promoCode?: string;
     promoDiscountAmount?: number;
+    requestSeparateTickets?: boolean;
   }) => void;
   eventId?: string;
   eventDetails?: {
@@ -103,6 +104,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [termsContent, setTermsContent] = useState('');
   const [termsTitle, setTermsTitle] = useState('Payment Terms & Conditions');
   const [termsLoading, setTermsLoading] = useState(false);
+  const [requestSeparateTickets, setRequestSeparateTickets] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
     lastName: '',
@@ -272,6 +274,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       bookingForSomeoneElse: false,
       promoCode: appliedPromo?.code,
       promoDiscountAmount: effectivePromoDiscount,
+      requestSeparateTickets,
     });
   };
 
@@ -390,6 +393,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </Grid>
               </Grid>
             </Box>
+
+            {/* Group separate tickets option */}
+            {((selectedSeats?.length || 0) + (sharedAreaSelections?.reduce((acc, a) => acc + (a.ticketCount || a.count || 0), 0) || 0)) > 1 && (
+              <Box sx={{ mb: 2, p: 1.5, borderRadius: '8px', bgcolor: 'rgba(255, 25, 85, 0.04)', border: '1px solid rgba(255, 25, 85, 0.18)' }}>
+                <FormControlLabel
+                  control={
+                    <input 
+                      type="checkbox" 
+                      checked={requestSeparateTickets} 
+                      onChange={(e) => setRequestSeparateTickets(e.target.checked)} 
+                      style={{ marginRight: '8px', accentColor: '#ff1955' }} 
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography component="span" variant="body2" sx={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+                        {t('issueSeparateTickets', 'Issue separate E-Tickets with individual QR codes')}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.3, lineHeight: 1.3 }}>
+                        {t('separateTicketsHelp', 'Check this if attendees will arrive at different times. Each ticket will have its own unique QR code.')}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ m: 0, alignItems: 'flex-start' }}
+                />
+              </Box>
+            )}
 
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
               <FormControlLabel

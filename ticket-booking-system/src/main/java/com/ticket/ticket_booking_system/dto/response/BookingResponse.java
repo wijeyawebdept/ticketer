@@ -51,6 +51,16 @@ public class BookingResponse {
     private UUID venueId;
     private String venueName;
     private String venueAddress;
+
+    // Customer & Payment details
+    private String customerPhone;
+    private String customerNic;
+    private String customerEmail;
+    private BigDecimal finalAmount;
+    private BigDecimal discountAmount;
+    private String discountInfo;
+    private Boolean requestSeparateTickets;
+    private String qrCodeBase64;
     
     // Booking seats
     private List<BookingSeatInfo> seats;
@@ -64,10 +74,18 @@ public class BookingResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BookingSeatInfo {
+        private UUID bookingSeatId;
         private UUID seatId;
+        private String ticketCode;
+        private String venueSeatId;
         private String seatNumber;
         private String seatRow;
         private String section;
         private BigDecimal price;
+        private Boolean isSharedAreaTicket;
+        private Integer sharedAreaNumber;
+        private Boolean checkedIn;
+        private LocalDateTime checkedInAt;
+        private String ticketQrCodeBase64;
     }
 }

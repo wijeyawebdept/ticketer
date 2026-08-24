@@ -72,7 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/blog/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/*").permitAll()
-                        .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}")
+                        .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}", "/api/checkin/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE",
                                 "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
                         .requestMatchers("/api/admin/**")

@@ -160,6 +160,7 @@ public class BookingService {
                 .bookingReference(generateBookingReference())
                 .attended(false)
                 .currency(request.getCurrency())
+                .requestSeparateTickets(Boolean.TRUE.equals(request.getRequestSeparateTickets()))
                 .build();
 
         // Add seat bookings if any (using VenueSeat with String ID), priced from the
@@ -461,8 +462,13 @@ public class BookingService {
      * Confirm a booking after successful payment
      *
      * @param bookingId Booking ID
+    /**
+     * Confirm a booking after successful payment
+     *
+     * @param bookingId Booking ID
      * @return Confirmed booking
      */
+    @Transactional
     public Booking confirmBookingAfterPayment(UUID bookingId) {
         log.info("Confirming booking after payment: {}", bookingId);
 
@@ -516,6 +522,7 @@ public class BookingService {
      * @param reason Cancellation reason
      * @return Cancelled booking
      */
+    @Transactional
     public Booking cancelBookingAfterPaymentFailure(UUID bookingId, String reason) {
         log.info("Cancelling booking after payment failure: {}", bookingId);
 
@@ -691,6 +698,15 @@ public class BookingService {
     }
 
     /**
+     * Get booking by ID with all lazy details eagerly fetched
+     */
+    @Transactional(readOnly = true)
+    public Booking getBookingByIdWithDetails(UUID bookingId) {
+        return bookingRepository.findByIdWithDetails(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+    }
+
+    /**
      * Update booking status
      */
     public Booking updateBookingStatus(String bookingId, String status) {
@@ -805,8 +821,20 @@ public class BookingService {
                 .status(booking.getStatus())
                 .attended(booking.getAttended())
                 .ticketCount(ticketCount)
+                .currency(booking.getCurrency())
+                .customerPhone(booking.getCustomerPhone())
+                .customerNic(booking.getCustomerNic())
+                .customerEmail(booking.getCustomerEmail())
+                .finalAmount(booking.getFinalAmount())
+                .discountAmount(booking.getDiscountAmount())
+                .discountInfo(booking.getDiscountInfo())
+                .requestSeparateTickets(booking.getRequestSeparateTickets())
                 .cancelledAt(booking.getCancelledAt())
                 .cancellationReason(booking.getCancellationReason());
+
+        // Generate Master Booking QR code
+        String masterQrContent = "{\"app\":\"TICKETER\",\"type\":\"BOOKING\",\"ref\":\"" + booking.getBookingReference() + "\",\"event\":\"" + (booking.getEvent() != null ? booking.getEvent().getName() : "") + "\"}";
+        builder.qrCodeBase64(emailService.generateQrCodeBase64(masterQrContent));
         
         // Map user information
         if (booking.getUser() != null) {
@@ -849,8 +877,20 @@ public class BookingService {
                     .map(bookingSeat -> {
                         BookingResponse.BookingSeatInfo.BookingSeatInfoBuilder seatBuilder = 
                                 BookingResponse.BookingSeatInfo.builder()
+                                .bookingSeatId(bookingSeat.getBookingSeatId())
+                                .ticketCode(bookingSeat.getTicketCode())
+                                .venueSeatId(bookingSeat.getVenueSeatId())
+                                .isSharedAreaTicket(bookingSeat.getIsSharedAreaTicket())
+                                .sharedAreaNumber(bookingSeat.getSharedAreaNumber())
+                                .checkedIn(Boolean.TRUE.equals(bookingSeat.getCheckedIn()))
+                                .checkedInAt(bookingSeat.getCheckedInAt())
                                 .price(bookingSeat.getPriceAtBooking());
                         
+                        // Individual ticket QR code
+                        String individualQrContent = "{\"app\":\"TICKETER\",\"type\":\"TICKET\",\"ref\":\"" 
+                                + booking.getBookingReference() + "\",\"ticket\":\"" + bookingSeat.getTicketCode() + "\"}";
+                        seatBuilder.ticketQrCodeBase64(emailService.generateQrCodeBase64(individualQrContent));
+
                         // For shared area tickets, use venue seat ID or shared area number
                         if (Boolean.TRUE.equals(bookingSeat.getIsSharedAreaTicket())) {
                             seatBuilder.seatNumber("Shared Area " + bookingSeat.getSharedAreaNumber())
