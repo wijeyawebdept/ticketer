@@ -22,25 +22,38 @@ jobs:
       - name: Setup SSH & Deploy to Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USERNAME }}
+          RAW_HOST: ${{ secrets.SERVER_HOST }}
+          RAW_USER: ${{ secrets.SERVER_USERNAME }}
         run: |
-          # 1. Setup SSH Key with clean UNIX line endings
+          set -e
+
+          # 1. Sanitize HOST and USER (strip whitespace, newlines, quotes, and accidental prefixes)
+          SERVER_HOST=$(echo "$RAW_HOST" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/.*@//')
+          SERVER_USER=$(echo "$RAW_USER" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/@.*//')
+          
+          if [ -z "$SERVER_USER" ]; then
+            SERVER_USER="ubuntu"
+          fi
+
+          echo "Target Host: $SERVER_HOST"
+          echo "Target User: $SERVER_USER"
+
+          # 2. Setup SSH Key with clean UNIX line endings
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # 2. Add host key to known_hosts to avoid interactive prompts
+          # 3. Add host key to known_hosts
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           
-          # 3. Create target directory on server
+          # 4. Create target directory on server
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" "mkdir -p /home/ubuntu/Ticket-Booking-System"
 
-          # 4. Copy build and backend files to server
+          # 5. Copy build and backend files to server
           echo "Copying files to server..."
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r ticket-booking-admin/build ticket-booking-system "$SERVER_USER@$SERVER_HOST:/home/ubuntu/Ticket-Booking-System/"
 
-          # 5. Run deployment and restart services
+          # 6. Run deployment and restart services
           echo "Running deployment commands on server..."
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" << 'EOF'
             set -e
