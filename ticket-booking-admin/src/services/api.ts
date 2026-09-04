@@ -78,8 +78,20 @@ axiosInstance.interceptors.response.use(
       headers: error.response?.headers
     });
     
-    // If token is expired, redirect to login page
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const requestUrl = originalRequest?.url || '';
+    const isAuthEndpoint = requestUrl.includes('/api/auth/login') || 
+                          requestUrl.includes('/api/auth/register') ||
+                          requestUrl.includes('/api/auth/admin/login') ||
+                          requestUrl.includes('/api/auth/organizer/login') ||
+                          requestUrl.includes('/api/auth/organizer-employee/login') ||
+                          requestUrl.includes('/api/auth/verify-email') ||
+                          requestUrl.includes('/api/auth/send-verification');
+
+    const currentPath = window.location.pathname;
+    const isLoginPage = currentPath.startsWith('/login') || currentPath.startsWith('/admin/login');
+
+    // If token is expired during an authenticated API call (and NOT during a login attempt), redirect
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint && !isLoginPage) {
       // Clear from both storage types
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
@@ -88,12 +100,9 @@ axiosInstance.interceptors.response.use(
       sessionStorage.removeItem('user');
       sessionStorage.removeItem('user_data');
       
-      // Redirect based on which page they were on
-      // If URL contains /admin, /organizer, or /employee, go to restricted login
-      // Otherwise go to regular login
-      const currentPath = window.location.pathname;
+      // Redirect based on which section they were on
       if (currentPath.includes('/admin') || currentPath.includes('/organizer') || currentPath.includes('/employee')) {
-        window.location.href = '/restricted-login';
+        window.location.href = '/login/tkadmin';
       } else {
         window.location.href = '/login';
       }
