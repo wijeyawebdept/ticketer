@@ -19,22 +19,32 @@ jobs:
           npm install --legacy-peer-deps
           CI=false npm run build
 
-      - name: Copy files to server (SCP)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USERNAME }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "ticket-booking-admin/build,ticket-booking-system"
-          target: "/home/ubuntu/Ticket-Booking-System"
+      - name: Setup SSH & Deploy to Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USERNAME }}
+        run: |
+          # 1. Setup SSH Key with clean UNIX line endings
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           
-      - name: Execute deployment commands (SSH)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USERNAME }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
+          # 2. Add host key to known_hosts to avoid interactive prompts
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # 3. Create target directory on server
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" "mkdir -p /home/ubuntu/Ticket-Booking-System"
+
+          # 4. Copy build and backend files to server
+          echo "Copying files to server..."
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r ticket-booking-admin/build ticket-booking-system "$SERVER_USER@$SERVER_HOST:/home/ubuntu/Ticket-Booking-System/"
+
+          # 5. Run deployment and restart services
+          echo "Running deployment commands on server..."
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" << 'EOF'
+            set -e
+
             echo "Deploying Frontend..."
             sudo rm -rf /var/www/ticketer/*
             sudo cp -r /home/ubuntu/Ticket-Booking-System/ticket-booking-admin/build/* /var/www/ticketer/
@@ -63,3 +73,4 @@ jobs:
             sudo systemctl start ticketer
             
             echo "Backend Deployment Complete!"
+          EOF
