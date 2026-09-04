@@ -209,7 +209,7 @@ const theme = createTheme({
   },
 });
 
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '930448322888-i5vhfaq98795o1b1ktton4hdudvlag99.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
 function App() {
   return (
