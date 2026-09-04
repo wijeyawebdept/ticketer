@@ -5,21 +5,83 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  build-frontend:
+    name: Build Frontend (React)
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build Frontend
+      - name: Setup Node.js & npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ticket-booking-admin/package-lock.json
+
+      - name: Install Dependencies & Build Frontend
+        working-directory: ticket-booking-admin
         run: |
-          cd ticket-booking-admin
-          npm install --legacy-peer-deps
+          npm ci --legacy-peer-deps --prefer-offline || npm install --legacy-peer-deps
           CI=false npm run build
 
-      - name: Setup SSH & Deploy to Server
+      - name: Upload Frontend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ticket-booking-admin/build
+          retention-days: 1
+
+  build-backend:
+    name: Build Backend (Java Spring Boot)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 & Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build JAR with Maven Wrapper
+        working-directory: ticket-booking-system
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Upload Backend JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: ticket-booking-system/target/*.jar
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Production Server
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Frontend Build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: build
+
+      - name: Download Backend JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: target
+
+      - name: Setup SSH & Fast Deploy
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
           RAW_HOST: ${{ secrets.SERVER_HOST }}
@@ -27,63 +89,51 @@ jobs:
         run: |
           set -e
 
-          # 1. Sanitize HOST and USER (strip whitespace, newlines, quotes, and accidental prefixes)
+          # 1. Sanitize HOST and USER
           SERVER_HOST=$(echo "$RAW_HOST" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/.*@//')
           SERVER_USER=$(echo "$RAW_USER" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/@.*//')
-          
           if [ -z "$SERVER_USER" ]; then
             SERVER_USER="ubuntu"
           fi
 
-          echo "Target Host: $SERVER_HOST"
-          echo "Target User: $SERVER_USER"
+          echo "Deploying to: $SERVER_USER@$SERVER_HOST"
 
           # 2. Setup SSH Key with clean UNIX line endings
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # 3. Add host key to known_hosts
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          
-          # 4. Create target directory on server
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" "mkdir -p /home/ubuntu/Ticket-Booking-System"
 
-          # 5. Copy build and backend files to server
-          echo "Copying files to server..."
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r ticket-booking-admin/build ticket-booking-system "$SERVER_USER@$SERVER_HOST:/home/ubuntu/Ticket-Booking-System/"
+          # 3. Create temp deployment folder on server
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" "mkdir -p /home/ubuntu/deploy-temp"
 
-          # 6. Run deployment and restart services
-          echo "Running deployment commands on server..."
+          # 4. Copy pre-built production files to server (lightweight & fast!)
+          echo "Copying compiled assets to server..."
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r build "$SERVER_USER@$SERVER_HOST:/home/ubuntu/deploy-temp/build"
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no target/*.jar "$SERVER_USER@$SERVER_HOST:/home/ubuntu/deploy-temp/ticketer.jar"
+
+          # 5. Instant activation of services on server
+          echo "Applying deployment on server..."
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" << 'EOF'
             set -e
 
-            echo "Deploying Frontend..."
+            # Update Frontend in Nginx web root
+            echo "Updating Frontend..."
             sudo rm -rf /var/www/ticketer/*
-            sudo cp -r /home/ubuntu/Ticket-Booking-System/ticket-booking-admin/build/* /var/www/ticketer/
+            sudo cp -r /home/ubuntu/deploy-temp/build/* /var/www/ticketer/
             sudo chown -R www-data:www-data /var/www/ticketer
             sudo chmod -R 755 /var/www/ticketer
-            
-            # Restart Nginx
             sudo systemctl restart nginx
-            echo "Frontend Deployment Complete!"
+            echo "Frontend Updated!"
 
-            echo "Deploying Backend..."
-            cd /home/ubuntu/Ticket-Booking-System/ticket-booking-system
-            
-            # Make sure maven wrapper is executable and build the backend
-            chmod +x mvnw
-            ./mvnw clean package -DskipTests
-            
-            # Restart the Java backend service
-            echo "Stopping ticketer service..."
+            # Update Backend JAR & Restart
+            echo "Updating Backend..."
             sudo systemctl stop ticketer
-            
-            echo "Copying new jar file..."
-            sudo cp target/*.jar /home/ubuntu/ticketer.jar
-            
-            echo "Starting ticketer service..."
+            sudo cp /home/ubuntu/deploy-temp/ticketer.jar /home/ubuntu/ticketer.jar
             sudo systemctl start ticketer
-            
-            echo "Backend Deployment Complete!"
+            echo "Backend Updated!"
+
+            # Clean temporary files
+            rm -rf /home/ubuntu/deploy-temp
+            echo "Deployment finished successfully!"
           EOF
