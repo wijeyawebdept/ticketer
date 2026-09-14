@@ -61,7 +61,7 @@ public class BookingService {
     private final TicketCategoryRepository ticketCategoryRepository;
     private final PromoCodeService promoCodeService;
 
-    @Value("${booking.pending-timeout-minutes:20}")
+    @Value("${booking.pending-timeout-minutes:2}")
     private int pendingTimeoutMinutes;
 
     private static final AtomicBoolean pendingCleanupRunning = new AtomicBoolean(false);
