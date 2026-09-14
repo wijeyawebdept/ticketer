@@ -291,6 +291,13 @@ const SeatSelectionPage: React.FC = () => {
     }
 
     const interval = setInterval(() => {
+      if (eventDetails.ticketCutoffTime) {
+        const cutoff = new Date(eventDetails.ticketCutoffTime);
+        if (new Date() > cutoff) {
+          setIsSalesClosed(true);
+        }
+      }
+
       const timeRemaining = calculateTimeRemaining(eventDetails.date, eventDetails.time);
 
       if (timeRemaining > 0) {
@@ -893,6 +900,7 @@ const SeatSelectionPage: React.FC = () => {
           bookedSeats={[]}
           isHolding={isHolding}
           ticketMode={eventDetailsFromState?.ticketMode}
+          isSalesClosed={isSalesClosed}
         />
       </div>
 

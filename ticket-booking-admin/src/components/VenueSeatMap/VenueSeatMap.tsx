@@ -110,6 +110,7 @@ interface VenueSeatMapProps {
   bookedSeats?: string[];
   isHolding?: boolean;
   ticketMode?: string;
+  isSalesClosed?: boolean;
 }
 
 const getAreaColor = (index: number): string => {
@@ -147,6 +148,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   bookedSeats = DEFAULT_EMPTY_BOOKED,
   isHolding = false,
   ticketMode = 'standard',
+  isSalesClosed = false,
 }) => {
   const { isRestrictedUser, user } = useAuth();
   const { t } = useTranslation();
@@ -339,6 +341,10 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       e.stopPropagation();
     }
 
+    if (isSalesClosed) {
+      return;
+    }
+
     const status = seatStatuses.get(seat.seatId);
 
     // If it's already in our local selection, we should ALWAYS be able to click it to unselect it
@@ -366,7 +372,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
 
     setLocalSelectedSeats(newSelected);
     onSeatSelect?.(Array.from(newSelected));
-  }, [seatStatuses, localSelectedSeats, maxSelection, onSeatSelect, user?.id]);
+  }, [seatStatuses, localSelectedSeats, maxSelection, onSeatSelect, user?.id, isSalesClosed]);
 
   // Pan handlers - Define handleMouseMove first since handleSVGMouseMove depends on it
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -536,6 +542,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   };
 
   const handleSharedAreaClick = (area: SharedAreaCategory) => {
+    if (isSalesClosed) return;
     setSelectedSharedArea(area);
     setShowSharedAreaDialog(true);
   };
@@ -780,7 +787,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                         return (
                           <g
                             key={seat.seatId}
-                            style={{ cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer' }}
+                            style={{ cursor: isHiddenLockedSeat ? 'default' : isUnavailable || isSalesClosed ? 'not-allowed' : 'pointer' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSeatClick(seat, e);
@@ -803,7 +810,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                               className="seat-circle"
                               style={{
                                 pointerEvents: isPanning.current || isHiddenLockedSeat ? 'none' : 'auto',
-                                cursor: isHiddenLockedSeat ? 'default' : isUnavailable ? 'not-allowed' : 'pointer'
+                                cursor: isHiddenLockedSeat ? 'default' : isUnavailable || isSalesClosed ? 'not-allowed' : 'pointer'
                               }}
                               onMouseDown={(e) => {
                                 e.stopPropagation();
@@ -888,14 +895,16 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                             strokeWidth="2"
                             rx="8"
                             className="shared-area"
-                            style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
+                            style={{ cursor: isSalesClosed ? 'not-allowed' : 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSharedAreaClick(area);
                             }}
                             onMouseEnter={(e) => {
-                              (e.target as SVGRectElement).style.fillOpacity = "0.25";
-                              (e.target as SVGRectElement).style.strokeWidth = "3";
+                              if (!isSalesClosed) {
+                                (e.target as SVGRectElement).style.fillOpacity = "0.25";
+                                (e.target as SVGRectElement).style.strokeWidth = "3";
+                              }
                             }}
                             onMouseLeave={(e) => {
                               (e.target as SVGRectElement).style.fillOpacity = "0.15";
@@ -909,7 +918,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                             fontSize="16"
                             fontWeight="600"
                             fill="#f8fafc"
-                            style={{ cursor: 'pointer', pointerEvents: 'none', letterSpacing: '0.5px' }}
+                            style={{ cursor: isSalesClosed ? 'not-allowed' : 'pointer', pointerEvents: 'none', letterSpacing: '0.5px' }}
                           >
                             {area.categoryName}
                           </text>
@@ -920,9 +929,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                             fontSize="13"
                             fontWeight="500"
                             fill="#cbd5e1"
-                            style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                            style={{ cursor: isSalesClosed ? 'not-allowed' : 'pointer', pointerEvents: 'none' }}
                           >
-                            {formatCurrency((ticketMode === 'early_bird' && area.earlyBirdPrice) ? area.earlyBirdPrice : area.price)} • {area.availableTickets} {t('availableLower', 'available')}
+                            {formatCurrency((ticketMode === 'early_bird' && area.earlyBirdPrice) ? area.earlyBirdPrice : area.price)} • {isSalesClosed ? t('unavailable', 'Unavailable') : `${area.availableTickets} ${t('availableLower', 'available')}`}
                           </text>
                         </g>
                       );
@@ -982,7 +991,9 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
         if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
 
         let statusText: string = hoveredStatus || 'AVAILABLE';
-        if (statusText === 'HELD' || (selectedSeats && selectedSeats.includes(hoveredSeat.seatId))) {
+        if (isSalesClosed && (statusText === 'AVAILABLE' || !hoveredStatus)) {
+          statusText = 'UNAVAILABLE';
+        } else if (statusText === 'HELD' || (selectedSeats && selectedSeats.includes(hoveredSeat.seatId))) {
           statusText = 'TEMPORARILY HELD';
         }
 

@@ -280,6 +280,30 @@
   color: #ddd;
 }
 
+.seat-tooltip-status.available {
+  background: rgba(46, 125, 50, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.seat-tooltip-status.unavailable {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+  border: 1px solid rgba(239, 83, 80, 0.4);
+}
+
+.seat-tooltip-status.booked {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+
+.seat-tooltip-status.locked {
+  background: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+  border: 1px solid rgba(108, 117, 125, 0.4);
+}
+
 .seat-tooltip-status.temporarily-held {
   background: rgba(255, 215, 0, 0.2);
   color: #ffd700;
