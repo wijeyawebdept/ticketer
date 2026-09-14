@@ -33,12 +33,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/admin/banners")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 public class BannerController {
 
     private final BannerService bannerService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<BannerResponse> createBanner(
             @RequestParam("title") String title,
             @RequestParam("description") String description,
@@ -55,6 +55,7 @@ public class BannerController {
     }
 
     @PutMapping("/{bannerId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<BannerResponse> updateBanner(
             @PathVariable UUID bannerId,
             @RequestParam(value = "title", required = false) String title,
@@ -80,6 +81,7 @@ public class BannerController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Page<BannerResponse>> getAllBanners(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -90,6 +92,7 @@ public class BannerController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Page<BannerResponse>> getBannersByStatus(
             @PathVariable BannerStatus status,
             @RequestParam(defaultValue = "0") int page,
@@ -109,6 +112,7 @@ public class BannerController {
     }
 
     @DeleteMapping("/{bannerId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> deleteBanner(@PathVariable UUID bannerId) {
         log.info("Deleting banner: {}", bannerId);
         bannerService.deleteBanner(bannerId);
@@ -116,6 +120,7 @@ public class BannerController {
     }
 
     @PutMapping("/{bannerId}/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<BannerResponse> updateBannerStatus(
             @PathVariable UUID bannerId,
             @PathVariable BannerStatus status) {
@@ -125,6 +130,7 @@ public class BannerController {
     }
 
     @PostMapping("/reorder")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> reorderBanners(@RequestBody List<UUID> bannerIds) {
         log.info("Reordering banners");
         bannerService.reorderBanners(bannerIds);

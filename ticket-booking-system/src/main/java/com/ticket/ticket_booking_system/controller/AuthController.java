@@ -22,9 +22,12 @@ import com.ticket.ticket_booking_system.dto.request.LoginRequest;
 import com.ticket.ticket_booking_system.dto.request.UserCreateRequest;
 import com.ticket.ticket_booking_system.dto.response.UserResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.GateStaff;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffAssignmentRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -50,6 +53,8 @@ public class AuthController {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final GateStaffRepository gateStaffRepository;
+    private final GateStaffAssignmentRepository gateStaffAssignmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final LoginSuccessHandler loginSuccessHandler;
     private final EmailService emailService;
@@ -63,6 +68,8 @@ public class AuthController {
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
             OrganizerEmployeeRepository organizerEmployeeRepository,
+            GateStaffRepository gateStaffRepository,
+            GateStaffAssignmentRepository gateStaffAssignmentRepository,
             PasswordEncoder passwordEncoder,
             LoginSuccessHandler loginSuccessHandler,
             EmailService emailService,
@@ -74,6 +81,8 @@ public class AuthController {
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
+        this.gateStaffRepository = gateStaffRepository;
+        this.gateStaffAssignmentRepository = gateStaffAssignmentRepository;
         this.passwordEncoder = passwordEncoder;
         this.loginSuccessHandler = loginSuccessHandler;
         this.emailService = emailService;
@@ -377,6 +386,204 @@ public class AuthController {
             ));
 
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Login failed: " + e.getMessage());
+            response.put("error_code", "AUTHENTICATION_ERROR");
+            response.put("error_details", e.getClass().getSimpleName());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
+
+    @PostMapping("/gate/login")
+    public ResponseEntity<Map<String, Object>> gateStaffLogin(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest servletRequest) {
+        try {
+            // 1. Check if user is a Gate Staff member in the dedicated gate_staff table
+            GateStaff staff = gateStaffRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+
+            if (staff != null) {
+                if (!passwordEncoder.matches(loginRequest.getPassword(), staff.getPassword())) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Invalid email or password");
+                    response.put("error_code", "INVALID_CREDENTIALS");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                if (!staff.isEnabled() || staff.getActive() != 1) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Account is disabled or deactivated. Please contact administrator.");
+                    response.put("error_code", "USER_DISABLED");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                // Verify that the Gate Staff member is currently assigned to at least one active event
+                boolean hasAssignments = gateStaffAssignmentRepository.hasActiveAssignments(staff.getGateStaffId());
+                if (!hasAssignments) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Access denied: You are not currently assigned to any active event. Please contact the administrator.");
+                    response.put("error_code", "NO_EVENT_ASSIGNMENTS");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                }
+
+                loginSuccessHandler.updateGateStaffLastLogin(loginRequest.getEmail());
+                String token = jwtService.generateToken(staff);
+
+                auditService.logAction(staff.getGateStaffId(), "GATE_LOGIN", "GATE_STAFF", staff.getGateStaffId(), "Gate staff login successful: " + staff.getEmail(), getClientIp(servletRequest));
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("message", "Gate staff login successful");
+                response.put("token", token);
+                response.put("user", Map.of(
+                    "id", staff.getGateStaffId(),
+                    "firstName", staff.getFirstName(),
+                    "lastName", staff.getLastName(),
+                    "role", "GATE_STAFF",
+                    "email", staff.getEmail()
+                ));
+
+                return ResponseEntity.ok(response);
+            }
+
+            // 2. Check if user is an Admin / Super Admin (Admins have gate supervision rights)
+            Admin admin = adminRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+            if (admin != null) {
+                if (!passwordEncoder.matches(loginRequest.getPassword(), admin.getPassword())) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Invalid email or password");
+                    response.put("error_code", "INVALID_CREDENTIALS");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                if (!admin.isEnabled()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Account is disabled. Please contact administrator.");
+                    response.put("error_code", "USER_DISABLED");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                loginSuccessHandler.updateAdminLastLogin(loginRequest.getEmail());
+                String token = jwtService.generateToken(admin);
+                String adminRole = admin.getRole().name();
+
+                auditService.logAction(admin.getAdminId(), "GATE_ADMIN_LOGIN", "ADMIN", admin.getAdminId(), "Admin logged into gate terminal: " + admin.getEmail(), getClientIp(servletRequest));
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("message", "Admin gate access authorized");
+                response.put("token", token);
+                response.put("user", Map.of(
+                    "id", admin.getAdminId(),
+                    "firstName", admin.getFirstName(),
+                    "lastName", admin.getLastName(),
+                    "role", adminRole,
+                    "email", admin.getEmail(),
+                    "isSuperAdmin", "SUPER_ADMIN".equals(adminRole)
+                ));
+
+                return ResponseEntity.ok(response);
+            }
+
+            // 3. Check if user is an Organizer
+            Organizer organizer = organizerRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+            if (organizer != null) {
+                if (!passwordEncoder.matches(loginRequest.getPassword(), organizer.getPassword())) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Invalid email or password");
+                    response.put("error_code", "INVALID_CREDENTIALS");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                if (!organizer.isEnabled()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Account is disabled. Please contact administrator.");
+                    response.put("error_code", "USER_DISABLED");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                loginSuccessHandler.updateOrganizerLastLogin(loginRequest.getEmail());
+                String token = jwtService.generateToken(organizer);
+
+                auditService.logAction(organizer.getOrganizerId(), "GATE_ORGANIZER_LOGIN", "ORGANIZER", organizer.getOrganizerId(), "Organizer logged into gate terminal: " + organizer.getEmail(), getClientIp(servletRequest));
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("message", "Organizer gate access authorized");
+                response.put("token", token);
+                response.put("user", Map.of(
+                    "id", organizer.getOrganizerId(),
+                    "firstName", organizer.getFirstName(),
+                    "lastName", organizer.getLastName(),
+                    "role", "ORGANIZER",
+                    "email", organizer.getEmail()
+                ));
+
+                return ResponseEntity.ok(response);
+            }
+
+            // 4. Check if user is an Organizer Employee
+            OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+            if (employee != null) {
+                if (!passwordEncoder.matches(loginRequest.getPassword(), employee.getPassword())) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Invalid email or password");
+                    response.put("error_code", "INVALID_CREDENTIALS");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                if (!employee.isEnabled()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", "error");
+                    response.put("message", "Account is disabled. Please contact administrator.");
+                    response.put("error_code", "USER_DISABLED");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+
+                loginSuccessHandler.updateOrganizerEmployeeLastLogin(loginRequest.getEmail());
+                String token = jwtService.generateToken(employee);
+
+                auditService.logAction(employee.getEmployeeId(), "GATE_EMPLOYEE_LOGIN", "ORGANIZER_EMPLOYEE", employee.getEmployeeId(), "Organizer employee logged into gate terminal: " + employee.getEmail(), getClientIp(servletRequest));
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("message", "Organizer employee gate access authorized");
+                response.put("token", token);
+                response.put("user", Map.of(
+                    "id", employee.getEmployeeId(),
+                    "firstName", employee.getFirstName(),
+                    "lastName", employee.getLastName(),
+                    "role", "ORGANIZER_EMPLOYEE",
+                    "email", employee.getEmail()
+                ));
+
+                return ResponseEntity.ok(response);
+            }
+
+            // If account is a customer account in users table
+            if (userRepository.findByEmail(loginRequest.getEmail()).isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Access denied. Customers cannot access the Gate Scanner terminal. Please use Customer Login.");
+                response.put("error_code", "CUSTOMER_PORTAL_ONLY");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+            // If not found in any table (wrong email / typo)
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid email or password");
+            response.put("error_code", "INVALID_CREDENTIALS");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");

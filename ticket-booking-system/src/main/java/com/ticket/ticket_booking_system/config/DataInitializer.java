@@ -14,11 +14,12 @@ import com.ticket.ticket_booking_system.repository.PrivacyPolicyRepository;
 import com.ticket.ticket_booking_system.repository.RefundPolicyRepository;
 import com.ticket.ticket_booking_system.repository.TermsAndConditionsRepository;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Initializes default page content on application startup
+ * Initializes default page content and verifies DB schema on application startup
  */
 @Component
 @RequiredArgsConstructor
@@ -30,13 +31,35 @@ public class DataInitializer implements CommandLineRunner {
     private final CookiePolicyRepository cookiePolicyRepository;
     private final FAQRepository faqRepository;
     private final RefundPolicyRepository refundPolicyRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
         try {
+            fixDatabaseSchema();
             initializeDefaultContent();
         } catch (Exception e) {
-            log.error("Error initializing default page content", e);
+            log.error("Error during startup data initialization", e);
+        }
+    }
+
+    private void fixDatabaseSchema() {
+        try {
+            // Fix legacy staff_user_id NOT NULL constraint if present in gate_staff_assignments table
+            jdbcTemplate.execute(
+                "DO $$ " +
+                "BEGIN " +
+                "    IF EXISTS (" +
+                "        SELECT 1 FROM information_schema.columns " +
+                "        WHERE table_name = 'gate_staff_assignments' AND column_name = 'staff_user_id'" +
+                "    ) THEN " +
+                "        ALTER TABLE gate_staff_assignments ALTER COLUMN staff_user_id DROP NOT NULL; " +
+                "    END IF; " +
+                "END $$;"
+            );
+            log.info("Database schema check for gate_staff_assignments completed successfully.");
+        } catch (Exception e) {
+            log.warn("Could not patch gate_staff_assignments schema: {}", e.getMessage());
         }
     }
 

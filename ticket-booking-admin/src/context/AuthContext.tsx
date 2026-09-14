@@ -6,6 +6,7 @@ interface AuthContextType {
   user: { id: string; email: string; role: UserRole } | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  gateLogin: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
@@ -78,6 +79,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const gateLogin = React.useCallback(async (email: string, password: string): Promise<void> => {
+    try {
+      const response = await AuthService.gateLogin({ email, password });
+      
+      if (response.user) {
+        setUser({ 
+          id: response.user.id,
+          email: response.user.email,
+          role: response.user.role as UserRole 
+        });
+      } else if (response.id && response.role && response.email) {
+        setUser({
+          id: response.id,
+          email: response.email,
+          role: response.role as UserRole
+        });
+      } else {
+        throw new Error('Invalid login response format');
+      }
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
   const logout = React.useCallback((): void => {
     AuthService.logout();
     setUser(null);
@@ -133,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       user,
       loading,
       login,
+      gateLogin,
       logout,
       isAuthenticated,
       isAdmin,
@@ -141,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isCustomerUser,
       refreshUser,
     }),
-    [user, loading, login, logout, isAuthenticated, isAdmin, isSuperAdmin, isRestrictedUser, isCustomerUser, refreshUser]
+    [user, loading, login, gateLogin, logout, isAuthenticated, isAdmin, isSuperAdmin, isRestrictedUser, isCustomerUser, refreshUser]
   );
 
   return (

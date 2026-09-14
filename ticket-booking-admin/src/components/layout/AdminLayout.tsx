@@ -41,6 +41,7 @@ import {
   LocalOffer as LocalOfferIcon,
   Assessment as AssessmentIcon,
   QrCodeScanner as QrCodeScannerIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material';
 import { useNavigate, Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -187,6 +188,8 @@ const AdminLayout: React.FC = () => {
     { text: t('navigation.admins'), icon: <PersonIcon />, path: '/admin/admins' },
     { text: t('navigation.organizers'), icon: <PersonIcon />, path: '/admin/organizers' },
     { text: t('navigation.organizerEmployees'), icon: <PersonIcon />, path: '/admin/organizer-employees' },
+    { text: 'Gate Staff', icon: <SecurityIcon />, path: '/admin/gate-staff' },
+    { text: 'Gate Staff Assignment', icon: <AssignmentIcon />, path: '/admin/gate-staff-assignments' },
     { text: t('navigation.events'), icon: <EventIcon />, path: '/admin/events' },
     { text: 'Deals', icon: <LocalOfferIcon />, path: '/admin/deals' },
     { text: 'Promo Codes', icon: <LocalOfferIcon />, path: '/admin/promocodes' },

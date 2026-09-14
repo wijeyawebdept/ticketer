@@ -33,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/admin/events/{eventId}/schedules")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'GATE_STAFF') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ORGANIZER_EMPLOYEE', 'GATE_STAFF', 'ROLE_GATE_STAFF')")
 public class AdminEventScheduleController {
 
     private final EventScheduleService eventScheduleService;
@@ -42,6 +42,7 @@ public class AdminEventScheduleController {
      * Create a new schedule for an event
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER')")
     public ResponseEntity<EventScheduleResponse> createSchedule(
             @PathVariable UUID eventId,
             @Valid @RequestBody EventScheduleRequest request) {
@@ -73,6 +74,7 @@ public class AdminEventScheduleController {
      * Update a schedule
      */
     @PutMapping("/{scheduleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER')")
     public ResponseEntity<EventScheduleResponse> updateSchedule(
             @PathVariable UUID eventId,
             @PathVariable UUID scheduleId,
@@ -85,6 +87,7 @@ public class AdminEventScheduleController {
      * Delete a schedule (soft delete - move to recycle bin)
      */
     @DeleteMapping("/{scheduleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER')")
     public ResponseEntity<Void> deleteSchedule(
             @PathVariable UUID eventId,
             @PathVariable UUID scheduleId) {
@@ -96,6 +99,7 @@ public class AdminEventScheduleController {
      * Restore a schedule from recycle bin
      */
     @PostMapping("/{scheduleId}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER')")
     public ResponseEntity<Void> restoreSchedule(
             @PathVariable UUID eventId,
             @PathVariable UUID scheduleId) {
@@ -119,6 +123,7 @@ public class AdminEventScheduleController {
      * Change schedule status
      */
     @PatchMapping("/{scheduleId}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ORGANIZER', 'ROLE_ORGANIZER')")
     public ResponseEntity<EventScheduleResponse> changeScheduleStatus(
             @PathVariable UUID eventId,
             @PathVariable UUID scheduleId,

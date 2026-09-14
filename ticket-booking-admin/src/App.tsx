@@ -50,6 +50,9 @@ import HandlingFeeManager from './pages/Admin/HandlingFeeManager';
 import AuditLogs from './pages/AuditLogs';
 import ReportsIndex from './pages/Reports';
 import EventReportView from './pages/Reports/EventReportView';
+import AdminGateStaff from './pages/AdminGateStaff';
+import AdminGateStaffAssignments from './pages/AdminGateStaffAssignments';
+import GateLogin from './pages/GateLogin';
 import { UserRole } from './types';
 
 // Public pages
@@ -223,6 +226,8 @@ function App() {
               {/* Public authentication routes - must come before protected routes */}
               <Route path="/admin/login" element={<Login />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/login/gate" element={<GateLogin />} />
+              <Route path="/gate/login" element={<Navigate to="/login/gate" replace />} />
               <Route path="/login/tkadmin" element={<RestrictedLogin mode="admin" />} />
               <Route path="/login/tkorg" element={<RestrictedLogin mode="organizer" />} />
               <Route path="/login/tkemp" element={<RestrictedLogin mode="employee" />} />
@@ -261,6 +266,8 @@ function App() {
                   <Route path="/admin/admins" element={<Admins />} />
                   <Route path="/admin/organizers" element={<Organizers />} />
                   <Route path="/admin/organizer-employees" element={<OrganizerEmployees />} />
+                  <Route path="/admin/gate-staff" element={<AdminGateStaff />} />
+                  <Route path="/admin/gate-staff-assignments" element={<AdminGateStaffAssignments />} />
                   <Route path="/admin/event-assignments" element={<AdminEventAssignments />} />
                   <Route path="/admin/organizer-assignment" element={<OrganizerAssignment />} />
                   <Route path="/admin/deals" element={<AdminDeals role="admin" />} />
@@ -299,6 +306,8 @@ function App() {
                 <Route path="/organizer/seats" element={<SeatManagement isAdmin={true} />} />
                 <Route path="/organizer/employees" element={<Employees />} />
                 <Route path="/organizer/event-assignments" element={<EventAssignments />} />
+                <Route path="/organizer/gate-staff" element={<AdminGateStaff />} />
+                <Route path="/organizer/gate-staff-assignments" element={<AdminGateStaffAssignments />} />
                 <Route path="/organizer/recycle-bin" element={<RecycleBin />} />
                 <Route path="/organizer/profile" element={<Profile />} />
                 <Route path="/organizer/audit-logs" element={<AuditLogs isMyLogs={true} />} />
@@ -320,6 +329,8 @@ function App() {
                 <Route path="/employee/bookings" element={<Bookings />} />
                 <Route path="/employee/checkin" element={<CheckInDashboard />} />
                 <Route path="/employee/seats" element={<SeatManagement isAdmin={true} />} />
+                <Route path="/employee/gate-staff" element={<AdminGateStaff />} />
+                <Route path="/employee/gate-staff-assignments" element={<AdminGateStaffAssignments />} />
                 <Route path="/employee/recycle-bin" element={<RecycleBin />} />
                 <Route path="/employee/profile" element={<Profile />} />
                 <Route path="/employee/audit-logs" element={<AuditLogs isMyLogs={true} />} />
@@ -327,11 +338,31 @@ function App() {
               </Route>
             </Route>
 
-            {/* Standalone Security Gate Scanner Routes (Clean, No Admin/Financial Nav) */}
-            <Route element={<GateSecurityLayout />}>
-              <Route path="/gate" element={<GateScanner />} />
-              <Route path="/gate/:eventId" element={<GateScanner />} />
-              <Route path="/gate/:eventId/:scheduleId" element={<GateScanner />} />
+            {/* Standalone Security Gate Scanner Routes (Protected for Gate Staff, Organizers & Admins) */}
+            <Route
+              element={
+                <ProtectedRoute
+                  allowedRoles={[
+                    UserRole.GATE_STAFF,
+                    UserRole.ROLE_GATE_STAFF,
+                    UserRole.ORGANIZER_EMPLOYEE,
+                    UserRole.ROLE_ORGANIZER_EMPLOYEE,
+                    UserRole.ORGANIZER,
+                    UserRole.ROLE_ORGANIZER,
+                    UserRole.ADMIN,
+                    UserRole.ROLE_ADMIN,
+                    UserRole.SUPER_ADMIN,
+                    UserRole.ROLE_SUPER_ADMIN,
+                  ]}
+                  redirectTo="/login/gate"
+                />
+              }
+            >
+              <Route element={<GateSecurityLayout />}>
+                <Route path="/gate" element={<GateScanner />} />
+                <Route path="/gate/:eventId" element={<GateScanner />} />
+                <Route path="/gate/:eventId/:scheduleId" element={<GateScanner />} />
+              </Route>
             </Route>
 
             {/* User routes - ONLY for USER users */}

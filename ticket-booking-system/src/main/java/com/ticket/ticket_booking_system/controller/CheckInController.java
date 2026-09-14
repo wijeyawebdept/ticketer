@@ -19,9 +19,11 @@ import com.ticket.ticket_booking_system.dto.request.CheckInScanRequest;
 import com.ticket.ticket_booking_system.dto.response.CheckInAttendeeDTO;
 import com.ticket.ticket_booking_system.dto.response.CheckInResponse;
 import com.ticket.ticket_booking_system.dto.response.CheckInStatsResponse;
+import com.ticket.ticket_booking_system.entity.GateStaff;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -36,13 +38,14 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE', 'ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'GATE_STAFF') or hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE', 'ROLE_GATE_STAFF', 'ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'GATE_STAFF')")
 public class CheckInController {
 
     private final CheckInService checkInService;
     private final UserRepository userRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final GateStaffRepository gateStaffRepository;
 
     /**
      * Scan QR code or search code to check in tickets.
@@ -112,6 +115,9 @@ public class CheckInController {
         if (authentication.getPrincipal() instanceof OrganizerEmployee) {
             return ((OrganizerEmployee) authentication.getPrincipal()).getEmployeeId();
         }
+        if (authentication.getPrincipal() instanceof GateStaff) {
+            return ((GateStaff) authentication.getPrincipal()).getGateStaffId();
+        }
 
         String email = authentication.getName();
         if (email != null) {
@@ -121,6 +127,8 @@ public class CheckInController {
             if (organizer != null) return organizer.getOrganizerId();
             OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(email).orElse(null);
             if (employee != null) return employee.getEmployeeId();
+            GateStaff staff = gateStaffRepository.findByEmail(email).orElse(null);
+            if (staff != null) return staff.getGateStaffId();
         }
         return null;
     }
@@ -138,6 +146,10 @@ public class CheckInController {
         if (authentication.getPrincipal() instanceof OrganizerEmployee) {
             OrganizerEmployee e = (OrganizerEmployee) authentication.getPrincipal();
             return (e.getFirstName() + " " + e.getLastName()).trim();
+        }
+        if (authentication.getPrincipal() instanceof GateStaff) {
+            GateStaff g = (GateStaff) authentication.getPrincipal();
+            return (g.getFirstName() + " " + g.getLastName()).trim();
         }
         return authentication.getName() != null ? authentication.getName() : "Gate Staff";
     }

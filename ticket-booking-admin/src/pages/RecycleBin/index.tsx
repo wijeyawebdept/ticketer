@@ -80,7 +80,7 @@ const RecycleBin: React.FC = () => {
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ROLE_SUPER_ADMIN;
   const isOrganizer = user?.role === UserRole.ORGANIZER || user?.role === UserRole.ROLE_ORGANIZER;
-  const entityTypes = ['USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY', 'BLOG'];
+  const entityTypes = ['USER', 'ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'GATE_STAFF', 'EVENT', 'VENUE', 'SCHEDULE', 'EVENT_CATEGORY', 'BLOG'];
 
   useEffect(() => {
     fetchRecycleBinItems();
@@ -94,7 +94,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         data = await RecycleBinService.getAllRecycleBinItems();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'GATE_STAFF' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
         data = await RecycleBinService.getRecycleBinItemsByType(entityType);
       }
       setItems(data);
@@ -168,7 +168,7 @@ const RecycleBin: React.FC = () => {
       if (tabValue === 0) {
         await RecycleBinService.emptyRecycleBin();
       } else {
-        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
+        const entityType = entityTypes[tabValue - 1] as 'USER' | 'ADMIN' | 'ORGANIZER' | 'ORGANIZER_EMPLOYEE' | 'GATE_STAFF' | 'EVENT' | 'VENUE' | 'SCHEDULE' | 'EVENT_CATEGORY' | 'BLOG';
         await RecycleBinService.emptyRecycleBinByType(entityType);
       }
       setSuccess('Recycle bin emptied successfully');
@@ -191,6 +191,8 @@ const RecycleBin: React.FC = () => {
         return 'info';
       case 'ORGANIZER_EMPLOYEE':
         return 'secondary';
+      case 'GATE_STAFF':
+        return 'warning';
       case 'EVENT':
         return 'secondary';
       case 'VENUE':
@@ -296,6 +298,7 @@ const RecycleBin: React.FC = () => {
           <Tab label="Admins" />
           <Tab label="Organizers" />
           <Tab label="Organizer Employees" />
+          <Tab label="Gate Staff" />
           <Tab label="Events" />
           <Tab label="Venues" />
           <Tab label="Schedules" />

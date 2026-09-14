@@ -8,10 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.GateStaff;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -25,16 +27,19 @@ public class LoginSuccessHandler {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final GateStaffRepository gateStaffRepository;
 
     public LoginSuccessHandler(
             UserRepository userRepository,
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
-            OrganizerEmployeeRepository organizerEmployeeRepository) {
+            OrganizerEmployeeRepository organizerEmployeeRepository,
+            GateStaffRepository gateStaffRepository) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
+        this.gateStaffRepository = gateStaffRepository;
     }
 
     /**
@@ -160,6 +165,32 @@ public class LoginSuccessHandler {
             }
         } catch (Exception e) {
             logger.error("Error updating last_login_at for organizer employee: {}", email, e);
+            return false;
+        }
+    }
+
+    /**
+     * Updates the last login timestamp for a GateStaff after successful authentication.
+     * 
+     * @param email The gate staff's email address
+     * @return true if update was successful, false otherwise
+     */
+    public boolean updateGateStaffLastLogin(String email) {
+        try {
+            GateStaff staff = gateStaffRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Gate staff not found: " + email));
+            
+            int rowsUpdated = gateStaffRepository.updateLastLoginAt(staff.getGateStaffId(), LocalDateTime.now());
+            
+            if (rowsUpdated > 0) {
+                logger.debug("Updated last_login_at for gate staff: {} (ID: {})", email, staff.getGateStaffId());
+                return true;
+            } else {
+                logger.warn("Failed to update last_login_at for gate staff: {} (ID: {})", email, staff.getGateStaffId());
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Error updating last_login_at for gate staff: {}", email, e);
             return false;
         }
     }

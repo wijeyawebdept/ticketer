@@ -34,6 +34,8 @@ const RoleBasedRedirect: React.FC = () => {
     return <Navigate to="/organizer/dashboard" replace />;
   } else if (userRole === UserRole.ORGANIZER_EMPLOYEE || userRole === UserRole.ROLE_ORGANIZER_EMPLOYEE) {
     return <Navigate to="/employee/dashboard" replace />;
+  } else if (userRole === UserRole.GATE_STAFF || userRole === UserRole.ROLE_GATE_STAFF) {
+    return <Navigate to="/gate" replace />;
   } else if (userRole === UserRole.USER || userRole === UserRole.ROLE_USER) {
     return <Navigate to="/events" replace />;
   } else {

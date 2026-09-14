@@ -71,10 +71,21 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/blog/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/*").permitAll()
-                        .requestMatchers("/api/admin/event-categories/active", "/api/admin/event-categories/{id}", "/api/checkin/**")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE",
-                                "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/banners", "/api/admin/banners/*", "/api/public/banners/**").permitAll()
+                        .requestMatchers(
+                                "/api/admin/event-categories/active",
+                                "/api/admin/event-categories/*",
+                                "/api/admin/events/*/schedules",
+                                "/api/admin/events/*/schedules/**",
+                                "/api/admin/gate-staff/**",
+                                "/api/admin/gate-staff-assignments/**",
+                                "/api/checkin/**",
+                                "/api/gate/**"
+                        )
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_ORGANIZER", "ROLE_ORGANIZER_EMPLOYEE", "ROLE_GATE_STAFF",
+                                "ADMIN", "SUPER_ADMIN", "ORGANIZER", "ORGANIZER_EMPLOYEE", "GATE_STAFF"
+                        )
                         .requestMatchers("/api/admin/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated())

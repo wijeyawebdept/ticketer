@@ -374,6 +374,30 @@ class AuthService {
     }
   }
 
+  async gateLogin(credentials: LoginRequest): Promise<LoginResponse> {
+    try {
+      const response = await axios.post<LoginResponse>('/api/auth/gate/login', credentials);
+      
+      if (response.data.token) {
+        this.setSession(response.data.token, response.data.user);
+        devLog('Gate staff logged in successfully');
+      }
+      
+      return {
+        id: response.data.user?.id || '',
+        role: response.data.user?.role || '',
+        email: response.data.user?.email || credentials.email,
+        token: response.data.token,
+        status: response.data.status,
+        message: response.data.message,
+        user: response.data.user
+      };
+    } catch (error: any) {
+      errorLog('Gate staff login error', error);
+      throw error;
+    }
+  }
+
   async forgotPassword(email: string, roleHint?: string): Promise<{ message: string }> {
     const response = await axios.post<{ message: string }>('/api/auth/forgot-password', { email, roleHint });
     return response.data;

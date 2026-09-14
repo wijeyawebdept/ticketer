@@ -131,7 +131,7 @@ public class User implements UserDetails {
     }
 
     public enum Role {
-        USER, ORGANIZER, ORGANIZER_EMPLOYEE, ADMIN, SUPER_ADMIN
+        USER, ORGANIZER, ORGANIZER_EMPLOYEE, GATE_STAFF, ADMIN, SUPER_ADMIN
     }
 
     @Override

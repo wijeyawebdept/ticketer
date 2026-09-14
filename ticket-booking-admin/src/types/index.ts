@@ -20,6 +20,8 @@ export enum UserRole {
   ROLE_ORGANIZER = 'ROLE_ORGANIZER',
   ORGANIZER_EMPLOYEE = 'ORGANIZER_EMPLOYEE',
   ROLE_ORGANIZER_EMPLOYEE = 'ROLE_ORGANIZER_EMPLOYEE',
+  GATE_STAFF = 'GATE_STAFF',
+  ROLE_GATE_STAFF = 'ROLE_GATE_STAFF',
   ADMIN = 'ADMIN',
   ROLE_ADMIN = 'ROLE_ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
@@ -485,3 +487,76 @@ export interface ValidatePromoCodeResponse {
   scope?: string;
   appliedTarget?: string;
 }
+
+// Gate Staff & Assignment Types
+export interface GateStaff {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  nic?: string;
+  role: string;
+  active: number; // 1 = active, 0 = inactive, -1 = deleted
+  emailVerified: boolean;
+  notes?: string;
+  createdAt: string;
+  lastLoginAt?: string | null;
+  activeAssignmentsCount?: number;
+}
+
+export interface CreateGateStaffRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+  nic?: string;
+  notes?: string;
+}
+
+export interface UpdateGateStaffRequest {
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  nic?: string;
+  password?: string;
+  active?: number;
+  notes?: string;
+}
+
+export interface GateStaffAssignment {
+  assignmentId: string;
+  staffUserId: string;
+  staffName: string;
+  staffEmail: string;
+  staffPhone?: string;
+  eventId: string;
+  eventTitle: string;
+  venueName?: string;
+  scheduleId?: string;
+  scheduleDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isAllSchedules: boolean;
+  assignedById?: string;
+  assignedByName?: string;
+  assignedAt: string;
+  notes?: string;
+  isActive: boolean;
+}
+
+export interface AssignGateStaffRequest {
+  eventId: string;
+  scheduleIds?: string[];
+  staffUserIds: string[];
+  notes?: string;
+}
+
+export interface UpdateGateStaffAssignmentRequest {
+  staffUserId?: string;
+  scheduleId?: string | null;
+  isAllSchedules?: boolean;
+  notes?: string;
+}
+

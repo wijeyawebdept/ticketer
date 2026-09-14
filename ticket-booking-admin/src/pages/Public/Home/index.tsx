@@ -1492,21 +1492,33 @@ const Home: React.FC = () => {
       {/* Logout confirmation Toast */}
       <Snackbar
         open={logoutOpen}
-        autoHideDuration={5000}
+        autoHideDuration={4000}
         onClose={() => setLogoutOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         TransitionComponent={SlideTransition}
+        sx={{
+          bottom: { xs: 20, sm: 30 },
+          zIndex: 9999,
+        }}
       >
         <Alert
           onClose={() => setLogoutOpen(false)}
           severity="info"
           variant="filled"
-          elevation={6}
+          elevation={4}
           sx={{
             fontFamily: 'Raleway, sans-serif',
             fontWeight: 600,
-            fontSize: '1rem',
-            minWidth: 320,
+            fontSize: { xs: '0.8rem', sm: '0.88rem' },
+            maxWidth: { xs: 'calc(100vw - 32px)', sm: 440 },
+            minWidth: 'auto',
+            py: { xs: 0.5, sm: 0.8 },
+            px: { xs: 1.2, sm: 2 },
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+            alignItems: 'center',
+            '& .MuiAlert-icon': { fontSize: { xs: 18, sm: 22 }, mr: 1, py: 0 },
+            '& .MuiAlert-action': { pt: 0, mr: -0.5 },
           }}
         >
           You've been signed out. See you next time!

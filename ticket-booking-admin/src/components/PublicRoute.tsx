@@ -40,6 +40,7 @@ const PublicRoute: React.FC = () => {
                   userRoleStr === 'SUPER_ADMIN' || userRoleStr === 'ROLE_SUPER_ADMIN';
   const isOrganizer = userRoleStr === 'ORGANIZER' || userRoleStr === 'ROLE_ORGANIZER';
   const isOrganizerEmployee = userRoleStr === 'ORGANIZER_EMPLOYEE' || userRoleStr === 'ROLE_ORGANIZER_EMPLOYEE';
+  const isGateStaff = userRoleStr === 'GATE_STAFF' || userRoleStr === 'ROLE_GATE_STAFF';
   const isUser = userRoleStr === 'USER' || userRoleStr === 'ROLE_USER';
 
   // Redirect admins to admin dashboard
@@ -55,6 +56,11 @@ const PublicRoute: React.FC = () => {
   // Redirect organizer employees to employee dashboard
   if (isOrganizerEmployee) {
     return <Navigate to="/employee/dashboard" replace />;
+  }
+
+  // Redirect gate staff to gate scanner terminal
+  if (isGateStaff) {
+    return <Navigate to="/gate" replace />;
   }
 
   // Allow regular users to access public pages

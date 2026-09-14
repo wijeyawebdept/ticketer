@@ -40,7 +40,10 @@ import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
 import com.ticket.ticket_booking_system.repository.VenueRepository;
 import com.ticket.ticket_booking_system.repository.BlogPostRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffAssignmentRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.entity.BlogPost;
+import com.ticket.ticket_booking_system.entity.GateStaff;
 
 @Service
 public class RecycleBinService {
@@ -50,6 +53,8 @@ public class RecycleBinService {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final GateStaffRepository gateStaffRepository;
+    private final GateStaffAssignmentRepository gateStaffAssignmentRepository;
     private final EventRepository eventRepository;
     private final EventScheduleRepository eventScheduleRepository;
     private final VenueRepository venueRepository;
@@ -68,6 +73,8 @@ public class RecycleBinService {
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
             OrganizerEmployeeRepository organizerEmployeeRepository,
+            GateStaffRepository gateStaffRepository,
+            GateStaffAssignmentRepository gateStaffAssignmentRepository,
             EventRepository eventRepository,
             EventScheduleRepository eventScheduleRepository,
             VenueRepository venueRepository,
@@ -83,6 +90,8 @@ public class RecycleBinService {
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
+        this.gateStaffRepository = gateStaffRepository;
+        this.gateStaffAssignmentRepository = gateStaffAssignmentRepository;
         this.eventRepository = eventRepository;
         this.eventScheduleRepository = eventScheduleRepository;
         this.venueRepository = venueRepository;
@@ -153,6 +162,12 @@ public class RecycleBinService {
             case "ORGANIZER_EMPLOYEE" -> {
                 if (organizerEmployeeRepository.existsById(entityId)) {
                     organizerEmployeeRepository.deleteById(entityId);
+                }
+            }
+            case "GATE_STAFF" -> {
+                if (gateStaffRepository.existsById(entityId)) {
+                    gateStaffAssignmentRepository.deleteByGateStaff_GateStaffId(entityId);
+                    gateStaffRepository.deleteById(entityId);
                 }
             }
             case "EVENT" -> {
@@ -311,6 +326,7 @@ public class RecycleBinService {
                 case "ADMIN" -> restoreAdmin(recycleBin);
                 case "ORGANIZER" -> restoreOrganizer(recycleBin);
                 case "ORGANIZER_EMPLOYEE" -> restoreOrganizerEmployee(recycleBin);
+                case "GATE_STAFF" -> restoreGateStaff(recycleBin);
                 case "EVENT" -> restoreEvent(recycleBin);
                 case "VENUE" -> restoreVenue(recycleBin);
                 case "SCHEDULE" -> restoreSchedule(recycleBin);
@@ -371,6 +387,17 @@ public class RecycleBinService {
         organizerEmployeeRepository.save(employee);
         
         System.out.println("Organizer Employee " + employee.getEmail() + " restored from recycle bin");
+    }
+
+    private void restoreGateStaff(RecycleBin recycleBin) throws JsonProcessingException {
+        GateStaff staff = gateStaffRepository.findById(recycleBin.getEntityId())
+                .orElseThrow(() -> new RuntimeException("Gate Staff not found: " + recycleBin.getEntityId()));
+        
+        // Reactivate the gate staff member
+        staff.setActive(1);
+        gateStaffRepository.save(staff);
+        
+        System.out.println("Gate Staff " + staff.getEmail() + " restored from recycle bin");
     }
 
     private void restoreEvent(RecycleBin recycleBin) throws JsonProcessingException {
@@ -501,6 +528,12 @@ public class RecycleBinService {
                 case "ORGANIZER_EMPLOYEE" -> {
                     if (organizerEmployeeRepository.existsById(entityId)) {
                         organizerEmployeeRepository.deleteById(entityId);
+                    }
+                }
+                case "GATE_STAFF" -> {
+                    if (gateStaffRepository.existsById(entityId)) {
+                        gateStaffAssignmentRepository.deleteByGateStaff_GateStaffId(entityId);
+                        gateStaffRepository.deleteById(entityId);
                     }
                 }
                 case "ADMIN" -> {

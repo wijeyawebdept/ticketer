@@ -25,6 +25,8 @@ import {
   FormControl,
   InputLabel,
   LinearProgress,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   QrCodeScanner as QrCodeScannerIcon,
@@ -41,6 +43,8 @@ import {
   Refresh as RefreshIcon,
   Check as CheckIcon,
   Clear as ClearIcon,
+  EventNote as EventIcon,
+  AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import QrScanner from '../../components/QrScanner/QrScanner';
 import { VenueSeatMap } from '../../components/VenueSeatMap/VenueSeatMap';
@@ -52,6 +56,8 @@ import checkInService, {
 import seatWebSocketService from '../../services/websocket.service';
 import eventService from '../../services/event.service';
 import eventScheduleService from '../../services/eventSchedule.service';
+import gateStaffService from '../../services/gateStaff.service';
+import { useAuth } from '../../context/AuthContext';
 
 // Web Audio API Sound Generator for Instant Gate Audio Chimes
 const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: boolean) => {
@@ -62,11 +68,10 @@ const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: 
     const ctx = new AudioContext();
 
     if (type === 'SUCCESS') {
-      // Pleasant high double beep
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
       gain1.gain.setValueAtTime(0.2, ctx.currentTime);
       gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
       osc1.connect(gain1);
@@ -77,7 +82,7 @@ const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: 
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1320, ctx.currentTime + 0.12); // E6
+      osc2.frequency.setValueAtTime(1320, ctx.currentTime + 0.12);
       gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.12);
       gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
       osc2.connect(gain2);
@@ -85,7 +90,6 @@ const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: 
       osc2.start(ctx.currentTime + 0.12);
       osc2.stop(ctx.currentTime + 0.3);
     } else if (type === 'WARNING') {
-      // Amber warning tone
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
@@ -98,7 +102,6 @@ const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: 
       osc.start();
       osc.stop(ctx.currentTime + 0.35);
     } else {
-      // Error low buzz
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
@@ -117,6 +120,7 @@ const playAudioFeedback = (type: 'SUCCESS' | 'WARNING' | 'ERROR', soundEnabled: 
 
 export const GateScanner: React.FC = () => {
   const { eventId: routeEventId, scheduleId: routeScheduleId } = useParams<{ eventId?: string; scheduleId?: string }>();
+  const { user } = useAuth();
 
   // Active View Tab: 0 = Scanner & Live Entry, 1 = Live Seat Map Attendance, 2 = Attendee Roster
   const [activeTab, setActiveTab] = useState(0);
@@ -130,6 +134,7 @@ export const GateScanner: React.FC = () => {
   // Events & Schedules state
   const [events, setEvents] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string>(() => {
     return routeEventId || localStorage.getItem('ticketer_gate_event_id') || '';
   });
@@ -144,6 +149,11 @@ export const GateScanner: React.FC = () => {
   const [scanLoading, setScanLoading] = useState(false);
   const [lastScanResult, setLastScanResult] = useState<CheckInResponse | null>(null);
 
+  const userRoleStr = String(user?.role || '').toUpperCase();
+  const isGateStaff = userRoleStr.includes('GATE_STAFF') || (!userRoleStr.includes('ADMIN') && !userRoleStr.includes('ORGANIZER'));
+  const currentEvent = events.find((ev) => String(ev.eventId || ev.id || '').toLowerCase() === String(selectedEventId || '').toLowerCase()) || events[0] || null;
+  const currentSchedule = schedules.find((sc) => String(sc.scheduleId || sc.id || '').toLowerCase() === String(selectedScheduleId || '').toLowerCase()) || schedules[0] || null;
+
   // Real-time Statistics
   const [stats, setStats] = useState<CheckInStatsResponse | null>(null);
 
@@ -155,47 +165,53 @@ export const GateScanner: React.FC = () => {
   // Fetch Available Events with localStorage persistence and URL sync
   useEffect(() => {
     const fetchEvents = async () => {
+      setEventsLoading(true);
       try {
-        const res = await eventService.getAllEvents();
-        const list: any[] = res?.content || (Array.isArray(res) ? res : []);
+        let list: any[] = [];
+        try {
+          const assignedRes = await gateStaffService.getMyAssignedEvents();
+          list = Array.isArray(assignedRes) ? assignedRes : (assignedRes as any)?.content || [];
+        } catch (assignErr) {
+          console.warn('Could not fetch via gateStaffService, trying eventService fallback:', assignErr);
+        }
+
+        const isAdminOrOrganizer = userRoleStr.includes('ADMIN') || userRoleStr.includes('ORGANIZER');
+
+        if (list.length === 0 && isAdminOrOrganizer) {
+          try {
+            const res = await eventService.getAllEvents();
+            list = res?.content || (Array.isArray(res) ? res : []);
+          } catch (err) {
+            const fallbackRes = await eventService.getUpcomingPublishedEvents(0, 50);
+            list = fallbackRes?.content || (Array.isArray(fallbackRes) ? fallbackRes : []);
+          }
+        }
+
         setEvents(list);
         if (list.length > 0) {
           const storedId = localStorage.getItem('ticketer_gate_event_id');
-          const targetId = (routeEventId && list.some(e => String(e.eventId || e.id) === routeEventId))
-            ? routeEventId
-            : (storedId && list.some(e => String(e.eventId || e.id) === storedId))
+          const targetId =
+            routeEventId && list.some((e) => String(e.eventId || e.id) === routeEventId)
+              ? routeEventId
+              : storedId && list.some((e) => String(e.eventId || e.id) === storedId)
               ? storedId
               : String(list[0].eventId || list[0].id || '');
 
           setSelectedEventId(targetId);
           localStorage.setItem('ticketer_gate_event_id', targetId);
           window.history.replaceState(null, '', `/gate/${targetId}`);
+        } else {
+          setSelectedEventId('');
+          setSelectedScheduleId('');
         }
       } catch (err) {
-        console.error('Failed to load events via eventService, trying fallback:', err);
-        try {
-          const fallbackRes = await eventService.getUpcomingPublishedEvents(0, 50);
-          const fallbackList: any[] = fallbackRes?.content || (Array.isArray(fallbackRes) ? fallbackRes : []);
-          setEvents(fallbackList);
-          if (fallbackList.length > 0) {
-            const storedId = localStorage.getItem('ticketer_gate_event_id');
-            const targetId = (routeEventId && fallbackList.some(e => String(e.eventId || e.id) === routeEventId))
-              ? routeEventId
-              : (storedId && fallbackList.some(e => String(e.eventId || e.id) === storedId))
-                ? storedId
-                : String(fallbackList[0].eventId || fallbackList[0].id || '');
-
-            setSelectedEventId(targetId);
-            localStorage.setItem('ticketer_gate_event_id', targetId);
-            window.history.replaceState(null, '', `/gate/${targetId}`);
-          }
-        } catch (e2) {
-          console.error('Failed to load events fallback:', e2);
-        }
+        console.error('Failed to load events for GateScanner:', err);
+      } finally {
+        setEventsLoading(false);
       }
     };
     fetchEvents();
-  }, [routeEventId]);
+  }, [routeEventId, user?.role, userRoleStr]);
 
   // Fetch Schedules for selected event with localStorage persistence
   useEffect(() => {
@@ -206,29 +222,41 @@ export const GateScanner: React.FC = () => {
     }
     const fetchSchedules = async () => {
       try {
-        const ev = events.find(e => String(e.eventId || e.id) === String(selectedEventId));
+        const ev = events.find((e) => String(e.eventId || e.id) === String(selectedEventId));
         if (ev?.venue?.venueId || ev?.venueId) {
           setVenueId(ev.venue?.venueId || ev.venueId);
         }
 
-        let list: any[] = [];
-        try {
-          list = await eventScheduleService.getSchedulesForEvent(selectedEventId);
-        } catch (e) {
+        let scheduleArray: any[] = [];
+
+        if (ev?.eventSchedules && Array.isArray(ev.eventSchedules) && ev.eventSchedules.length > 0) {
+          scheduleArray = ev.eventSchedules;
+        } else if (ev?.schedules && Array.isArray(ev.schedules) && ev.schedules.length > 0) {
+          scheduleArray = ev.schedules;
+        } else {
           try {
-            list = await eventScheduleService.getBookableSchedulesForEvent(selectedEventId);
-          } catch (e2) {
-            list = await eventScheduleService.getPublicBookableSchedulesForEvent(selectedEventId);
+            const list = await eventScheduleService.getSchedulesForEvent(selectedEventId);
+            scheduleArray = Array.isArray(list) ? list : (list as any)?.content || [];
+          } catch (e) {
+            try {
+              const list = await eventScheduleService.getBookableSchedulesForEvent(selectedEventId);
+              scheduleArray = Array.isArray(list) ? list : (list as any)?.content || [];
+            } catch (e2) {
+              const list = await eventScheduleService.getPublicBookableSchedulesForEvent(selectedEventId);
+              scheduleArray = Array.isArray(list) ? list : (list as any)?.content || [];
+            }
           }
         }
 
-        const scheduleArray: any[] = Array.isArray(list) ? list : (list as any)?.content || [];
         setSchedules(scheduleArray);
         if (scheduleArray.length > 0) {
           const storedScheduleId = localStorage.getItem(`ticketer_gate_schedule_${selectedEventId}`);
-          const targetScheduleId = (routeScheduleId && scheduleArray.some((s: any) => String(s.scheduleId || s.id) === routeScheduleId))
-            ? routeScheduleId
-            : (storedScheduleId && scheduleArray.some((s: any) => String(s.scheduleId || s.id) === storedScheduleId))
+          const targetScheduleId =
+            routeScheduleId &&
+            scheduleArray.some((s: any) => String(s.scheduleId || s.id) === routeScheduleId)
+              ? routeScheduleId
+              : storedScheduleId &&
+                scheduleArray.some((s: any) => String(s.scheduleId || s.id) === storedScheduleId)
               ? storedScheduleId
               : String(scheduleArray[0].scheduleId || scheduleArray[0].id || '');
 
@@ -277,19 +305,16 @@ export const GateScanner: React.FC = () => {
     const unsubscribe = seatWebSocketService.subscribeToSchedule(
       selectedScheduleId,
       (msg) => {
-        // Play audio if checked in
         if (msg.action === 'CHECKED_IN') {
           playAudioFeedback('SUCCESS', soundEnabled);
         }
 
-        // Live update stats state
         setStats((prev) => {
           if (!prev) return prev;
           const newCheckedIn = Number(msg.totalScheduleCheckedIn);
           const newPending = Math.max(0, prev.totalBooked - newCheckedIn);
           const newPct = prev.totalBooked > 0 ? (newCheckedIn / prev.totalBooked) * 100 : 0;
 
-          // Add to recent check-ins
           const newItem = {
             customerName: msg.customerName,
             bookingReference: msg.bookingReference,
@@ -308,7 +333,6 @@ export const GateScanner: React.FC = () => {
           };
         });
 
-        // Live update attendee roster state
         setAttendees((prev) =>
           prev.map((att) => {
             if (
@@ -394,152 +418,319 @@ export const GateScanner: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      {/* Event and Schedule Selector Bar */}
-      <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Event Select */}
-            <Grid item xs={12} sm={5} md={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="gatescanner-event-label" sx={{ color: 'rgba(255,255,255,0.6)' }}>Event</InputLabel>
-                <Select
-                  labelId="gatescanner-event-label"
-                  value={selectedEventId || ''}
-                  label="Event"
-                  onChange={(e) => {
-                    const newId = e.target.value;
-                    setSelectedEventId(newId);
-                    localStorage.setItem('ticketer_gate_event_id', newId);
-                    window.history.replaceState(null, '', `/gate/${newId}`);
+      {/* No Assigned Events Warning Banner */}
+      {!eventsLoading && events.length === 0 && (
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          <AlertTitle sx={{ fontWeight: 700 }}>No Active Event Assignments</AlertTitle>
+          There are currently no events or schedules assigned to your account. Please ask the event administrator or supervisor to assign you to an event schedule.
+        </Alert>
+      )}
+
+      {/* Event and Schedule Display / Selector Bar */}
+      {/* Top Header Card: Assigned Event & Schedule + Controls */}
+      <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: { xs: 2, sm: 3 }, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', mb: { xs: 1.5, sm: 2.5 } }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          {isGateStaff ? (
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 1.2, md: 2 }, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between' }}>
+              {/* Event & Venue Info */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: { xs: 32, sm: 38 },
+                      height: { xs: 32, sm: 38 },
+                      borderRadius: 1.5,
+                      bgcolor: 'rgba(255, 25, 85, 0.1)',
+                      color: '#ff1955',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <EventIcon sx={{ fontSize: { xs: 18, sm: 22 } }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" sx={{ color: '#ff1955', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: 0.5, display: 'block', lineHeight: 1.1 }}>
+                      Assigned Event
+                    </Typography>
+                    <Typography variant="subtitle2" noWrap sx={{ color: '#1e293b', fontWeight: 800, fontSize: { xs: '0.88rem', sm: '0.98rem' } }}>
+                      {currentEvent ? (currentEvent.name || currentEvent.title) : eventsLoading ? 'Loading event...' : 'Assigned Event'}
+                    </Typography>
+                    {currentEvent?.venue?.name && (
+                      <Typography variant="caption" noWrap sx={{ color: '#64748b', fontSize: '0.72rem', display: 'block', lineHeight: 1.1 }}>
+                        {currentEvent.venue.name}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Event Selector if assigned multiple events */}
+                {events.length > 1 && (
+                  <FormControl size="small" sx={{ minWidth: 90, flexShrink: 0 }}>
+                    <Select
+                      value={selectedEventId || ''}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        setSelectedEventId(newId);
+                        localStorage.setItem('ticketer_gate_event_id', newId);
+                        window.history.replaceState(null, '', `/gate/${newId}`);
+                      }}
+                      sx={{ height: 28, fontSize: '0.72rem', borderRadius: 1.5 }}
+                    >
+                      {events.map((ev) => (
+                        <MenuItem key={ev.eventId || ev.id} value={String(ev.eventId || ev.id)}>
+                          {ev.name || ev.title}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+
+                {/* Sound & Sync Controls */}
+                <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', flexShrink: 0 }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const newVal = !soundEnabled;
+                      setSoundEnabled(newVal);
+                      localStorage.setItem('ticketer_gate_sound_enabled', String(newVal));
+                    }}
+                    sx={{
+                      bgcolor: soundEnabled ? 'rgba(16, 185, 129, 0.1)' : '#f1f5f9',
+                      color: soundEnabled ? '#10b981' : '#64748b',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 1.5,
+                      p: 0.7,
+                    }}
+                  >
+                    {soundEnabled ? <VolumeUpIcon sx={{ fontSize: 18 }} /> : <VolumeOffIcon sx={{ fontSize: 18 }} />}
+                  </IconButton>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<RefreshIcon sx={{ fontSize: '0.95rem !important' }} />}
+                    onClick={refreshStatsAndRoster}
+                    sx={{
+                      borderRadius: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      color: '#1e293b',
+                      borderColor: '#e2e8f0',
+                      py: 0.4,
+                      px: 1,
+                      minWidth: 'auto',
+                      '&:hover': {
+                        borderColor: '#ff1955',
+                        color: '#ff1955',
+                        bgcolor: 'rgba(255, 25, 85, 0.06)',
+                      },
+                    }}
+                  >
+                    Sync
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Schedule Info Box & Active Status */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: { xs: 1, sm: 1.2 }, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', flex: 1, minWidth: 0, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 1.5,
+                      bgcolor: 'rgba(59, 130, 246, 0.1)',
+                      color: '#3b82f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <TimeIcon sx={{ fontSize: 16 }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" sx={{ color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.62rem', letterSpacing: 0.5, display: 'block', lineHeight: 1.1 }}>
+                      Schedule / Showtime
+                    </Typography>
+                    <Typography variant="body2" noWrap sx={{ color: '#1e293b', fontWeight: 800, fontSize: { xs: '0.78rem', sm: '0.88rem' } }}>
+                      {currentSchedule
+                        ? `${currentSchedule.scheduleDate || currentSchedule.date || ''} (${String(currentSchedule.startTime || currentSchedule.scheduleStartTime || '').slice(0, 5)}${currentSchedule.endTime ? ' - ' + String(currentSchedule.endTime).slice(0, 5) : ''})`
+                        : (schedules.length === 0 ? 'All Showtimes' : 'Showtime Assigned')}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Gate Active status badge or schedule dropdown */}
+                {schedules.length > 1 ? (
+                  <FormControl size="small" sx={{ minWidth: 100, flexShrink: 0 }}>
+                    <Select
+                      value={selectedScheduleId || ''}
+                      onChange={(e) => {
+                        const newScheduleId = e.target.value;
+                        setSelectedScheduleId(newScheduleId);
+                        if (selectedEventId) {
+                          localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
+                          window.history.replaceState(null, '', `/gate/${selectedEventId}/${newScheduleId}`);
+                        }
+                      }}
+                      sx={{ height: 26, fontSize: '0.7rem', borderRadius: 1.5, bgcolor: '#ffffff' }}
+                    >
+                      {schedules.map((sc) => (
+                        <MenuItem key={sc.scheduleId || sc.id} value={String(sc.scheduleId || sc.id)}>
+                          {`${sc.scheduleDate || sc.date || ''} ${sc.startTime ? '(' + sc.startTime + ')' : ''}`.trim()}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', px: 1, py: 0.3, borderRadius: 1.5, flexShrink: 0 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10b981' }} />
+                    <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 700, fontSize: '0.68rem' }}>
+                      Active
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          ) : (
+            /* Admin/Organizer Dropdowns */
+            <Grid container spacing={1.5} alignItems="center">
+              <Grid item xs={12} sm={5} md={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="gatescanner-event-label">Event</InputLabel>
+                  <Select
+                    labelId="gatescanner-event-label"
+                    value={selectedEventId || ''}
+                    label="Event"
+                    onChange={(e) => {
+                      const newId = e.target.value;
+                      setSelectedEventId(newId);
+                      localStorage.setItem('ticketer_gate_event_id', newId);
+                      window.history.replaceState(null, '', `/gate/${newId}`);
+                    }}
+                    displayEmpty
+                  >
+                    {selectedEventId && !events.some((ev) => String(ev.eventId || ev.id || '').toLowerCase() === selectedEventId.toLowerCase()) && (
+                      <MenuItem value={selectedEventId} sx={{ display: 'none' }}>
+                        <em>Loading selected event...</em>
+                      </MenuItem>
+                    )}
+                    {events.length === 0 && !selectedEventId ? (
+                      <MenuItem disabled value="">
+                        <em>No events available</em>
+                      </MenuItem>
+                    ) : (
+                      events.map((ev) => {
+                        const id = String(ev.eventId || ev.id || '');
+                        const name = ev.name || ev.title || `Event #${id}`;
+                        return (
+                          <MenuItem key={id} value={id}>
+                            {name}
+                          </MenuItem>
+                        );
+                      })
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={4} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="gatescanner-schedule-label">Schedule / Date</InputLabel>
+                  <Select
+                    labelId="gatescanner-schedule-label"
+                    value={selectedScheduleId || ''}
+                    label="Schedule / Date"
+                    onChange={(e) => {
+                      const newScheduleId = e.target.value;
+                      setSelectedScheduleId(newScheduleId);
+                      if (selectedEventId) {
+                        localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
+                        window.history.replaceState(null, '', `/gate/${selectedEventId}/${newScheduleId}`);
+                      }
+                    }}
+                    displayEmpty
+                  >
+                    {selectedScheduleId && !schedules.some((sc) => String(sc.scheduleId || sc.id || '').toLowerCase() === selectedScheduleId.toLowerCase()) && (
+                      <MenuItem value={selectedScheduleId} sx={{ display: 'none' }}>
+                        <em>Loading schedule...</em>
+                      </MenuItem>
+                    )}
+                    {schedules.length === 0 && !selectedScheduleId ? (
+                      <MenuItem disabled value="">
+                        <em>{selectedEventId ? 'No schedules for this event' : 'Select an event first'}</em>
+                      </MenuItem>
+                    ) : (
+                      schedules.map((sc) => {
+                        const id = String(sc.scheduleId || sc.id || '');
+                        const dateStr = sc.scheduleDate || sc.date || 'Date N/A';
+                        const timeStr = sc.startTime || sc.scheduleStartTime ? `(${sc.startTime || sc.scheduleStartTime})` : '';
+                        return (
+                          <MenuItem key={id} value={id}>
+                            {`${dateStr} ${timeStr}`.trim()}
+                          </MenuItem>
+                        );
+                      })
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={3} md={5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' }, gap: 1, alignItems: 'center' }}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newVal = !soundEnabled;
+                    setSoundEnabled(newVal);
+                    localStorage.setItem('ticketer_gate_sound_enabled', String(newVal));
                   }}
-                  displayEmpty
                   sx={{
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.04)',
-                    borderRadius: 2,
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                    bgcolor: soundEnabled ? 'rgba(16, 185, 129, 0.1)' : '#f1f5f9',
+                    color: soundEnabled ? '#10b981' : '#64748b',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 1.5,
                   }}
                 >
-                  {selectedEventId && !events.some((ev) => String(ev.eventId || ev.id || '').toLowerCase() === selectedEventId.toLowerCase()) && (
-                    <MenuItem value={selectedEventId} sx={{ display: 'none' }}>
-                      <em>Loading selected event...</em>
-                    </MenuItem>
-                  )}
-                  {events.length === 0 && !selectedEventId ? (
-                    <MenuItem disabled value="">
-                      <em>No events available</em>
-                    </MenuItem>
-                  ) : (
-                    events.map((ev) => {
-                      const id = String(ev.eventId || ev.id || '');
-                      const name = ev.name || ev.title || `Event #${id}`;
-                      return (
-                        <MenuItem key={id} value={id}>
-                          {name}
-                        </MenuItem>
-                      );
-                    })
-                  )}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Schedule Select */}
-            <Grid item xs={12} sm={4} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="gatescanner-schedule-label" sx={{ color: 'rgba(255,255,255,0.6)' }}>Schedule / Date</InputLabel>
-                <Select
-                  labelId="gatescanner-schedule-label"
-                  value={selectedScheduleId || ''}
-                  label="Schedule / Date"
-                  onChange={(e) => {
-                    const newScheduleId = e.target.value;
-                    setSelectedScheduleId(newScheduleId);
-                    if (selectedEventId) {
-                      localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
-                      window.history.replaceState(null, '', `/gate/${selectedEventId}/${newScheduleId}`);
-                    }
-                  }}
-                  displayEmpty
+                  {soundEnabled ? <VolumeUpIcon fontSize="small" /> : <VolumeOffIcon fontSize="small" />}
+                </IconButton>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<RefreshIcon />}
+                  onClick={refreshStatsAndRoster}
                   sx={{
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.04)',
-                    borderRadius: 2,
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#ff1955' },
+                    borderRadius: 1.5,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    borderColor: '#e2e8f0',
+                    '&:hover': {
+                      borderColor: '#ff1955',
+                      color: '#ff1955',
+                      bgcolor: 'rgba(255, 25, 85, 0.06)',
+                    },
                   }}
                 >
-                  {selectedScheduleId && !schedules.some((sc) => String(sc.scheduleId || sc.id || '').toLowerCase() === selectedScheduleId.toLowerCase()) && (
-                    <MenuItem value={selectedScheduleId} sx={{ display: 'none' }}>
-                      <em>Loading schedule...</em>
-                    </MenuItem>
-                  )}
-                  {schedules.length === 0 && !selectedScheduleId ? (
-                    <MenuItem disabled value="">
-                      <em>{selectedEventId ? 'No schedules for this event' : 'Select an event first'}</em>
-                    </MenuItem>
-                  ) : (
-                    schedules.map((sc) => {
-                      const id = String(sc.scheduleId || sc.id || '');
-                      const dateStr = sc.scheduleDate || sc.date || 'Date N/A';
-                      const timeStr = sc.startTime || sc.scheduleStartTime ? `(${sc.startTime || sc.scheduleStartTime})` : '';
-                      return (
-                        <MenuItem key={id} value={id}>
-                          {`${dateStr} ${timeStr}`.trim()}
-                        </MenuItem>
-                      );
-                    })
-                  )}
-                </Select>
-              </FormControl>
+                  Sync
+                </Button>
+              </Grid>
             </Grid>
-
-            {/* Sound Mute & Refresh Button */}
-            <Grid item xs={12} sm={3} md={5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' }, gap: 1.5, alignItems: 'center' }}>
-              <IconButton
-                onClick={() => {
-                  const newVal = !soundEnabled;
-                  setSoundEnabled(newVal);
-                  localStorage.setItem('ticketer_gate_sound_enabled', String(newVal));
-                }}
-                sx={{
-                  bgcolor: soundEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: soundEnabled ? '#10b981' : 'rgba(255, 255, 255, 0.4)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 2,
-                }}
-              >
-                {soundEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
-              </IconButton>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={refreshStatsAndRoster}
-                sx={{
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  color: 'rgba(255,255,255,0.8)',
-                  borderRadius: 2,
-                  textTransform: 'none',
-                }}
-              >
-                Sync
-              </Button>
-            </Grid>
-          </Grid>
+          )}
         </CardContent>
       </Card>
 
-      {/* KPI Attendance Metrics Bar */}
-      <Grid container spacing={2}>
+      {/* KPI Attendance Metrics Grid */}
+      <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 1.5, sm: 2.5 } }}>
         <Grid item xs={6} sm={3}>
-          <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2.5 }}>
-            <CardContent sx={{ p: 2 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>
+          <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <CardContent sx={{ p: { xs: 1.2, sm: 2 } }}>
+              <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3, fontSize: { xs: '0.62rem', sm: '0.72rem' }, display: 'block' }}>
                 Total Booked
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', mt: 0.5 }}>
+              <Typography sx={{ fontWeight: 800, color: '#1e293b', mt: 0.2, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                 {stats?.totalBooked ?? 0}
               </Typography>
             </CardContent>
@@ -547,12 +738,12 @@ export const GateScanner: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3}>
-          <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 2.5 }}>
-            <CardContent sx={{ p: 2 }}>
-              <Typography variant="caption" sx={{ color: '#10b981', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>
-                Checked In (Arrived)
+          <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <CardContent sx={{ p: { xs: 1.2, sm: 2 } }}>
+              <Typography variant="caption" sx={{ color: '#10b981', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3, fontSize: { xs: '0.62rem', sm: '0.72rem' }, display: 'block' }}>
+                Checked In
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#10b981', mt: 0.5 }}>
+              <Typography sx={{ fontWeight: 800, color: '#10b981', mt: 0.2, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                 {stats?.totalCheckedIn ?? 0}
               </Typography>
             </CardContent>
@@ -560,12 +751,12 @@ export const GateScanner: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3}>
-          <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 2.5 }}>
-            <CardContent sx={{ p: 2 }}>
-              <Typography variant="caption" sx={{ color: '#f59e0b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>
-                Pending Arrival
+          <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <CardContent sx={{ p: { xs: 1.2, sm: 2 } }}>
+              <Typography variant="caption" sx={{ color: '#f59e0b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3, fontSize: { xs: '0.62rem', sm: '0.72rem' }, display: 'block' }}>
+                Pending
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#f59e0b', mt: 0.5 }}>
+              <Typography sx={{ fontWeight: 800, color: '#f59e0b', mt: 0.2, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                 {stats?.totalPendingArrival ?? 0}
               </Typography>
             </CardContent>
@@ -573,28 +764,28 @@ export const GateScanner: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3}>
-          <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255, 25, 85, 0.3)', borderRadius: 2.5 }}>
-            <CardContent sx={{ p: 2 }}>
+          <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <CardContent sx={{ p: { xs: 1.2, sm: 2 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: '#ff1955', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>
-                  Arrival Progress
+                <Typography variant="caption" sx={{ color: '#ff1955', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3, fontSize: { xs: '0.62rem', sm: '0.72rem' } }}>
+                  Progress
                 </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#fff' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e293b', fontSize: { xs: '0.68rem', sm: '0.75rem' } }}>
                   {stats?.checkInPercentage ?? 0}%
                 </Typography>
               </Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#ff1955', mt: 0.5 }}>
+              <Typography sx={{ fontWeight: 800, color: '#ff1955', mt: 0.2, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
                 {stats?.checkInPercentage ?? 0}%
               </Typography>
               <LinearProgress
                 variant="determinate"
                 value={stats?.checkInPercentage ?? 0}
                 sx={{
-                  mt: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: 'rgba(255,255,255,0.08)',
-                  '& .MuiLinearProgress-bar': { bgcolor: '#ff1955', borderRadius: 3 },
+                  mt: 0.6,
+                  height: { xs: 4, sm: 6 },
+                  borderRadius: 2,
+                  bgcolor: '#f1f5f9',
+                  '& .MuiLinearProgress-bar': { bgcolor: '#ff1955', borderRadius: 2 },
                 }}
               />
             </CardContent>
@@ -606,38 +797,46 @@ export const GateScanner: React.FC = () => {
       <Tabs
         value={activeTab}
         onChange={(_, val) => setActiveTab(val)}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{
-          bgcolor: '#111827',
-          borderRadius: 2.5,
+          bgcolor: '#ffffff',
+          borderRadius: 2,
           p: 0.5,
-          border: '1px solid rgba(255,255,255,0.08)',
+          mb: { xs: 1.5, sm: 2.5 },
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          minHeight: { xs: 38, sm: 44 },
           '& .MuiTab-root': {
-            color: 'rgba(255,255,255,0.6)',
+            color: '#64748b',
             textTransform: 'none',
             fontWeight: 700,
-            fontSize: '0.88rem',
-            borderRadius: 2,
-            minHeight: 42,
+            fontSize: { xs: '0.78rem', sm: '0.85rem' },
+            borderRadius: 1.5,
+            minHeight: { xs: 34, sm: 40 },
+            py: 0.5,
+            px: { xs: 1.2, sm: 2 },
             '&.Mui-selected': {
-              color: '#fff',
-              bgcolor: 'rgba(255, 25, 85, 0.18)',
+              color: '#ff1955',
+              bgcolor: 'rgba(255, 25, 85, 0.08)',
             },
           },
           '& .MuiTabs-indicator': { display: 'none' },
         }}
       >
-        <Tab icon={<QrCodeScannerIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Live Camera Scanner & Entry" />
-        <Tab icon={<MapIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Live Seat Map & Shared Areas" />
-        <Tab icon={<ListIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Attendee Roster & Manual Check-In" />
+        <Tab icon={<QrCodeScannerIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Live Camera Scanner" />
+        <Tab icon={<MapIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Live Seat Map" />
+        <Tab icon={<ListIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Attendee Roster" />
       </Tabs>
 
       {/* TAB 0: Scanner & Live Entry */}
       {activeTab === 0 && (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 2.5 }}>
           {/* Left Column: QR Scanner & Manual Input */}
           <Grid item xs={12} md={5}>
-            <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, p: { xs: 2, sm: 2.5 } }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2.5, boxShadow: '0 2px 10px rgba(0,0,0,0.03)', p: { xs: 1.5, sm: 2.5 } }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b', fontSize: { xs: '0.92rem', sm: '1rem' }, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <QrCodeScannerIcon sx={{ color: '#ff1955' }} />
                 Gate Camera Scanner
               </Typography>
@@ -654,9 +853,9 @@ export const GateScanner: React.FC = () => {
               />
 
               {/* Manual Ticket / Booking Code Input */}
-              <Box component="form" onSubmit={handleManualSubmit} sx={{ mt: 3 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, display: 'block', mb: 0.8 }}>
-                  Manual Reference / Ticket Code Entry:
+              <Box component="form" onSubmit={handleManualSubmit} sx={{ mt: 2.5 }}>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, display: 'block', mb: 0.6 }}>
+                  Manual Ticket Code / Reference Entry:
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <TextField
@@ -668,18 +867,12 @@ export const GateScanner: React.FC = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />
+                          <SearchIcon sx={{ color: '#94a3b8', fontSize: 18 }} />
                         </InputAdornment>
                       ),
                     }}
                     sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'rgba(255,255,255,0.04)',
-                        color: '#fff',
-                        borderRadius: 2,
-                        '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-                        '&:hover fieldset': { borderColor: '#ff1955' },
-                      },
+                      '& input': { fontSize: '0.85rem' }
                     }}
                   />
                   <Button
@@ -689,9 +882,11 @@ export const GateScanner: React.FC = () => {
                     sx={{
                       bgcolor: '#ff1955',
                       fontWeight: 700,
-                      borderRadius: 2,
+                      borderRadius: 1.5,
                       textTransform: 'none',
-                      px: 2.5,
+                      px: { xs: 2, sm: 2.5 },
+                      fontSize: '0.85rem',
+                      flexShrink: 0,
                       '&:hover': { bgcolor: '#e0144c' },
                     }}
                   >
@@ -710,9 +905,9 @@ export const GateScanner: React.FC = () => {
                 sx={{
                   bgcolor: lastScanResult.valid
                     ? lastScanResult.alreadyCheckedIn
-                      ? 'rgba(245, 158, 11, 0.1)'
-                      : 'rgba(16, 185, 129, 0.1)'
-                    : 'rgba(239, 68, 68, 0.1)',
+                      ? '#fffbeb'
+                      : '#ecfdf5'
+                    : '#fef2f2',
                   border: `2px solid ${
                     lastScanResult.valid
                       ? lastScanResult.alreadyCheckedIn
@@ -720,49 +915,44 @@ export const GateScanner: React.FC = () => {
                         : '#10b981'
                       : '#ef4444'
                   }`,
-                  borderRadius: 3,
-                  p: { xs: 2.5, sm: 3 },
-                  mb: 3,
-                  boxShadow: `0 8px 32px ${
-                    lastScanResult.valid
-                      ? lastScanResult.alreadyCheckedIn
-                        ? 'rgba(245, 158, 11, 0.2)'
-                        : 'rgba(16, 185, 129, 0.2)'
-                      : 'rgba(239, 68, 68, 0.2)'
-                  }`,
+                  borderRadius: 2.5,
+                  p: { xs: 1.5, sm: 2.5 },
+                  mb: { xs: 1.5, sm: 2.5 },
                 }}
               >
                 {/* Status Header */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                   {lastScanResult.valid ? (
                     lastScanResult.alreadyCheckedIn ? (
-                      <WarningIcon sx={{ color: '#f59e0b', fontSize: 36 }} />
+                      <WarningIcon sx={{ color: '#f59e0b', fontSize: { xs: 28, sm: 36 } }} />
                     ) : (
-                      <SuccessIcon sx={{ color: '#10b981', fontSize: 36 }} />
+                      <SuccessIcon sx={{ color: '#10b981', fontSize: { xs: 28, sm: 36 } }} />
                     )
                   ) : (
-                    <ErrorIcon sx={{ color: '#ef4444', fontSize: 36 }} />
+                    <ErrorIcon sx={{ color: '#ef4444', fontSize: { xs: 28, sm: 36 } }} />
                   )}
                   <Box>
                     <Typography
                       variant="h6"
                       sx={{
                         fontWeight: 900,
+                        fontSize: { xs: '0.92rem', sm: '1.05rem' },
                         color: lastScanResult.valid
                           ? lastScanResult.alreadyCheckedIn
-                            ? '#f59e0b'
-                            : '#10b981'
-                          : '#ef4444',
-                        letterSpacing: 0.5,
+                            ? '#b45309'
+                            : '#047857'
+                          : '#b91c1c',
+                        letterSpacing: 0.2,
+                        lineHeight: 1.2,
                       }}
                     >
                       {lastScanResult.valid
                         ? lastScanResult.alreadyCheckedIn
-                          ? 'ALREADY CHECKED IN (DUPLICATE ATTEMPT)'
+                          ? 'ALREADY CHECKED IN (DUPLICATE)'
                           : 'ACCESS GRANTED - VERIFIED TICKET'
                         : 'ACCESS DENIED - INVALID PASS'}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                    <Typography variant="body2" sx={{ color: '#475569', fontSize: '0.8rem', mt: 0.3 }}>
                       {lastScanResult.message}
                     </Typography>
                   </Box>
@@ -770,40 +960,40 @@ export const GateScanner: React.FC = () => {
 
                 {/* Attendee Details Grid */}
                 {lastScanResult.customerName && (
-                  <Box sx={{ bgcolor: 'rgba(0,0,0,0.3)', p: 2, borderRadius: 2, mb: 2 }}>
-                    <Grid container spacing={1.5}>
+                  <Box sx={{ bgcolor: '#ffffff', p: 1.5, borderRadius: 2, mb: 1.5, border: '1px solid #e2e8f0' }}>
+                    <Grid container spacing={1}>
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                        <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'uppercase', fontWeight: 600, fontSize: '0.68rem' }}>
                           Attendee Name
                         </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 800, color: '#fff' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#1e293b' }}>
                           {lastScanResult.customerName}
                         </Typography>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                        <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'uppercase', fontWeight: 600, fontSize: '0.68rem' }}>
                           Booking Ref
                         </Typography>
-                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 800, color: '#fcd0a5' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 800, color: '#1e293b' }}>
                           {lastScanResult.bookingReference}
                         </Typography>
                       </Grid>
                       {lastScanResult.customerNic && (
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                          <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'uppercase', fontWeight: 600, fontSize: '0.68rem' }}>
                             NIC Number
                           </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
                             {lastScanResult.customerNic}
                           </Typography>
                         </Grid>
                       )}
                       {lastScanResult.customerPhone && (
                         <Grid item xs={12} sm={6}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                          <Typography variant="caption" sx={{ color: '#64748b', textTransform: 'uppercase', fontWeight: 600, fontSize: '0.68rem' }}>
                             Phone
                           </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
                             {lastScanResult.customerPhone}
                           </Typography>
                         </Grid>
@@ -815,10 +1005,10 @@ export const GateScanner: React.FC = () => {
                 {/* Ticket Details list */}
                 {lastScanResult.allTickets && lastScanResult.allTickets.length > 0 && (
                   <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, textTransform: 'uppercase', mb: 1, display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase', mb: 0.8, display: 'block', fontSize: '0.68rem' }}>
                       Verified Seats & Passes:
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
                       {lastScanResult.allTickets.map((tkt, idx) => (
                         <Box
                           key={tkt.bookingSeatId || idx}
@@ -826,30 +1016,31 @@ export const GateScanner: React.FC = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            p: 1.2,
-                            bgcolor: 'rgba(255,255,255,0.05)',
+                            p: 1,
+                            bgcolor: '#ffffff',
                             borderRadius: 1.5,
+                            border: '1px solid #e2e8f0',
                           }}
                         >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {tkt.isSharedAreaTicket ? <GroupsIcon sx={{ color: '#10b981', fontSize: 18 }} /> : <SeatIcon sx={{ color: '#ff1955', fontSize: 18 }} />}
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#fff' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
+                            {tkt.isSharedAreaTicket ? <GroupsIcon sx={{ color: '#10b981', fontSize: 16 }} /> : <SeatIcon sx={{ color: '#ff1955', fontSize: 16 }} />}
+                            <Typography variant="body2" noWrap sx={{ fontWeight: 700, color: '#1e293b', fontSize: '0.8rem' }}>
                               {tkt.isSharedAreaTicket
-                                ? `Shared Area #${tkt.sharedAreaNumber || 1}`
+                                ? `Area #${tkt.sharedAreaNumber || 1}`
                                 : `Seat ${tkt.seatNumber || tkt.venueSeatId}${tkt.rowLabel ? ` (Row ${tkt.rowLabel})` : ''}`}
                             </Typography>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#64748b', fontSize: '0.72rem', display: { xs: 'none', sm: 'inline' } }}>
                               ({tkt.ticketCode})
                             </Typography>
                           </Box>
                           <Chip
                             size="small"
                             label={tkt.checkedIn ? 'Checked In' : 'Pending'}
+                            color={tkt.checkedIn ? 'success' : 'warning'}
                             sx={{
-                              bgcolor: tkt.checkedIn ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
-                              color: tkt.checkedIn ? '#10b981' : '#f59e0b',
                               fontWeight: 700,
-                              fontSize: '0.7rem',
+                              fontSize: '0.68rem',
+                              height: 22,
                             }}
                           />
                         </Box>
@@ -860,24 +1051,24 @@ export const GateScanner: React.FC = () => {
               </Card>
             ) : (
               /* Awaiting Scan Placeholder */
-              <Card sx={{ bgcolor: '#111827', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 3, p: 4, textAlign: 'center', mb: 3 }}>
-                <QrCodeScannerIcon sx={{ fontSize: 54, color: 'rgba(255,255,255,0.2)', mb: 1 }} />
-                <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>
+              <Card sx={{ bgcolor: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: 2.5, p: { xs: 2.5, sm: 3.5 }, textAlign: 'center', mb: { xs: 1.5, sm: 2.5 } }}>
+                <QrCodeScannerIcon sx={{ fontSize: { xs: 36, sm: 44 }, color: '#94a3b8', mb: 1 }} />
+                <Typography variant="subtitle1" sx={{ color: '#475569', fontWeight: 700, fontSize: { xs: '0.92rem', sm: '1rem' } }}>
                   Ready to Scan Tickets
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5 }}>
+                <Typography variant="caption" sx={{ color: '#94a3b8', mt: 0.5, display: 'block' }}>
                   Point customer QR codes towards the camera or enter their reference above.
                 </Typography>
               </Card>
             )}
 
             {/* Live Entry Activity Stream */}
-            <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, p: { xs: 2, sm: 2.5 } }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2.5, p: { xs: 1.5, sm: 2 } }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1e293b', fontSize: '0.88rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
                 Live Gate Entry Stream
               </Typography>
-              <Box sx={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ maxHeight: { xs: 200, sm: 260 }, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.8 }}>
                 {stats?.recentCheckIns && stats.recentCheckIns.length > 0 ? (
                   stats.recentCheckIns.map((item, idx) => (
                     <Box
@@ -886,29 +1077,32 @@ export const GateScanner: React.FC = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        p: 1.2,
-                        bgcolor: 'rgba(255,255,255,0.03)',
+                        p: 1,
+                        bgcolor: '#f8fafc',
                         borderRadius: 1.5,
+                        border: '1px solid #e2e8f0',
                         borderLeft: '3px solid #10b981',
                       }}
                     >
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#fff' }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 700, color: '#1e293b', fontSize: '0.8rem' }}>
                           {item.customerName}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+                        <Typography variant="caption" noWrap sx={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.72rem', display: 'block' }}>
                           {item.seatIdentifier} • {item.bookingReference}
                         </Typography>
                       </Box>
                       <Chip
                         size="small"
                         label={item.checkedInAtTime || 'Just now'}
-                        sx={{ bgcolor: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 600, fontSize: '0.7rem' }}
+                        color="success"
+                        variant="outlined"
+                        sx={{ fontWeight: 600, fontSize: '0.68rem', height: 20, flexShrink: 0 }}
                       />
                     </Box>
                   ))
                 ) : (
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', py: 3 }}>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', py: 2.5, fontSize: '0.82rem' }}>
                     No check-ins recorded yet for this session.
                   </Typography>
                 )}
@@ -920,36 +1114,36 @@ export const GateScanner: React.FC = () => {
 
       {/* TAB 1: Live Seat Map Attendance & Shared Areas */}
       {activeTab === 1 && (
-        <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, p: { xs: 2, sm: 3 } }}>
+        <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2.5, p: { xs: 1.5, sm: 2.5 } }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1.1rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b', fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
                 Live Attendance Seat Map
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                Real-time SVG visualization. Glowing Emerald Green seats represent checked-in attendees.
+              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+                Real-time SVG visualization. Green seats represent checked-in attendees.
               </Typography>
             </Box>
 
             {/* Shared Areas Headcount Counters */}
             {stats?.sharedAreaBreakdown && Object.keys(stats.sharedAreaBreakdown).length > 0 && (
-              <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {Object.values(stats.sharedAreaBreakdown).map((sa) => (
                   <Box
                     key={sa.sharedAreaNumber}
                     sx={{
-                      p: 1.2,
-                      px: 2,
-                      bgcolor: 'rgba(16, 185, 129, 0.1)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      borderRadius: 2,
+                      p: 0.8,
+                      px: 1.5,
+                      bgcolor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 1.5,
                       textAlign: 'center',
                     }}
                   >
-                    <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 700, display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 700, display: 'block', fontSize: '0.7rem' }}>
                       {sa.categoryName} (#{sa.sharedAreaNumber})
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#1e293b', fontSize: '0.82rem' }}>
                       {sa.checkedIn} / {sa.booked} Checked In
                     </Typography>
                   </Box>
@@ -959,51 +1153,55 @@ export const GateScanner: React.FC = () => {
           </Box>
 
           {selectedScheduleId && (
-            <VenueSeatMap
-              eventScheduleId={selectedScheduleId}
-              eventId={selectedEventId}
-              venueId={venueId}
-              mode="attendance"
-              enableLiveCheckIn={true}
-            />
+            <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+              <VenueSeatMap
+                eventScheduleId={selectedScheduleId}
+                eventId={selectedEventId}
+                venueId={venueId}
+                mode="attendance"
+                enableLiveCheckIn={true}
+              />
+            </Box>
           )}
         </Card>
       )}
 
       {/* TAB 2: Attendee Roster & Manual Check-In */}
       {activeTab === 2 && (
-        <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, p: { xs: 2, sm: 3 } }}>
+        <Card sx={{ bgcolor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 2.5, p: { xs: 1.5, sm: 2.5 } }}>
           {/* Filter Bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, mb: 2, gap: 1.2 }}>
             <TextField
               size="small"
-              placeholder="Search by name, reference, ticket code, NIC, phone..."
+              placeholder="Search attendee, ref, seat, phone..."
               value={rosterSearch}
               onChange={(e) => setRosterSearch(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />
+                    <SearchIcon sx={{ color: '#94a3b8', fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
               sx={{
-                width: { xs: '100%', sm: 360 },
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(255,255,255,0.04)',
-                  color: '#fff',
-                  borderRadius: 2,
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-                },
+                width: { xs: '100%', sm: 320 },
+                '& input': { fontSize: '0.85rem' },
               }}
             />
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
                 variant={rosterFilterCheckedIn === undefined ? 'contained' : 'outlined'}
                 onClick={() => setRosterFilterCheckedIn(undefined)}
-                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem', bgcolor: rosterFilterCheckedIn === undefined ? '#ff1955' : undefined }}
+                sx={{
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  py: 0.4,
+                  bgcolor: rosterFilterCheckedIn === undefined ? '#ff1955' : undefined,
+                  '&:hover': { bgcolor: rosterFilterCheckedIn === undefined ? '#e0144c' : undefined },
+                }}
               >
                 All ({attendees.length})
               </Button>
@@ -1011,7 +1209,8 @@ export const GateScanner: React.FC = () => {
                 size="small"
                 variant={rosterFilterCheckedIn === true ? 'contained' : 'outlined'}
                 onClick={() => setRosterFilterCheckedIn(true)}
-                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem', bgcolor: rosterFilterCheckedIn === true ? '#10b981' : undefined }}
+                color="success"
+                sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '0.75rem', py: 0.4 }}
               >
                 Checked In ({attendees.filter((a) => a.checkedIn).length})
               </Button>
@@ -1019,18 +1218,19 @@ export const GateScanner: React.FC = () => {
                 size="small"
                 variant={rosterFilterCheckedIn === false ? 'contained' : 'outlined'}
                 onClick={() => setRosterFilterCheckedIn(false)}
-                sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem', bgcolor: rosterFilterCheckedIn === false ? '#f59e0b' : undefined }}
+                color="warning"
+                sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '0.75rem', py: 0.4 }}
               >
                 Pending ({attendees.filter((a) => !a.checkedIn).length})
               </Button>
             </Box>
           </Box>
 
-          {/* Roster Table */}
-          <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
-            <Table size="small">
+          {/* Roster Table with Smooth Horizontal Scroll for Mobile */}
+          <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <Table size="small" sx={{ minWidth: 600 }}>
               <TableHead>
-                <TableRow sx={{ '& th': { color: 'rgba(255,255,255,0.5)', fontWeight: 700, borderColor: 'rgba(255,255,255,0.08)' } }}>
+                <TableRow sx={{ '& th': { color: '#64748b', fontWeight: 700, borderColor: '#e2e8f0', fontSize: '0.78rem' } }}>
                   <TableCell>Customer</TableCell>
                   <TableCell>Booking Ref</TableCell>
                   <TableCell>Ticket Code</TableCell>
@@ -1042,27 +1242,27 @@ export const GateScanner: React.FC = () => {
               </TableHead>
               <TableBody>
                 {attendees.map((att) => (
-                  <TableRow key={att.bookingSeatId} sx={{ '& td': { color: '#fff', borderColor: 'rgba(255,255,255,0.06)' } }}>
+                  <TableRow key={att.bookingSeatId} hover sx={{ '& td': { color: '#1e293b', borderColor: '#e2e8f0', fontSize: '0.8rem' } }}>
                     <TableCell sx={{ fontWeight: 700 }}>{att.customerName}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', color: '#fcd0a5' }}>{att.bookingReference}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)' }}>{att.ticketCode}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', color: '#0284c7', fontWeight: 600 }}>{att.bookingReference}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', color: '#64748b' }}>{att.ticketCode}</TableCell>
                     <TableCell>
                       {att.isSharedAreaTicket
-                        ? `Shared Area #${att.sharedAreaNumber || 1}`
+                        ? `Area #${att.sharedAreaNumber || 1}`
                         : `Seat ${att.seatNumber || att.venueSeatId}${att.rowLabel ? ` (Row ${att.rowLabel})` : ''}`}
                     </TableCell>
-                    <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem' }}>
+                    <TableCell sx={{ color: '#64748b', fontSize: '0.75rem' }}>
                       {att.customerPhone || att.customerNic || att.customerEmail || '—'}
                     </TableCell>
                     <TableCell>
                       <Chip
                         size="small"
                         label={att.checkedIn ? 'Checked In' : 'Pending'}
+                        color={att.checkedIn ? 'success' : 'warning'}
                         sx={{
-                          bgcolor: att.checkedIn ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                          color: att.checkedIn ? '#10b981' : '#f59e0b',
                           fontWeight: 700,
-                          fontSize: '0.7rem',
+                          fontSize: '0.68rem',
+                          height: 22,
                         }}
                       />
                     </TableCell>
@@ -1071,13 +1271,14 @@ export const GateScanner: React.FC = () => {
                         size="small"
                         variant="outlined"
                         onClick={() => handleToggleRosterSeat(att.bookingSeatId, att.checkedIn)}
-                        startIcon={att.checkedIn ? <ClearIcon /> : <CheckIcon />}
+                        startIcon={att.checkedIn ? <ClearIcon sx={{ fontSize: '0.9rem !important' }} /> : <CheckIcon sx={{ fontSize: '0.9rem !important' }} />}
+                        color={att.checkedIn ? 'error' : 'success'}
                         sx={{
-                          borderColor: att.checkedIn ? 'rgba(239, 68, 68, 0.4)' : '#10b981',
-                          color: att.checkedIn ? '#ef4444' : '#10b981',
-                          borderRadius: 2,
+                          borderRadius: 1.5,
                           textTransform: 'none',
-                          fontSize: '0.75rem',
+                          fontSize: '0.72rem',
+                          py: 0.3,
+                          px: 1,
                         }}
                       >
                         {att.checkedIn ? 'Undo' : 'Check In'}

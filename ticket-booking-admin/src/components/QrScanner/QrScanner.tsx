@@ -276,12 +276,13 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       </Box>
 
       {/* Control Buttons */}
-      <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 1, mt: 1.5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
         {cameras.length > 1 && (
           <Tooltip title="Switch Camera">
             <IconButton
+              size="small"
               onClick={handleSwitchCamera}
-              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' } }}
+              sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' } }}
             >
               <FlipCameraIos fontSize="small" />
             </IconButton>
@@ -291,11 +292,13 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         {hasTorch && (
           <Tooltip title={torchOn ? 'Turn Flash Off' : 'Turn Flash On'}>
             <IconButton
+              size="small"
               onClick={handleToggleTorch}
               sx={{ 
-                bgcolor: torchOn ? '#ff9800' : 'rgba(255,255,255,0.08)', 
-                color: torchOn ? '#000' : '#fff',
-                '&:hover': { bgcolor: torchOn ? '#f57c00' : 'rgba(255,255,255,0.18)' } 
+                bgcolor: torchOn ? '#ff9800' : '#f1f5f9', 
+                color: torchOn ? '#ffffff' : '#1e293b',
+                border: '1px solid #e2e8f0',
+                '&:hover': { bgcolor: torchOn ? '#f57c00' : '#e2e8f0' } 
               }}
             >
               {torchOn ? <FlashOff fontSize="small" /> : <FlashOn fontSize="small" />}
@@ -312,8 +315,9 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         />
         <Tooltip title="Upload QR Image">
           <IconButton
+            size="small"
             onClick={() => fileInputRef.current?.click()}
-            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' } }}
+            sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' } }}
           >
             <UploadFile fontSize="small" />
           </IconButton>
@@ -335,11 +339,16 @@ export const QrScanner: React.FC<QrScannerProps> = ({
             }
           }}
           sx={{
-            borderColor: isScanning ? 'rgba(255,255,255,0.2)' : '#ff1955',
-            color: isScanning ? 'rgba(255,255,255,0.7)' : '#ff1955',
+            borderColor: isScanning ? '#cbd5e1' : '#ff1955',
+            color: isScanning ? '#64748b' : '#ff1955',
             borderRadius: 2,
             textTransform: 'none',
-            fontSize: '0.8rem'
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            '&:hover': {
+              borderColor: '#ff1955',
+              bgcolor: 'rgba(255, 25, 85, 0.05)',
+            }
           }}
         >
           {isScanning ? 'Turn Off Camera' : 'Start Camera'}
