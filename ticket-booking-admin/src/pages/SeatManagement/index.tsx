@@ -40,8 +40,6 @@ import {
   Info,
   SelectAll,
   Refresh,
-  Wifi,
-  WifiOff,
   RemoveCircle,
   BookmarkRemove,
   ZoomIn,
@@ -920,26 +918,77 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">
-          Seat Management
-        </Typography>
-        {eventId && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Chip
-              icon={wsConnected ? <Wifi /> : <WifiOff />}
-              label={wsConnected ? 'Live' : 'Offline'}
-              color={wsConnected ? 'success' : 'error'}
-              size="small"
-              variant="outlined"
-            />
-            {!wsConnected && (
-              <Button size="small" startIcon={<Refresh />} onClick={wsReconnect}>
-                Reconnect
-              </Button>
-            )}
-          </Box>
-        )}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a' }}>
+            Seat Management
+          </Typography>
+          {eventId && (
+            <Tooltip
+              title={
+                wsConnected
+                  ? "Real-time WebSocket connection active. Seat locks and reservations update instantly."
+                  : "Live WebSocket disconnected. Click to re-establish real-time connection."
+              }
+              arrow
+            >
+              <Box
+                onClick={!wsConnected ? wsReconnect : undefined}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: '20px',
+                  backgroundColor: wsConnected ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                  border: `1px solid ${wsConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  cursor: !wsConnected ? 'pointer' : 'default',
+                  transition: 'all 0.2s ease',
+                  '&:hover': !wsConnected
+                    ? {
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        borderColor: 'rgba(239, 68, 68, 0.5)',
+                      }
+                    : undefined,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    backgroundColor: wsConnected ? '#10b981' : '#ef4444',
+                    boxShadow: wsConnected ? '0 0 0 0 rgba(16, 185, 129, 0.7)' : 'none',
+                    animation: wsConnected ? 'pulseGreen 2s infinite' : 'none',
+                    '@keyframes pulseGreen': {
+                      '0%': {
+                        boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.7)',
+                      },
+                      '70%': {
+                        boxShadow: '0 0 0 6px rgba(16, 185, 129, 0)',
+                      },
+                      '100%': {
+                        boxShadow: '0 0 0 0 rgba(16, 185, 129, 0)',
+                      },
+                    },
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    color: wsConnected ? '#065f46' : '#991b1b',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  {wsConnected ? 'Live Real-time Sync' : 'Sync Offline (Click to Reconnect)'}
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
 
       {/* Connection Error Alert */}

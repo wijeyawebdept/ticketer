@@ -7,7 +7,6 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  Paper,
   IconButton,
   Tooltip
 } from '@mui/material';
@@ -211,26 +210,34 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         renderOption={(props, option) => {
           const { key, ...otherProps } = props;
           return (
-            <Paper
+            <Box
               key={key}
               {...otherProps}
               component="li"
               sx={{
-                borderRadius: 2,
-                mb: 0.5,
-                py: 1.5,
-                px: 2,
+                borderRadius: 1.5,
+                mb: 0.75,
+                p: 1.5,
                 display: 'flex',
                 alignItems: 'flex-start',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                transition: 'all 0.15s ease-in-out',
+                cursor: 'pointer',
                 '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  backgroundColor: 'rgba(25, 118, 210, 0.06) !important',
+                  borderColor: '#93c5fd',
+                },
+                '&[aria-selected="true"]': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.12) !important',
+                  borderColor: '#3b82f6',
                 },
               }}
             >
-              <EventIcon color="primary" sx={{ mr: 2, flexShrink: 0, mt: 0.5 }} />
+              <EventIcon color="primary" sx={{ mr: 1.5, flexShrink: 0, mt: 0.5 }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }}>
                     {option.name}
                   </Typography>
                   <Chip
@@ -238,26 +245,27 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
                     color={getStatusChipColor(option.status)}
                     size="small"
                     variant="outlined"
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
                   />
                 </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
                   {option.venue && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <LocationIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
+                      <LocationIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                         {option.venue.name}
                       </Typography>
                     </Box>
                   )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
+                    <CalendarIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                    <Typography variant="caption" color="text.secondary">
                       {formatDate(option.startDateTime)}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <PriceIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
+                    <PriceIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, color: '#0f766e' }}>
                       {option.ticketCategories && option.ticketCategories.length > 0
                         ? (() => {
                             const currentPrices = option.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => {
@@ -276,16 +284,40 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
                   </Box>
                 </Box>
               </Box>
-            </Paper>
+            </Box>
           );
         }}
-        PaperComponent={({ children, ...other }) => (
-          <Paper {...other} component="div" sx={{ maxHeight: 400, overflow: 'auto' }}>
-            {children}
-          </Paper>
-        )}
+        componentsProps={{
+          paper: {
+            elevation: 6,
+            sx: {
+              borderRadius: 2,
+              mt: 1,
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            }
+          }
+        }}
         ListboxProps={{
-          style: { maxHeight: 400, overflow: 'auto' }
+          sx: {
+            maxHeight: '380px',
+            overflowY: 'auto',
+            p: 1,
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f5f9',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#cbd5e1',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#94a3b8',
+              },
+            },
+          }
         }}
         noOptionsText={
           <Box sx={{ p: 2, textAlign: 'center' }}>
