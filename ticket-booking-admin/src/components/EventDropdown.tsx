@@ -153,11 +153,11 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   return (
     <Box sx={{ width: '100%' }}>
       <Autocomplete
-        value={value}
+        value={value || null}
         onChange={(_, newValue) => onChange(newValue)}
         options={filteredEvents}
-        getOptionLabel={(option) => option.name}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
+        getOptionLabel={(option) => option.name || ''}
+        isOptionEqualToValue={(option, val) => !!option && !!val && option.id === val.id}
         loading={loading}
         disabled={disabled}
         open={open}

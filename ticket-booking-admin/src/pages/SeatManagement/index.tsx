@@ -48,12 +48,14 @@ import {
   ZoomOut,
   CenterFocusStrong
 } from '@mui/icons-material';
+import { useSearchParams } from 'react-router-dom';
 import { Seat, SeatService } from '../../services/seat.service';
 import { venueSeatService, VenueSeat, SeatDTO } from '../../services/venueSeatService';
 import { useSeatWebSocket } from '../../hooks/useSeatWebSocket';
 import { Event, EventSchedule } from '../../types';
 import EventDropdown from '../../components/EventDropdown';
 import EventScheduleService from '../../services/eventSchedule.service';
+import eventService from '../../services/event.service';
 
 interface SeatManagementProps {
   eventId?: string;
@@ -65,7 +67,13 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   isAdmin = false
 }) => {
   const { t } = useTranslation();
-  const [eventId, setEventId] = useState<string>(propEventId || '');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryEventId = searchParams.get('eventId') || '';
+  const queryScheduleId = searchParams.get('scheduleId') || '';
+  const savedEventId = queryEventId || propEventId || localStorage.getItem('selected_seat_management_event_id') || '';
+  const savedScheduleId = queryScheduleId || localStorage.getItem('selected_seat_management_schedule_id') || '';
+
+  const [eventId, setEventId] = useState<string>(savedEventId);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<EventSchedule | null>(null);
   const [schedules, setSchedules] = useState<EventSchedule[]>([]);
@@ -260,20 +268,30 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     reconnect: wsReconnect
   } = useSeatWebSocket(selectedSchedule?.scheduleId || eventId || '');
 
-  // Load schedules when event is selected
-  const loadSchedules = useCallback(async (event: Event) => {
-    try {
-      const eventSchedules = await EventScheduleService.getSchedulesForEvent(event.id);
-      setSchedules(eventSchedules);
-      // Auto-select first schedule if available
-      if (eventSchedules.length > 0) {
-        setSelectedSchedule(eventSchedules[0]);
-        loadSeatAvailability(eventSchedules[0].scheduleId);
-      }
-    } catch (err: any) {
-      setSchedules([]);
+  // Load venue seats for an event's venue
+  const loadVenueSeats = useCallback(async (event: Event) => {
+    if (!event.venue?.id) {
+      setError('Event does not have a venue assigned');
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let venueLayout = await venueSeatService.getVenueLayoutByVenueId(event.venue.id);
+      if (event.venue.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
+        venueLayout = venueLayout.filter(
+          (seat: any) => !(seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]'))
+        );
+      }
+      setVenueSeats(venueLayout);
+      setSuccess(`Loaded ${venueLayout.length} venue seats for ${event.venue.name}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load venue seats');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   // Load seat availability for a specific schedule
@@ -302,6 +320,55 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     }
   }, [selectedEvent]);
 
+  // Load schedules when event is selected
+  const loadSchedules = useCallback(async (event: Event, preferredScheduleId?: string) => {
+    try {
+      const eventSchedules = await EventScheduleService.getSchedulesForEvent(event.id);
+      setSchedules(eventSchedules);
+      // Auto-select schedule if available
+      if (eventSchedules.length > 0) {
+        const target = preferredScheduleId
+          ? eventSchedules.find(s => s.scheduleId === preferredScheduleId) || eventSchedules[0]
+          : eventSchedules[0];
+        setSelectedSchedule(target);
+        loadSeatAvailability(target.scheduleId);
+      }
+    } catch (err: any) {
+      setSchedules([]);
+    }
+  }, [loadSeatAvailability]);
+
+  // Auto-restore selected event & schedule across page refreshes
+  useEffect(() => {
+    if (savedEventId && !selectedEvent) {
+      let isMounted = true;
+      const restoreSelectedEvent = async () => {
+        try {
+          setLoading(true);
+          const event = await eventService.getEventById(savedEventId);
+          if (isMounted && event) {
+            setSelectedEvent(event);
+            setEventId(event.id);
+            loadVenueSeats(event);
+            await loadSchedules(event, savedScheduleId);
+          }
+        } catch (err: any) {
+          console.error('Failed to restore selected event on refresh:', err);
+          localStorage.removeItem('selected_seat_management_event_id');
+          localStorage.removeItem('selected_seat_management_schedule_id');
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      };
+      restoreSelectedEvent();
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [savedEventId, savedScheduleId, selectedEvent, loadVenueSeats, loadSchedules]);
+
   // Handle event selection from dropdown
   const handleEventChange = async (event: Event | null) => {
     setSelectedEvent(event);
@@ -312,10 +379,25 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     setSharedAreas([]);
     if (event) {
       setEventId(event.id);
+      localStorage.setItem('selected_seat_management_event_id', event.id);
+      setSearchParams(prev => {
+        const updated = new URLSearchParams(prev);
+        updated.set('eventId', event.id);
+        updated.delete('scheduleId');
+        return updated;
+      }, { replace: true });
       loadVenueSeats(event);
       await loadSchedules(event);
     } else {
       setEventId('');
+      localStorage.removeItem('selected_seat_management_event_id');
+      localStorage.removeItem('selected_seat_management_schedule_id');
+      setSearchParams(prev => {
+        const updated = new URLSearchParams(prev);
+        updated.delete('eventId');
+        updated.delete('scheduleId');
+        return updated;
+      }, { replace: true });
       setSeats([]);
       setVenueSeats([]);
     }
@@ -325,38 +407,24 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
   const handleScheduleChange = (schedule: EventSchedule | null) => {
     setSelectedSchedule(schedule);
     if (schedule) {
+      localStorage.setItem('selected_seat_management_schedule_id', schedule.scheduleId);
+      setSearchParams(prev => {
+        const updated = new URLSearchParams(prev);
+        updated.set('scheduleId', schedule.scheduleId);
+        return updated;
+      }, { replace: true });
       loadSeatAvailability(schedule.scheduleId);
     } else {
+      localStorage.removeItem('selected_seat_management_schedule_id');
+      setSearchParams(prev => {
+        const updated = new URLSearchParams(prev);
+        updated.delete('scheduleId');
+        return updated;
+      }, { replace: true });
       setSeatAvailability([]);
       setSharedAreas([]);
     }
   };
-
-  // Load venue seats for an event's venue
-  const loadVenueSeats = useCallback(async (event: Event) => {
-    if (!event.venue?.id) {
-      setError('Event does not have a venue assigned');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      let venueLayout = await venueSeatService.getVenueLayoutByVenueId(event.venue.id);
-      if (event.venue.id === 'f2ca9b05-b1c6-4cf5-9083-1194543d5898') {
-        venueLayout = venueLayout.filter(
-          (seat: any) => !(seat.status === 'LOCKED' || seat.notes?.toLowerCase().includes('[locked]'))
-        );
-      }
-      setVenueSeats(venueLayout);
-      setSuccess(`Loaded ${venueLayout.length} venue seats for ${event.venue.name}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load venue seats');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   // Load event-specific seats (legacy method)
   const loadSeats = useCallback(async (targetEventId: string) => {
