@@ -64,6 +64,42 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Helper to sanitize any database, SQL, or internal server tokens
+function sanitizeClientErrorMessage(msg: unknown): string {
+  if (!msg || typeof msg !== 'string') {
+    return 'An unexpected error occurred. Please try again later.';
+  }
+
+  const lower = msg.toLowerCase();
+  const sqlTokens = [
+    'sql',
+    'syntax error',
+    'select ',
+    'insert into',
+    'update ',
+    'delete from',
+    'psqlexception',
+    'sqlexception',
+    'hibernate',
+    'jdbc',
+    'relation "',
+    'table "',
+    'column "',
+    'org.postgresql',
+    'org.hibernate',
+    'org.springframework.dao',
+    'violates unique',
+    'foreign key constraint',
+    'could not execute statement'
+  ];
+
+  if (sqlTokens.some((token) => lower.includes(token))) {
+    return 'A processing error occurred. Please try again later.';
+  }
+
+  return msg;
+}
+
 // Response interceptor for API calls
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -112,15 +148,32 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 403) {
     }
 
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.headers?.['retry-after'] || error.response?.data?.retryAfterSeconds;
+      const rateLimitMsg = retryAfter 
+        ? `Too many requests. Please slow down and try again in ${retryAfter} seconds.`
+        : 'Too many requests. Please slow down and try again shortly.';
+      error.message = rateLimitMsg;
+      if (error.response?.data && typeof error.response.data === 'object') {
+        error.response.data.message = rateLimitMsg;
+      }
+      return Promise.reject(error);
+    }
+
     const data = error.response?.data;
-    const normalizedMessage =
+    const rawMessage =
       (typeof data === 'string' && data) ||
       (typeof data?.message === 'string' && data.message) ||
       (typeof error.message === 'string' && error.message) ||
       'Request failed';
 
-    // Ensure error.message is always a string
+    const normalizedMessage = sanitizeClientErrorMessage(rawMessage);
+
+    // Ensure error.message is always a sanitized string
     error.message = normalizedMessage;
+    if (data && typeof data === 'object' && 'message' in data) {
+      data.message = normalizedMessage;
+    }
     
     // Preserve the original error object so that status codes and response data are accessible
     return Promise.reject(error);
@@ -128,3 +181,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
+

@@ -75,10 +75,11 @@ public class SeatController {
     }
 
     /**
-     * Hold seats temporarily for a user
+     * Hold seats temporarily for a user (Admin/Organizer only)
      * POST /api/seats/hold
      */
     @PostMapping("/hold")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Void> holdSeats(@RequestBody SeatHoldRequest request) {
         // If userId is null, use a placeholder for admin holds
         UUID userId = request.getUserId();
@@ -91,10 +92,11 @@ public class SeatController {
     }
 
     /**
-     * Reserve seats (mark as unavailable/booked)
+     * Reserve seats (mark as unavailable/booked - Admin/Organizer only)
      * POST /api/seats/reserve
      */
     @PostMapping("/reserve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Void> reserveSeats(@RequestBody List<UUID> seatIds) {
         seatService.reserveSeats(seatIds);
         return ResponseEntity.ok().build();
@@ -134,10 +136,11 @@ public class SeatController {
     }
 
     /**
-     * Release seat holds for a user
+     * Release seat holds for a user (Admin/Organizer only)
      * POST /api/seats/release-holds
      */
     @PostMapping("/release-holds")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Void> releaseSeatHolds(@RequestParam UUID userId) {
         seatService.releaseSeatHolds(userId);
         return ResponseEntity.ok().build();

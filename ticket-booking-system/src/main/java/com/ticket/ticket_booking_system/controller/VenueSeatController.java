@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,9 @@ import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.service.VenueSeatService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/venue-seats")
 @RequiredArgsConstructor
@@ -64,7 +67,6 @@ public class VenueSeatController {
     @GetMapping("/availability/{eventScheduleId}")
     public ResponseEntity<SeatAvailabilityResponse> getSeatAvailability(@PathVariable String eventScheduleId) {
         try {
-            // Parse UUID from string
             UUID scheduleUuid = UUID.fromString(eventScheduleId);
             SeatAvailabilityResponse response = venueSeatService.getSeatAvailabilityByUUID(scheduleUuid);
             return ResponseEntity.ok(response);
@@ -77,13 +79,15 @@ public class VenueSeatController {
      * Lock a seat (admin/organizer only)
      */
     @PutMapping("/{seatId}/lock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> lockSeat(@PathVariable String seatId) {
         try {
             venueSeatService.lockSeat(seatId);
             return ResponseEntity.ok(Map.of("message", "Seat locked successfully", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to lock seat {}: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to lock seat: " + e.getMessage()));
+                .body(Map.of("message", "Failed to lock seat. Please try again."));
         }
     }
 
@@ -91,13 +95,15 @@ public class VenueSeatController {
      * Unlock a seat (admin/organizer only)
      */
     @PutMapping("/{seatId}/unlock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> unlockSeat(@PathVariable String seatId) {
         try {
             venueSeatService.unlockSeat(seatId);
             return ResponseEntity.ok(Map.of("message", "Seat unlocked successfully", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to unlock seat {}: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to unlock seat: " + e.getMessage()));
+                .body(Map.of("message", "Failed to unlock seat. Please try again."));
         }
     }
 
@@ -105,13 +111,15 @@ public class VenueSeatController {
      * Mark seat as accessible (admin/organizer only)
      */
     @PutMapping("/{seatId}/accessible")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> markAccessible(@PathVariable String seatId) {
         try {
             venueSeatService.markAccessible(seatId);
             return ResponseEntity.ok(Map.of("message", "Seat marked as accessible", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to mark seat {} as accessible: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to mark seat as accessible: " + e.getMessage()));
+                .body(Map.of("message", "Failed to mark seat as accessible. Please try again."));
         }
     }
 
@@ -119,13 +127,15 @@ public class VenueSeatController {
      * Reserve seat for VIP (admin/organizer only)
      */
     @PutMapping("/{seatId}/reserve-vip")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> reserveForVIP(@PathVariable String seatId) {
         try {
             venueSeatService.reserveForVIP(seatId);
             return ResponseEntity.ok(Map.of("message", "Seat reserved for VIP", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to reserve seat {} for VIP: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to reserve seat for VIP: " + e.getMessage()));
+                .body(Map.of("message", "Failed to reserve seat for VIP. Please try again."));
         }
     }
 
@@ -133,13 +143,15 @@ public class VenueSeatController {
      * Remove accessible marking from a seat (admin/organizer only)
      */
     @PutMapping("/{seatId}/remove-accessible")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> removeAccessible(@PathVariable String seatId) {
         try {
             venueSeatService.removeAccessible(seatId);
             return ResponseEntity.ok(Map.of("message", "Accessible marking removed", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to remove accessible marking for seat {}: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to remove accessible marking: " + e.getMessage()));
+                .body(Map.of("message", "Failed to remove accessible marking. Please try again."));
         }
     }
 
@@ -147,21 +159,24 @@ public class VenueSeatController {
      * Remove VIP reservation from a seat (admin/organizer only)
      */
     @PutMapping("/{seatId}/remove-vip")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, String>> removeVIPReservation(@PathVariable String seatId) {
         try {
             venueSeatService.removeVIPReservation(seatId);
             return ResponseEntity.ok(Map.of("message", "VIP reservation removed", "seatId", seatId));
         } catch (Exception e) {
+            log.error("Failed to remove VIP reservation for seat {}: {}", seatId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Failed to remove VIP reservation: " + e.getMessage()));
+                .body(Map.of("message", "Failed to remove VIP reservation. Please try again."));
         }
     }
 
     /**
-     * Hold seats temporarily (5-minute timer) - Public endpoint for customers
+     * Hold seats temporarily (5-minute timer)
      * POST /api/venue-seats/hold
      */
     @PostMapping("/hold")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> holdSeats(@RequestBody SeatHoldRequest request) {
         try {
             boolean success = venueSeatService.holdSeats(
@@ -183,19 +198,21 @@ public class VenueSeatController {
                 ));
             }
         } catch (Exception e) {
+            log.error("Error holding seats: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(Map.of(
                     "success", false,
-                    "message", "Error holding seats: " + e.getMessage()
+                    "message", "Error holding seats. Please try again."
                 ));
         }
     }
 
     /**
-     * Release seat holds manually - Public endpoint
+     * Release seat holds manually
      * POST /api/venue-seats/release
      */
     @PostMapping("/release")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> releaseHolds(
             @org.springframework.web.bind.annotation.RequestParam UUID eventScheduleId,
             @RequestBody List<String> seatIds) {
@@ -206,19 +223,21 @@ public class VenueSeatController {
                 "message", "Holds released successfully"
             ));
         } catch (Exception e) {
+            log.error("Error releasing holds: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(Map.of(
                     "success", false,
-                    "message", "Error releasing holds: " + e.getMessage()
+                    "message", "Error releasing holds. Please try again."
                 ));
         }
     }
 
     /**
-     * Confirm booking (convert hold to booked) - Public endpoint
+     * Confirm booking (convert hold to booked)
      * POST /api/venue-seats/confirm
      */
     @PostMapping("/confirm")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> confirmBooking(
             @org.springframework.web.bind.annotation.RequestParam UUID eventScheduleId,
             @org.springframework.web.bind.annotation.RequestParam Long bookingRefId,
@@ -239,10 +258,11 @@ public class VenueSeatController {
                 ));
             }
         } catch (Exception e) {
+            log.error("Error confirming booking: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(Map.of(
                     "success", false,
-                    "message", "Error confirming booking: " + e.getMessage()
+                    "message", "Error confirming booking. Please try again."
                 ));
         }
     }
@@ -252,6 +272,7 @@ public class VenueSeatController {
      * POST /api/venue-seats/initialize/{eventScheduleId}
      */
     @PostMapping("/initialize/{eventScheduleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE') or hasAnyAuthority('ADMIN', 'SUPER_ADMIN', 'ORGANIZER', 'ORGANIZER_EMPLOYEE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ROLE_ORGANIZER', 'ROLE_ORGANIZER_EMPLOYEE')")
     public ResponseEntity<Map<String, Object>> initializeEventSeats(@PathVariable UUID eventScheduleId) {
         try {
             venueSeatService.initializeEventSeats(eventScheduleId);
@@ -260,11 +281,13 @@ public class VenueSeatController {
                 "message", "Event seats initialized successfully"
             ));
         } catch (Exception e) {
+            log.error("Error initializing event seats: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(Map.of(
                     "success", false,
-                    "message", "Error initializing event seats: " + e.getMessage()
+                    "message", "Error initializing event seats. Please try again."
                 ));
         }
     }
 }
+

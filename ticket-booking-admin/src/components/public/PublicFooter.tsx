@@ -75,7 +75,7 @@ const PublicFooter: React.FC = () => {
               <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, alignItems: 'center', flexWrap: 'wrap' }}>
                 <img src="/images/visa.jpg" alt="Visa" style={{ height: '18px', width: 'auto', maxHeight: '18px', objectFit: 'contain' }} />
                 <img src="/images/master.jpg" alt="Mastercard" style={{ height: '18px', width: 'auto', maxHeight: '18px', objectFit: 'contain' }} />
-                <img src="/images/koko.jpeg" alt="Koko" style={{ height: '18px', width: 'auto', maxHeight: '18px', objectFit: 'contain' }} />
+                <img src="/images/unionpay.jpg" alt="UnionPay" style={{ height: '18px', width: 'auto', maxHeight: '18px', objectFit: 'contain' }} />
               </Box>
             </Grid>
 

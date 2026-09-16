@@ -36,13 +36,16 @@ import {
 import {
   LocalOffer as LocalOfferIcon,
   Add as AddIcon,
-  Delete as DeleteIcon,
   Edit as EditIcon,
   Refresh as RefreshIcon,
   TrendingDown as TrendingDownIcon,
   CheckCircle as CheckCircleIcon,
+  CheckCircle as ActivateIcon,
+  Block as DeactivateIcon,
+  DeleteSweep as DeleteSweepIcon,
+  Visibility as ViewIcon,
+  Close as CloseIcon,
   PauseCircle as PauseCircleIcon,
-  PlayCircle as PlayCircleIcon,
   ConfirmationNumber as ConfirmationNumberIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -64,6 +67,8 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDeal, setEditDeal] = useState<TicketCategoryDeal | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewDeal, setViewDeal] = useState<TicketCategoryDeal | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [eventCategories, setEventCategories] = useState<TicketCategoryDeal[]>([]);
@@ -204,6 +209,57 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
     }
   };
 
+  const handleViewClick = (deal: TicketCategoryDeal) => {
+    setViewDeal(deal);
+    setViewDialogOpen(true);
+  };
+
+  const handleDeactivateDeal = async (deal: TicketCategoryDeal) => {
+    try {
+      const request: TicketDealRequest = {
+        categoryId: deal.categoryId,
+        dealActive: false,
+        dealType: deal.dealType,
+        dealDiscountPercentage: deal.dealDiscountPercentage,
+        dealBuyQuantity: deal.dealBuyQuantity,
+        dealFreeQuantity: deal.dealFreeQuantity,
+        dealLabel: deal.dealLabel,
+      };
+
+      role === 'admin'
+        ? await dealService.adminApplyDeal(request)
+        : await dealService.organizerApplyDeal(request);
+
+      toast.success('Deal deactivated successfully!');
+      fetchDeals();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to deactivate deal');
+    }
+  };
+
+  const handleActivateDeal = async (deal: TicketCategoryDeal) => {
+    try {
+      const request: TicketDealRequest = {
+        categoryId: deal.categoryId,
+        dealActive: true,
+        dealType: deal.dealType || 'PERCENTAGE_DISCOUNT',
+        dealDiscountPercentage: deal.dealDiscountPercentage,
+        dealBuyQuantity: deal.dealBuyQuantity,
+        dealFreeQuantity: deal.dealFreeQuantity,
+        dealLabel: deal.dealLabel,
+      };
+
+      role === 'admin'
+        ? await dealService.adminApplyDeal(request)
+        : await dealService.organizerApplyDeal(request);
+
+      toast.success('Deal activated successfully!');
+      fetchDeals();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to activate deal');
+    }
+  };
+
   const handleRemoveDeal = async (categoryId: string, categoryName: string) => {
     if (!window.confirm(`Remove deal from "${categoryName}"?`)) return;
     try {
@@ -329,7 +385,7 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
                 <TableCell sx={{ fontWeight: 700 }}>Offer</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Label</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 700, textAlign: 'right' }}>Actions</TableCell>
+                <TableCell sx={{ fontWeight: 700, minWidth: 180 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -404,24 +460,98 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
                         />
                       )}
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'right' }}>
-                      {!deal.dealActive && (
-                        <Tooltip title="Reactivate deal">
-                          <IconButton size="small" onClick={() => handleOpenEdit(deal)} sx={{ color: '#00a844' }}>
-                            <PlayCircleIcon fontSize="small" />
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                        {/* View Details */}
+                        <Tooltip title="View Details" arrow>
+                          <IconButton
+                            onClick={() => handleViewClick(deal)}
+                            size="small"
+                            color="info"
+                            sx={{
+                              backgroundColor: 'rgba(2, 136, 209, 0.1)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(2, 136, 209, 0.2)',
+                              },
+                              mr: 0.5,
+                            }}
+                          >
+                            <ViewIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                      )}
-                      <Tooltip title="Edit deal">
-                        <IconButton size="small" onClick={() => handleOpenEdit(deal)} sx={{ color: '#1976d2' }}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Permanently remove deal">
-                        <IconButton size="small" onClick={() => handleRemoveDeal(deal.categoryId, deal.categoryName)} sx={{ color: '#d32f2f' }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+
+                        {/* Edit */}
+                        <Tooltip title="Edit Deal" arrow>
+                          <IconButton
+                            onClick={() => handleOpenEdit(deal)}
+                            size="small"
+                            color="primary"
+                            sx={{
+                              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                              },
+                              mr: 0.5,
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        {/* Activate / Deactivate */}
+                        {deal.dealActive ? (
+                          <Tooltip title="Deactivate Deal" arrow>
+                            <IconButton
+                              onClick={() => handleDeactivateDeal(deal)}
+                              size="small"
+                              color="error"
+                              sx={{
+                                backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                            >
+                              <DeactivateIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Activate Deal" arrow>
+                            <IconButton
+                              onClick={() => handleActivateDeal(deal)}
+                              size="small"
+                              color="success"
+                              sx={{
+                                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                            >
+                              <ActivateIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {/* Delete */}
+                        <Tooltip title="Move to Recycle Bin" arrow>
+                          <IconButton
+                            onClick={() => handleRemoveDeal(deal.categoryId, deal.categoryName)}
+                            size="small"
+                            color="warning"
+                            sx={{
+                              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                              },
+                            }}
+                          >
+                            <DeleteSweepIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 );
@@ -613,6 +743,133 @@ const DealsManagement: React.FC<DealsManagementProps> = ({ role }) => {
           >
             {savingDeal ? 'Saving…' : editDeal ? 'Update Deal' : 'Apply Deal'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Deal Details Dialog */}
+      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocalOfferIcon sx={{ color: '#00c853' }} />
+            <Typography variant="h6" fontWeight={700}>Deal Details</Typography>
+          </Box>
+          <IconButton onClick={() => setViewDialogOpen(false)} size="small">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 3 }}>
+          {viewDeal && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {/* Event & Category Card */}
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                  Event & Category
+                </Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+                  {viewDeal.eventName}
+                </Typography>
+                {viewDeal.venueName && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    📍 {viewDeal.venueName}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+                  <Typography variant="body2" fontWeight={600} color="text.secondary">
+                    Ticket Category:
+                  </Typography>
+                  <Chip label={viewDeal.categoryName} size="small" sx={{ fontWeight: 600 }} />
+                </Box>
+              </Box>
+
+              {/* Pricing & Offer Card */}
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', height: '100%' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      REGULAR PRICE
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700} sx={{ mt: 0.5 }}>
+                      {formatPrice(viewDeal.originalPrice)}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', height: '100%' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      {viewDeal.dealType === 'BUY_X_GET_Y_FREE' ? 'EFFECTIVE PRICE' : 'DISCOUNTED PRICE'}
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700} color="error" sx={{ mt: 0.5 }}>
+                      {viewDeal.dealType === 'BUY_X_GET_Y_FREE'
+                        ? (viewDeal.dealBuyQuantity && viewDeal.dealFreeQuantity
+                            ? formatPrice((viewDeal.originalPrice * viewDeal.dealBuyQuantity) / (viewDeal.dealBuyQuantity + viewDeal.dealFreeQuantity))
+                            : formatPrice(viewDeal.originalPrice))
+                        : formatPrice(viewDeal.discountedPrice)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Deal Breakdown */}
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                  Deal Configuration
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                  <Chip
+                    icon={viewDeal.dealType === 'BUY_X_GET_Y_FREE'
+                      ? <ConfirmationNumberIcon sx={{ fontSize: '13px !important' }} />
+                      : <TrendingDownIcon sx={{ fontSize: '13px !important' }} />}
+                    label={viewDeal.dealType === 'BUY_X_GET_Y_FREE' ? 'Buy X Get Y Free' : '% Discount'}
+                    size="small"
+                    sx={{
+                      backgroundColor: viewDeal.dealType === 'BUY_X_GET_Y_FREE' ? 'rgba(123,31,162,0.1)' : 'rgba(255,111,0,0.1)',
+                      color: viewDeal.dealType === 'BUY_X_GET_Y_FREE' ? '#7b1fa2' : '#e65100',
+                      fontWeight: 700,
+                    }}
+                  />
+                  <Chip
+                    label={viewDeal.dealActive ? 'Active' : 'Inactive'}
+                    color={viewDeal.dealActive ? 'success' : 'default'}
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                  {viewDeal.dealLabel && (
+                    <Chip label={viewDeal.dealLabel} size="small" variant="outlined" color="primary" />
+                  )}
+                </Box>
+                <Box sx={{ mt: 1.5 }}>
+                  {viewDeal.dealType === 'BUY_X_GET_Y_FREE' ? (
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#7b1fa2' }}>
+                      Buy {viewDeal.dealBuyQuantity} ticket{Number(viewDeal.dealBuyQuantity) > 1 ? 's' : ''} → Get {viewDeal.dealFreeQuantity} free!
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#e65100' }}>
+                      {viewDeal.dealDiscountPercentage}% OFF discount applied
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setViewDialogOpen(false)} color="inherit">
+            Close
+          </Button>
+          {viewDeal && (
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                const d = viewDeal;
+                setViewDialogOpen(false);
+                handleOpenEdit(d);
+              }}
+              sx={{ backgroundColor: '#1976d2', fontWeight: 600 }}
+            >
+              Edit Deal
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

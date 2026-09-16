@@ -37,13 +37,19 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   LocalOffer as PromoIcon,
   ContentCopy as CopyIcon,
   Search as SearchIcon,
   ConfirmationNumber as TicketIcon,
   Event as EventIcon,
   Public as GlobalIcon,
+  Visibility as ViewIcon,
+  CheckCircle as ActivateIcon,
+  CheckCircle as CheckCircleIcon,
+  Block as DeactivateIcon,
+  DeleteSweep as DeleteSweepIcon,
+  Close as CloseIcon,
+  PauseCircle as PauseCircleIcon,
 } from '@mui/icons-material';
 
 import { PromoCode, PromoCodeRequest, PromoCodeScope } from '../../types';
@@ -67,6 +73,8 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewPromo, setViewPromo] = useState<PromoCode | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [promoToDelete, setPromoToDelete] = useState<PromoCode | null>(null);
   const [editPromo, setEditPromo] = useState<PromoCode | null>(null);
@@ -266,6 +274,11 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
     }
   };
 
+  const handleViewClick = (promo: PromoCode) => {
+    setViewPromo(promo);
+    setViewDialogOpen(true);
+  };
+
   const handleToggleStatus = async (promo: PromoCode) => {
     try {
       if (role === 'admin') {
@@ -417,7 +430,7 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
                 <TableCell sx={{ fontWeight: 700, color: '#475569' }}>Usage Limit</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: '#475569' }}>Validity Period</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: '#475569' }}>Status</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, color: '#475569' }}>Actions</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: '#475569', minWidth: 180 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -514,38 +527,129 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
 
                       {/* Status */}
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Switch
-                            checked={p.isActive}
-                            onChange={() => handleToggleStatus(p)}
+                        {p.isActive ? (
+                          <Chip
+                            icon={<CheckCircleIcon sx={{ fontSize: '14px !important' }} />}
+                            label="Active"
                             size="small"
-                            color="success"
+                            sx={{
+                              backgroundColor: 'rgba(0,200,83,0.1)',
+                              color: '#00a844',
+                              fontWeight: 700,
+                              border: '1px solid rgba(0,200,83,0.3)',
+                            }}
                           />
-                          <Typography variant="caption" fontWeight={600} color={p.isActive ? 'success.main' : 'text.disabled'}>
-                            {p.isActive ? 'Active' : 'Inactive'}
-                          </Typography>
-                        </Box>
+                        ) : (
+                          <Chip
+                            icon={<PauseCircleIcon sx={{ fontSize: '14px !important' }} />}
+                            label="Inactive"
+                            size="small"
+                            sx={{
+                              backgroundColor: 'rgba(0,0,0,0.06)',
+                              color: '#666',
+                              fontWeight: 700,
+                              border: '1px solid rgba(0,0,0,0.15)',
+                            }}
+                          />
+                        )}
                       </TableCell>
 
                       {/* Actions */}
-                      <TableCell align="right">
-                        <Tooltip title="Edit">
-                          <IconButton size="small" onClick={() => handleOpenEdit(p)} color="primary">
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setPromoToDelete(p);
-                              setDeleteDialogOpen(true);
-                            }}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                          {/* View Details */}
+                          <Tooltip title="View Details" arrow>
+                            <IconButton
+                              onClick={() => handleViewClick(p)}
+                              size="small"
+                              color="info"
+                              sx={{
+                                backgroundColor: 'rgba(2, 136, 209, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(2, 136, 209, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                            >
+                              <ViewIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+
+                          {/* Edit */}
+                          <Tooltip title="Edit Promo Code" arrow>
+                            <IconButton
+                              onClick={() => handleOpenEdit(p)}
+                              size="small"
+                              color="primary"
+                              sx={{
+                                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+
+                          {/* Activate / Deactivate Toggle */}
+                          {p.isActive ? (
+                            <Tooltip title="Deactivate Promo Code" arrow>
+                              <IconButton
+                                onClick={() => handleToggleStatus(p)}
+                                size="small"
+                                color="error"
+                                sx={{
+                                  backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                                  },
+                                  mr: 0.5,
+                                }}
+                              >
+                                <DeactivateIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="Activate Promo Code" arrow>
+                              <IconButton
+                                onClick={() => handleToggleStatus(p)}
+                                size="small"
+                                color="success"
+                                sx={{
+                                  backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                                  },
+                                  mr: 0.5,
+                                }}
+                              >
+                                <ActivateIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
+                          {/* Delete */}
+                          <Tooltip title="Move to Recycle Bin" arrow>
+                            <IconButton
+                              onClick={() => {
+                                setPromoToDelete(p);
+                                setDeleteDialogOpen(true);
+                              }}
+                              size="small"
+                              color="warning"
+                              sx={{
+                                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                                },
+                              }}
+                            >
+                              <DeleteSweepIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   );
@@ -787,6 +891,159 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
           <Button onClick={handleDeleteConfirm} variant="contained" color="error">
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Promo Code Details Dialog */}
+      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PromoIcon sx={{ color: '#ff1955' }} />
+            <Typography variant="h6" fontWeight={700}>Promo Code Details</Typography>
+          </Box>
+          <IconButton onClick={() => setViewDialogOpen(false)} size="small">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 3 }}>
+          {viewPromo && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {/* Promo Code & Discount Badge Card */}
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                      Promo Code
+                    </Typography>
+                    <Typography variant="h5" fontWeight={800} sx={{ color: '#0f172a', letterSpacing: '0.5px' }}>
+                      {viewPromo.code}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={`${viewPromo.discountPercentage}% OFF`}
+                    size="medium"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      bgcolor: 'rgba(255, 25, 85, 0.1)',
+                      color: '#ff1955',
+                      border: '1px solid rgba(255, 25, 85, 0.3)',
+                    }}
+                  />
+                </Box>
+                {viewPromo.description && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {viewPromo.description}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Scope & Applicability */}
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                  Scope & Target
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                  {viewPromo.scope === 'ALL_EVENTS' && (
+                    <Chip icon={<GlobalIcon fontSize="small" />} label="All Events" size="small" variant="outlined" color="primary" />
+                  )}
+                  {viewPromo.scope === 'EVENT' && (
+                    <Chip icon={<EventIcon fontSize="small" />} label="Event-wise" size="small" variant="outlined" color="secondary" />
+                  )}
+                  {viewPromo.scope === 'TICKET_CATEGORY' && (
+                    <Chip icon={<TicketIcon fontSize="small" />} label="Ticket Category" size="small" variant="outlined" sx={{ borderColor: '#8b5cf6', color: '#8b5cf6' }} />
+                  )}
+                  <Chip
+                    label={viewPromo.isActive ? 'Active' : 'Inactive'}
+                    color={viewPromo.isActive ? 'success' : 'default'}
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                </Box>
+                {viewPromo.eventName && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary" display="block">Event:</Typography>
+                    <Typography variant="body2" fontWeight={600}>{viewPromo.eventName}</Typography>
+                  </Box>
+                )}
+                {viewPromo.ticketCategoryName && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" display="block">Category:</Typography>
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#7c3aed' }}>{viewPromo.ticketCategoryName}</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Usage & Limits */}
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', height: '100%' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      USAGE REDEEMED
+                    </Typography>
+                    <Typography variant="body1" fontWeight={700} sx={{ mt: 0.5 }}>
+                      {viewPromo.usageCount} {viewPromo.usageLimit ? `/ ${viewPromo.usageLimit}` : 'uses'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', height: '100%' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      MAX DISCOUNT / MIN SPEND
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
+                      {viewPromo.maxDiscountAmount ? `Max: LKR ${viewPromo.maxDiscountAmount.toLocaleString()}` : 'No max cap'}
+                    </Typography>
+                    {viewPromo.minOrderAmount && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Min Spend: LKR {viewPromo.minOrderAmount.toLocaleString()}
+                      </Typography>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Validity */}
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                  Validity Period
+                </Typography>
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">Start Date:</Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {viewPromo.startDate ? new Date(viewPromo.startDate).toLocaleDateString() : 'Immediate'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">End Date:</Typography>
+                    <Typography variant="body2" fontWeight={600} color={viewPromo.endDate && new Date(viewPromo.endDate) < new Date() ? 'error.main' : 'text.primary'}>
+                      {viewPromo.endDate ? new Date(viewPromo.endDate).toLocaleDateString() : 'No expiry'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setViewDialogOpen(false)} color="inherit">
+            Close
+          </Button>
+          {viewPromo && (
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                const p = viewPromo;
+                setViewDialogOpen(false);
+                handleOpenEdit(p);
+              }}
+              sx={{ bgcolor: '#ff1955', '&:hover': { bgcolor: '#e01545' }, fontWeight: 600 }}
+            >
+              Edit Promo Code
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

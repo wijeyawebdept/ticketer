@@ -111,8 +111,7 @@ public class PaymentController {
             }
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of(
-                    "message", "Payment initiation failed",
-                    "details", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "message", "Payment initiation failed. Please try again later."));
         }
     }
 
@@ -475,7 +474,7 @@ public class PaymentController {
             return ResponseEntity.ok(PaymentVerificationResponse.builder()
                     .success(false)
                     .status("ERROR")
-                    .message("Failed to verify payment: " + e.getMessage())
+                    .message("Failed to verify payment. Please try again or contact support.")
                     .build());
         }
     }
