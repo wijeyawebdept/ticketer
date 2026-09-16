@@ -41,21 +41,26 @@ export interface SeatStatsMessage {
 }
 
 // Derived at call-time so the hook works through tunnels (ngrok, etc.) as well
-// as local development without any changes.
+// as local development and hosted production without any changes.
 const getWsUrl = () => {
-  // If explicitly configured, use that
+  // 1. If explicitly configured via environment variable, use that
   if (process.env.REACT_APP_WS_URL) {
     return process.env.REACT_APP_WS_URL;
   }
+
+  // 2. If REACT_APP_API_URL is set (e.g. backend at different subdomain/host), derive WS endpoint
+  const apiUrl = process.env.REACT_APP_API_URL;
+  if (apiUrl && typeof apiUrl === 'string' && apiUrl.startsWith('http')) {
+    return `${apiUrl.replace(/\/+$/, '')}/ws`;
+  }
   
-  // For development: connect directly to backend WebSocket
-  // SockJS requires HTTP/HTTPS URLs, not WebSocket URLs
+  // 3. For local development
   if (process.env.NODE_ENV === 'development') {
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
     return `${protocol}://localhost:8081/ws`;
   }
   
-  // For production: use the same host
+  // 4. For production: use current host with same protocol
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
   return `${protocol}://${window.location.host}/ws`;
 };
@@ -94,13 +99,18 @@ export const useSeatWebSocket = (eventId: string) => {
   const connect = useCallback(() => {
     if (!eventId || clientRef.current?.active) return;
 
+    const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+    const wsUrl = getWsUrl();
+
     const client = new Client({
-      webSocketFactory: () => new SockJS(getWsUrl()) as WebSocket,
+      webSocketFactory: () => new SockJS(wsUrl) as WebSocket,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       debug: (str) => {
         if (process.env.NODE_ENV === 'development') {
+          console.debug('[STOMP WS]', str);
         }
       },
       onConnect: () => {

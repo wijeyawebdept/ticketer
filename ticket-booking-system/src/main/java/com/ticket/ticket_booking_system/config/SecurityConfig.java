@@ -69,6 +69,7 @@ public class SecurityConfig {
                                 "/api/pages/**",
                                 "/api/contact",
                                 "/contact",
+                                "/ws",
                                 "/ws/**",
                                 "/error")
                         .permitAll()
