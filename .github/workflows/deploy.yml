@@ -31,7 +31,7 @@ jobs:
           GENERATE_SOURCEMAP: false
           DISABLE_ESLINT_PLUGIN: true
           NODE_OPTIONS: "--max-old-space-size=4096"
-          REACT_APP_GOOGLE_CLIENT_ID: ${{ secrets.REACT_APP_GOOGLE_CLIENT_ID }}
+          REACT_APP_GOOGLE_CLIENT_ID: ${{ secrets['REACT_APP_GOOGLE_CLIENT_ID'] }}
         run: |
           npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
           npm run build
