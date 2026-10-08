@@ -34,3 +34,6 @@ build/
 
 ### env files ###
 .env
+
+# Maven wrapper
+mvnw.cmd
