@@ -39,7 +39,6 @@ import {
   BarChart as BarChartIcon,
   EventSeat as SeatIcon,
   Refresh as RefreshIcon,
-  CardGiftcard as PromoIcon,
   DateRange as DateRangeIcon,
   Schedule as ScheduleIcon
 } from '@mui/icons-material';

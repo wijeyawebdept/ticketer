@@ -11,25 +11,24 @@ const FAQ: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+        const data = await PageContentService.getPageContent('FAQ');
+        setTitle(data.title);
+        setContent(data.content);
+      } catch (err) {
+        setError(true);
+        setContent(getDefaultContent());
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadContent();
   }, []);
-
-  const loadContent = async () => {
-    try {
-      setLoading(true);
-      setError(false);
-      const data = await PageContentService.getPageContent('FAQ');
-      setTitle(data.title);
-      setContent(data.content);
-    } catch (err) {
-      setError(true);
-      setContent(getDefaultContent());
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDefaultContent = () => {
     return `

@@ -750,12 +750,29 @@ public class EventServiceImpl implements EventService {
         boolean hasDeal = ticketCategoryResponses.stream()
                 .anyMatch(tc -> Boolean.TRUE.equals(tc.getDealActive()));
 
-        // Auto-compute basePrice as the minimum price across non-shared-area ticket categories
+        // Auto-compute basePrice as the minimum price across all ticket categories (including shared areas)
         // This is used by public pages to show "From LKR X" without requiring admin input
         java.math.BigDecimal computedBasePrice = ticketCategoryResponses.stream()
-                .filter(tc -> !Boolean.TRUE.equals(tc.getIsSharedArea()))
-                .map(tc -> tc != null ? tc.getPrice() : null)
-                .filter(p -> p != null)
+                .map(tc -> {
+                    if (tc == null) return null;
+                    java.math.BigDecimal regularPrice = tc.getPrice();
+                    java.math.BigDecimal discountedPrice = tc.getDiscountedPrice();
+                    java.math.BigDecimal minCatPrice = discountedPrice != null ? discountedPrice : regularPrice;
+
+                    // Also consider earlyBirdPrice if configured and active
+                    if (tc.getEarlyBirdPrice() != null && tc.getEarlyBirdPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                        boolean isStartValid = tc.getSalesStartDate() == null || !now.isBefore(tc.getSalesStartDate());
+                        boolean isEndValid = tc.getSalesEndDate() == null || !now.isAfter(tc.getSalesEndDate());
+                        if (isStartValid && isEndValid) {
+                            if (minCatPrice == null || tc.getEarlyBirdPrice().compareTo(minCatPrice) < 0) {
+                                minCatPrice = tc.getEarlyBirdPrice();
+                            }
+                        }
+                    }
+                    return minCatPrice != null ? minCatPrice : regularPrice;
+                })
+                .filter(p -> p != null && p.compareTo(java.math.BigDecimal.ZERO) > 0)
                 .min((p1, p2) -> p1.compareTo(p2))
                 .orElse(java.math.BigDecimal.ZERO);
 

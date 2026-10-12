@@ -212,7 +212,7 @@ const EventDetails: React.FC = () => {
     };
 
     fetchEvent();
-  }, [id]);
+  }, [id, locationState?.selectedShowtime, locationState?.ticketMode]);
 
   // Fetch dynamic handling fee from system settings
   useEffect(() => {

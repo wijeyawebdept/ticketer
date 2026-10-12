@@ -12,8 +12,6 @@ import {
   TextField,
   InputAdornment,
   Chip,
-  useTheme,
-  useMediaQuery,
   Snackbar,
   Alert,
   Slide,
@@ -36,9 +34,6 @@ const Events: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
-  
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,9 +256,18 @@ const Events: React.FC = () => {
                   const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
                     const originalPrice = Number(tc.price) || 0;
                     const discount = Number(tc.dealDiscountPercentage) || 0;
-                    const currentPrice = (tc.dealActive && discount > 0)
+                    let currentPrice = (tc.dealActive && discount > 0)
                       ? originalPrice * (1 - discount / 100)
                       : originalPrice;
+                    if (tc.earlyBirdPrice && Number(tc.earlyBirdPrice) > 0) {
+                      const now = new Date();
+                      const start = tc.salesStartDate ? new Date(tc.salesStartDate) : null;
+                      const end = tc.salesEndDate ? new Date(tc.salesEndDate) : null;
+                      const isEbActive = (!start || now >= start) && (!end || now <= end);
+                      if (isEbActive && Number(tc.earlyBirdPrice) < currentPrice) {
+                        currentPrice = Number(tc.earlyBirdPrice);
+                      }
+                    }
                     return { originalPrice, currentPrice };
                   });
 

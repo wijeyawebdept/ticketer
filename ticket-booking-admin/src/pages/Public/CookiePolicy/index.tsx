@@ -9,23 +9,22 @@ const CookiePolicy: React.FC = () => {
   const [title, setTitle] = useState('Cookie Policy');
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const data = await PageContentService.getPageContent('COOKIE_POLICY');
+        setTitle(data.title);
+        setContent(data.content);
+      } catch (err) {
+        setContent(getDefaultContent());
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadContent();
   }, []);
-
-  const loadContent = async () => {
-    try {
-      setLoading(true);
-      const data = await PageContentService.getPageContent('COOKIE_POLICY');
-      setTitle(data.title);
-      setContent(data.content);
-    } catch (err) {
-      setContent(getDefaultContent());
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDefaultContent = () => {
     return `

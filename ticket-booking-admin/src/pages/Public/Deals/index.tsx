@@ -10,8 +10,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import { LocationOn, LocalOffer } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -34,8 +32,6 @@ function groupByEvent(deals: TicketCategoryDeal[]): Record<string, TicketCategor
 const Deals: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [deals, setDeals] = useState<TicketCategoryDeal[]>([]);
   const [loading, setLoading] = useState(true);

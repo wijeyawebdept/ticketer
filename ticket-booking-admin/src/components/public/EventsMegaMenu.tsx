@@ -102,6 +102,36 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
     onClose();
   };
 
+  const getEventLowestPrice = (eventItem: Event): number => {
+    if (eventItem.ticketCategories && eventItem.ticketCategories.length > 0) {
+      const prices = eventItem.ticketCategories
+        .map((cat: any) => {
+          const originalPrice = Number(cat.price) || 0;
+          const discount = Number(cat.dealDiscountPercentage) || 0;
+          let effectivePrice = (cat.dealActive && discount > 0)
+            ? originalPrice * (1 - discount / 100)
+            : originalPrice;
+
+          if (cat.earlyBirdPrice && Number(cat.earlyBirdPrice) > 0) {
+            const now = new Date();
+            const start = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
+            const end = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
+            const isEbActive = (!start || now >= start) && (!end || now <= end);
+            if (isEbActive && Number(cat.earlyBirdPrice) < effectivePrice) {
+              effectivePrice = Number(cat.earlyBirdPrice);
+            }
+          }
+          return effectivePrice;
+        })
+        .filter((p: number) => p > 0);
+
+      if (prices.length > 0) {
+        return Math.min(...prices);
+      }
+    }
+    return Number(eventItem.basePrice || 0);
+  };
+
   const displayedEvents = activeCategoryId ? eventsCache[activeCategoryId] || [] : [];
 
   return (
@@ -292,7 +322,10 @@ const EventsMegaMenu: React.FC<EventsMegaMenuProps> = ({
                       sx={{ fontFamily: 'Raleway, sans-serif', fontSize: '0.78rem', color: '#fcd0a5' }}
                     >
                       {event.startDateTime ? format(new Date(event.startDateTime), 'EEE dd MMM') : 'TBA'} 
-                      {event.basePrice ? ` • ${formatCurrency(event.basePrice)}` : ''}
+                      {(() => {
+                        const lowestPrice = getEventLowestPrice(event);
+                        return lowestPrice > 0 ? ` • ${formatCurrency(lowestPrice)}` : '';
+                      })()}
                     </Typography>
                   </CardContent>
                 </Card>

@@ -20,6 +20,7 @@ import {
   ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import PublicNavbar from '../../../components/public/PublicNavbar';
 import VenueSeatMap from '../../../components/VenueSeatMap/VenueSeatMap';
 import { venueSeatService } from '../../../services/venueSeatService';
@@ -63,7 +64,6 @@ const SeatSelectionPage: React.FC = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [handlingFee, setHandlingFee] = useState<number>(100);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showBookingSummary, setShowBookingSummary] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
@@ -384,6 +384,15 @@ const SeatSelectionPage: React.FC = () => {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
+  const calculateTotalPrice = useCallback(async (seatIds: string[]) => {
+    try {
+      const response = await venueSeatService.getSeatAvailability(eventScheduleId!);
+      const selectedDetails = seatIds.map(seatId => response.seats.find(s => s.seatId === seatId)).filter(Boolean);
+      setSelectedSeatDetails(selectedDetails);
+    } catch (error) {
+    }
+  }, [eventScheduleId]);
+
   // Restore seat booking & auto-open payment modal after login
   useEffect(() => {
     const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
@@ -411,7 +420,7 @@ const SeatSelectionPage: React.FC = () => {
       };
       restoreSeatBooking();
     }
-  }, [eventScheduleId, isAuthenticated]);
+  }, [eventScheduleId, isAuthenticated, calculateTotalPrice]);
 
   useEffect(() => {
     let newTotal = 0;
@@ -490,16 +499,7 @@ const SeatSelectionPage: React.FC = () => {
     setTotalPrice(newTotal);
     setTotalDiscount(newTotalDiscount);
     setDiscountInfoString(dealDescriptions.size > 0 ? Array.from(dealDescriptions).join(', ') : undefined);
-  }, [sharedAreaSelections, selectedSeatDetails]);
-
-  const calculateTotalPrice = async (seatIds: string[]) => {
-    try {
-      const response = await venueSeatService.getSeatAvailability(eventScheduleId!);
-      const selectedDetails = seatIds.map(seatId => response.seats.find(s => s.seatId === seatId)).filter(Boolean);
-      setSelectedSeatDetails(selectedDetails);
-    } catch (error) {
-    }
-  };
+  }, [sharedAreaSelections, selectedSeatDetails, eventDetailsFromState?.ticketMode]);
 
   const handleHoldSeats = async () => {
     if (isSalesClosed) return;
@@ -627,8 +627,11 @@ const SeatSelectionPage: React.FC = () => {
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   if (!eventDetails) {

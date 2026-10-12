@@ -11,25 +11,24 @@ const RefundPolicy: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const data = await PageContentService.getPageContent('REFUND_POLICY');
+        setTitle(data.title);
+        setContent(data.content);
+      } catch (err) {
+        setError(true);
+        // Set default content if API fails
+        setContent(getDefaultContent());
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadContent();
   }, []);
-
-  const loadContent = async () => {
-    try {
-      setLoading(true);
-      const data = await PageContentService.getPageContent('REFUND_POLICY');
-      setTitle(data.title);
-      setContent(data.content);
-    } catch (err) {
-      setError(true);
-      // Set default content if API fails
-      setContent(getDefaultContent());
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDefaultContent = () => {
     return '';

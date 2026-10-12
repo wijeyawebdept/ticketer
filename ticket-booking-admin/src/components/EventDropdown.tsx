@@ -268,13 +268,23 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, color: '#0f766e' }}>
                       {option.ticketCategories && option.ticketCategories.length > 0
                         ? (() => {
-                            const currentPrices = option.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => {
+                            const currentPrices = option.ticketCategories.map(tc => {
                               const originalPrice = Number(tc.price) || 0;
                               const discount = Number(tc.dealDiscountPercentage) || 0;
-                              return (tc.dealActive && discount > 0)
+                              let effective = (tc.dealActive && discount > 0)
                                 ? originalPrice * (1 - discount / 100)
                                 : originalPrice;
-                            });
+                              if (tc.earlyBirdPrice && Number(tc.earlyBirdPrice) > 0) {
+                                const now = new Date();
+                                const start = tc.salesStartDate ? new Date(tc.salesStartDate) : null;
+                                const end = tc.salesEndDate ? new Date(tc.salesEndDate) : null;
+                                const isEbActive = (!start || now >= start) && (!end || now <= end);
+                                if (isEbActive && Number(tc.earlyBirdPrice) < effective) {
+                                  effective = Number(tc.earlyBirdPrice);
+                                }
+                              }
+                              return effective;
+                            }).filter(p => p > 0);
                             return currentPrices.length > 0 
                               ? `From ${formatPrice(Math.min(...currentPrices))}`
                               : option.basePrice !== undefined ? formatPrice(option.basePrice) : 'Price TBA';

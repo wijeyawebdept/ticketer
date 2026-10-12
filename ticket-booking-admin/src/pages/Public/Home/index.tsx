@@ -295,9 +295,9 @@ const Home: React.FC = () => {
             )
           );
           const validBanners = fullBannersWithImages.filter(
-            (banner): banner is BannerResponse => banner !== null && banner.imageUrl !== undefined
+            (banner): banner is BannerResponse => banner !== null && !!banner.imageUrl
           );
-          setBanners(validBanners);
+          setBanners(validBanners.length > 0 ? validBanners : sortedBanners.filter(b => !!b.imageUrl));
         } else {
           setBanners([]);
         }
@@ -362,15 +362,6 @@ const Home: React.FC = () => {
     loadUpcomingEvents();
   }, [timeFilter]);
 
-  // Auto-rotate carousel based on published events
-  useEffect(() => {
-    if (publishedEvents.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % publishedEvents.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [publishedEvents.length]);
-
   const handleSlideChange = (index: number) => {
     setActiveSlide(index);
   };
@@ -408,11 +399,23 @@ const Home: React.FC = () => {
       const prices = eventItem.ticketCategories.map((cat: any) => {
         const originalPrice = Number(cat.price) || 0;
         const discount = Number(cat.dealDiscountPercentage) || 0;
-        return (cat.dealActive && discount > 0)
+        let effective = (cat.dealActive && discount > 0)
           ? originalPrice * (1 - discount / 100)
           : originalPrice;
-      });
-      return Math.min(...prices);
+        if (cat.earlyBirdPrice && Number(cat.earlyBirdPrice) > 0) {
+          const now = new Date();
+          const start = cat.salesStartDate ? new Date(cat.salesStartDate) : null;
+          const end = cat.salesEndDate ? new Date(cat.salesEndDate) : null;
+          const isEbActive = (!start || now >= start) && (!end || now <= end);
+          if (isEbActive && Number(cat.earlyBirdPrice) < effective) {
+            effective = Number(cat.earlyBirdPrice);
+          }
+        }
+        return effective;
+      }).filter((p: number) => p > 0);
+      if (prices.length > 0) {
+        return Math.min(...prices);
+      }
     }
     return Number(eventItem.basePrice || eventItem.ticketPrice || 0);
   };
@@ -422,7 +425,9 @@ const Home: React.FC = () => {
     return formatCurrency(price);
   };
 
-  // Unified hero slides merging custom admin banners and published events
+  // Hero slides logic:
+  // - When events ARE active (publishedEvents.length > 0): Show ONLY active published events; admin-uploaded banners should NOT show.
+  // - When events ARE NOT active (publishedEvents.length === 0): Show the banners uploaded via admin/banner.
   const heroSlides = useMemo(() => {
     const slides: Array<{
       id: string | number;
@@ -436,43 +441,12 @@ const Home: React.FC = () => {
       isCustomAdminBanner?: boolean;
     }> = [];
 
-    const processedEventIds = new Set<string | number>();
+    const hasActiveEvents = publishedEvents && publishedEvents.length > 0;
 
-    // 1. Process custom admin banners first (standalone admin-uploaded banners show without text/button overlays)
-    banners.forEach((banner: BannerResponse) => {
-      const targetId = banner.targetEventId;
-      const linkedEvent = targetId
-        ? publishedEvents.find((e: Event) => String(e.id) === String(targetId) || String(e.eventId) === String(targetId))
-        : undefined;
-
-      if (linkedEvent) {
-        const eId = linkedEvent.id || linkedEvent.eventId || '';
-        if (eId) processedEventIds.add(eId);
-        slides.push({
-          id: `admin-banner-${banner.bannerId}`,
-          imageUrl: getAssetUrl(banner.imageUrl || linkedEvent.imageUrl || '') || '',
-          title: linkedEvent.name,
-          venueName: linkedEvent.venue?.name || 'Venue TBA',
-          eventDateStr: formatShortDate(linkedEvent.startDateTime || linkedEvent.nextSchedule?.scheduleDate),
-          minPrice: getMinPrice(linkedEvent),
-          targetUrl: `/event/${linkedEvent.slug || linkedEvent.id || linkedEvent.eventId}`,
-          buttonText: 'Tickets',
-          isCustomAdminBanner: false,
-        });
-      } else if (banner.imageUrl) {
-        slides.push({
-          id: `admin-banner-${banner.bannerId}`,
-          imageUrl: getAssetUrl(banner.imageUrl || '') || '',
-          targetUrl: banner.linkUrl || undefined,
-          isCustomAdminBanner: true,
-        });
-      }
-    });
-
-    // 2. Add published events that were not already linked by a custom admin banner
-    publishedEvents.forEach((eventItem: Event) => {
-      const eventId = eventItem.id || eventItem.eventId || '';
-      if (!eventId || !processedEventIds.has(eventId)) {
+    if (hasActiveEvents) {
+      // 1. When events are active: Show only published events (admin-uploaded banners should NOT show)
+      publishedEvents.forEach((eventItem: Event) => {
+        const eventId = eventItem.id || eventItem.eventId || '';
         slides.push({
           id: `event-${eventId || Math.random()}`,
           imageUrl: getAssetUrl(eventItem.imageUrl || '') || '',
@@ -484,11 +458,36 @@ const Home: React.FC = () => {
           buttonText: 'Tickets',
           isCustomAdminBanner: false,
         });
-      }
-    });
+      });
+    } else {
+      // 2. When events are NOT active: Show uploaded banners from admin/banner
+      banners.forEach((banner: BannerResponse) => {
+        if (banner.imageUrl) {
+          slides.push({
+            id: `admin-banner-${banner.bannerId}`,
+            imageUrl: getAssetUrl(banner.imageUrl || '') || '',
+            title: banner.title || undefined,
+            targetUrl: banner.linkUrl || undefined,
+            isCustomAdminBanner: true,
+          });
+        }
+      });
+    }
 
     return slides;
   }, [banners, publishedEvents]);
+
+  // Auto-rotate carousel based on hero slides
+  useEffect(() => {
+    if (heroSlides.length <= 1) {
+      setActiveSlide(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroSlides.length]);
 
   const handleDealScroll = (direction: 'left' | 'right') => {
     if (dealsScrollRef.current) {
@@ -968,7 +967,13 @@ const Home: React.FC = () => {
                 justifyContent: 'center',
               }}
             >
-              <CircularProgress sx={{ color: '#ff1955' }} />
+              {loading ? (
+                <CircularProgress sx={{ color: '#ff1955' }} />
+              ) : (
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontFamily: 'Raleway, sans-serif', fontSize: '15px' }}>
+                  No active events or banners available
+                </Typography>
+              )}
             </Box>
           )}
         </Box>
@@ -1052,21 +1057,24 @@ const Home: React.FC = () => {
                 const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
                   const originalPrice = Number(tc.price) || 0;
                   const discount = Number(tc.dealDiscountPercentage) || 0;
-                  const currentPrice = (tc.dealActive && discount > 0)
+                  let currentPrice = (tc.dealActive && discount > 0)
                     ? originalPrice * (1 - discount / 100)
                     : originalPrice;
+                  if (tc.earlyBirdPrice && Number(tc.earlyBirdPrice) > 0) {
+                    const now = new Date();
+                    const start = tc.salesStartDate ? new Date(tc.salesStartDate) : null;
+                    const end = tc.salesEndDate ? new Date(tc.salesEndDate) : null;
+                    const isEbActive = (!start || now >= start) && (!end || now <= end);
+                    if (isEbActive && Number(tc.earlyBirdPrice) < currentPrice) {
+                      currentPrice = Number(tc.earlyBirdPrice);
+                    }
+                  }
                   return { originalPrice, currentPrice };
                 });
-
-                const lowestOriginalPrice = allCategoryPrices.length > 0
-                  ? Math.min(...allCategoryPrices.map(p => p.originalPrice))
-                  : Number(event.basePrice) || 0;
 
                 const lowestCurrentPrice = allCategoryPrices.length > 0
                   ? Math.min(...allCategoryPrices.map(p => p.currentPrice))
                   : Number(event.basePrice) || 0;
-
-                const showDiscountedPrice = lowestCurrentPrice < lowestOriginalPrice;
 
                 return (
                   <Card
@@ -1428,9 +1436,18 @@ const Home: React.FC = () => {
                       // Compute the true lowest current price across all categories
                       const allCategoryPrices = (event.ticketCategories || []).map((tc: any) => {
                         const originalPrice = Number(tc.price) || 0;
-                        const currentPrice = (tc.dealActive && tc.dealDiscountPercentage > 0)
+                        let currentPrice = (tc.dealActive && tc.dealDiscountPercentage > 0)
                           ? originalPrice * (1 - tc.dealDiscountPercentage / 100)
                           : originalPrice;
+                        if (tc.earlyBirdPrice && Number(tc.earlyBirdPrice) > 0) {
+                          const now = new Date();
+                          const start = tc.salesStartDate ? new Date(tc.salesStartDate) : null;
+                          const end = tc.salesEndDate ? new Date(tc.salesEndDate) : null;
+                          const isEbActive = (!start || now >= start) && (!end || now <= end);
+                          if (isEbActive && Number(tc.earlyBirdPrice) < currentPrice) {
+                            currentPrice = Number(tc.earlyBirdPrice);
+                          }
+                        }
                         return { originalPrice, currentPrice };
                       });
 

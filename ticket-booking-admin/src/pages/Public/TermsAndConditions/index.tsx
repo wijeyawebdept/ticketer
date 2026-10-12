@@ -9,23 +9,22 @@ const TermsAndConditions: React.FC = () => {
   const [title, setTitle] = useState('Terms and Conditions');
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const data = await PageContentService.getPageContent('TERMS_AND_CONDITIONS');
+        setTitle(data.title);
+        setContent(data.content);
+      } catch (err) {
+        setContent(getDefaultContent());
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadContent();
   }, []);
-
-  const loadContent = async () => {
-    try {
-      setLoading(true);
-      const data = await PageContentService.getPageContent('TERMS_AND_CONDITIONS');
-      setTitle(data.title);
-      setContent(data.content);
-    } catch (err) {
-      setContent(getDefaultContent());
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDefaultContent = () => {
     return `

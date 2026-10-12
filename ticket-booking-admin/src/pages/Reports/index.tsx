@@ -120,6 +120,7 @@ const ReportsIndex: React.FC = () => {
   useEffect(() => {
     fetchEvents();
     loadSalesByDate('last30');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchEvents = async () => {

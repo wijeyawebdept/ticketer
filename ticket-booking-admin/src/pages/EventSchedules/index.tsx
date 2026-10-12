@@ -331,7 +331,11 @@ const EventSchedules: React.FC = () => {
                   </Typography>
                   <Typography variant="h6">
                     {event.ticketCategories && event.ticketCategories.length > 0
-                      ? `${t('schedules.currencyPrefix')}${Math.min(...event.ticketCategories.filter(tc => !tc.isSharedArea).map(tc => Number(tc.price) || 0)).toLocaleString()}`
+                      ? `${t('schedules.currencyPrefix')}${Math.min(...event.ticketCategories.map(tc => {
+                          const base = Number(tc.price) || 0;
+                          const eb = Number(tc.earlyBirdPrice) || 0;
+                          return eb > 0 ? Math.min(base, eb) : base;
+                        }).filter(p => p > 0)).toLocaleString()}`
                       : 'TBA'}
                   </Typography>
                 </Grid>
