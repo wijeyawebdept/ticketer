@@ -65,7 +65,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       .catch((err) => {
         if (!isMounted) return;
         console.warn('Error accessing cameras:', err);
-        setErrorMsg('Camera access permission required. Please allow camera access in your browser.');
+        setErrorMsg('Camera permission required. Please allow access in browser.');
       });
 
     return () => {
@@ -196,7 +196,42 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   return (
     <Box sx={{ width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {errorMsg && (
-        <Alert severity="warning" sx={{ width: '100%', mb: 1.5, fontSize: '0.85rem' }}>
+        <Alert
+          severity="warning"
+          onClose={() => setErrorMsg(null)}
+          sx={{
+            width: '100%',
+            maxWidth: { xs: '100%', sm: 360 },
+            mb: { xs: 1, sm: 1.5 },
+            py: { xs: 0.25, sm: 0.4 },
+            px: { xs: 1, sm: 1.5 },
+            fontSize: { xs: '0.72rem', sm: '0.78rem' },
+            lineHeight: 1.3,
+            borderRadius: 2,
+            alignItems: 'center',
+            bgcolor: 'rgba(245, 158, 11, 0.12)',
+            border: '1px solid rgba(245, 158, 11, 0.28)',
+            color: '#fbbf24',
+            '& .MuiAlert-icon': {
+              fontSize: { xs: 16, sm: 18 },
+              mr: 0.8,
+              p: 0,
+              color: '#f59e0b',
+            },
+            '& .MuiAlert-message': {
+              p: 0,
+              fontWeight: 500,
+            },
+            '& .MuiAlert-action': {
+              p: 0,
+              mr: -0.5,
+              '& .MuiIconButton-root': {
+                p: 0.3,
+                color: '#fbbf24',
+              },
+            },
+          }}
+        >
           {errorMsg}
         </Alert>
       )}
@@ -205,10 +240,10 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       <Box
         sx={{
           width: '100%',
-          maxWidth: 380,
+          maxWidth: { xs: 260, sm: 320, md: 360 },
           aspectRatio: '1/1',
           bgcolor: '#0a0d14',
-          borderRadius: 3,
+          borderRadius: { xs: 2, sm: 3 },
           overflow: 'hidden',
           position: 'relative',
           border: '2px solid rgba(255, 25, 85, 0.4)',
@@ -220,20 +255,20 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       >
         {isInitializing && (
           <Box sx={{ position: 'absolute', zIndex: 10, textAlign: 'center', color: '#fff' }}>
-            <CircularProgress size={40} sx={{ color: '#ff1955', mb: 1 }} />
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <CircularProgress size={32} sx={{ color: '#ff1955', mb: 1 }} />
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', sm: '0.85rem' } }}>
               Starting Camera...
             </Typography>
           </Box>
         )}
 
         {!isScanning && !isInitializing && (
-          <Box sx={{ position: 'absolute', zIndex: 5, textAlign: 'center', color: 'rgba(255,255,255,0.4)', p: 3 }}>
-            <VideocamOff sx={{ fontSize: 44, mb: 1, color: 'rgba(255,255,255,0.25)' }} />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <Box sx={{ position: 'absolute', zIndex: 5, textAlign: 'center', color: 'rgba(255,255,255,0.4)', p: { xs: 1.5, sm: 3 } }}>
+            <VideocamOff sx={{ fontSize: { xs: 32, sm: 44 }, mb: 0.6, color: 'rgba(255,255,255,0.25)' }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.78rem', sm: '0.875rem' } }}>
               Camera is turned off
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block', mt: 0.5 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block', mt: 0.3, fontSize: { xs: '0.65rem', sm: '0.72rem' } }}>
               Click "Start Camera" below to begin scanning
             </Typography>
           </Box>
@@ -276,15 +311,15 @@ export const QrScanner: React.FC<QrScannerProps> = ({
       </Box>
 
       {/* Control Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, mt: 1.5, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', gap: { xs: 0.8, sm: 1 }, mt: 1.2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
         {cameras.length > 1 && (
           <Tooltip title="Switch Camera">
             <IconButton
               size="small"
               onClick={handleSwitchCamera}
-              sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' } }}
+              sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' }, p: { xs: 0.5, sm: 0.7 } }}
             >
-              <FlipCameraIos fontSize="small" />
+              <FlipCameraIos sx={{ fontSize: { xs: 16, sm: 18 } }} />
             </IconButton>
           </Tooltip>
         )}
@@ -298,10 +333,11 @@ export const QrScanner: React.FC<QrScannerProps> = ({
                 bgcolor: torchOn ? '#ff9800' : '#f1f5f9', 
                 color: torchOn ? '#ffffff' : '#1e293b',
                 border: '1px solid #e2e8f0',
+                p: { xs: 0.5, sm: 0.7 },
                 '&:hover': { bgcolor: torchOn ? '#f57c00' : '#e2e8f0' } 
               }}
             >
-              {torchOn ? <FlashOff fontSize="small" /> : <FlashOn fontSize="small" />}
+              {torchOn ? <FlashOff sx={{ fontSize: { xs: 16, sm: 18 } }} /> : <FlashOn sx={{ fontSize: { xs: 16, sm: 18 } }} />}
             </IconButton>
           </Tooltip>
         )}
@@ -317,16 +353,16 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           <IconButton
             size="small"
             onClick={() => fileInputRef.current?.click()}
-            sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' } }}
+            sx={{ bgcolor: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', '&:hover': { bgcolor: '#e2e8f0' }, p: { xs: 0.5, sm: 0.7 } }}
           >
-            <UploadFile fontSize="small" />
+            <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
           </IconButton>
         </Tooltip>
 
         <Button
           size="small"
           variant="outlined"
-          startIcon={isScanning ? <VideocamOff /> : <Videocam />}
+          startIcon={isScanning ? <VideocamOff sx={{ fontSize: '1rem !important' }} /> : <Videocam sx={{ fontSize: '1rem !important' }} />}
           onClick={() => {
             if (isScanning) {
               stopScanner();
@@ -343,8 +379,10 @@ export const QrScanner: React.FC<QrScannerProps> = ({
             color: isScanning ? '#64748b' : '#ff1955',
             borderRadius: 2,
             textTransform: 'none',
-            fontSize: '0.8rem',
+            fontSize: { xs: '0.72rem', sm: '0.78rem' },
             fontWeight: 600,
+            py: { xs: 0.35, sm: 0.5 },
+            px: { xs: 1.2, sm: 1.6 },
             '&:hover': {
               borderColor: '#ff1955',
               bgcolor: 'rgba(255, 25, 85, 0.05)',

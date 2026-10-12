@@ -9,6 +9,7 @@ import {
   PhotoCamera, Save, Edit, Cancel, NotificationsActive, NotificationsOff,
   Business, AccountBalance, Person, Phone, LocationOn, Badge,
   MarkEmailRead, Email, CheckCircle,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
@@ -163,7 +164,12 @@ const Profile: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>My Profile</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1976d2' }}>My Profile</Typography>
+        <IconButton onClick={loadProfile} title="Refresh">
+          <RefreshIcon />
+        </IconButton>
+      </Box>
 
       <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit} enableReinitialize>
         {({ values, errors, touched, handleChange, handleBlur, isSubmitting }) => (

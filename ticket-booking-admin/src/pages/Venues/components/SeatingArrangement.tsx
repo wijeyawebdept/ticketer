@@ -30,7 +30,8 @@ import {
   LockOpen,
   EventSeat,
   Info,
-  Close
+  Close,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
@@ -523,9 +524,14 @@ const SeatingArrangement: React.FC = () => {
   return (
     <Box p={3}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Venue Seating Layout {venueName ? `(${venueName})` : ''}
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5" sx={{ mb: 0 }}>
+            Venue Seating Layout {venueName ? `(${venueName})` : ''}
+          </Typography>
+          <IconButton onClick={fetchHardcodedSeats} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+        </Box>
 
         <Alert severity="info" sx={{ mb: 3 }}>
           This is the venue seating layout with <strong>{seats.length} seats</strong>.

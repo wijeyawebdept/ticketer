@@ -93,6 +93,13 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                         .orElseThrow(() -> new ResourceNotFoundException("Schedule not found with ID: " + scheduleId));
                 schedulesToAssign.add(schedule);
             }
+        } else {
+            // If no specific schedule IDs were provided, auto-resolve all active schedules for this event so schedule_id is populated
+            List<EventSchedule> eventSchedules = eventScheduleRepository
+                    .findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(event.getEventId());
+            if (!eventSchedules.isEmpty()) {
+                schedulesToAssign.addAll(eventSchedules);
+            }
         }
 
         for (UUID staffId : request.getStaffUserIds()) {
@@ -100,13 +107,14 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                     .orElseThrow(() -> new ResourceNotFoundException("Gate staff member not found with ID: " + staffId));
 
             if (schedulesToAssign.isEmpty()) {
-                // Assign to all schedules (eventSchedule = null)
+                // Fallback only if the event has no schedules configured yet
                 Optional<GateStaffAssignment> existing = assignmentRepository.findExistingAssignment(staffId, event.getEventId(), null);
                 if (existing.isEmpty()) {
                     GateStaffAssignment assignment = GateStaffAssignment.builder()
                             .event(event)
                             .eventSchedule(null)
                             .gateStaff(staff)
+                            .gateName(request.getGateName() != null && !request.getGateName().trim().isEmpty() ? request.getGateName().trim() : null)
                             .assignedById(assignedByUserId)
                             .assignedAt(LocalDateTime.now())
                             .notes(request.getNotes())
@@ -122,6 +130,7 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                                 .event(event)
                                 .eventSchedule(schedule)
                                 .gateStaff(staff)
+                                .gateName(request.getGateName() != null && !request.getGateName().trim().isEmpty() ? request.getGateName().trim() : null)
                                 .assignedById(assignedByUserId)
                                 .assignedAt(LocalDateTime.now())
                                 .notes(request.getNotes())
@@ -149,16 +158,27 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
             assignment.setGateStaff(staff);
         }
 
-        if (Boolean.TRUE.equals(request.getIsAllSchedules()) || request.getScheduleId() == null) {
-            assignment.setEventSchedule(null);
-        } else {
+        if (request.getScheduleId() != null) {
             EventSchedule schedule = eventScheduleRepository.findById(request.getScheduleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Schedule not found with ID: " + request.getScheduleId()));
             assignment.setEventSchedule(schedule);
+        } else if (Boolean.TRUE.equals(request.getIsAllSchedules()) || request.getScheduleId() == null) {
+            // If request did not specify a scheduleId, resolve from event's active schedules
+            List<EventSchedule> eventSchedules = eventScheduleRepository
+                    .findByEvent_EventIdAndIsDeletedFalseOrderByScheduleDateAscStartTimeAsc(assignment.getEvent().getEventId());
+            if (!eventSchedules.isEmpty()) {
+                assignment.setEventSchedule(eventSchedules.get(0));
+            } else {
+                assignment.setEventSchedule(null);
+            }
         }
 
         if (request.getNotes() != null) {
             assignment.setNotes(request.getNotes());
+        }
+
+        if (request.getGateName() != null) {
+            assignment.setGateName(request.getGateName().trim().isEmpty() ? null : request.getGateName().trim());
         }
 
         GateStaffAssignment updated = assignmentRepository.save(assignment);
@@ -257,6 +277,7 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                 .assignedById(a.getAssignedById())
                 .assignedByName("System Admin")
                 .assignedAt(a.getAssignedAt())
+                .gateName(a.getGateName())
                 .notes(a.getNotes())
                 .isActive(a.getIsActive())
                 .build();

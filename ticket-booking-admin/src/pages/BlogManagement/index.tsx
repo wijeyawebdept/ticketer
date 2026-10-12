@@ -17,6 +17,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import BlogService, { BlogPostSummary, BlogImage } from '../../services/BlogService';
 
@@ -402,7 +403,10 @@ const BlogManagement: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <h1>Blog Management</h1>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <IconButton onClick={fetchPosts} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
           <Button variant="outlined" startIcon={<SendIcon />} onClick={() => setDigestDialogOpen(true)}
             sx={{ borderColor: '#ff1955', color: '#ff1955', '&:hover': { bgcolor: 'rgba(255,25,85,0.08)' } }}>
             Send Digest Email

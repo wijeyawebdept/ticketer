@@ -29,4 +29,6 @@ public class AssignGateStaffRequest {
     private List<UUID> staffUserIds;
 
     private String notes;
+
+    private String gateName;
 }

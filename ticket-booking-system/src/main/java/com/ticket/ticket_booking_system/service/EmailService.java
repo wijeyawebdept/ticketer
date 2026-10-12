@@ -224,9 +224,10 @@ public class EmailService {
                     seatLabel = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "Seat";
                 }
 
+                String sig = CheckInService.computeHmacSignature(bs.getTicketCode(), booking.getBookingReference(), null);
                 String individualQrContent = "{\"app\":\"TICKETER\",\"type\":\"TICKET\",\"ref\":\"" 
                         + booking.getBookingReference() + "\",\"ticket\":\"" + bs.getTicketCode() 
-                        + "\",\"seat\":\"" + seatLabel + "\"}";
+                        + "\",\"seat\":\"" + seatLabel + "\",\"sig\":\"" + sig + "\"}";
                 String individualQrBase64 = generateQrCodeBase64(individualQrContent);
 
                 emailTickets.add(new EmailTicketItem(

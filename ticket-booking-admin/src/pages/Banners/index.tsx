@@ -32,6 +32,7 @@ import {
   Visibility as VisibilityIcon,
   CheckCircle as ActivateIcon,
   Block as DeactivateIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import BannerService, { BannerResponse } from '../../services/banner.service';
 import {
@@ -309,13 +310,18 @@ export default function BannersPage() {
         }}
       >
         <h1>Banner Management</h1>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleCreateClick}
-        >
-          Create Banner
-        </Button>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={loadBanners} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCreateClick}
+          >
+            Create Banner
+          </Button>
+        </Box>
       </Box>
 
       {/* Alerts */}

@@ -916,6 +916,17 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
     return () => clearInterval(timer);
   }, [displaySeats, eventId, loadSeats]);
 
+  const handleRefreshData = () => {
+    if (selectedSchedule?.scheduleId) {
+      loadSeatAvailability(selectedSchedule.scheduleId);
+    } else if (selectedEvent) {
+      loadVenueSeats(selectedEvent);
+      loadSchedules(selectedEvent);
+    } else if (eventId) {
+      loadSeats(eventId);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
@@ -988,6 +999,11 @@ const SeatManagement: React.FC<SeatManagementProps> = ({
               </Box>
             </Tooltip>
           )}
+        </Box>
+        <Box>
+          <IconButton onClick={handleRefreshData} title="Refresh">
+            <Refresh />
+          </IconButton>
         </Box>
       </Box>
 

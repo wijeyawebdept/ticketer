@@ -132,5 +132,15 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, UUID> 
            "AND bs.sharedAreaNumber = :sharedAreaNumber " +
            "AND bs.checkedIn = true")
     Long countCheckedInSharedAreaSeatsForSchedule(UUID scheduleId, Integer sharedAreaNumber);
+
+    /**
+     * Find booking seats by schedule ID and booking status
+     */
+    @Query("SELECT bs FROM BookingSeat bs " +
+           "WHERE bs.booking.eventSchedule.scheduleId = :scheduleId " +
+           "AND bs.booking.status = :status")
+    List<BookingSeat> findByBooking_EventSchedule_ScheduleIdAndBooking_Status(
+            @org.springframework.data.repository.query.Param("scheduleId") UUID scheduleId,
+            @org.springframework.data.repository.query.Param("status") com.ticket.ticket_booking_system.entity.Booking.BookingStatus status);
 }
 

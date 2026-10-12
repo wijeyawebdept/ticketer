@@ -31,6 +31,7 @@ import {
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -301,23 +302,28 @@ const EventSchedules: React.FC = () => {
               </Typography>
             </Box>
           </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleCreateClick}
-            sx={{
-              borderRadius: 2,
-              padding: '8px 16px',
-              fontWeight: 600,
-              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-              position: 'sticky',
-              top: 16,
-              zIndex: 10,
-            }}
-          >
-            {t('schedules.addSchedule')}
-          </Button>
+          <Box display="flex" alignItems="center">
+            <IconButton onClick={fetchSchedules} sx={{ mr: 1 }} title="Refresh">
+              <RefreshIcon />
+            </IconButton>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleCreateClick}
+              sx={{
+                borderRadius: 2,
+                padding: '8px 16px',
+                fontWeight: 600,
+                boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                position: 'sticky',
+                top: 16,
+                zIndex: 10,
+              }}
+            >
+              {t('schedules.addSchedule')}
+            </Button>
+          </Box>
         </Grid>
  
         {/* Event Info Card */}

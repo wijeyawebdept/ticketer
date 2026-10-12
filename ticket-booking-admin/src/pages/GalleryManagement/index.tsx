@@ -37,6 +37,7 @@ import {
   Close as CloseIcon,
   PhotoLibrary as GalleryIcon,
   PauseCircle as PauseCircleIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import GalleryService, { GalleryImage } from '../../services/GalleryService';
 import EventCategoryService from '../../services/eventCategory.service';
@@ -222,9 +223,14 @@ const GalleryManagement: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b' }}>
           Gallery Management
         </Typography>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenDialog}>
-          Upload New Image
-        </Button>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={fetchImages} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenDialog}>
+            Upload New Image
+          </Button>
+        </Box>
       </Box>
 
       {/* Alerts */}

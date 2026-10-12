@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ticket.ticket_booking_system.dto.GateStaffAssignmentDTO;
 import com.ticket.ticket_booking_system.dto.response.EventResponse;
 import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
@@ -53,6 +54,26 @@ public class GateStaffPortalController {
 
         List<EventResponse> assignedEvents = assignmentService.getAssignedEventsForStaff(userId);
         return ResponseEntity.ok(assignedEvents);
+    }
+
+    @GetMapping("/my-assignment-details")
+    public ResponseEntity<List<GateStaffAssignmentDTO>> getMyAssignmentDetails(
+            @RequestParam(required = false) UUID eventId,
+            @RequestParam(required = false) UUID scheduleId,
+            Authentication authentication) {
+        UUID userId = extractUserId(authentication);
+        if (userId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<GateStaffAssignmentDTO> list = assignmentService.getAssignmentsByStaff(userId);
+        if (eventId != null) {
+            list = list.stream().filter(a -> a.getEventId() != null && a.getEventId().equals(eventId)).toList();
+        }
+        if (scheduleId != null) {
+            list = list.stream().filter(a -> a.isAllSchedules() || (a.getScheduleId() != null && a.getScheduleId().equals(scheduleId))).toList();
+        }
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/check-assignment")

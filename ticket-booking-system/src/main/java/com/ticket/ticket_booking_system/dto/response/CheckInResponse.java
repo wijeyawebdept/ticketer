@@ -40,6 +40,15 @@ public class CheckInResponse {
     private LocalDateTime checkedInAt;
     private String checkedInByName;
 
+    // Advanced Check-In & Security fields
+    private Boolean isPassOut;
+    private LocalDateTime exitedAt;
+    private Integer entryCount;
+    private String lastScanGate;
+    private Long secondsSinceLastScan;
+    private Boolean requiresGuestSelection;
+    private Boolean signatureValid;
+
     private List<CheckInTicketDetail> seatedTickets;
     private List<CheckInTicketDetail> sharedAreaTickets;
     private List<CheckInTicketDetail> allTickets;
@@ -61,5 +70,8 @@ public class CheckInResponse {
         private BigDecimal price;
         private Boolean checkedIn;
         private LocalDateTime checkedInAt;
+        private LocalDateTime exitedAt;
+        private Integer entryCount;
+        private String lastScanGate;
     }
 }

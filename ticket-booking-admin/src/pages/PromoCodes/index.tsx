@@ -50,6 +50,7 @@ import {
   DeleteSweep as DeleteSweepIcon,
   Close as CloseIcon,
   PauseCircle as PauseCircleIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 import { PromoCode, PromoCodeRequest, PromoCodeScope } from '../../types';
@@ -345,23 +346,28 @@ const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ role }) => {
             Manage promotional percentage discount codes for events and ticket categories
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreate}
-          sx={{
-            bgcolor: '#ff1955',
-            '&:hover': { bgcolor: '#e01545' },
-            borderRadius: '8px',
-            textTransform: 'none',
-            fontWeight: 700,
-            px: 3,
-            py: 1,
-            boxShadow: '0 4px 12px rgba(255, 25, 85, 0.3)',
-          }}
-        >
-          Create Promo Code
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton onClick={fetchPromoCodes} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreate}
+            sx={{
+              bgcolor: '#ff1955',
+              '&:hover': { bgcolor: '#e01545' },
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 3,
+              py: 1,
+              boxShadow: '0 4px 12px rgba(255, 25, 85, 0.3)',
+            }}
+          >
+            Create Promo Code
+          </Button>
+        </Box>
       </Box>
 
       {/* Filter Bar */}

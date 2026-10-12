@@ -54,6 +54,9 @@ public class GateStaffAssignment {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "gate_name", length = 100)
+    private String gateName;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;

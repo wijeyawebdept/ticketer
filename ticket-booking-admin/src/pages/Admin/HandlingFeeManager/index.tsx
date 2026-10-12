@@ -16,6 +16,7 @@ import {
   Divider,
   InputAdornment,
   Chip,
+  IconButton,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -24,6 +25,7 @@ import {
   Cancel as CancelIcon,
   Info as InfoIcon,
   ShoppingCart as CartIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import systemSettingService, { HandlingFeeSetting } from '../../../services/systemSetting.service';
 import { useCurrency } from '../../../context/CurrencyContext';
@@ -117,13 +119,18 @@ const HandlingFeeManager: React.FC = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: 'Raleway, sans-serif', color: '#1e293b', mb: 0.5 }}>
-          Handling Fee Manager
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b' }}>
-          Configure and manage the handling & service fee charged during checkout for customer ticket bookings.
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: 'Raleway, sans-serif', color: '#1e293b', mb: 0.5 }}>
+            Handling Fee Manager
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b' }}>
+            Configure and manage the handling & service fee charged during checkout for customer ticket bookings.
+          </Typography>
+        </Box>
+        <IconButton onClick={loadFeeSetting} title="Refresh">
+          <RefreshIcon />
+        </IconButton>
       </Box>
 
       <Grid container spacing={3}>

@@ -13,13 +13,29 @@ export interface CheckInTicketDetail {
   price?: number;
   checkedIn: boolean;
   checkedInAt?: string;
+  exitedAt?: string;
+  entryCount?: number;
+  lastScanGate?: string;
 }
 
 export interface CheckInResponse {
   valid: boolean;
   alreadyCheckedIn: boolean;
   message: string;
-  statusType: 'SUCCESS' | 'ALREADY_CHECKED_IN' | 'INVALID_EVENT' | 'CANCELLED' | 'ERROR' | string;
+  statusType:
+    | 'SUCCESS'
+    | 'ALREADY_CHECKED_IN'
+    | 'RE_ENTRY_APPROVED'
+    | 'CHECKED_OUT'
+    | 'WRONG_GATE'
+    | 'CLONED_SUSPECT'
+    | 'FORGED_SIGNATURE'
+    | 'SELECTION_REQUIRED'
+    | 'NOT_CHECKED_IN'
+    | 'INVALID_EVENT'
+    | 'CANCELLED'
+    | 'ERROR'
+    | string;
   bookingId?: string;
   bookingReference?: string;
   customerName?: string;
@@ -36,6 +52,13 @@ export interface CheckInResponse {
   checkedInTickets?: number;
   checkedInAt?: string;
   checkedInByName?: string;
+  isPassOut?: boolean;
+  exitedAt?: string;
+  entryCount?: number;
+  lastScanGate?: string;
+  secondsSinceLastScan?: number;
+  requiresGuestSelection?: boolean;
+  signatureValid?: boolean;
   allTickets?: CheckInTicketDetail[];
   seatedTickets?: CheckInTicketDetail[];
   sharedAreaTickets?: CheckInTicketDetail[];
@@ -97,6 +120,9 @@ export interface CheckInAttendee {
   checkedIn: boolean;
   checkedInAt?: string;
   checkedInByName?: string;
+  exitedAt?: string;
+  entryCount?: number;
+  lastScanGate?: string;
 }
 
 export interface CheckInScanPayload {
@@ -105,6 +131,34 @@ export interface CheckInScanPayload {
   eventId?: string;
   checkInAll?: boolean;
   ticketCode?: string;
+  selectedTicketCodes?: string[];
+  scanMode?: 'CHECK_IN' | 'CHECK_OUT';
+  gateName?: string;
+  allowedZone?: string;
+  offlineTimestamp?: number;
+}
+
+export interface OfflineScanItem {
+  qrData?: string;
+  ticketCode?: string;
+  offlineTimestamp: number;
+  scanMode: 'CHECK_IN' | 'CHECK_OUT';
+}
+
+export interface OfflineSyncPayload {
+  eventScheduleId?: string;
+  eventId?: string;
+  gateName?: string;
+  scans: OfflineScanItem[];
+}
+
+export interface OfflineSyncResponse {
+  totalSubmitted: number;
+  successfullySynced: number;
+  duplicatesSkipped: number;
+  errorsCount: number;
+  message: string;
+  results: CheckInResponse[];
 }
 
 export const checkInService = {
@@ -113,6 +167,14 @@ export const checkInService = {
    */
   async scanTicket(payload: CheckInScanPayload): Promise<CheckInResponse> {
     const response = await api.post<CheckInResponse>('/api/checkin/scan', payload);
+    return response.data;
+  },
+
+  /**
+   * Bulk sync offline queued scans
+   */
+  async syncOfflineScans(payload: OfflineSyncPayload): Promise<OfflineSyncResponse> {
+    const response = await api.post<OfflineSyncResponse>('/api/checkin/sync-offline', payload);
     return response.data;
   },
 

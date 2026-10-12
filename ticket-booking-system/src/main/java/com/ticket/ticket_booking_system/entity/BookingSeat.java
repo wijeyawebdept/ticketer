@@ -89,6 +89,17 @@ public class BookingSeat {
 
     @Column(name = "checked_in_by")
     private UUID checkedInBy;
+
+    // Pass-out & Re-entry support
+    @Column(name = "exited_at")
+    private java.time.LocalDateTime exitedAt;
+
+    @Column(name = "entry_count")
+    @Builder.Default
+    private Integer entryCount = 0;
+
+    @Column(name = "last_scan_gate", length = 100)
+    private String lastScanGate;
     
     // Add compatibility methods to support existing code
     public UUID getId() {

@@ -34,6 +34,7 @@ import {
   Check as CheckIcon,
   InfoOutlined as InfoIcon,
   Close as CloseIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 // @ts-ignore - react-quill types
 import ReactQuill from 'react-quill';
@@ -471,6 +472,9 @@ export default function PageContentManager() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+          <IconButton onClick={loadAllPageContents} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
           <Button
             variant="outlined"
             startIcon={<ViewIcon />}

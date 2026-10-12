@@ -35,4 +35,7 @@ public class CheckInAttendeeDTO {
     private Boolean checkedIn;
     private LocalDateTime checkedInAt;
     private String checkedInByName;
+    private LocalDateTime exitedAt;
+    private Integer entryCount;
+    private String lastScanGate;
 }

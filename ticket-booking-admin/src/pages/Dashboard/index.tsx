@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
@@ -10,7 +10,8 @@ import {
   CircularProgress,
   Chip,
   Alert,
-  AlertTitle
+  AlertTitle,
+  IconButton
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -23,7 +24,8 @@ import {
   AccountBalanceWallet as AccountBalanceWalletIcon,
   ConfirmationNumber as ConfirmationNumberIcon,
   Security as SecurityIcon,
-  AdminPanelSettings as AdminPanelSettingsIcon
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { DashboardService } from '../../services';
@@ -150,34 +152,34 @@ const Dashboard: React.FC = () => {
   const isOrganizer = user?.role === 'ORGANIZER' || user?.role === 'ROLE_ORGANIZER' || 
                       user?.role === 'ORGANIZER_EMPLOYEE' || user?.role === 'ROLE_ORGANIZER_EMPLOYEE';
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch dashboard overview
-        const dashboardOverview = await DashboardService.getDashboardOverview();
-        setOverview(dashboardOverview);
-        
-        // Fetch recent transactions (10)
-        const transactions = await DashboardService.getRecentTransactions(10);
-        setRecentTransactions(transactions.transactions || []);
-        
-        // Fetch draft events (10)
-        const drafts = await DashboardService.getDraftEvents(10);
-        setDraftEvents(drafts.draftEvents || []);
-        
-        // Fetch trend data
-        const trends = await DashboardService.getTrendData();
-        setTrendData(trends);
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchDashboardData();
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch dashboard overview
+      const dashboardOverview = await DashboardService.getDashboardOverview();
+      setOverview(dashboardOverview);
+      
+      // Fetch recent transactions (10)
+      const transactions = await DashboardService.getRecentTransactions(10);
+      setRecentTransactions(transactions.transactions || []);
+      
+      // Fetch draft events (10)
+      const drafts = await DashboardService.getDraftEvents(10);
+      setDraftEvents(drafts.draftEvents || []);
+      
+      // Fetch trend data
+      const trends = await DashboardService.getTrendData();
+      setTrendData(trends);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
   
   if (loading) {
     return (
@@ -189,13 +191,18 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>
-          {t('dashboard.title')}
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-          {t('dashboard.welcomeMessage')}
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box>
+          <Typography variant="h3" gutterBottom sx={{ fontWeight: 700, color: '#1976d2' }}>
+            {t('dashboard.title')}
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+            {t('dashboard.welcomeMessage')}
+          </Typography>
+        </Box>
+        <IconButton onClick={fetchDashboardData} title="Refresh">
+          <RefreshIcon />
+        </IconButton>
       </Box>
       
       {/* Stats Cards */}

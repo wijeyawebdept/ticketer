@@ -1,9 +1,11 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,18 +14,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ticket.ticket_booking_system.dto.request.CheckInScanRequest;
+import com.ticket.ticket_booking_system.dto.request.OfflineSyncRequest;
 import com.ticket.ticket_booking_system.dto.response.CheckInAttendeeDTO;
 import com.ticket.ticket_booking_system.dto.response.CheckInResponse;
 import com.ticket.ticket_booking_system.dto.response.CheckInResponse.CheckInTicketDetail;
 import com.ticket.ticket_booking_system.dto.response.CheckInStatsResponse;
 import com.ticket.ticket_booking_system.dto.response.CheckInStatsResponse.RecentCheckInItem;
 import com.ticket.ticket_booking_system.dto.response.CheckInStatsResponse.SharedAreaStats;
+import com.ticket.ticket_booking_system.dto.response.OfflineSyncResponse;
 import com.ticket.ticket_booking_system.entity.Booking;
 import com.ticket.ticket_booking_system.entity.Booking.BookingStatus;
 import com.ticket.ticket_booking_system.entity.BookingSeat;
@@ -34,7 +41,6 @@ import com.ticket.ticket_booking_system.entity.VenueSeat;
 import com.ticket.ticket_booking_system.repository.BookingRepository;
 import com.ticket.ticket_booking_system.repository.BookingSeatRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
-import com.ticket.ticket_booking_system.repository.TicketCategoryRepository;
 import com.ticket.ticket_booking_system.repository.VenueSeatRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -50,7 +56,6 @@ public class CheckInService {
     private final BookingSeatRepository bookingSeatRepository;
     private final EventScheduleRepository eventScheduleRepository;
     private final VenueSeatRepository venueSeatRepository;
-    private final TicketCategoryRepository ticketCategoryRepository;
     private final SeatWebSocketService seatWebSocketService;
     private final ObjectMapper objectMapper;
 
@@ -58,13 +63,42 @@ public class CheckInService {
     private static final Pattern BK_PATTERN = Pattern.compile("BK-[A-Z0-9]{8}", Pattern.CASE_INSENSITIVE);
     private static final Pattern TK_PATTERN = Pattern.compile("TK-[A-Z0-9]{12}", Pattern.CASE_INSENSITIVE);
 
+    public static final String HMAC_ALGO = "HmacSHA256";
+    public static final String DEFAULT_HMAC_SECRET = "TicketerSecretKeyForQrCodeCryptographicSigning2026!";
+
     /**
-     * Process scanned QR code or manually entered reference/ticket code.
+     * Compute compact 16-hex HMAC-SHA256 signature for anti-counterfeiting verification.
+     */
+    public static String computeHmacSignature(String ticketCode, String bookingRef, String secret) {
+        try {
+            String keyToUse = (secret != null && !secret.isBlank()) ? secret : DEFAULT_HMAC_SECRET;
+            Mac mac = Mac.getInstance(HMAC_ALGO);
+            SecretKeySpec keySpec = new SecretKeySpec(keyToUse.getBytes(StandardCharsets.UTF_8), HMAC_ALGO);
+            mac.init(keySpec);
+            String data = (bookingRef != null ? bookingRef : "") + ":" + (ticketCode != null ? ticketCode : "");
+            byte[] rawHmac = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : rawHmac) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.substring(0, 16);
+        } catch (Exception e) {
+            return "SIGERR";
+        }
+    }
+
+    /**
+     * Process scanned QR code or manually entered reference/ticket code with advanced security,
+     * pass-out (re-entry), gate-zone restriction, velocity anti-fraud, and partial group check-in support.
      */
     @Transactional
     public CheckInResponse scanAndCheckIn(CheckInScanRequest request, UUID staffUserId, String staffName) {
         String rawData = request.getQrData() != null ? request.getQrData().trim() : "";
-        log.info("Processing check-in scan: '{}', staff: {}", rawData, staffName);
+        String scanMode = request.getScanMode() != null ? request.getScanMode().toUpperCase() : "CHECK_IN";
+        boolean isCheckOut = "CHECK_OUT".equals(scanMode) || "PASS_OUT".equals(scanMode);
+        String gateName = request.getGateName() != null && !request.getGateName().isBlank() ? request.getGateName().trim() : "Gate";
+
+        log.info("Processing scan [mode={}]: '{}', gate={}, staff={}", scanMode, rawData, gateName, staffName);
 
         ParsedScanTarget target = parseScanPayload(rawData, request.getTicketCode());
 
@@ -116,7 +150,7 @@ public class CheckInService {
                     .build();
         }
 
-        // 2. Event & Schedule Matching Check (if schedule is specified)
+        // 2. Event & Schedule Matching Check
         if (request.getEventScheduleId() != null && booking.getEventSchedule() != null) {
             if (!booking.getEventSchedule().getScheduleId().equals(request.getEventScheduleId())) {
                 return CheckInResponse.builder()
@@ -133,20 +167,160 @@ public class CheckInService {
             }
         }
 
+        // 3. Cryptographic Signature Verification (Anti-Counterfeiting)
+        Boolean signatureValid = null;
+        if (target.signature != null && !target.signature.isBlank()) {
+            String expectedSig = computeHmacSignature(
+                    target.ticketCode != null ? target.ticketCode : (specificSeat != null ? specificSeat.getTicketCode() : ""),
+                    booking.getBookingReference(),
+                    null
+            );
+            if (!target.signature.equalsIgnoreCase(expectedSig)) {
+                return CheckInResponse.builder()
+                        .valid(false)
+                        .signatureValid(false)
+                        .statusType("FORGED_SIGNATURE")
+                        .bookingId(booking.getBookingId())
+                        .bookingReference(booking.getBookingReference())
+                        .customerName(resolveCustomerName(booking))
+                        .message("SECURITY ALERT: Invalid cryptographic QR signature! Potential counterfeit or tampered ticket.")
+                        .build();
+            }
+            signatureValid = true;
+        }
+
+        // 4. Gate / Zone Access Restriction Check
+        if (request.getAllowedZone() != null && !request.getAllowedZone().isBlank() && !"ALL".equalsIgnoreCase(request.getAllowedZone())) {
+            String allowed = request.getAllowedZone().trim().toLowerCase();
+            if (specificSeat != null) {
+                String seatZone = (specificSeat.getVenueSeatId() != null ? specificSeat.getVenueSeatId() : "").toLowerCase();
+                String isShared = Boolean.TRUE.equals(specificSeat.getIsSharedAreaTicket()) ? "shared standing" : "seated";
+                if (!seatZone.contains(allowed) && !isShared.contains(allowed)) {
+                    return CheckInResponse.builder()
+                            .valid(false)
+                            .statusType("WRONG_GATE")
+                            .bookingId(booking.getBookingId())
+                            .bookingReference(booking.getBookingReference())
+                            .customerName(resolveCustomerName(booking))
+                            .message("Wrong Gate / Entrance: This ticket belongs to " + (specificSeat.getVenueSeatId() != null ? specificSeat.getVenueSeatId() : "another section") + ". Gate assigned: " + request.getAllowedZone())
+                            .build();
+                }
+            }
+        }
+
         LocalDateTime now = LocalDateTime.now();
+
+        // 5. PASS-OUT (CHECK-OUT) MODE
+        if (isCheckOut) {
+            List<BookingSeat> seatsToPassOut = new ArrayList<>();
+            if (specificSeat != null) {
+                if (!Boolean.TRUE.equals(specificSeat.getCheckedIn())) {
+                    return CheckInResponse.builder()
+                            .valid(false)
+                            .statusType("NOT_CHECKED_IN")
+                            .message("Cannot record pass-out: Ticket has not been checked in yet.")
+                            .bookingReference(booking.getBookingReference())
+                            .customerName(resolveCustomerName(booking))
+                            .build();
+                }
+                specificSeat.setExitedAt(now);
+                specificSeat.setLastScanGate(gateName);
+                seatsToPassOut.add(specificSeat);
+                bookingSeatRepository.save(specificSeat);
+            } else {
+                for (BookingSeat bs : booking.getBookingSeats()) {
+                    if (Boolean.TRUE.equals(bs.getCheckedIn())) {
+                        bs.setExitedAt(now);
+                        bs.setLastScanGate(gateName);
+                        seatsToPassOut.add(bs);
+                    }
+                }
+                if (seatsToPassOut.isEmpty()) {
+                    return CheckInResponse.builder()
+                            .valid(false)
+                            .statusType("NOT_CHECKED_IN")
+                            .message("Cannot record pass-out: None of the tickets in this booking are currently inside.")
+                            .bookingReference(booking.getBookingReference())
+                            .customerName(resolveCustomerName(booking))
+                            .build();
+                }
+                bookingSeatRepository.saveAll(seatsToPassOut);
+            }
+
+            return CheckInResponse.builder()
+                    .valid(true)
+                    .isPassOut(true)
+                    .statusType("CHECKED_OUT")
+                    .exitedAt(now)
+                    .lastScanGate(gateName)
+                    .bookingId(booking.getBookingId())
+                    .bookingReference(booking.getBookingReference())
+                    .customerName(resolveCustomerName(booking))
+                    .message("Pass-out recorded successfully! Guest is authorized for re-entry.")
+                    .totalTickets(booking.getBookingSeats().size())
+                    .checkedInTickets((int) booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count())
+                    .allTickets(mapBookingSeatsToDetails(booking.getBookingSeats()))
+                    .build();
+        }
+
+        // 6. GROUP / PARTIAL CHECK-IN SELECTION CHECK
+        // If master booking code was scanned, contains multiple seats, checkInAll is false, and no explicit selection was passed:
+        if (specificSeat == null && booking.getBookingSeats().size() > 1 && Boolean.FALSE.equals(request.getCheckInAll()) && (request.getSelectedTicketCodes() == null || request.getSelectedTicketCodes().isEmpty())) {
+            List<CheckInTicketDetail> allDetails = mapBookingSeatsToDetails(booking.getBookingSeats());
+            return CheckInResponse.builder()
+                    .valid(true)
+                    .requiresGuestSelection(true)
+                    .statusType("SELECTION_REQUIRED")
+                    .bookingId(booking.getBookingId())
+                    .bookingReference(booking.getBookingReference())
+                    .customerName(resolveCustomerName(booking))
+                    .totalTickets(booking.getBookingSeats().size())
+                    .checkedInTickets((int) booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count())
+                    .allTickets(allDetails)
+                    .message("Group booking detected (" + booking.getBookingSeats().size() + " guests). Select guests who have arrived to check in.")
+                    .build();
+        }
+
+        // 7. ENTRY (CHECK-IN) MODE
         boolean alreadyCheckedIn = false;
+        boolean isReEntryApproved = false;
+        boolean isClonedSuspect = false;
+        Long secondsSinceLastScan = null;
+        String prevScanGate = null;
+
         List<String> newlyCheckedInSeats = new ArrayList<>();
         List<String> newlyCheckedInTicketCodes = new ArrayList<>();
         List<Integer> newlyCheckedInSharedAreas = new ArrayList<>();
 
         if (specificSeat != null) {
-            // When an individual ticket code (TK-...) is scanned, check in ONLY that specific seat
+            // Specific seat/ticket evaluation
             if (Boolean.TRUE.equals(specificSeat.getCheckedIn())) {
-                alreadyCheckedIn = true;
+                // Check if they exited earlier -> RE-ENTRY APPROVED
+                if (specificSeat.getExitedAt() != null) {
+                    isReEntryApproved = true;
+                    specificSeat.setExitedAt(null);
+                    int currentEntries = specificSeat.getEntryCount() != null ? specificSeat.getEntryCount() : 1;
+                    specificSeat.setEntryCount(currentEntries + 1);
+                    specificSeat.setCheckedInAt(now);
+                    specificSeat.setLastScanGate(gateName);
+                    bookingSeatRepository.save(specificSeat);
+                } else {
+                    // Duplicate scan / Cloned check
+                    alreadyCheckedIn = true;
+                    if (specificSeat.getCheckedInAt() != null) {
+                        secondsSinceLastScan = ChronoUnit.SECONDS.between(specificSeat.getCheckedInAt(), now);
+                    }
+                    prevScanGate = specificSeat.getLastScanGate();
+                    if (secondsSinceLastScan != null && secondsSinceLastScan <= 90) {
+                        isClonedSuspect = true;
+                    }
+                }
             } else {
                 specificSeat.setCheckedIn(true);
                 specificSeat.setCheckedInAt(now);
                 specificSeat.setCheckedInBy(staffUserId);
+                specificSeat.setLastScanGate(gateName);
+                specificSeat.setEntryCount(1);
                 bookingSeatRepository.save(specificSeat);
 
                 if (specificSeat.getVenueSeatId() != null) newlyCheckedInSeats.add(specificSeat.getVenueSeatId());
@@ -156,24 +330,40 @@ public class CheckInService {
                 }
             }
         } else {
-            // Master booking reference BK-... scanned: check in all remaining seats in the booking
-            boolean anyUnchecked = false;
+            // Master booking reference: check in all or selected remaining seats
+            List<String> selectedCodes = request.getSelectedTicketCodes();
+            boolean anyProcessed = false;
+
             for (BookingSeat bs : booking.getBookingSeats()) {
+                if (selectedCodes != null && !selectedCodes.isEmpty() && !selectedCodes.contains(bs.getTicketCode())) {
+                    continue; // Skip seats not selected for partial check-in
+                }
+
                 if (!Boolean.TRUE.equals(bs.getCheckedIn())) {
-                    anyUnchecked = true;
+                    anyProcessed = true;
                     bs.setCheckedIn(true);
                     bs.setCheckedInAt(now);
                     bs.setCheckedInBy(staffUserId);
+                    bs.setLastScanGate(gateName);
+                    bs.setEntryCount(1);
 
                     if (bs.getVenueSeatId() != null) newlyCheckedInSeats.add(bs.getVenueSeatId());
                     if (bs.getTicketCode() != null) newlyCheckedInTicketCodes.add(bs.getTicketCode());
                     if (Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && bs.getSharedAreaNumber() != null) {
                         newlyCheckedInSharedAreas.add(bs.getSharedAreaNumber());
                     }
+                } else if (bs.getExitedAt() != null) {
+                    // Re-entry for this seat
+                    anyProcessed = true;
+                    isReEntryApproved = true;
+                    bs.setExitedAt(null);
+                    bs.setEntryCount((bs.getEntryCount() != null ? bs.getEntryCount() : 1) + 1);
+                    bs.setCheckedInAt(now);
+                    bs.setLastScanGate(gateName);
                 }
             }
 
-            if (!anyUnchecked) {
+            if (!anyProcessed) {
                 alreadyCheckedIn = true;
             } else {
                 bookingSeatRepository.saveAll(booking.getBookingSeats());
@@ -184,11 +374,10 @@ public class CheckInService {
         booking.setAttended(true);
         bookingRepository.save(booking);
 
-        // Calculate counts
         int totalTickets = booking.getBookingSeats().size();
         long checkedInCount = booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count();
 
-        // Broadcast WebSocket check-in event if new check-ins occurred
+        // Broadcast WebSocket check-in event
         if (!newlyCheckedInTicketCodes.isEmpty() && booking.getEvent() != null && booking.getEventSchedule() != null) {
             UUID eventId = booking.getEvent().getEventId();
             UUID scheduleId = booking.getEventSchedule().getScheduleId();
@@ -220,7 +409,15 @@ public class CheckInService {
 
         String message;
         String statusType;
-        if (alreadyCheckedIn) {
+
+        if (isReEntryApproved) {
+            statusType = "RE_ENTRY_APPROVED";
+            message = "Re-entry approved! Welcome back, " + resolveCustomerName(booking) + " (Pass-out verified)";
+        } else if (isClonedSuspect) {
+            statusType = "CLONED_SUSPECT";
+            message = "FRAUD ALERT: Ticket was already scanned " + (secondsSinceLastScan != null ? secondsSinceLastScan + "s" : "") 
+                    + " ago at " + (prevScanGate != null ? prevScanGate : "another gate") + "! Inspect physical pass.";
+        } else if (alreadyCheckedIn) {
             statusType = "ALREADY_CHECKED_IN";
             if (specificSeat != null) {
                 message = "Notice: Ticket " + (specificSeat.getVenueSeatId() != null ? specificSeat.getVenueSeatId() : specificSeat.getTicketCode()) + " is already checked in.";
@@ -255,7 +452,7 @@ public class CheckInService {
         }
 
         return CheckInResponse.builder()
-                .valid(true)
+                .valid(!isClonedSuspect && !alreadyCheckedIn)
                 .alreadyCheckedIn(alreadyCheckedIn)
                 .statusType(statusType)
                 .message(message)
@@ -275,9 +472,81 @@ public class CheckInService {
                 .checkedInTickets((int) checkedInCount)
                 .checkedInAt(now)
                 .checkedInByName(staffName)
+                .lastScanGate(gateName)
+                .secondsSinceLastScan(secondsSinceLastScan)
+                .signatureValid(signatureValid)
                 .allTickets(allDetails)
                 .seatedTickets(seatedDetails)
                 .sharedAreaTickets(sharedDetails)
+                .build();
+    }
+
+    /**
+     * Bulk sync scans performed while gate scanner was offline.
+     */
+    @Transactional
+    public OfflineSyncResponse syncOfflineScans(OfflineSyncRequest request, UUID staffUserId, String staffName) {
+        if (request == null || request.getScans() == null || request.getScans().isEmpty()) {
+            return OfflineSyncResponse.builder()
+                    .totalSubmitted(0)
+                    .successfullySynced(0)
+                    .duplicatesSkipped(0)
+                    .errorsCount(0)
+                    .message("No offline scans provided for synchronization.")
+                    .results(new ArrayList<>())
+                    .build();
+        }
+
+        int success = 0;
+        int duplicates = 0;
+        int errors = 0;
+        List<CheckInResponse> results = new ArrayList<>();
+
+        for (OfflineSyncRequest.OfflineScanItem item : request.getScans()) {
+            try {
+                CheckInScanRequest scanReq = CheckInScanRequest.builder()
+                        .qrData(item.getQrData() != null ? item.getQrData() : item.getTicketCode())
+                        .ticketCode(item.getTicketCode())
+                        .eventScheduleId(request.getEventScheduleId())
+                        .eventId(request.getEventId())
+                        .gateName(request.getGateName())
+                        .scanMode(item.getScanMode() != null ? item.getScanMode() : "CHECK_IN")
+                        .offlineTimestamp(item.getOfflineTimestamp())
+                        .checkInAll(true)
+                        .build();
+
+                CheckInResponse res = scanAndCheckIn(scanReq, staffUserId, staffName);
+                results.add(res);
+
+                if (res.isValid()) {
+                    if (res.isAlreadyCheckedIn()) {
+                        duplicates++;
+                    } else {
+                        success++;
+                    }
+                } else {
+                    if ("ALREADY_CHECKED_IN".equals(res.getStatusType()) || "CLONED_SUSPECT".equals(res.getStatusType())) {
+                        duplicates++;
+                    } else {
+                        errors++;
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error syncing offline scan item: {}", e.getMessage());
+                errors++;
+            }
+        }
+
+        String msg = String.format("Offline sync completed: %d synced, %d duplicate/re-entries, %d errors out of %d scans.",
+                success, duplicates, errors, request.getScans().size());
+
+        return OfflineSyncResponse.builder()
+                .totalSubmitted(request.getScans().size())
+                .successfullySynced(success)
+                .duplicatesSkipped(duplicates)
+                .errorsCount(errors)
+                .message(msg)
+                .results(results)
                 .build();
     }
 
@@ -293,6 +562,10 @@ public class CheckInService {
         seat.setCheckedIn(checkIn);
         seat.setCheckedInAt(checkIn ? LocalDateTime.now() : null);
         seat.setCheckedInBy(checkIn ? staffUserId : null);
+        if (checkIn) {
+            seat.setExitedAt(null);
+            seat.setEntryCount((seat.getEntryCount() != null ? seat.getEntryCount() : 0) + 1);
+        }
         bookingSeatRepository.save(seat);
 
         // Update booking attended status
@@ -300,170 +573,155 @@ public class CheckInService {
         booking.setAttended(anyAttended);
         bookingRepository.save(booking);
 
-        // Broadcast WebSocket
+        // Broadcast WS update
         if (booking.getEvent() != null && booking.getEventSchedule() != null) {
             UUID eventId = booking.getEvent().getEventId();
             UUID scheduleId = booking.getEventSchedule().getScheduleId();
             Long totalScheduleBooked = bookingSeatRepository.countBookedSeatsForSchedule(scheduleId);
             Long totalScheduleCheckedIn = bookingSeatRepository.countCheckedInSeatsForSchedule(scheduleId);
 
-            List<String> tktCodes = seat.getTicketCode() != null ? List.of(seat.getTicketCode()) : List.of();
-            List<String> seatIds = seat.getVenueSeatId() != null ? List.of(seat.getVenueSeatId()) : List.of();
-            List<Integer> sharedArea = (Boolean.TRUE.equals(seat.getIsSharedAreaTicket()) && seat.getSharedAreaNumber() != null) 
-                    ? List.of(seat.getSharedAreaNumber()) : List.of();
-
             SeatWebSocketService.CheckInEventMessage wsMsg = new SeatWebSocketService.CheckInEventMessage(
                     eventId,
                     scheduleId,
                     booking.getBookingReference(),
                     resolveCustomerName(booking),
-                    tktCodes,
-                    seatIds,
-                    sharedArea,
-                    booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).mapToInt(bs -> 1).sum(),
+                    seat.getTicketCode() != null ? List.of(seat.getTicketCode()) : new ArrayList<>(),
+                    seat.getVenueSeatId() != null ? List.of(seat.getVenueSeatId()) : new ArrayList<>(),
+                    seat.getSharedAreaNumber() != null ? List.of(seat.getSharedAreaNumber()) : new ArrayList<>(),
+                    (int) booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count(),
                     booking.getBookingSeats().size(),
                     totalScheduleBooked != null ? totalScheduleBooked : 0L,
                     totalScheduleCheckedIn != null ? totalScheduleCheckedIn : 0L,
-                    checkIn ? "CHECKED_IN" : "UNCHECKED"
+                    checkIn ? "CHECKED_IN" : "CHECK_IN_REVERSED"
             );
 
             seatWebSocketService.notifyCheckIn(eventId, scheduleId, wsMsg);
         }
 
-        List<CheckInTicketDetail> allDetails = mapBookingSeatsToDetails(booking.getBookingSeats());
         return CheckInResponse.builder()
                 .valid(true)
-                .statusType("SUCCESS")
-                .message("Seat status updated to " + (checkIn ? "CHECKED IN" : "UNCHECKED"))
-                .bookingId(booking.getBookingId())
+                .statusType(checkIn ? "SUCCESS" : "REVERSED")
+                .message("Seat check-in status updated to: " + (checkIn ? "Checked In" : "Unchecked"))
                 .bookingReference(booking.getBookingReference())
                 .customerName(resolveCustomerName(booking))
-                .totalTickets(booking.getBookingSeats().size())
-                .checkedInTickets((int) booking.getBookingSeats().stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count())
-                .allTickets(allDetails)
-                .seatedTickets(allDetails.stream().filter(d -> !Boolean.TRUE.equals(d.getIsSharedAreaTicket())).collect(Collectors.toList()))
-                .sharedAreaTickets(allDetails.stream().filter(d -> Boolean.TRUE.equals(d.getIsSharedAreaTicket())).collect(Collectors.toList()))
+                .allTickets(mapBookingSeatsToDetails(booking.getBookingSeats()))
                 .build();
     }
 
     /**
-     * Get real-time check-in stats for an event schedule.
+     * Get live stats for a specific schedule.
      */
     @Transactional(readOnly = true)
     public CheckInStatsResponse getScheduleCheckInStats(UUID scheduleId) {
         EventSchedule schedule = eventScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("EventSchedule not found with ID: " + scheduleId));
+                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + scheduleId));
 
         Event event = schedule.getEvent();
-        List<BookingSeat> allScheduleSeats = bookingSeatRepository.findByScheduleId(scheduleId);
+        List<BookingSeat> allScheduleSeats = bookingSeatRepository.findByBooking_EventSchedule_ScheduleIdAndBooking_Status(
+                scheduleId, BookingStatus.CONFIRMED);
 
-        long totalBooked = allScheduleSeats.size();
-        long totalCheckedIn = allScheduleSeats.stream().filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn())).count();
-        long totalPending = totalBooked - totalCheckedIn;
-        double checkInPercentage = totalBooked > 0 ? ((double) totalCheckedIn / totalBooked) * 100.0 : 0.0;
-
-        // Seated vs Shared
         long seatedBooked = allScheduleSeats.stream().filter(bs -> !Boolean.TRUE.equals(bs.getIsSharedAreaTicket())).count();
         long seatedCheckedIn = allScheduleSeats.stream().filter(bs -> !Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Boolean.TRUE.equals(bs.getCheckedIn())).count();
         long sharedBooked = allScheduleSeats.stream().filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket())).count();
         long sharedCheckedIn = allScheduleSeats.stream().filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Boolean.TRUE.equals(bs.getCheckedIn())).count();
 
-        // Shared areas breakdown
-        Map<Integer, SharedAreaStats> sharedAreaMap = new HashMap<>();
-        if (event != null) {
-            List<TicketCategory> sharedCategories = ticketCategoryRepository.findSharedAreaCategoriesByEventId(event.getEventId());
-            for (TicketCategory tc : sharedCategories) {
-                int areaNum = tc.getSharedAreaNumber() != null ? tc.getSharedAreaNumber() : 1;
-                long bookedInArea = allScheduleSeats.stream()
-                        .filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Integer.valueOf(areaNum).equals(bs.getSharedAreaNumber()))
-                        .count();
-                long checkedInInArea = allScheduleSeats.stream()
-                        .filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Integer.valueOf(areaNum).equals(bs.getSharedAreaNumber()) && Boolean.TRUE.equals(bs.getCheckedIn()))
-                        .count();
+        long totalBooked = seatedBooked + sharedBooked;
+        long totalCheckedIn = seatedCheckedIn + sharedCheckedIn;
+        long pending = Math.max(0, totalBooked - totalCheckedIn);
+        double checkInPct = totalBooked > 0 ? ((double) totalCheckedIn / totalBooked) * 100.0 : 0.0;
 
-                sharedAreaMap.put(areaNum, SharedAreaStats.builder()
-                        .sharedAreaNumber(areaNum)
-                        .categoryName(tc.getCategoryName())
-                        .capacity(tc.getCapacity() != null ? tc.getCapacity().longValue() : 0L)
-                        .booked(bookedInArea)
-                        .checkedIn(checkedInInArea)
-                        .pending(bookedInArea - checkedInInArea)
-                        .build());
+        // Breakdown per shared area
+        Map<Integer, SharedAreaStats> sharedAreaBreakdown = new LinkedHashMap<>();
+        if (event != null && event.getTicketCategories() != null) {
+            for (TicketCategory tc : event.getTicketCategories()) {
+                if (Boolean.TRUE.equals(tc.getIsSharedArea()) && tc.getSharedAreaNumber() != null) {
+                    int areaNum = tc.getSharedAreaNumber();
+                    long aBooked = allScheduleSeats.stream()
+                            .filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Integer.valueOf(areaNum).equals(bs.getSharedAreaNumber()))
+                            .count();
+                    long aCheckedIn = allScheduleSeats.stream()
+                            .filter(bs -> Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) && Integer.valueOf(areaNum).equals(bs.getSharedAreaNumber()) && Boolean.TRUE.equals(bs.getCheckedIn()))
+                            .count();
+                    sharedAreaBreakdown.put(areaNum, SharedAreaStats.builder()
+                            .sharedAreaNumber(areaNum)
+                            .categoryName(tc.getCategoryName())
+                            .capacity(tc.getCapacity() != null ? tc.getCapacity().longValue() : 0L)
+                            .booked(aBooked)
+                            .checkedIn(aCheckedIn)
+                            .pending(Math.max(0L, aBooked - aCheckedIn))
+                            .build());
+                }
             }
         }
 
-        // Recent check-in items (sorted by checkedInAt desc)
+        // Recent check-ins list (latest 25)
         List<RecentCheckInItem> recentItems = allScheduleSeats.stream()
                 .filter(bs -> Boolean.TRUE.equals(bs.getCheckedIn()) && bs.getCheckedInAt() != null)
                 .sorted((a, b) -> b.getCheckedInAt().compareTo(a.getCheckedInAt()))
                 .limit(25)
                 .map(bs -> {
-                    String seatDesc;
-                    if (Boolean.TRUE.equals(bs.getIsSharedAreaTicket())) {
-                        seatDesc = "Shared Area #" + bs.getSharedAreaNumber();
-                    } else if (bs.getVenueSeatId() != null) {
-                        seatDesc = bs.getVenueSeatId();
-                    } else {
-                        seatDesc = "Seat";
+                    String identifier = bs.getVenueSeatId() != null ? bs.getVenueSeatId() : 
+                                        (Boolean.TRUE.equals(bs.getIsSharedAreaTicket()) ? "Shared Area #" + bs.getSharedAreaNumber() : "General");
+                    if (bs.getVenueSeatId() != null) {
+                        try {
+                            Optional<VenueSeat> vs = venueSeatRepository.findById(bs.getVenueSeatId());
+                            if (vs.isPresent()) {
+                                identifier = vs.get().getSection() + " • Row " + vs.get().getRowLabel() + " Seat " + vs.get().getSeatNumber();
+                            }
+                        } catch (Exception e) {}
                     }
-
-                    String timeFormatted = bs.getCheckedInAt().format(DateTimeFormatter.ofPattern("hh:mm:ss a"));
-
                     return RecentCheckInItem.builder()
                             .customerName(resolveCustomerName(bs.getBooking()))
                             .bookingReference(bs.getBooking() != null ? bs.getBooking().getBookingReference() : "")
-                            .ticketCode(bs.getTicketCode())
-                            .seatIdentifier(seatDesc)
-                            .checkedInAtTime(timeFormatted)
+                            .ticketCode(bs.getTicketCode() != null ? bs.getTicketCode() : "")
+                            .seatIdentifier(identifier)
+                            .checkedInAtTime(bs.getCheckedInAt().format(DateTimeFormatter.ofPattern("hh:mm:ss a")))
                             .isSharedArea(Boolean.TRUE.equals(bs.getIsSharedAreaTicket()))
                             .build();
                 })
                 .collect(Collectors.toList());
 
-        String scheduleDate = schedule.getScheduleDate() != null ? schedule.getScheduleDate().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")) : "N/A";
-        String scheduleTime = schedule.getStartTime() != null ? schedule.getStartTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "N/A";
-
         return CheckInStatsResponse.builder()
+                .scheduleId(scheduleId)
                 .eventId(event != null ? event.getEventId() : null)
-                .eventName(event != null ? event.getName() : "N/A")
-                .scheduleId(schedule.getScheduleId())
-                .scheduleDate(scheduleDate)
-                .scheduleTime(scheduleTime)
+                .eventName(event != null ? event.getName() : "Event")
                 .totalBooked(totalBooked)
                 .totalCheckedIn(totalCheckedIn)
-                .totalPendingArrival(totalPending)
-                .checkInPercentage(Math.round(checkInPercentage * 10.0) / 10.0)
+                .totalPendingArrival(pending)
+                .checkInPercentage(Math.round(checkInPct * 10.0) / 10.0)
                 .totalSeatedBooked(seatedBooked)
                 .totalSeatedCheckedIn(seatedCheckedIn)
                 .totalSharedBooked(sharedBooked)
                 .totalSharedCheckedIn(sharedCheckedIn)
-                .sharedAreaBreakdown(sharedAreaMap)
+                .sharedAreaBreakdown(sharedAreaBreakdown)
                 .recentCheckIns(recentItems)
                 .build();
     }
 
     /**
-     * Get attendee list for a schedule with filtering.
+     * Get attendee roster for search and manual check-in.
      */
     @Transactional(readOnly = true)
     public List<CheckInAttendeeDTO> getScheduleAttendees(UUID scheduleId, String search, Boolean checkedInOnly) {
-        List<BookingSeat> seats = bookingSeatRepository.findByScheduleId(scheduleId);
+        List<BookingSeat> seats = bookingSeatRepository.findByBooking_EventSchedule_ScheduleIdAndBooking_Status(
+                scheduleId, BookingStatus.CONFIRMED);
 
         return seats.stream()
                 .filter(bs -> {
-                    if (Boolean.TRUE.equals(checkedInOnly) && !Boolean.TRUE.equals(bs.getCheckedIn())) {
-                        return false;
+                    if (checkedInOnly != null) {
+                        if (checkedInOnly && !Boolean.TRUE.equals(bs.getCheckedIn())) return false;
+                        if (!checkedInOnly && Boolean.TRUE.equals(bs.getCheckedIn())) return false;
                     }
                     if (search != null && !search.isBlank()) {
-                        String s = search.toLowerCase();
-                        String custName = resolveCustomerName(bs.getBooking()).toLowerCase();
-                        String ref = bs.getBooking() != null && bs.getBooking().getBookingReference() != null ? bs.getBooking().getBookingReference().toLowerCase() : "";
-                        String tkt = bs.getTicketCode() != null ? bs.getTicketCode().toLowerCase() : "";
-                        String phone = bs.getBooking() != null && bs.getBooking().getCustomerPhone() != null ? bs.getBooking().getCustomerPhone().toLowerCase() : "";
-                        String nic = bs.getBooking() != null && bs.getBooking().getCustomerNic() != null ? bs.getBooking().getCustomerNic().toLowerCase() : "";
-                        String seatId = bs.getVenueSeatId() != null ? bs.getVenueSeatId().toLowerCase() : "";
-
-                        return custName.contains(s) || ref.contains(s) || tkt.contains(s) || phone.contains(s) || nic.contains(s) || seatId.contains(s);
+                        String q = search.trim().toLowerCase();
+                        Booking b = bs.getBooking();
+                        String name = resolveCustomerName(b).toLowerCase();
+                        String ref = (b != null && b.getBookingReference() != null ? b.getBookingReference() : "").toLowerCase();
+                        String code = (bs.getTicketCode() != null ? bs.getTicketCode() : "").toLowerCase();
+                        String seat = (bs.getVenueSeatId() != null ? bs.getVenueSeatId() : "").toLowerCase();
+                        String email = (b != null && b.getCustomerEmail() != null ? b.getCustomerEmail() : "").toLowerCase();
+                        String phone = (b != null && b.getCustomerPhone() != null ? b.getCustomerPhone() : "").toLowerCase();
+                        return name.contains(q) || ref.contains(q) || code.contains(q) || seat.contains(q) || email.contains(q) || phone.contains(q);
                     }
                     return true;
                 })
@@ -502,6 +760,9 @@ public class CheckInService {
                             .sharedAreaNumber(bs.getSharedAreaNumber())
                             .checkedIn(Boolean.TRUE.equals(bs.getCheckedIn()))
                             .checkedInAt(bs.getCheckedInAt())
+                            .exitedAt(bs.getExitedAt())
+                            .entryCount(bs.getEntryCount() != null ? bs.getEntryCount() : (Boolean.TRUE.equals(bs.getCheckedIn()) ? 1 : 0))
+                            .lastScanGate(bs.getLastScanGate())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -511,7 +772,7 @@ public class CheckInService {
 
     private ParsedScanTarget parseScanPayload(String rawData, String explicitTicketCode) {
         if (explicitTicketCode != null && !explicitTicketCode.isBlank()) {
-            return new ParsedScanTarget(null, explicitTicketCode.trim().toUpperCase());
+            return new ParsedScanTarget(null, explicitTicketCode.trim().toUpperCase(), null);
         }
 
         // Try JSON parsing
@@ -521,7 +782,8 @@ public class CheckInService {
                 String ref = node.has("ref") ? node.get("ref").asText() : null;
                 String ticket = node.has("ticket") ? node.get("ticket").asText() : null;
                 if (ticket == null && node.has("ticketCode")) ticket = node.get("ticketCode").asText();
-                return new ParsedScanTarget(ref, ticket);
+                String sig = node.has("sig") ? node.get("sig").asText() : null;
+                return new ParsedScanTarget(ref, ticket, sig);
             } catch (Exception e) {
                 log.debug("Failed to parse JSON QR data: {}", e.getMessage());
             }
@@ -530,22 +792,22 @@ public class CheckInService {
         // Try Regex match for REF: BK-...
         Matcher refMatcher = REF_PATTERN.matcher(rawData);
         if (refMatcher.find()) {
-            return new ParsedScanTarget(refMatcher.group(1).toUpperCase(), null);
+            return new ParsedScanTarget(refMatcher.group(1).toUpperCase(), null, null);
         }
 
         // Try Ticket code TK-...
         Matcher tkMatcher = TK_PATTERN.matcher(rawData);
         if (tkMatcher.find()) {
-            return new ParsedScanTarget(null, tkMatcher.group().toUpperCase());
+            return new ParsedScanTarget(null, tkMatcher.group().toUpperCase(), null);
         }
 
         // Try raw Booking ref BK-...
         Matcher bkMatcher = BK_PATTERN.matcher(rawData);
         if (bkMatcher.find()) {
-            return new ParsedScanTarget(bkMatcher.group().toUpperCase(), null);
+            return new ParsedScanTarget(bkMatcher.group().toUpperCase(), null, null);
         }
 
-        return new ParsedScanTarget(rawData.toUpperCase(), null);
+        return new ParsedScanTarget(rawData.toUpperCase(), null, null);
     }
 
     private String resolveCustomerName(Booking booking) {
@@ -590,6 +852,9 @@ public class CheckInService {
                     .price(bs.getPriceAtBooking())
                     .checkedIn(Boolean.TRUE.equals(bs.getCheckedIn()))
                     .checkedInAt(bs.getCheckedInAt())
+                    .exitedAt(bs.getExitedAt())
+                    .entryCount(bs.getEntryCount() != null ? bs.getEntryCount() : (Boolean.TRUE.equals(bs.getCheckedIn()) ? 1 : 0))
+                    .lastScanGate(bs.getLastScanGate())
                     .build();
         }).collect(Collectors.toList());
     }
@@ -597,10 +862,12 @@ public class CheckInService {
     private static class ParsedScanTarget {
         final String bookingReference;
         final String ticketCode;
+        final String signature;
 
-        ParsedScanTarget(String bookingReference, String ticketCode) {
+        ParsedScanTarget(String bookingReference, String ticketCode, String signature) {
             this.bookingReference = bookingReference;
             this.ticketCode = ticketCode;
+            this.signature = signature;
         }
     }
 }

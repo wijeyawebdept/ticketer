@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
   IconButton,
@@ -36,7 +34,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Assignment as AssignmentIcon,
   Refresh as RefreshIcon,
   EventNote as EventIcon,
   AccessTime as TimeIcon,
@@ -68,6 +65,7 @@ export const AdminGateStaffAssignments: React.FC = () => {
   const [isAllSchedules, setIsAllSchedules] = useState(true);
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+  const [assignGateName, setAssignGateName] = useState<string>('');
   const [assignNotes, setAssignNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -77,6 +75,7 @@ export const AdminGateStaffAssignments: React.FC = () => {
   const [editStaffId, setEditStaffId] = useState<string>('');
   const [editIsAllSchedules, setEditIsAllSchedules] = useState<boolean>(true);
   const [editScheduleId, setEditScheduleId] = useState<string>('');
+  const [editGateName, setEditGateName] = useState<string>('');
   const [editNotes, setEditNotes] = useState<string>('');
   const [editEventSchedules, setEditEventSchedules] = useState<EventSchedule[]>([]);
   const [editLoadingSchedules, setEditLoadingSchedules] = useState<boolean>(false);
@@ -136,10 +135,17 @@ export const AdminGateStaffAssignments: React.FC = () => {
       try {
         const schList = await eventScheduleService.getSchedulesForEvent(selectedEventId);
         setEventSchedules(schList || []);
+        if (schList && schList.length === 1) {
+          setSelectedScheduleIds([schList[0].scheduleId]);
+        }
       } catch (e) {
         // Fallback to embedded schedules if available
         const found = events.find((ev) => String(ev.eventId || ev.id) === String(selectedEventId));
-        setEventSchedules(found?.schedules || []);
+        const fallback = found?.schedules || [];
+        setEventSchedules(fallback);
+        if (fallback.length === 1) {
+          setSelectedScheduleIds([fallback[0].scheduleId]);
+        }
       } finally {
         setLoadingSchedules(false);
       }
@@ -222,16 +228,23 @@ export const AdminGateStaffAssignments: React.FC = () => {
 
     setSubmitting(true);
     try {
+      const targetScheduleIds = isAllSchedules
+        ? (eventSchedules.length > 0 ? eventSchedules.map((s) => s.scheduleId) : undefined)
+        : selectedScheduleIds;
+
       const payload: AssignGateStaffRequest = {
         eventId: selectedEventId,
-        scheduleIds: isAllSchedules ? undefined : selectedScheduleIds,
+        scheduleIds: targetScheduleIds,
         staffUserIds: selectedStaffIds,
+        gateName: assignGateName.trim() || undefined,
         notes: assignNotes.trim() || undefined,
       };
 
       await gateStaffService.assignGateStaff(payload);
       setSuccessMsg('Gate staff assigned successfully.');
       setOpenModal(false);
+      setAssignGateName('');
+      setAssignNotes('');
       fetchAssignments();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to assign gate staff.');
@@ -247,6 +260,7 @@ export const AdminGateStaffAssignments: React.FC = () => {
     const hasSpecificSchedule = Boolean(assignment.scheduleId && !assignment.isAllSchedules);
     setEditIsAllSchedules(!hasSpecificSchedule);
     setEditScheduleId(assignment.scheduleId || '');
+    setEditGateName(assignment.gateName || '');
     setEditNotes(assignment.notes || '');
     setEditError(null);
     setOpenEditModal(true);
@@ -282,10 +296,12 @@ export const AdminGateStaffAssignments: React.FC = () => {
 
     setEditSubmitting(true);
     try {
+      const resolvedScheduleId = editScheduleId || (editEventSchedules.length > 0 ? editEventSchedules[0].scheduleId : null);
       const payload: UpdateGateStaffAssignmentRequest = {
         staffUserId: editStaffId,
         isAllSchedules: editIsAllSchedules,
-        scheduleId: editIsAllSchedules ? null : editScheduleId,
+        scheduleId: editIsAllSchedules ? (resolvedScheduleId || null) : editScheduleId,
+        gateName: editGateName.trim() || undefined,
         notes: editNotes.trim() || undefined,
       };
 
@@ -315,71 +331,42 @@ export const AdminGateStaffAssignments: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      {/* Header Card */}
-      <Card
+      {/* Page Header */}
+      <Box
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 3,
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          color: '#ffffff',
-          borderRadius: 2,
-          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#3b82f6',
-                }}
-              >
-                <AssignmentIcon sx={{ fontSize: 28 }} />
-              </Box>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: 0.5 }}>
-                  Gate Staff Assignments
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                  Assign Gate Keepers to specific events and showtime schedules for ticket verification
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={() => fetchAssignments()}
-                sx={{ color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.2)' }}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAssignModal}
-                disabled={gateStaffList.length === 0 || events.length === 0}
-                sx={{
-                  bgcolor: '#ff1955',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: '#e0144c' },
-                }}
-              >
-                Assign Gate Staff
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
+          Gate Staff Assignments
+        </Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={() => fetchAssignments()} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAssignModal}
+            disabled={gateStaffList.length === 0 || events.length === 0}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+              },
+            }}
+          >
+            Assign Gate Staff
+          </Button>
+        </Box>
+      </Box>
 
       {/* Notifications */}
       {error && (
@@ -394,28 +381,26 @@ export const AdminGateStaffAssignments: React.FC = () => {
       )}
 
       {/* Event Filter Bar */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 260 }}>
-              <InputLabel id="event-filter-label">Filter by Event</InputLabel>
-              <Select
-                labelId="event-filter-label"
-                value={filterEventId}
-                label="Filter by Event"
-                onChange={(e) => setFilterEventId(e.target.value)}
-              >
-                <MenuItem value="">All Events</MenuItem>
-                {events.map((ev) => (
-                  <MenuItem key={ev.eventId || ev.id} value={String(ev.eventId || ev.id)}>
-                    {ev.name || ev.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </CardContent>
-      </Card>
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 260 }}>
+            <InputLabel id="event-filter-label">Filter by Event</InputLabel>
+            <Select
+              labelId="event-filter-label"
+              value={filterEventId}
+              label="Filter by Event"
+              onChange={(e) => setFilterEventId(e.target.value)}
+            >
+              <MenuItem value="">All Events</MenuItem>
+              {events.map((ev) => (
+                <MenuItem key={ev.eventId || ev.id} value={String(ev.eventId || ev.id)}>
+                  {ev.name || ev.title}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
 
       {/* Assignments Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
@@ -435,7 +420,7 @@ export const AdminGateStaffAssignments: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={36} sx={{ color: '#ff1955', mb: 1 }} />
+                    <CircularProgress size={36} color="primary" sx={{ mb: 1 }} />
                     <Typography variant="body2" color="text.secondary">
                       Loading gate staff assignments...
                     </Typography>
@@ -486,7 +471,7 @@ export const AdminGateStaffAssignments: React.FC = () => {
 
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <EventIcon sx={{ fontSize: 18, color: '#ff1955' }} />
+                        <EventIcon sx={{ fontSize: 18, color: 'primary.main' }} />
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {assignment.eventTitle}
                         </Typography>
@@ -513,6 +498,17 @@ export const AdminGateStaffAssignments: React.FC = () => {
                             {assignment.scheduleDate} • {assignment.startTime ? String(assignment.startTime).slice(0, 5) : ''}
                             {assignment.endTime ? ` - ${String(assignment.endTime).slice(0, 5)}` : ''}
                           </Typography>
+                        </Box>
+                      )}
+                      {assignment.gateName && (
+                        <Box sx={{ mt: 0.6 }}>
+                          <Chip
+                            label={`Station: ${assignment.gateName}`}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ fontWeight: 700, fontSize: '0.7rem', height: 22 }}
+                          />
                         </Box>
                       )}
                       {assignment.notes && (
@@ -808,8 +804,8 @@ export const AdminGateStaffAssignments: React.FC = () => {
                               p: 1,
                               borderRadius: 1.5,
                               cursor: 'pointer',
-                              bgcolor: isChecked ? 'rgba(255, 25, 85, 0.05)' : 'transparent',
-                              border: isChecked ? '1px solid rgba(255, 25, 85, 0.3)' : '1px solid transparent',
+                              bgcolor: isChecked ? 'rgba(25, 118, 210, 0.05)' : 'transparent',
+                              border: isChecked ? '1px solid rgba(25, 118, 210, 0.3)' : '1px solid transparent',
                               '&:hover': {
                                 bgcolor: 'rgba(0, 0, 0, 0.02)',
                               },
@@ -821,7 +817,8 @@ export const AdminGateStaffAssignments: React.FC = () => {
                                 checked={isChecked}
                                 onChange={() => handleToggleStaff(staff.id)}
                                 onClick={(e) => e.stopPropagation()}
-                                sx={{ p: 0.5, color: isChecked ? '#ff1955' : undefined, '&.Mui-checked': { color: '#ff1955' } }}
+                                color="primary"
+                                sx={{ p: 0.5 }}
                               />
                               <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -866,6 +863,17 @@ export const AdminGateStaffAssignments: React.FC = () => {
                 </Paper>
               </Box>
 
+              {/* Station / Gate Name Assigned by Admin */}
+              <TextField
+                fullWidth
+                label="Station / Gate Name"
+                placeholder="e.g. Gate 1 - Main, VIP Entrance, North Turnstile"
+                value={assignGateName}
+                onChange={(e) => setAssignGateName(e.target.value)}
+                size="small"
+                helperText="This gate will automatically show on the assigned gate staff member's scanner terminal."
+              />
+
               {/* Assignment Notes */}
               <TextField
                 fullWidth
@@ -884,8 +892,8 @@ export const AdminGateStaffAssignments: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
+              color="primary"
               disabled={submitting || selectedStaffIds.length === 0}
-              sx={{ bgcolor: '#ff1955', color: '#fff', '&:hover': { bgcolor: '#e0144c' } }}
             >
               {submitting ? 'Assigning...' : 'Confirm Assignment'}
             </Button>
@@ -917,15 +925,15 @@ export const AdminGateStaffAssignments: React.FC = () => {
                   sx={{
                     p: 2,
                     borderRadius: 2,
-                    bgcolor: 'rgba(255, 25, 85, 0.04)',
-                    borderColor: 'rgba(255, 25, 85, 0.2)',
+                    bgcolor: 'rgba(25, 118, 210, 0.04)',
+                    borderColor: 'rgba(25, 118, 210, 0.2)',
                   }}
                 >
-                  <Typography variant="caption" sx={{ color: '#ff1955', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700, textTransform: 'uppercase' }}>
                     Target Event
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                    <EventIcon sx={{ fontSize: 20, color: '#ff1955' }} />
+                    <EventIcon sx={{ fontSize: 20, color: 'primary.main' }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                       {editingAssignment.eventTitle}
                     </Typography>
@@ -1085,6 +1093,17 @@ export const AdminGateStaffAssignments: React.FC = () => {
                   )}
                 </Box>
 
+                {/* Station / Gate Name in Edit Modal */}
+                <TextField
+                  fullWidth
+                  label="Station / Gate Name"
+                  placeholder="e.g. Gate 1 - Main, VIP Entrance"
+                  value={editGateName}
+                  onChange={(e) => setEditGateName(e.target.value)}
+                  size="small"
+                  sx={{ mb: 1.5 }}
+                />
+
                 {/* Notes Input */}
                 <TextField
                   fullWidth
@@ -1104,8 +1123,8 @@ export const AdminGateStaffAssignments: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
+                color="primary"
                 disabled={editSubmitting || !editStaffId || (!editIsAllSchedules && !editScheduleId)}
-                sx={{ bgcolor: '#ff1955', color: '#fff', '&:hover': { bgcolor: '#e0144c' } }}
               >
                 {editSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>

@@ -45,19 +45,23 @@ public class DataInitializer implements CommandLineRunner {
 
     private void fixDatabaseSchema() {
         try {
-            // Fix legacy staff_user_id NOT NULL constraint if present in gate_staff_assignments table
+            // Drop legacy assigned_by_user_id and staff_user_id columns from gate_staff_assignments
+            jdbcTemplate.execute("ALTER TABLE gate_staff_assignments DROP COLUMN IF EXISTS assigned_by_user_id CASCADE;");
+            jdbcTemplate.execute("ALTER TABLE gate_staff_assignments DROP COLUMN IF EXISTS staff_user_id CASCADE;");
+            
+            // Backfill schedule_id for any legacy assignments that are missing schedule_id
             jdbcTemplate.execute(
-                "DO $$ " +
-                "BEGIN " +
-                "    IF EXISTS (" +
-                "        SELECT 1 FROM information_schema.columns " +
-                "        WHERE table_name = 'gate_staff_assignments' AND column_name = 'staff_user_id'" +
-                "    ) THEN " +
-                "        ALTER TABLE gate_staff_assignments ALTER COLUMN staff_user_id DROP NOT NULL; " +
-                "    END IF; " +
-                "END $$;"
+                "UPDATE gate_staff_assignments gsa " +
+                "SET schedule_id = ( " +
+                "    SELECT es.schedule_id " +
+                "    FROM event_schedules es " +
+                "    WHERE es.event_id = gsa.event_id " +
+                "    ORDER BY es.schedule_date ASC, es.start_time ASC " +
+                "    LIMIT 1 " +
+                ") " +
+                "WHERE gsa.schedule_id IS NULL;"
             );
-            log.info("Database schema check for gate_staff_assignments completed successfully.");
+            log.info("Database schema check and cleanup for gate_staff_assignments completed successfully.");
         } catch (Exception e) {
             log.warn("Could not patch gate_staff_assignments schema: {}", e.getMessage());
         }

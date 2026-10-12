@@ -542,6 +542,7 @@ export interface GateStaffAssignment {
   assignedById?: string;
   assignedByName?: string;
   assignedAt: string;
+  gateName?: string;
   notes?: string;
   isActive: boolean;
 }
@@ -550,6 +551,7 @@ export interface AssignGateStaffRequest {
   eventId: string;
   scheduleIds?: string[];
   staffUserIds: string[];
+  gateName?: string;
   notes?: string;
 }
 
@@ -557,6 +559,7 @@ export interface UpdateGateStaffAssignmentRequest {
   staffUserId?: string;
   scheduleId?: string | null;
   isAllSchedules?: boolean;
+  gateName?: string;
   notes?: string;
 }
 

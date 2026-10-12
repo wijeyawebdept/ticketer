@@ -36,6 +36,7 @@ import {
   Edit as EditIcon,
   ExpandMore as ExpandMoreIcon,
   Assignment as AssignmentIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { showErrorToast, showSuccessToast } from '../../services/toast.service';
@@ -283,13 +284,18 @@ const AdminEventAssignments: React.FC = () => {
         <Typography variant="h4" component="h1">
           Event-Employee Assignments
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setAssignDialogOpen(true)}
-        >
-          Assign Employees
-        </Button>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={fetchData} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setAssignDialogOpen(true)}
+          >
+            Assign Employees
+          </Button>
+        </Box>
       </Box>
 
       <Card sx={{ mb: 3 }}>

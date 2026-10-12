@@ -25,6 +25,7 @@ import {
 import {
   RestoreFromTrash as RestoreIcon,
   DeleteForever as DeleteForeverIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import RecycleBinService from '../../services/recycle-bin.service';
 import { useAuth } from '../../context/AuthContext';
@@ -221,23 +222,28 @@ const RecycleBin: React.FC = () => {
             </Typography>
           )}
         </Box>
-        {isSuperAdmin && items.length > 0 && (
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<DeleteForeverIcon />}
-            onClick={handleEmptyRecycleBin}
-            sx={{
-              fontWeight: 600,
-              boxShadow: '0 4px 6px rgba(211, 47, 47, 0.3)',
-              '&:hover': {
-                boxShadow: '0 6px 8px rgba(211, 47, 47, 0.4)',
-              }
-            }}
-          >
-            Empty Recycle Bin ({items.length})
-          </Button>
-        )}
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={fetchRecycleBinItems} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          {isSuperAdmin && items.length > 0 && (
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteForeverIcon />}
+              onClick={handleEmptyRecycleBin}
+              sx={{
+                fontWeight: 600,
+                boxShadow: '0 4px 6px rgba(211, 47, 47, 0.3)',
+                '&:hover': {
+                  boxShadow: '0 6px 8px rgba(211, 47, 47, 0.4)',
+                }
+              }}
+            >
+              Empty Recycle Bin ({items.length})
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {!isSuperAdmin && isOrganizer && (

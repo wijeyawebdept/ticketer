@@ -15,7 +15,7 @@ import {
   Divider
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Check as CheckIcon, Close as CloseIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Check as CheckIcon, Close as CloseIcon, Visibility as VisibilityIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { EventService } from '../../services';
 import { Event } from '../../types';
@@ -160,6 +160,9 @@ const PendingRequests: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Pending Event Requests</Typography>
+        <IconButton onClick={fetchPendingEvents} title="Refresh">
+          <RefreshIcon />
+        </IconButton>
       </Box>
 
       <Paper sx={{ width: '100%', height: 600 }}>

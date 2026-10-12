@@ -75,7 +75,7 @@ export const gateStaffService = {
 
   updateAssignment: async (
     assignmentId: string,
-    data: { staffUserId?: string; scheduleId?: string | null; isAllSchedules?: boolean; notes?: string }
+    data: { staffUserId?: string; scheduleId?: string | null; isAllSchedules?: boolean; gateName?: string; notes?: string }
   ): Promise<GateStaffAssignment> => {
     const response = await axiosInstance.put<GateStaffAssignment>(`/api/admin/gate-staff-assignments/${assignmentId}`, data);
     return response.data;
@@ -89,6 +89,11 @@ export const gateStaffService = {
   // Gate Staff Portal (for logged in Gate Staff)
   getMyAssignedEvents: async (): Promise<Event[]> => {
     const response = await axiosInstance.get<Event[]>('/api/gate/my-assignments');
+    return response.data;
+  },
+
+  getMyAssignmentDetails: async (params?: { eventId?: string; scheduleId?: string }): Promise<GateStaffAssignment[]> => {
+    const response = await axiosInstance.get<GateStaffAssignment[]>('/api/gate/my-assignment-details', { params });
     return response.data;
   },
 

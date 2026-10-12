@@ -38,7 +38,8 @@ import {
   Info as InfoIcon,
   History as HistoryIcon,
   Security as SecurityIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { getProfilePictureUrl } from '../../utils/formatters';
@@ -573,9 +574,14 @@ const Settings: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
-        {t('settings.title')}
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
+          {t('settings.title')}
+        </Typography>
+        <IconButton onClick={() => { loadProfile(); setSystemSettings(loadSystemSettings()); }} title="Refresh">
+          <RefreshIcon />
+        </IconButton>
+      </Box>
 
       <Paper 
         sx={{ 

@@ -31,6 +31,7 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   Edit as EditIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
 import EventAssignmentService, { EventEmployeeAssignment } from '../../services/event-assignment.service';
@@ -206,9 +207,14 @@ const EventAssignments: React.FC = () => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Event Employee Assignments</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAssignDialog}>
-          Assign Employees
-        </Button>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={fetchData} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAssignDialog}>
+            Assign Employees
+          </Button>
+        </Box>
       </Box>
 
       {Object.keys(groupedAssignments).length === 0 ? (

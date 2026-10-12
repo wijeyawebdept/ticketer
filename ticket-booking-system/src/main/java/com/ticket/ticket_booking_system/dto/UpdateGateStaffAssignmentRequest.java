@@ -16,4 +16,5 @@ public class UpdateGateStaffAssignmentRequest {
     private UUID scheduleId; // null = all showtimes
     private Boolean isAllSchedules;
     private String notes;
+    private String gateName;
 }

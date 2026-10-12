@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ticket.ticket_booking_system.dto.request.CheckInScanRequest;
+import com.ticket.ticket_booking_system.dto.request.OfflineSyncRequest;
 import com.ticket.ticket_booking_system.dto.response.CheckInAttendeeDTO;
 import com.ticket.ticket_booking_system.dto.response.CheckInResponse;
 import com.ticket.ticket_booking_system.dto.response.CheckInStatsResponse;
+import com.ticket.ticket_booking_system.dto.response.OfflineSyncResponse;
 import com.ticket.ticket_booking_system.entity.GateStaff;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
@@ -59,6 +61,21 @@ public class CheckInController {
         String staffName = extractStaffName(authentication);
 
         CheckInResponse response = checkInService.scanAndCheckIn(request, staffId, staffName);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Bulk sync scans performed while gate scanner was offline.
+     */
+    @PostMapping("/sync-offline")
+    public ResponseEntity<OfflineSyncResponse> syncOfflineScans(
+            @RequestBody OfflineSyncRequest request,
+            Authentication authentication) {
+        
+        UUID staffId = extractStaffId(authentication);
+        String staffName = extractStaffName(authentication);
+
+        OfflineSyncResponse response = checkInService.syncOfflineScans(request, staffId, staffName);
         return ResponseEntity.ok(response);
     }
 

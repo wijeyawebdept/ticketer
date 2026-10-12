@@ -36,6 +36,7 @@ public class GateStaffAssignmentDTO {
     private boolean isAllSchedules;
 
     // Assignment metadata
+    private String gateName;
     private UUID assignedById;
     private String assignedByName;
     private LocalDateTime assignedAt;

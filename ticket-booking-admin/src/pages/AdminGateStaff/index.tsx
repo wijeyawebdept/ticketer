@@ -34,7 +34,6 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
-  Security as SecurityIcon,
   Refresh as RefreshIcon,
   Visibility,
   VisibilityOff,
@@ -213,70 +212,41 @@ export const AdminGateStaff: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      {/* Top Header Card */}
-      <Card
+      {/* Page Header */}
+      <Box
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 3,
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          color: '#ffffff',
-          borderRadius: 2,
-          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255, 25, 85, 0.15)',
-                  border: '1px solid rgba(255, 25, 85, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ff1955',
-                }}
-              >
-                <SecurityIcon sx={{ fontSize: 28 }} />
-              </Box>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: 0.5 }}>
-                  Gate Staff Management
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                  Create and manage gate operator credentials for ticket scanning terminals
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={() => fetchGateStaff()}
-                sx={{ color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.2)' }}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAdd}
-                sx={{
-                  bgcolor: '#ff1955',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: '#e0144c' },
-                }}
-              >
-                Add Gate Staff
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
+          Gate Staff Management
+        </Typography>
+        <Box display="flex" alignItems="center">
+          <IconButton onClick={() => fetchGateStaff()} sx={{ mr: 1 }} title="Refresh">
+            <RefreshIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAdd}
+            sx={{
+              borderRadius: 2,
+              padding: '8px 16px',
+              fontWeight: 600,
+              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+              },
+            }}
+          >
+            Add Gate Staff
+          </Button>
+        </Box>
+      </Box>
 
       {/* Notifications */}
       {error && (
@@ -291,46 +261,44 @@ export const AdminGateStaff: React.FC = () => {
       )}
 
       {/* Filter and Search Bar */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            <TextField
-              size="small"
-              placeholder="Search by name or email..."
-              value={search}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 280, flex: 1 }}
+          />
+
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel id="status-filter-label">Status</InputLabel>
+            <Select
+              labelId="status-filter-label"
+              value={statusFilter}
+              label="Status"
               onChange={(e) => {
-                setSearch(e.target.value);
+                setStatusFilter(e.target.value as any);
                 setPage(0);
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ minWidth: 280, flex: 1 }}
-            />
-
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel id="status-filter-label">Status</InputLabel>
-              <Select
-                labelId="status-filter-label"
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as any);
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">All Statuses</MenuItem>
-                <MenuItem value={1}>Active</MenuItem>
-                <MenuItem value={0}>Inactive</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </CardContent>
-      </Card>
+            >
+              <MenuItem value="">All Statuses</MenuItem>
+              <MenuItem value={1}>Active</MenuItem>
+              <MenuItem value={0}>Inactive</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
 
       {/* Gate Staff Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
@@ -350,7 +318,7 @@ export const AdminGateStaff: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={36} sx={{ color: '#ff1955', mb: 1 }} />
+                    <CircularProgress size={36} color="primary" sx={{ mb: 1 }} />
                     <Typography variant="body2" color="text.secondary">
                       Loading gate staff accounts...
                     </Typography>
@@ -377,8 +345,8 @@ export const AdminGateStaff: React.FC = () => {
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            bgcolor: 'rgba(255, 25, 85, 0.1)',
-                            color: '#ff1955',
+                            bgcolor: 'rgba(25, 118, 210, 0.1)',
+                            color: '#1976d2',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -561,8 +529,8 @@ export const AdminGateStaff: React.FC = () => {
                     width: 54,
                     height: 54,
                     borderRadius: '50%',
-                    bgcolor: 'rgba(255, 25, 85, 0.12)',
-                    color: '#ff1955',
+                    bgcolor: 'rgba(25, 118, 210, 0.12)',
+                    color: '#1976d2',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -666,11 +634,11 @@ export const AdminGateStaff: React.FC = () => {
           {viewStaff && (
             <Button
               variant="contained"
+              color="primary"
               onClick={() => {
                 setOpenViewModal(false);
                 handleOpenEdit(viewStaff);
               }}
-              sx={{ bgcolor: '#ff1955', color: '#fff', '&:hover': { bgcolor: '#e0144c' } }}
             >
               Edit Staff
             </Button>
@@ -768,8 +736,8 @@ export const AdminGateStaff: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
+              color="primary"
               disabled={submitting}
-              sx={{ bgcolor: '#ff1955', color: '#fff', '&:hover': { bgcolor: '#e0144c' } }}
             >
               {submitting ? 'Saving...' : editingStaff ? 'Update Staff' : 'Create Staff Member'}
             </Button>

@@ -887,8 +887,10 @@ public class BookingService {
                                 .price(bookingSeat.getPriceAtBooking());
                         
                         // Individual ticket QR code
+                        String sig = CheckInService.computeHmacSignature(bookingSeat.getTicketCode(), booking.getBookingReference(), null);
                         String individualQrContent = "{\"app\":\"TICKETER\",\"type\":\"TICKET\",\"ref\":\"" 
-                                + booking.getBookingReference() + "\",\"ticket\":\"" + bookingSeat.getTicketCode() + "\"}";
+                                + booking.getBookingReference() + "\",\"ticket\":\"" + bookingSeat.getTicketCode() 
+                                + "\",\"sig\":\"" + sig + "\"}";
                         seatBuilder.ticketQrCodeBase64(emailService.generateQrCodeBase64(individualQrContent));
 
                         // For shared area tickets, use venue seat ID or shared area number
