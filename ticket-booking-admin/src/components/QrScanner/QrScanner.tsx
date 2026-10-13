@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Button, Typography, IconButton, CircularProgress, Alert, Tooltip } from '@mui/material';
 import { 
   Videocam, 
@@ -6,7 +6,8 @@ import {
   FlipCameraIos, 
   FlashOn, 
   FlashOff,
-  UploadFile
+  UploadFile,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { Html5Qrcode, Html5QrcodeCameraScanConfig, CameraDevice } from 'html5-qrcode';
 
@@ -18,6 +19,7 @@ interface QrScannerProps {
   scannerId?: string;
   fps?: number;
   qrbox?: number | { width: number; height: number };
+  resetScanTrigger?: any;
 }
 
 export const QrScanner: React.FC<QrScannerProps> = ({
@@ -27,7 +29,8 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   onActiveChange,
   scannerId = 'html5-qr-code-scanner',
   fps = 10,
-  qrbox = { width: 250, height: 250 }
+  qrbox = { width: 250, height: 250 },
+  resetScanTrigger,
 }) => {
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
@@ -38,125 +41,216 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   const [hasTorch, setHasTorch] = useState(false);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const isTransitioningRef = useRef<boolean>(false);
+  const mountedRef = useRef<boolean>(true);
   const lastScannedTextRef = useRef<string>('');
   const lastScanTimeRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize camera list
+  const onScanSuccessRef = useRef(onScanSuccess);
+  onScanSuccessRef.current = onScanSuccess;
+  const onScanErrorRef = useRef(onScanError);
+  onScanErrorRef.current = onScanError;
+
   useEffect(() => {
-    let isMounted = true;
-
-    Html5Qrcode.getCameras()
-      .then((devices) => {
-        if (!isMounted) return;
-        if (devices && devices.length) {
-          setCameras(devices);
-          // Prefer back camera if available
-          const backCamera = devices.find(d => 
-            d.label.toLowerCase().includes('back') || 
-            d.label.toLowerCase().includes('rear') || 
-            d.label.toLowerCase().includes('environment')
-          );
-          setSelectedCameraId(backCamera ? backCamera.id : devices[0].id);
-        } else {
-          setErrorMsg('No camera detected on this device.');
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.warn('Error accessing cameras:', err);
-        setErrorMsg('Camera permission required. Please allow access in browser.');
-      });
-
+    mountedRef.current = true;
     return () => {
-      isMounted = false;
+      mountedRef.current = false;
     };
   }, []);
 
-  // Start scanner when camera is selected and isActive is true
+  // Clear throttle when resetScanTrigger changes (e.g. event or schedule changed)
   useEffect(() => {
-    if (!isActive || !selectedCameraId) {
-      stopScanner();
+    lastScannedTextRef.current = '';
+    lastScanTimeRef.current = 0;
+  }, [resetScanTrigger]);
+
+  // Safe camera stop & clear
+  const stopScanner = useCallback(async () => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
+    try {
+      if (html5QrCodeRef.current) {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+        try {
+          await html5QrCodeRef.current.clear();
+        } catch (clearErr) {
+          // Ignore DOM clear errors during unmount
+        }
+        html5QrCodeRef.current = null;
+      }
+      if (mountedRef.current) {
+        setIsScanning(false);
+        setIsInitializing(false);
+        setTorchOn(false);
+        setHasTorch(false);
+      }
+    } catch (err) {
+      console.warn('Error stopping scanner:', err);
+    } finally {
+      isTransitioningRef.current = false;
+    }
+  }, []);
+
+  // Camera enumeration helper
+  const loadCameras = useCallback(async (): Promise<CameraDevice[]> => {
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      if (!mountedRef.current) return [];
+      if (devices && devices.length > 0) {
+        setCameras(devices);
+        const backCamera = devices.find(d => 
+          d.label.toLowerCase().includes('back') || 
+          d.label.toLowerCase().includes('rear') || 
+          d.label.toLowerCase().includes('environment')
+        );
+        const preferredId = backCamera ? backCamera.id : devices[0].id;
+        setSelectedCameraId((prev) => prev || preferredId);
+        return devices;
+      } else {
+        return [];
+      }
+    } catch (err: any) {
+      console.warn('Error querying camera devices:', err);
+      return [];
+    }
+  }, []);
+
+  // Safe scanner start with race-condition prevention & mobile optimization
+  const startScanner = useCallback(async (cameraIdToUse?: string) => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
+    if (mountedRef.current) {
+      setIsInitializing(true);
+      setErrorMsg(null);
+    }
+
+    // Check for Secure Context on mobile (HTTPS or localhost required for getUserMedia)
+    if (
+      typeof window !== 'undefined' &&
+      window.isSecureContext === false &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1'
+    ) {
+      if (mountedRef.current) {
+        setIsInitializing(false);
+        setIsScanning(false);
+        setErrorMsg('Mobile browser blocks camera on HTTP. Please access via HTTPS or hosted domain.');
+      }
+      isTransitioningRef.current = false;
       return;
     }
 
-    startScanner(selectedCameraId);
-
-    return () => {
-      stopScanner();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, selectedCameraId]);
-
-  const startScanner = async (cameraId: string) => {
     try {
-      setIsInitializing(true);
-      setErrorMsg(null);
-
-      // Stop any existing instance
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        await html5QrCodeRef.current.stop();
+      // 1. Clear any running instance
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          await html5QrCodeRef.current.clear();
+        } catch (e) {
+          // Ignore cleanup error
+        }
+        html5QrCodeRef.current = null;
       }
 
-      if (!html5QrCodeRef.current) {
-        html5QrCodeRef.current = new Html5Qrcode(scannerId);
+      // Check DOM container
+      const container = document.getElementById(scannerId);
+      if (!container) {
+        throw new Error('Scanner container element not found in DOM.');
       }
 
+      // Determine camera target: prefer explicit ID, then selectedCameraId, fallback to environment facingMode
+      let cameraTarget: string | { facingMode: string } = cameraIdToUse || selectedCameraId || '';
+      if (!cameraTarget) {
+        // Default to rear environment camera on mobile
+        cameraTarget = { facingMode: 'environment' };
+      }
+
+      const instance = new Html5Qrcode(scannerId);
+      html5QrCodeRef.current = instance;
+
+      // Dynamic responsive QR box so it never exceeds video viewfinder on mobile devices
       const config: Html5QrcodeCameraScanConfig = {
         fps,
-        qrbox,
-        aspectRatio: 1.0,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const edge = Math.floor(minEdge * 0.72);
+          return {
+            width: Math.max(160, Math.min(edge, 280)),
+            height: Math.max(160, Math.min(edge, 280)),
+          };
+        },
       };
 
-      await html5QrCodeRef.current.start(
-        cameraId,
+      await instance.start(
+        cameraTarget,
         config,
         (decodedText) => {
-          // Throttle duplicate consecutive scans within 1.5 seconds
           const now = Date.now();
           if (decodedText === lastScannedTextRef.current && now - lastScanTimeRef.current < 1500) {
             return;
           }
           lastScannedTextRef.current = decodedText;
           lastScanTimeRef.current = now;
-          onScanSuccess(decodedText);
+          onScanSuccessRef.current(decodedText);
         },
         (errorMessage) => {
-          onScanError?.(errorMessage);
+          onScanErrorRef.current?.(errorMessage);
         }
       );
 
-      setIsScanning(true);
-      setIsInitializing(false);
+      if (mountedRef.current) {
+        setIsScanning(true);
+        setIsInitializing(false);
+        setErrorMsg(null);
 
-      // Check torch capability
-      try {
-        const capabilities = html5QrCodeRef.current.getRunningTrackCapabilities();
-        if (capabilities && (capabilities as any).torch) {
-          setHasTorch(true);
+        // Refresh camera list now that camera permission is granted (gets real device labels on iOS/Android)
+        loadCameras();
+
+        try {
+          const capabilities = instance.getRunningTrackCapabilities();
+          if (capabilities && (capabilities as any).torch) {
+            setHasTorch(true);
+          }
+        } catch {
+          setHasTorch(false);
         }
-      } catch (e) {
-        setHasTorch(false);
       }
-
     } catch (err: any) {
       console.error('Failed to start scanner:', err);
-      setIsScanning(false);
-      setIsInitializing(false);
-      setErrorMsg(err?.message || 'Failed to start camera. Please check camera permissions.');
-    }
-  };
-
-  const stopScanner = async () => {
-    try {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        await html5QrCodeRef.current.stop();
+      if (mountedRef.current) {
         setIsScanning(false);
+        setIsInitializing(false);
+        setErrorMsg(err?.message || 'Could not access camera. Please check permissions and click Retry.');
       }
-    } catch (err) {
-      console.warn('Error stopping scanner:', err);
+    } finally {
+      isTransitioningRef.current = false;
     }
-  };
+  }, [fps, loadCameras, scannerId, selectedCameraId]);
+
+  // Initial camera enumeration
+  useEffect(() => {
+    loadCameras();
+  }, [loadCameras]);
+
+  // Start or stop based on isActive & selectedCameraId
+  useEffect(() => {
+    if (!isActive) {
+      stopScanner();
+    } else {
+      startScanner();
+    }
+
+    return () => {
+      stopScanner();
+    };
+  }, [isActive, selectedCameraId, startScanner, stopScanner]);
 
   const handleSwitchCamera = () => {
     if (cameras.length <= 1) return;
@@ -193,12 +287,37 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     }
   };
 
+  const handleTogglePower = () => {
+    const next = !isActive;
+    onActiveChange?.(next);
+  };
+
+  const handleRetry = () => {
+    setErrorMsg(null);
+    if (!isActive) {
+      onActiveChange?.(true);
+    } else {
+      startScanner();
+    }
+  };
+
   return (
     <Box sx={{ width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {errorMsg && (
         <Alert
           severity="warning"
           onClose={() => setErrorMsg(null)}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<RefreshIcon sx={{ fontSize: '0.9rem !important' }} />}
+              onClick={handleRetry}
+              sx={{ fontWeight: 700, fontSize: '0.72rem', textTransform: 'none', ml: 0.5 }}
+            >
+              Retry
+            </Button>
+          }
           sx={{
             width: '100%',
             maxWidth: { xs: '100%', sm: 360 },
@@ -221,14 +340,6 @@ export const QrScanner: React.FC<QrScannerProps> = ({
             '& .MuiAlert-message': {
               p: 0,
               fontWeight: 500,
-            },
-            '& .MuiAlert-action': {
-              p: 0,
-              mr: -0.5,
-              '& .MuiIconButton-root': {
-                p: 0.3,
-                color: '#fbbf24',
-              },
             },
           }}
         >
@@ -363,17 +474,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
           size="small"
           variant="outlined"
           startIcon={isScanning ? <VideocamOff sx={{ fontSize: '1rem !important' }} /> : <Videocam sx={{ fontSize: '1rem !important' }} />}
-          onClick={() => {
-            if (isScanning) {
-              stopScanner();
-              onActiveChange?.(false);
-            } else if (selectedCameraId) {
-              startScanner(selectedCameraId);
-              onActiveChange?.(true);
-            } else {
-              onActiveChange?.(true);
-            }
-          }}
+          onClick={handleTogglePower}
           sx={{
             borderColor: isScanning ? '#cbd5e1' : '#ff1955',
             color: isScanning ? '#64748b' : '#ff1955',

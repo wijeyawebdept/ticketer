@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -279,6 +279,7 @@ const ConnectivityBadge: React.FC<{
 
 export const GateScanner: React.FC = () => {
   const { eventId: routeEventId, scheduleId: routeScheduleId } = useParams<{ eventId?: string; scheduleId?: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // Dark Mode state for Gate Scanner terminal with layout sync & fallback
@@ -449,6 +450,44 @@ export const GateScanner: React.FC = () => {
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterFilterCheckedIn, setRosterFilterCheckedIn] = useState<boolean | undefined>(undefined);
 
+  // Synchronize route param changes with state
+  useEffect(() => {
+    if (routeEventId && routeEventId !== selectedEventId) {
+      setSelectedEventId(routeEventId);
+    }
+  }, [routeEventId, selectedEventId]);
+
+  useEffect(() => {
+    if (routeScheduleId && routeScheduleId !== selectedScheduleId) {
+      setSelectedScheduleId(routeScheduleId);
+    }
+  }, [routeScheduleId, selectedScheduleId]);
+
+  // Unified Event & Schedule Selection Handlers
+  const handleEventChange = useCallback((newId: string) => {
+    if (!newId || newId === selectedEventId) return;
+    setSelectedEventId(newId);
+    setSelectedScheduleId('');
+    setSchedules([]);
+    setStats(null);
+    setAttendees([]);
+    setLastScanResult(null);
+    localStorage.setItem('ticketer_gate_event_id', newId);
+    navigate(`/gate/${newId}`, { replace: true });
+  }, [navigate, selectedEventId]);
+
+  const handleScheduleChange = useCallback((newScheduleId: string) => {
+    if (!newScheduleId || newScheduleId === selectedScheduleId) return;
+    setSelectedScheduleId(newScheduleId);
+    setStats(null);
+    setAttendees([]);
+    setLastScanResult(null);
+    if (selectedEventId) {
+      localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
+      navigate(`/gate/${selectedEventId}/${newScheduleId}`, { replace: true });
+    }
+  }, [navigate, selectedEventId, selectedScheduleId]);
+
   // Trigger Full-Screen Visual Flash
   const triggerVisualFlash = (color: string) => {
     setFlashColor(color);
@@ -532,7 +571,7 @@ export const GateScanner: React.FC = () => {
 
           setSelectedEventId(targetId);
           localStorage.setItem('ticketer_gate_event_id', targetId);
-          window.history.replaceState(null, '', `/gate/${targetId}`);
+          navigate(`/gate/${targetId}`, { replace: true });
         } else {
           setSelectedEventId('');
           setSelectedScheduleId('');
@@ -596,8 +635,13 @@ export const GateScanner: React.FC = () => {
           setSelectedScheduleId(targetScheduleId);
           localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, targetScheduleId);
           updateOfflineQueueCount(targetScheduleId);
+          if (targetScheduleId && routeScheduleId !== targetScheduleId) {
+            navigate(`/gate/${selectedEventId}/${targetScheduleId}`, { replace: true });
+          }
         } else {
           setSelectedScheduleId('');
+          setStats(null);
+          setAttendees([]);
         }
       } catch (err) {
         console.error('Failed to load event schedules:', err);
@@ -870,6 +914,18 @@ export const GateScanner: React.FC = () => {
     if (scanLoading) return;
     setScanLoading(true);
 
+    if (!selectedEventId) {
+      setLastScanResult({
+        valid: false,
+        alreadyCheckedIn: false,
+        statusType: 'ERROR',
+        message: 'Please select an event before scanning tickets.',
+      });
+      playAudioFeedback('ERROR', soundEnabled);
+      setScanLoading(false);
+      return;
+    }
+
     // Offline check fallback
     if (!navigator.onLine) {
       const offlineRes = processOfflineScan(decodedText);
@@ -898,9 +954,16 @@ export const GateScanner: React.FC = () => {
     }
 
     try {
+      const effectiveScheduleId =
+        selectedScheduleId ||
+        schedules[0]?.scheduleId ||
+        schedules[0]?.id ||
+        currentEvent?.eventSchedules?.[0]?.scheduleId ||
+        undefined;
+
       const response = await checkInService.scanTicket({
         qrData: decodedText,
-        eventScheduleId: selectedScheduleId || undefined,
+        eventScheduleId: effectiveScheduleId,
         eventId: selectedEventId || undefined,
         checkInAll: specificTicketCodes ? false : false,
         selectedTicketCodes: specificTicketCodes,
@@ -987,7 +1050,9 @@ export const GateScanner: React.FC = () => {
       }
     } finally {
       setScanLoading(false);
-      refreshStatsAndRoster();
+      if (selectedScheduleId) {
+        refreshStatsAndRoster();
+      }
     }
   };
 
@@ -1132,12 +1197,7 @@ export const GateScanner: React.FC = () => {
                     <FormControl size="small" sx={{ minWidth: 95, flexShrink: 0 }}>
                       <Select
                         value={selectedEventId || ''}
-                        onChange={(e) => {
-                          const newId = e.target.value;
-                          setSelectedEventId(newId);
-                          localStorage.setItem('ticketer_gate_event_id', newId);
-                          window.history.replaceState(null, '', `/gate/${newId}`);
-                        }}
+                        onChange={(e) => handleEventChange(String(e.target.value))}
                         MenuProps={selectMenuProps}
                         sx={{ height: 28, fontSize: '0.72rem', borderRadius: 1.5, bgcolor: t.innerBg, color: t.textPrimary, '& .MuiOutlinedInput-notchedOutline': { borderColor: t.divider } }}
                       >
@@ -1266,14 +1326,7 @@ export const GateScanner: React.FC = () => {
                   <FormControl size="small" sx={{ minWidth: { xs: 170, sm: 160 }, flexShrink: 0 }}>
                     <Select
                       value={selectedScheduleId || ''}
-                      onChange={(e) => {
-                        const newScheduleId = e.target.value;
-                        setSelectedScheduleId(newScheduleId);
-                        if (selectedEventId) {
-                          localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
-                          window.history.replaceState(null, '', `/gate/${selectedEventId}/${newScheduleId}`);
-                        }
-                      }}
+                      onChange={(e) => handleScheduleChange(String(e.target.value))}
                       MenuProps={selectMenuProps}
                       sx={{
                         height: 28,
@@ -1312,12 +1365,7 @@ export const GateScanner: React.FC = () => {
                     labelId="gatescanner-event-label"
                     value={selectedEventId || ''}
                     label="Event"
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      setSelectedEventId(newId);
-                      localStorage.setItem('ticketer_gate_event_id', newId);
-                      window.history.replaceState(null, '', `/gate/${newId}`);
-                    }}
+                    onChange={(e) => handleEventChange(String(e.target.value))}
                     MenuProps={selectMenuProps}
                     displayEmpty
                     sx={{ bgcolor: t.inputBg, color: t.textPrimary, '& .MuiOutlinedInput-notchedOutline': { borderColor: t.divider } }}
@@ -1353,14 +1401,7 @@ export const GateScanner: React.FC = () => {
                     labelId="gatescanner-schedule-label"
                     value={selectedScheduleId || ''}
                     label="Schedule / Date"
-                    onChange={(e) => {
-                      const newScheduleId = e.target.value;
-                      setSelectedScheduleId(newScheduleId);
-                      if (selectedEventId) {
-                        localStorage.setItem(`ticketer_gate_schedule_${selectedEventId}`, newScheduleId);
-                        window.history.replaceState(null, '', `/gate/${selectedEventId}/${newScheduleId}`);
-                      }
-                    }}
+                    onChange={(e) => handleScheduleChange(String(e.target.value))}
                     MenuProps={selectMenuProps}
                     displayEmpty
                     sx={{ bgcolor: t.inputBg, color: t.textPrimary, '& .MuiOutlinedInput-notchedOutline': { borderColor: t.divider } }}
@@ -1757,10 +1798,11 @@ export const GateScanner: React.FC = () => {
                 />
               </Box>
 
-              {/* Camera Scanner Component */}
+              {/* Camera Scanner Component - Kept mounted with resetScanTrigger so camera stream never flickers or restarts when changing events */}
               <QrScanner
                 scannerId="gate-terminal-qr-scanner"
                 isActive={isCameraActive}
+                resetScanTrigger={`${selectedEventId}-${selectedScheduleId}`}
                 onActiveChange={(active) => {
                   setIsCameraActive(active);
                   localStorage.setItem('ticketer_gate_camera_active', String(active));
@@ -1927,6 +1969,8 @@ export const GateScanner: React.FC = () => {
                         ? 'WRONG GATE / ZONE ACCESS RESTRICTED'
                         : lastScanResult.statusType === 'FORGED_SIGNATURE'
                         ? 'FORGED / ALTERED QR CODE DETECTED'
+                        : lastScanResult.statusType === 'INVALID_EVENT'
+                        ? 'TICKET IS FOR ANOTHER EVENT'
                         : lastScanResult.statusType === 'RE_ENTRY_APPROVED'
                         ? `RE-ENTRY APPROVED (Entry #${lastScanResult.entryCount || 2})`
                         : lastScanResult.statusType === 'CHECKED_OUT'
@@ -1942,6 +1986,63 @@ export const GateScanner: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
+
+                {/* Quick-Switch for tickets belonging to another event */}
+                {lastScanResult.statusType === 'INVALID_EVENT' && (
+                  <Box
+                    sx={{
+                      bgcolor: t.isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid #3b82f6',
+                      color: t.textPrimary,
+                      p: 1.5,
+                      borderRadius: 2,
+                      mb: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 1.2,
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, fontSize: '0.85rem', color: '#3b82f6' }}>
+                        Ticket Belongs To: {lastScanResult.eventName || 'Another Event'}
+                      </Typography>
+                      {lastScanResult.scheduleDate && (
+                        <Typography variant="caption" sx={{ color: t.textSecondary, display: 'block', mt: 0.2 }}>
+                          Scheduled Date: {lastScanResult.scheduleDate}
+                        </Typography>
+                      )}
+                    </Box>
+                    {(() => {
+                      const matched = events.find(
+                        (ev) =>
+                          (ev.name || ev.title || '').trim().toLowerCase() ===
+                          (lastScanResult.eventName || '').trim().toLowerCase()
+                      );
+                      if (matched) {
+                        return (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleEventChange(String(matched.eventId || matched.id))}
+                            sx={{
+                              textTransform: 'none',
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                              borderRadius: 1.5,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Switch to this Event
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </Box>
+                )}
 
                 {/* FEATURE 6: Velocity Cloned Alert Box */}
                 {lastScanResult.statusType === 'CLONED_SUSPECT' && (
