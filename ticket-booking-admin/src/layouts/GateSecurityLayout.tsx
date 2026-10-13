@@ -65,6 +65,13 @@ export const GateSecurityLayout: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    document.title = 'Ticketer - Gate Terminal';
+    return () => {
+      document.title = 'Ticketer.lk - Book Your Tickets Online';
+    };
+  }, []);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
