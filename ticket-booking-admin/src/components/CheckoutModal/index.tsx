@@ -17,6 +17,7 @@ import {
   Link,
   CircularProgress,
   Chip,
+  InputAdornment,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { profileService } from '../../services';
@@ -24,6 +25,7 @@ import PageContentService from '../../services/pageContent.service';
 import { useCurrency } from '../../context/CurrencyContext';
 import promoCodeService from '../../services/promoCodeService';
 import { ValidatePromoCodeResponse } from '../../types';
+import { validateNicPassport } from '../../utils/idValidation';
 import {
   Event as EventIcon,
   AccessTime as AccessTimeIcon,
@@ -33,6 +35,8 @@ import {
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
   LocalOffer as LocalOfferIcon,
+  CheckCircle as CheckCircleIcon,
+  ErrorOutline as ErrorOutlineIcon,
 } from '@mui/icons-material';
 
 export interface CheckoutModalProps {
@@ -112,7 +116,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     phone: '',
     email: '',
   });
+  const [nicTouched, setNicTouched] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Real-time NIC & Passport validation
+  const nicValidation = useMemo(() => {
+    return validateNicPassport(customerInfo.nic || '');
+  }, [customerInfo.nic]);
 
   // Promo Code States
   const [promoInput, setPromoInput] = useState('');
@@ -185,11 +195,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setPromoError(null);
       setAppliedPromo(null);
       setPromoInput('');
+      setNicTouched(false);
       loadProfileData();
     }
   }, [isOpen]);
 
   const handleCustomerInfoChange = (field: keyof typeof customerInfo, value: string) => {
+    if (field === 'nic') {
+      // Auto-sanitize: remove invalid characters and convert to uppercase
+      const clean = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      setCustomerInfo(prev => ({ ...prev, nic: clean }));
+      setNicTouched(true);
+      return;
+    }
     setCustomerInfo(prev => ({ ...prev, [field]: value }));
   };
 
@@ -263,6 +281,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
     if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
       setLocalError(t('errRequiredFields', 'Please fill all required fields'));
+      return;
+    }
+    if (!customerInfo.nic || !customerInfo.nic.trim()) {
+      setNicTouched(true);
+      setLocalError('Please enter your NIC or Passport number');
+      return;
+    }
+    if (!nicValidation.isValid) {
+      setNicTouched(true);
+      setLocalError(nicValidation.message || 'Please enter a valid NIC or Passport number');
       return;
     }
 
@@ -383,7 +411,60 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <TextField fullWidth label="Last Name" value={customerInfo.lastName} onChange={(e) => handleCustomerInfoChange('lastName', e.target.value)} size="small" required />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="NIC/Passport" value={customerInfo.nic} onChange={(e) => handleCustomerInfoChange('nic', e.target.value)} size="small" required />
+                  <TextField
+                    fullWidth
+                    label="NIC/Passport"
+                    value={customerInfo.nic}
+                    onChange={(e) => handleCustomerInfoChange('nic', e.target.value)}
+                    onBlur={() => setNicTouched(true)}
+                    size="small"
+                    required
+                    error={nicTouched && Boolean(customerInfo.nic) && !nicValidation.isValid}
+                    helperText={
+                      customerInfo.nic ? (
+                        <Box
+                          component="span"
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            color: nicValidation.isValid ? '#10b981' : (nicTouched ? '#ef4444' : '#64748b'),
+                            fontWeight: nicValidation.isValid ? 600 : 500,
+                            fontSize: '0.74rem',
+                          }}
+                        >
+                          {nicValidation.isValid ? (
+                            <CheckCircleIcon sx={{ fontSize: 14, color: '#10b981' }} />
+                          ) : (
+                            <ErrorOutlineIcon sx={{ fontSize: 14, color: nicTouched ? '#ef4444' : '#64748b' }} />
+                          )}
+                          {nicValidation.message}
+                        </Box>
+                      ) : (
+                        <Typography component="span" variant="caption" sx={{ color: '#94a3b8', fontSize: '0.72rem' }}>
+                          e.g. 981234567V, 199812345678 or N1234567
+                        </Typography>
+                      )
+                    }
+                    InputProps={{
+                      endAdornment: customerInfo.nic ? (
+                        <InputAdornment position="end">
+                          {nicValidation.isValid ? (
+                            <CheckCircleIcon sx={{ color: '#10b981', fontSize: 19 }} />
+                          ) : nicTouched ? (
+                            <ErrorOutlineIcon sx={{ color: '#ef4444', fontSize: 19 }} />
+                          ) : null}
+                        </InputAdornment>
+                      ) : null,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&.Mui-focused fieldset': {
+                          borderColor: nicValidation.isValid ? '#10b981' : undefined,
+                        },
+                      },
+                    }}
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <TextField fullWidth label="Contact Number" value={customerInfo.phone} onChange={(e) => handleCustomerInfoChange('phone', e.target.value)} size="small" required />

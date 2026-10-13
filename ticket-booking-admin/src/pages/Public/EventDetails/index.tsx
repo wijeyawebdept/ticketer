@@ -452,8 +452,8 @@ const EventDetails: React.FC = () => {
 
     if (!paymentMethod) return alert('Please select a payment method');
     if (!acceptTerms) return alert('Please accept terms and conditions');
-    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
-      return alert('Please fill all required fields');
+    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email || !customerInfo.nic) {
+      return alert('Please fill all required fields including NIC/Passport');
     }
 
     if (!event?.id) {

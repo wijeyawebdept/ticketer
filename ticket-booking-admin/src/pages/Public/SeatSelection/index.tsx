@@ -558,8 +558,8 @@ const SeatSelectionPage: React.FC = () => {
 
     if (!paymentMethod) return showMessage('error', 'Please select a payment method');
     if (!acceptTerms) return showMessage('error', 'Please accept terms and conditions');
-    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email) {
-      return showMessage('error', 'Please fill all required fields');
+    if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.phone || !customerInfo.email || !customerInfo.nic) {
+      return showMessage('error', 'Please fill all required fields including NIC/Passport');
     }
 
     // Guard: eventId must be loaded before proceeding
