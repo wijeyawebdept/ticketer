@@ -583,7 +583,7 @@ export const GateScanner: React.FC = () => {
       }
     };
     fetchEvents();
-  }, [routeEventId, user?.role, userRoleStr]);
+  }, [navigate, routeEventId, user?.role, userRoleStr]);
 
   // Fetch Schedules for selected event with localStorage persistence
   useEffect(() => {
@@ -648,7 +648,7 @@ export const GateScanner: React.FC = () => {
       }
     };
     fetchSchedules();
-  }, [selectedEventId, events, routeScheduleId, updateOfflineQueueCount]);
+  }, [navigate, selectedEventId, events, routeScheduleId, updateOfflineQueueCount]);
 
   // Load stats and attendees when schedule changes + Cache offline roster
   const refreshStatsAndRoster = useCallback(async () => {
