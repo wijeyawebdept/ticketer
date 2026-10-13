@@ -54,7 +54,7 @@ public class UserServiceImpl implements UserService {
     private final RecycleBinService recycleBinService;
     private final EmailService emailService;
 
-    @Value("${app.frontend.base-url:http://localhost:3000}")
+    @Value("${app.frontend.base-url:https://ticketer.hitad.lk}")
     private String frontendUrl;
 
     public UserServiceImpl(

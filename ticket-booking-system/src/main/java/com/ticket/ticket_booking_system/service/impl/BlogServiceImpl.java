@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class BlogServiceImpl implements BlogService {
+
+    @Value("${app.frontend.base-url:https://ticketer.hitad.lk}")
+    private String frontendBaseUrl;
 
     private final BlogPostRepository postRepo;
     private final BlogCommentRepository commentRepo;
@@ -496,7 +500,7 @@ public class BlogServiceImpl implements BlogService {
             if (post.getSummary() != null) {
                 sb.append("<p style='color:#bbb;font-size:14px;margin:0 0 12px;'>").append(post.getSummary()).append("</p>");
             }
-            sb.append("<a href='http://localhost:3000/blog/").append(post.getPostId()).append("' ")
+            sb.append("<a href='").append(frontendBaseUrl).append("/blog/").append(post.getPostId()).append("' ")
               .append("style='background:#ff1955;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;'>")
               .append("Read More →</a>");
             sb.append("</div>");

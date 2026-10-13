@@ -35,7 +35,7 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000}")
+    @Value("${CORS_ALLOWED_ORIGINS:https://ticketer.hitad.lk,http://localhost:3000}")
     private String allowedOrigins;
 
     private final RateLimitingFilter rateLimitingFilter;

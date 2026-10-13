@@ -76,12 +76,15 @@ mpgs.api.password=${MPGS_API_PASSWORD}
 mpgs.webhook-secret=${MPGS_WEBHOOK_SECRET}
 mpgs.currency=LKR
 
+# Base URLs (Default to production domain https://ticketer.hitad.lk, overridable by APP_BASE_URL)
+app.frontend.base-url=${APP_BASE_URL:https://ticketer.hitad.lk}
+app.backend.base-url=${BACKEND_BASE_URL:${APP_BASE_URL:https://ticketer.hitad.lk}}
+
 # Payment Callback URLs
 # IMPORTANT: MPGS needs ONE return URL - we verify in that page
-mpgs.success-url=${APP_BASE_URL:http://localhost:3000}/booking/payment-return
-mpgs.cancel-url=${APP_BASE_URL:http://localhost:3000}/booking/payment-cancel
-mpgs.error-url=${APP_BASE_URL:http://localhost:3000}/booking/payment-error
-app.frontend.base-url=http://localhost:3000
+mpgs.success-url=${app.frontend.base-url}/booking/payment-return
+mpgs.cancel-url=${app.frontend.base-url}/booking/payment-cancel
+mpgs.error-url=${app.frontend.base-url}/booking/payment-error
 
 
 # Email Configuration for Booking Notifications

@@ -1,11 +1,15 @@
 package com.ticket.ticket_booking_system.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class FileUploadConfig implements WebMvcConfigurer {
+
+    @Value("${CORS_ALLOWED_ORIGINS:https://ticketer.hitad.lk,http://localhost:3000}")
+    private String allowedOrigins;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -16,8 +20,9 @@ public class FileUploadConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
+        String[] origins = allowedOrigins.split("\\s*,\\s*");
         registry.addMapping("/uploads/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:8081")
+                .allowedOrigins(origins)
                 .allowedMethods("GET", "OPTIONS")
                 .allowedHeaders("*");
     }
