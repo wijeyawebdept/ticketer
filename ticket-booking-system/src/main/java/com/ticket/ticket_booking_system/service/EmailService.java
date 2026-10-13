@@ -49,10 +49,10 @@ public class EmailService {
     @Value("${app.mail.toEmail:ishanf@wijeya.lk}")
     private String contactRecipient;
 
-    @Value("${app.frontend.base-url:https://ticketer.hitad.lk}")
+    @Value("${app.frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
-    @Value("${app.backend.base-url:https://ticketer.hitad.lk}")
+    @Value("${app.backend.base-url:http://localhost:8081}")
     private String backendBaseUrl;
 
     @Value("${app.mail.fallback.enabled:true}")

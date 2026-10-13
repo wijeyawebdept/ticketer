@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BlogServiceImpl implements BlogService {
 
-    @Value("${app.frontend.base-url:https://ticketer.hitad.lk}")
+    @Value("${app.frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
     private final BlogPostRepository postRepo;

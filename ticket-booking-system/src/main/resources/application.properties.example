@@ -76,9 +76,9 @@ mpgs.api.password=${MPGS_API_PASSWORD}
 mpgs.webhook-secret=${MPGS_WEBHOOK_SECRET}
 mpgs.currency=LKR
 
-# Base URLs (Default to production domain https://ticketer.hitad.lk, overridable by APP_BASE_URL)
-app.frontend.base-url=${APP_BASE_URL:https://ticketer.hitad.lk}
-app.backend.base-url=${BACKEND_BASE_URL:${APP_BASE_URL:https://ticketer.hitad.lk}}
+# Base URLs: Defaults to http://localhost:3000 locally, and uses https://ticketer.hitad.lk on server via APP_BASE_URL
+app.frontend.base-url=${APP_BASE_URL:http://localhost:3000}
+app.backend.base-url=${BACKEND_BASE_URL:${APP_BASE_URL:http://localhost:8081}}
 
 # Payment Callback URLs
 # IMPORTANT: MPGS needs ONE return URL - we verify in that page
