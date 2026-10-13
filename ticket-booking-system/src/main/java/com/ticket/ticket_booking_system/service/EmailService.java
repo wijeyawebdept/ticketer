@@ -5,10 +5,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -105,9 +109,13 @@ public class EmailService {
     }
 
     public void sendHtml(String toEmail, String subject, String htmlBody) throws MessagingException {
+        sendHtml(toEmail, subject, htmlBody, Collections.emptyMap());
+    }
+
+    public void sendHtml(String toEmail, String subject, String htmlBody, Map<String, byte[]> inlineImages) throws MessagingException {
         try {
             log.info("Attempting to send email to: {} via primary SMTP...", toEmail);
-            sendViaSender(this.mailSender, this.fromEmail, this.fromName, toEmail, subject, htmlBody);
+            sendViaSender(this.mailSender, this.fromEmail, this.fromName, toEmail, subject, htmlBody, inlineImages);
             log.info("Email sent successfully via primary SMTP to: {}", toEmail);
         } catch (Exception primaryEx) {
             log.warn("Primary SMTP failed to send email to {}: {}. Checking fallback...", toEmail, primaryEx.getMessage());
@@ -117,7 +125,7 @@ public class EmailService {
                     String senderEmail = (this.fallbackFromEmail != null && !this.fallbackFromEmail.isBlank())
                             ? this.fallbackFromEmail
                             : this.fallbackUsername;
-                    sendViaSender(this.fallbackMailSender, senderEmail, this.fromName, toEmail, subject, htmlBody);
+                    sendViaSender(this.fallbackMailSender, senderEmail, this.fromName, toEmail, subject, htmlBody, inlineImages);
                     log.info("Email sent successfully via fallback Gmail SMTP to: {}", toEmail);
                     return;
                 } catch (Exception fallbackEx) {
@@ -136,7 +144,7 @@ public class EmailService {
         }
     }
 
-    private void sendViaSender(JavaMailSender sender, String from, String name, String toEmail, String subject, String htmlBody) throws MessagingException {
+    private void sendViaSender(JavaMailSender sender, String from, String name, String toEmail, String subject, String htmlBody, Map<String, byte[]> inlineImages) throws MessagingException {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper =
                 new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
@@ -154,6 +162,14 @@ public class EmailService {
         }
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
+
+        if (inlineImages != null) {
+            for (Map.Entry<String, byte[]> entry : inlineImages.entrySet()) {
+                if (entry.getValue() != null && entry.getKey() != null) {
+                    helper.addInline(entry.getKey(), new ByteArrayResource(entry.getValue()), "image/png");
+                }
+            }
+        }
 
         sender.send(message);
     }
@@ -274,6 +290,8 @@ public class EmailService {
 
             String paymentDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy, hh:mm a"));
 
+            Map<String, byte[]> inlineImages = new HashMap<>();
+
             // Build QR code content
             String eventNameForQr  = booking.getEvent() != null ? booking.getEvent().getName() : "N/A";
             String qrContent = "TICKETER\n"
@@ -286,7 +304,12 @@ public class EmailService {
                     + "AMOUNT: " + (booking.getCurrency() != null ? booking.getCurrency() : "LKR") + " " + booking.getTotalAmount() + "\n"
                     + "TXN: " + transactionId + "\n"
                     + "PAID: " + paymentDate;
-            String qrCodeBase64 = generateQrCodeBase64(qrContent);
+            byte[] qrCodeBytes = generateQrCodeBytes(qrContent);
+            String qrCodeBase64 = qrCodeBytes != null ? Base64.getEncoder().encodeToString(qrCodeBytes) : null;
+            String groupQrCid = "groupqr" + Math.abs(booking.getBookingReference().hashCode());
+            if (qrCodeBytes != null) {
+                inlineImages.put(groupQrCid, qrCodeBytes);
+            }
 
             // Check if separate tickets were requested
             boolean separateTickets = Boolean.TRUE.equals(booking.getRequestSeparateTickets());
@@ -304,14 +327,20 @@ public class EmailService {
                 String individualQrContent = "{\"app\":\"TICKETER\",\"type\":\"TICKET\",\"ref\":\"" 
                         + booking.getBookingReference() + "\",\"ticket\":\"" + bs.getTicketCode() 
                         + "\",\"seat\":\"" + seatLabel + "\",\"sig\":\"" + sig + "\"}";
-                String individualQrBase64 = generateQrCodeBase64(individualQrContent);
+                byte[] individualQrBytes = generateQrCodeBytes(individualQrContent);
+                String individualQrBase64 = individualQrBytes != null ? Base64.getEncoder().encodeToString(individualQrBytes) : null;
+                String individualCid = "ticketqr" + Math.abs(bs.getTicketCode().hashCode());
+                if (individualQrBytes != null) {
+                    inlineImages.put(individualCid, individualQrBytes);
+                }
 
                 emailTickets.add(new EmailTicketItem(
                         bs.getTicketCode(),
                         seatLabel,
                         Boolean.TRUE.equals(bs.getIsSharedAreaTicket()),
                         bs.getSharedAreaNumber(),
-                        individualQrBase64
+                        individualQrBase64,
+                        individualCid
                 ));
             }
 
@@ -329,13 +358,14 @@ public class EmailService {
             ctx.setVariable("paymentMethod", paymentMethod);
             ctx.setVariable("paymentDate", paymentDate);
             ctx.setVariable("qrCodeBase64", qrCodeBase64);
+            ctx.setVariable("groupQrCid", groupQrCid);
             ctx.setVariable("requestSeparateTickets", separateTickets);
             ctx.setVariable("emailTickets", emailTickets);
 
             String htmlBody = templateEngine.process("emails/booking-confirmation", ctx);
             String subject = "Payment Confirmed - " + booking.getBookingReference();
 
-            sendHtml(customerEmail, subject, htmlBody);
+            sendHtml(customerEmail, subject, htmlBody, inlineImages);
             log.info("Payment confirmation + booking email sent to: {}", customerEmail);
         } catch (Exception e) {
             log.error("Failed to send payment confirmation email to {}: {}", customerEmail, e.getMessage());
@@ -350,13 +380,19 @@ public class EmailService {
         private boolean isSharedArea;
         private Integer sharedAreaNumber;
         private String qrCodeBase64;
+        private String cid;
 
-        public EmailTicketItem(String ticketCode, String seatLabel, boolean isSharedArea, Integer sharedAreaNumber, String qrCodeBase64) {
+        public EmailTicketItem(String ticketCode, String seatLabel, boolean isSharedArea, Integer sharedAreaNumber, String qrCodeBase64, String cid) {
             this.ticketCode = ticketCode;
             this.seatLabel = seatLabel;
             this.isSharedArea = isSharedArea;
             this.sharedAreaNumber = sharedAreaNumber;
             this.qrCodeBase64 = qrCodeBase64;
+            this.cid = cid;
+        }
+
+        public EmailTicketItem(String ticketCode, String seatLabel, boolean isSharedArea, Integer sharedAreaNumber, String qrCodeBase64) {
+            this(ticketCode, seatLabel, isSharedArea, sharedAreaNumber, qrCodeBase64, null);
         }
 
         public String getTicketCode() { return ticketCode; }
@@ -364,6 +400,7 @@ public class EmailService {
         public boolean isSharedArea() { return isSharedArea; }
         public Integer getSharedAreaNumber() { return sharedAreaNumber; }
         public String getQrCodeBase64() { return qrCodeBase64; }
+        public String getCid() { return cid; }
     }
 
     // ── Event Notifications ───────────────────────────────────────────────────
@@ -427,16 +464,21 @@ public class EmailService {
 
     // ── QR Code helper ────────────────────────────────────────────────────────
 
-    public String generateQrCodeBase64(String content) {
+    public byte[] generateQrCodeBytes(String content) {
         try {
             BitMatrix matrix = new MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, 280, 280);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             MatrixToImageWriter.writeToStream(matrix, "PNG", out);
-            return Base64.getEncoder().encodeToString(out.toByteArray());
+            return out.toByteArray();
         } catch (Exception e) {
             log.warn("QR code generation failed: {}", e.getMessage());
             return null;
         }
+    }
+
+    public String generateQrCodeBase64(String content) {
+        byte[] bytes = generateQrCodeBytes(content);
+        return bytes != null ? Base64.getEncoder().encodeToString(bytes) : null;
     }
 
     public void sendPasswordResetEmail(String customerEmail, String firstName, String resetLink) {
