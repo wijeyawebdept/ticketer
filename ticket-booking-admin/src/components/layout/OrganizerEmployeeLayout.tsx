@@ -139,6 +139,13 @@ const OrganizerEmployeeLayout: React.FC = () => {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    document.title = 'Ticketer - Employee Panel';
+    return () => {
+      document.title = 'Ticketer.lk - Book Your Tickets Online';
+    };
+  }, []);
+
   const handleDrawerToggle = () => {
     setOpen((prev) => {
       const next = !prev;

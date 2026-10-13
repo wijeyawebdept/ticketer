@@ -141,6 +141,13 @@ const OrganizerLayout: React.FC = () => {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    document.title = 'Ticketer - Organizer Panel';
+    return () => {
+      document.title = 'Ticketer.lk - Book Your Tickets Online';
+    };
+  }, []);
+
   const handleDrawerToggle = () => {
     setOpen((prev) => {
       const next = !prev;

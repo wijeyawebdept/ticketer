@@ -146,6 +146,13 @@ const AdminLayout: React.FC = () => {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    document.title = 'Ticketer - Admin Panel';
+    return () => {
+      document.title = 'Ticketer.lk - Book Your Tickets Online';
+    };
+  }, []);
+
   const handleDrawerToggle = () => {
     setOpen((prev) => {
       const next = !prev;
