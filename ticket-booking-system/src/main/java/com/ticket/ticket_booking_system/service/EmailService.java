@@ -5,15 +5,22 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
@@ -25,10 +32,6 @@ import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.TicketCategory;
-
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -52,19 +55,94 @@ public class EmailService {
     @Value("${app.backend.base-url:http://localhost:8081}")
     private String backendBaseUrl;
 
+    @Value("${app.mail.fallback.enabled:true}")
+    private boolean fallbackEnabled;
+
+    @Value("${app.mail.fallback.host:smtp.gmail.com}")
+    private String fallbackHost;
+
+    @Value("${app.mail.fallback.port:587}")
+    private int fallbackPort;
+
+    @Value("${app.mail.fallback.username:}")
+    private String fallbackUsername;
+
+    @Value("${app.mail.fallback.password:}")
+    private String fallbackPassword;
+
+    @Value("${app.mail.fallback.fromEmail:}")
+    private String fallbackFromEmail;
+
+    private JavaMailSender fallbackMailSender;
+
     public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
     }
 
+    @PostConstruct
+    public void initFallbackMailSender() {
+        if (fallbackEnabled && fallbackHost != null && !fallbackHost.isBlank() && fallbackUsername != null && !fallbackUsername.isBlank()) {
+            JavaMailSenderImpl sender = new JavaMailSenderImpl();
+            sender.setHost(fallbackHost);
+            sender.setPort(fallbackPort);
+            sender.setUsername(fallbackUsername);
+            String cleanPassword = (fallbackPassword != null) ? fallbackPassword.replace(" ", "") : "";
+            sender.setPassword(cleanPassword);
+
+            Properties props = sender.getJavaMailProperties();
+            props.put("mail.transport.protocol", "smtp");
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.connectiontimeout", "5000");
+            props.put("mail.smtp.timeout", "5000");
+            props.put("mail.smtp.writetimeout", "5000");
+
+            this.fallbackMailSender = sender;
+            log.info("EmailService: Fallback Gmail SMTP sender initialized successfully for {}", fallbackUsername);
+        }
+    }
+
     public void sendHtml(String toEmail, String subject, String htmlBody) throws MessagingException {
-        System.out.println("sendHtml called for: " + toEmail + " with subject: " + subject);
-        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            log.info("Attempting to send email to: {} via primary SMTP...", toEmail);
+            sendViaSender(this.mailSender, this.fromEmail, this.fromName, toEmail, subject, htmlBody);
+            log.info("Email sent successfully via primary SMTP to: {}", toEmail);
+        } catch (Exception primaryEx) {
+            log.warn("Primary SMTP failed to send email to {}: {}. Checking fallback...", toEmail, primaryEx.getMessage());
+            if (this.fallbackMailSender != null) {
+                try {
+                    log.info("Attempting fallback email sending to: {} via Gmail SMTP...", toEmail);
+                    String senderEmail = (this.fallbackFromEmail != null && !this.fallbackFromEmail.isBlank())
+                            ? this.fallbackFromEmail
+                            : this.fallbackUsername;
+                    sendViaSender(this.fallbackMailSender, senderEmail, this.fromName, toEmail, subject, htmlBody);
+                    log.info("Email sent successfully via fallback Gmail SMTP to: {}", toEmail);
+                    return;
+                } catch (Exception fallbackEx) {
+                    log.error("Both primary and fallback SMTP failed for recipient {}. Primary error: {}, Fallback error: {}",
+                            toEmail, primaryEx.getMessage(), fallbackEx.getMessage(), fallbackEx);
+                    if (fallbackEx instanceof MessagingException) {
+                        throw (MessagingException) fallbackEx;
+                    }
+                    throw new MessagingException("Primary and fallback SMTP both failed: " + fallbackEx.getMessage(), fallbackEx);
+                }
+            }
+            if (primaryEx instanceof MessagingException) {
+                throw (MessagingException) primaryEx;
+            }
+            throw new MessagingException("Primary SMTP failed: " + primaryEx.getMessage(), primaryEx);
+        }
+    }
+
+    private void sendViaSender(JavaMailSender sender, String from, String name, String toEmail, String subject, String htmlBody) throws MessagingException {
+        MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper =
                 new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
 
         try {
-            helper.setFrom(fromEmail, fromName);
+            helper.setFrom(from, name);
         } catch (java.io.UnsupportedEncodingException e) {
             throw new MessagingException("Invalid From name encoding", e);
         }
@@ -77,9 +155,7 @@ public class EmailService {
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
 
-        System.out.println("Actually sending email via mailSender...");
-        mailSender.send(message);
-        System.out.println("mailSender.send() completed.");
+        sender.send(message);
     }
 
     public void sendBookingConfirmationEmail(Booking booking, String customerEmail) {
