@@ -66,6 +66,10 @@ const SeatSelectionPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showBookingSummary, setShowBookingSummary] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [totalDiscount, setTotalDiscount] = useState(0);
+  const [discountInfoString, setDiscountInfoString] = useState<string | undefined>(undefined);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
   const [showCountdown, setShowCountdown] = useState<boolean>(false);
   const [countdownStatus, setCountdownStatus] = useState<'urgent' | 'warning' | 'normal' | 'expired'>('normal');
@@ -114,12 +118,30 @@ const SeatSelectionPage: React.FC = () => {
   const [sharedAreaSelections, setSharedAreaSelections] = useState<SharedAreaSelection[]>([]);
 
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const isRestoredRef = React.useRef(false);
+
+  const getOrCreateGuestId = (): string => {
+    let guestId = localStorage.getItem('ticketer_guest_user_id');
+    if (!guestId) {
+      guestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+      localStorage.setItem('ticketer_guest_user_id', guestId);
+    }
+    return guestId;
+  };
 
   const handleHoldExpired = useCallback(() => {
     setIsHolding(false);
     setSelectedSeats([]);
+    setPaymentModalOpen(false);
+    if (eventScheduleId) {
+      sessionStorage.removeItem(`ticketer_active_selection_${eventScheduleId}`);
+    }
     showMessage('error', 'Your seat hold has expired. Please select seats again.');
-  }, []);
+  }, [eventScheduleId]);
 
   const fetchEventDetails = useCallback(async (scheduleId: string) => {
     try {
@@ -221,13 +243,11 @@ const SeatSelectionPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showBookingSummary]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (selectedSeats.length > 0 || sharedAreaSelections.length > 0) {
+    if ((selectedSeats.length > 0 || sharedAreaSelections.length > 0) && !paymentModalOpen) {
       setIsCollapsed(false);
     }
-  }, [selectedSeats, sharedAreaSelections]);
+  }, [selectedSeats, sharedAreaSelections, paymentModalOpen]);
 
   useEffect(() => {
     if (holdTimer > 0) {
@@ -378,12 +398,6 @@ const SeatSelectionPage: React.FC = () => {
     });
   };
 
-
-  const [totalDiscount, setTotalDiscount] = useState(0);
-  const [discountInfoString, setDiscountInfoString] = useState<string | undefined>(undefined);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-
   const calculateTotalPrice = useCallback(async (seatIds: string[]) => {
     try {
       const response = await venueSeatService.getSeatAvailability(eventScheduleId!);
@@ -393,34 +407,92 @@ const SeatSelectionPage: React.FC = () => {
     }
   }, [eventScheduleId]);
 
-  // Restore seat booking & auto-open payment modal after login
+  // Restore seat booking on page refresh or after login redirect
   useEffect(() => {
+    if (!eventScheduleId || isRestoredRef.current) return;
+    isRestoredRef.current = true;
+
+    // 1. Check if returning from login modal redirect
     const pendingSeatBookingStr = sessionStorage.getItem('pendingSeatBooking');
     if (pendingSeatBookingStr && isAuthenticated()) {
-      const restoreSeatBooking = async () => {
-        try {
-          const pendingData = JSON.parse(pendingSeatBookingStr);
-          if (pendingData.eventScheduleId === eventScheduleId) {
-            if (pendingData.selectedSeats && pendingData.selectedSeats.length > 0) {
-              setSelectedSeats(pendingData.selectedSeats);
-              await calculateTotalPrice(pendingData.selectedSeats);
-            }
-            if (pendingData.sharedAreaSelections && pendingData.sharedAreaSelections.length > 0) {
-              setSharedAreaSelections(pendingData.sharedAreaSelections);
-            }
-            if (pendingData.autoOpenPaymentModal) {
-              setPaymentModalOpen(true);
-              setIsCollapsed(true);
-            }
-            sessionStorage.removeItem('pendingSeatBooking');
+      try {
+        const pendingData = JSON.parse(pendingSeatBookingStr);
+        if (pendingData.eventScheduleId === eventScheduleId) {
+          if (pendingData.selectedSeats && pendingData.selectedSeats.length > 0) {
+            setSelectedSeats(pendingData.selectedSeats);
+            calculateTotalPrice(pendingData.selectedSeats);
           }
-        } catch (error) {
+          if (pendingData.sharedAreaSelections && pendingData.sharedAreaSelections.length > 0) {
+            setSharedAreaSelections(pendingData.sharedAreaSelections);
+          }
+          if (pendingData.autoOpenPaymentModal) {
+            setPaymentModalOpen(true);
+            setIsCollapsed(true);
+          }
           sessionStorage.removeItem('pendingSeatBooking');
+          return;
         }
-      };
-      restoreSeatBooking();
+      } catch (error) {
+        sessionStorage.removeItem('pendingSeatBooking');
+      }
+    }
+
+    // 2. Otherwise restore from active session selection (e.g. browser refresh F5)
+    const savedActiveStr = sessionStorage.getItem(`ticketer_active_selection_${eventScheduleId}`);
+    if (savedActiveStr) {
+      try {
+        const saved = JSON.parse(savedActiveStr);
+        if (saved.eventScheduleId === eventScheduleId) {
+          let stillHolding = false;
+          let remainingTimer = 0;
+          if (saved.isHolding && saved.holdExpiresAt) {
+            const remainingSec = Math.floor((saved.holdExpiresAt - Date.now()) / 1000);
+            if (remainingSec > 0) {
+              stillHolding = true;
+              remainingTimer = remainingSec;
+            }
+          }
+
+          if (saved.selectedSeats && saved.selectedSeats.length > 0) {
+            setSelectedSeats(saved.selectedSeats);
+            calculateTotalPrice(saved.selectedSeats);
+          }
+          if (saved.sharedAreaSelections && saved.sharedAreaSelections.length > 0) {
+            setSharedAreaSelections(saved.sharedAreaSelections);
+          }
+          if (stillHolding) {
+            setIsHolding(true);
+            setHoldTimer(remainingTimer);
+          }
+          if (saved.paymentModalOpen) {
+            setPaymentModalOpen(true);
+            setIsCollapsed(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not restore active seat selection from session storage:', err);
+      }
     }
   }, [eventScheduleId, isAuthenticated, calculateTotalPrice]);
+
+  // Persist seat selection and checkout modal state to sessionStorage
+  useEffect(() => {
+    if (!eventScheduleId || !isRestoredRef.current) return;
+    if (selectedSeats.length > 0 || sharedAreaSelections.length > 0) {
+      const dataToSave = {
+        eventScheduleId,
+        selectedSeats,
+        sharedAreaSelections,
+        isHolding,
+        holdExpiresAt: isHolding && holdTimer > 0 ? Date.now() + holdTimer * 1000 : undefined,
+        paymentModalOpen,
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem(`ticketer_active_selection_${eventScheduleId}`, JSON.stringify(dataToSave));
+    } else {
+      sessionStorage.removeItem(`ticketer_active_selection_${eventScheduleId}`);
+    }
+  }, [eventScheduleId, selectedSeats, sharedAreaSelections, isHolding, holdTimer, paymentModalOpen]);
 
   useEffect(() => {
     let newTotal = 0;
@@ -510,7 +582,7 @@ const SeatSelectionPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const userId = user?.id || '00000000-0000-0000-0000-000000000000'; // from auth context or dummy guest uuid
+      const userId = user?.id || getOrCreateGuestId();
       const response = await venueSeatService.holdSeats({
         eventScheduleId: eventScheduleId!,
         seatIds: selectedSeats,
@@ -537,19 +609,42 @@ const SeatSelectionPage: React.FC = () => {
       setSelectedSeats([]);
       setIsHolding(false);
       setHoldTimer(0);
+      setPaymentModalOpen(false);
+      if (eventScheduleId) {
+        sessionStorage.removeItem(`ticketer_active_selection_${eventScheduleId}`);
+      }
       showMessage('success', 'Seats released');
     } catch {
       showMessage('error', 'Failed to release seats');
     }
   };
 
-  const handleProceedToPayment = () => {
+  const handleProceedToPayment = async () => {
     if (!isAuthenticated()) {
       setLoginModalOpen(true);
-    } else {
-      setPaymentModalOpen(true);
-      setIsCollapsed(true);
+      return;
     }
+
+    // Auto-hold selected seats if not already held so backend locks them while user is on checkout modal
+    if (selectedSeats.length > 0 && !isHolding) {
+      try {
+        const userId = user?.id || getOrCreateGuestId();
+        const response = await venueSeatService.holdSeats({
+          eventScheduleId: eventScheduleId!,
+          seatIds: selectedSeats,
+          userId,
+        });
+        if (response.success) {
+          setIsHolding(true);
+          setHoldTimer(response.expiresIn || 300);
+        }
+      } catch (err) {
+        console.warn('Auto-hold on checkout open:', err);
+      }
+    }
+
+    setPaymentModalOpen(true);
+    setIsCollapsed(true);
   };
   const handleClosePaymentModal = () => setPaymentModalOpen(false);
 
@@ -616,6 +711,10 @@ const SeatSelectionPage: React.FC = () => {
       await paymentService.loadMPGSScript(sessionResponse.checkoutScriptUrl);
 
       setPaymentModalOpen(false);
+      if (eventScheduleId) {
+        sessionStorage.removeItem(`ticketer_active_selection_${eventScheduleId}`);
+      }
+      sessionStorage.removeItem('ticketer_checkout_customer_info');
       paymentService.startCheckout(sessionResponse);
 
     } catch (error: any) {
@@ -907,7 +1006,7 @@ const SeatSelectionPage: React.FC = () => {
         />
       </div>
 
-      {showBookingSummary && (selectedSeats.length > 0 || sharedAreaSelections.length > 0) && (
+      {!paymentModalOpen && showBookingSummary && (selectedSeats.length > 0 || sharedAreaSelections.length > 0) && (
         <>
           {isCollapsed && (
             <button 

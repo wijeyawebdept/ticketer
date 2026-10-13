@@ -228,36 +228,60 @@
   stroke-width: 2;
 }
 
-/* Hover tooltip */
+/* Hover tooltip - Compact Dynamic Floating Card */
 .seat-tooltip {
-  position: fixed;
-  top: 50%;
-  right: 20px;
-  transform: translateY(-50%);
-  background: rgba(22, 27, 34, 0.95);
+  position: absolute;
+  background: rgba(18, 22, 28, 0.96);
   color: white;
-  padding: 14px 18px;
-  border-radius: 12px;
-  font-size: 13px;
-  z-index: 1000;
-  min-width: 240px;
-  border: 1px solid rgba(255, 25, 85, 0.35);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  z-index: 100;
+  min-width: unset;
+  max-width: 250px;
+  border: 1px solid rgba(255, 25, 85, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  transition: opacity 0.1s ease-out;
+}
+
+/* Downward arrow pointing to seat */
+.seat-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: rgba(18, 22, 28, 0.96) transparent transparent transparent;
+}
+
+/* Upward arrow if flipped below seat */
+.seat-tooltip.flipped::after {
+  top: auto;
+  bottom: 100%;
+  border-width: 0 5px 5px 5px;
+  border-color: transparent transparent rgba(18, 22, 28, 0.96) transparent;
 }
 
 .seat-tooltip-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 3px;
+  white-space: nowrap;
 }
 
 .seat-tooltip-header strong {
-  font-size: 16px;
+  font-size: 12.5px;
+  font-weight: 700;
   color: #fcd0a5;
   margin-bottom: 0;
   border-bottom: none;
@@ -267,60 +291,61 @@
 .seat-tooltip-price {
   font-weight: 700;
   color: #ff1955;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .seat-tooltip-status {
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
   text-transform: uppercase;
   background: rgba(255, 255, 255, 0.1);
   color: #ddd;
+  letter-spacing: 0.3px;
 }
 
 .seat-tooltip-status.available {
-  background: rgba(46, 125, 50, 0.2);
+  background: rgba(46, 125, 50, 0.25);
   color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.4);
+  border: 1px solid rgba(76, 175, 80, 0.45);
 }
 
 .seat-tooltip-status.unavailable {
-  background: rgba(239, 83, 80, 0.2);
+  background: rgba(239, 83, 80, 0.25);
   color: #ef5350;
-  border: 1px solid rgba(239, 83, 80, 0.4);
+  border: 1px solid rgba(239, 83, 80, 0.45);
 }
 
 .seat-tooltip-status.booked {
-  background: rgba(244, 67, 54, 0.2);
+  background: rgba(244, 67, 54, 0.25);
   color: #f44336;
-  border: 1px solid rgba(244, 67, 54, 0.4);
+  border: 1px solid rgba(244, 67, 54, 0.45);
 }
 
 .seat-tooltip-status.locked {
-  background: rgba(108, 117, 125, 0.2);
-  color: #6c757d;
-  border: 1px solid rgba(108, 117, 125, 0.4);
+  background: rgba(108, 117, 125, 0.25);
+  color: #94a3b8;
+  border: 1px solid rgba(108, 117, 125, 0.45);
 }
 
 .seat-tooltip-status.temporarily-held {
   background: rgba(255, 215, 0, 0.2);
   color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.4);
+  border: 1px solid rgba(255, 215, 0, 0.45);
 }
 
 .seat-tooltip-close {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
   cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 1px 3px;
+  border-radius: 3px;
   line-height: 1;
   transition: all 0.2s ease;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .seat-tooltip-close:hover {
@@ -330,10 +355,25 @@
 
 .seat-tooltip-details {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 12px;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.seat-tooltip-details strong {
+  color: #f1f5f9;
+}
+
+.seat-tooltip-divider {
+  opacity: 0.4;
+  font-size: 9px;
+}
+
+.seat-tooltip-cat {
+  color: #cbd5e1;
+  font-weight: 500;
 }
 
 .venue-loading {

@@ -161,3 +161,174 @@ iframe[src*="cbcmpgs"],
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   Compact & Sleek Toast Notifications (react-toastify)
+   ========================================================================== */
+.Toastify__toast-container {
+  width: auto !important;
+  max-width: 330px !important;
+  padding: 6px !important;
+  z-index: 999999 !important;
+}
+
+.Toastify__toast-container--top-right {
+  top: 14px !important;
+  right: 16px !important;
+}
+
+.Toastify__toast-container--top-left {
+  top: 14px !important;
+  left: 16px !important;
+}
+
+.Toastify__toast-container--bottom-right {
+  bottom: 14px !important;
+  right: 16px !important;
+}
+
+.Toastify__toast-container--bottom-left {
+  bottom: 14px !important;
+  left: 16px !important;
+}
+
+.Toastify__toast-container--top-center {
+  top: 14px !important;
+}
+
+.Toastify__toast-container--bottom-center {
+  bottom: 14px !important;
+}
+
+.Toastify__toast {
+  min-height: 36px !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  margin-bottom: 6px !important;
+  font-family: inherit !important;
+  letter-spacing: 0.15px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Success theme */
+.Toastify__toast-theme--colored.Toastify__toast--success,
+.Toastify__toast--success {
+  background: #15803d !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(74, 222, 128, 0.35) !important;
+}
+
+/* Error theme */
+.Toastify__toast-theme--colored.Toastify__toast--error,
+.Toastify__toast--error {
+  background: #b91c1c !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(248, 113, 113, 0.35) !important;
+}
+
+/* Warning theme */
+.Toastify__toast-theme--colored.Toastify__toast--warning,
+.Toastify__toast--warning {
+  background: #b45309 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(251, 191, 36, 0.35) !important;
+}
+
+/* Info theme */
+.Toastify__toast-theme--colored.Toastify__toast--info,
+.Toastify__toast--info {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(96, 165, 250, 0.35) !important;
+}
+
+/* Default / Dark theme */
+.Toastify__toast-theme--colored.Toastify__toast--default,
+.Toastify__toast--default,
+.Toastify__toast-theme--dark {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.Toastify__toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.Toastify__toast-icon {
+  width: 16px !important;
+  height: 16px !important;
+  margin-inline-end: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.Toastify__toast-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.Toastify__spinner {
+  width: 16px !important;
+  height: 16px !important;
+  margin-inline-end: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.Toastify__close-button {
+  width: 14px !important;
+  height: 14px !important;
+  align-self: center !important;
+  font-size: 11px !important;
+  opacity: 0.65 !important;
+  padding: 0 !important;
+  margin-left: 8px !important;
+  line-height: 1 !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+}
+
+.Toastify__close-button > svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.Toastify__progress-bar {
+  height: 2px !important;
+}
+
+/* ==========================================================================
+   Compact MUI Alerts
+   ========================================================================== */
+.MuiAlert-root {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+
+.MuiAlert-icon {
+  font-size: 18px !important;
+  margin-right: 8px !important;
+  padding: 2px 0 !important;
+}
+
+.MuiAlert-message {
+  padding: 2px 0 !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+.MuiAlert-action {
+  padding-left: 8px !important;
+  margin-right: -4px !important;
+}

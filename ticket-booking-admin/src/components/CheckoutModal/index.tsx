@@ -177,17 +177,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       try {
         const profile = await profileService.getProfile() as any;
         if (profile) {
-          setCustomerInfo({
-            firstName: profile.firstName || '',
-            lastName: profile.lastName || '',
-            nic: profile.nic || '',
-            phone: profile.phoneNumber || '',
-            email: profile.email || '',
-          });
+          setCustomerInfo(prev => ({
+            firstName: prev.firstName || profile.firstName || '',
+            lastName: prev.lastName || profile.lastName || '',
+            nic: prev.nic || profile.nic || '',
+            phone: prev.phone || profile.phoneNumber || '',
+            email: prev.email || profile.email || '',
+          }));
         }
       } catch (err) {
         // Ignored, fallback is already in place
       }
+
+      // Check if there is cached customer info in sessionStorage (e.g. from page reload)
+      try {
+        const cached = sessionStorage.getItem('ticketer_checkout_customer_info');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setCustomerInfo(prev => ({
+            firstName: prev.firstName || parsed.firstName || '',
+            lastName: prev.lastName || parsed.lastName || '',
+            nic: prev.nic || parsed.nic || '',
+            phone: prev.phone || parsed.phone || '',
+            email: prev.email || parsed.email || '',
+          }));
+        }
+      } catch {}
     };
 
     if (isOpen) {
@@ -199,6 +214,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       loadProfileData();
     }
   }, [isOpen]);
+
+  // Persist customer info to sessionStorage
+  useEffect(() => {
+    if (customerInfo.firstName || customerInfo.lastName || customerInfo.nic || customerInfo.phone || customerInfo.email) {
+      sessionStorage.setItem('ticketer_checkout_customer_info', JSON.stringify(customerInfo));
+    }
+  }, [customerInfo]);
 
   const handleCustomerInfoChange = (field: keyof typeof customerInfo, value: string) => {
     if (field === 'nic') {

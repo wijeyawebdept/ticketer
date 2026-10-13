@@ -209,6 +209,38 @@ const theme = createTheme({
         },
       },
     },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          padding: '6px 12px',
+          fontSize: '0.8rem',
+          borderRadius: 8,
+          alignItems: 'center',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+        },
+        icon: {
+          fontSize: '18px',
+          marginRight: 8,
+          padding: 0,
+        },
+        message: {
+          padding: 0,
+          fontSize: '0.8rem',
+          lineHeight: 1.35,
+        },
+        action: {
+          paddingLeft: 8,
+          marginRight: -4,
+        },
+      },
+    },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          maxWidth: 340,
+        },
+      },
+    },
   },
 });
 

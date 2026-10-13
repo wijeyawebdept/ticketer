@@ -157,6 +157,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   const [seatStatuses, setSeatStatuses] = useState<Map<string, SeatStatus>>(new Map());
   const [localSelectedSeats, setLocalSelectedSeats] = useState<Set<string>>(new Set(selectedSeats));
   const [hoveredSeat, setHoveredSeat] = useState<VenueSeatData | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; isFlipped?: boolean } | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(true);
@@ -175,6 +176,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [customerFacingTotal, setCustomerFacingTotal] = useState(0);
   const [showControls, setShowControls] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
@@ -404,6 +406,21 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
       const seatId = target.getAttribute('data-seat-id');
       const seat = venueSeats.find(s => s.seatId === seatId);
       if (seat) {
+        const circleRect = target.getBoundingClientRect();
+        const containerRect = containerRef.current?.getBoundingClientRect();
+        if (containerRect) {
+          const rawCenterX = circleRect.left + circleRect.width / 2 - containerRect.left;
+          const containerWidth = containerRect.width;
+          const clampedX = Math.max(105, Math.min(containerWidth - 105, rawCenterX));
+          const topY = circleRect.top - containerRect.top;
+          const isFlipped = topY < 65;
+          setTooltipPos({
+            x: clampedX,
+            y: isFlipped ? circleRect.bottom - containerRect.top + 8 : topY - 8,
+            isFlipped,
+          });
+        }
+        setHoveredSeat(seat);
         handleSeatClick(seat, e);
       }
     }
@@ -413,6 +430,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     if (isPanning.current) {
       handleMouseMove(e);
       setHoveredSeat(null);
+      setTooltipPos(null);
       return;
     }
 
@@ -420,9 +438,26 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     if (target.tagName === 'circle' && target.hasAttribute('data-seat-id')) {
       const seatId = target.getAttribute('data-seat-id');
       const seat = venueSeats.find(s => s.seatId === seatId);
-      setHoveredSeat(seat || null);
+      if (seat) {
+        const circleRect = target.getBoundingClientRect();
+        const containerRect = containerRef.current?.getBoundingClientRect();
+        if (containerRect) {
+          const rawCenterX = circleRect.left + circleRect.width / 2 - containerRect.left;
+          const containerWidth = containerRect.width;
+          const clampedX = Math.max(105, Math.min(containerWidth - 105, rawCenterX));
+          const topY = circleRect.top - containerRect.top;
+          const isFlipped = topY < 65;
+          setTooltipPos({
+            x: clampedX,
+            y: isFlipped ? circleRect.bottom - containerRect.top + 8 : topY - 8,
+            isFlipped,
+          });
+        }
+        setHoveredSeat(seat);
+      }
     } else {
       setHoveredSeat(null);
+      setTooltipPos(null);
     }
   }, [venueSeats, handleMouseMove]);
 
@@ -459,19 +494,45 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
   }, [seatStatuses, localSelectedSeats, venueId]);
 
   // Zoom handlers
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 3));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  const handleZoomIn = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+  };
+  const handleZoomOut = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
   const handleResetView = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
   };
 
   // Directional pan button handlers (step pan)
   const PAN_STEP = 80;
-  const handlePanLeft = () => setPanOffset(prev => ({ x: prev.x + PAN_STEP, y: prev.y }));
-  const handlePanRight = () => setPanOffset(prev => ({ x: prev.x - PAN_STEP, y: prev.y }));
-  const handlePanUp = () => setPanOffset(prev => ({ x: prev.x, y: prev.y + PAN_STEP }));
-  const handlePanDown = () => setPanOffset(prev => ({ x: prev.x, y: prev.y - PAN_STEP }));
+  const handlePanLeft = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setPanOffset(prev => ({ x: prev.x + PAN_STEP, y: prev.y }));
+  };
+  const handlePanRight = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setPanOffset(prev => ({ x: prev.x - PAN_STEP, y: prev.y }));
+  };
+  const handlePanUp = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setPanOffset(prev => ({ x: prev.x, y: prev.y + PAN_STEP }));
+  };
+  const handlePanDown = () => {
+    setHoveredSeat(null);
+    setTooltipPos(null);
+    setPanOffset(prev => ({ x: prev.x, y: prev.y - PAN_STEP }));
+  };
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -480,6 +541,8 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     if (target.tagName === 'circle') {
       return;
     }
+    setHoveredSeat(null);
+    setTooltipPos(null);
     e.preventDefault();
     isPanning.current = true;
     lastPanPosition.current = { x: e.clientX, y: e.clientY };
@@ -582,7 +645,7 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
     <div className="venue-map-section">
       <div className="venue-map-row">
         {/* Dark map box – controls are overlaid neatly inside */}
-        <div className="venue-seat-map-container">
+        <div className="venue-seat-map-container" ref={containerRef}>
           {/* Overlaid Controls inside map box */}
           {!loading && (
             <div className="venue-controls-col">
@@ -687,7 +750,11 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleSVGMouseMove}
                     onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
+                    onMouseLeave={() => {
+                      handleMouseUp();
+                      setHoveredSeat(null);
+                      setTooltipPos(null);
+                    }}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -941,6 +1008,47 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
               })()}
             </div>
           )}
+
+          {/* Hover tooltip - Floating dynamically above seat */}
+          {!loading && hoveredSeat && tooltipPos && (() => {
+            const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
+            if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
+
+            let statusText: string = hoveredStatus || 'AVAILABLE';
+            if (isSalesClosed && (statusText === 'AVAILABLE' || !hoveredStatus)) {
+              statusText = 'UNAVAILABLE';
+            } else if (statusText === 'HELD' || (selectedSeats && selectedSeats.includes(hoveredSeat.seatId))) {
+              statusText = 'TEMPORARILY HELD';
+            }
+
+            return (
+              <div
+                className={`seat-tooltip ${tooltipPos.isFlipped ? 'flipped' : ''}`}
+                style={{
+                  left: `${tooltipPos.x}px`,
+                  top: `${tooltipPos.y}px`,
+                  transform: tooltipPos.isFlipped ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+                }}
+              >
+                <div className="seat-tooltip-header">
+                  <strong>{hoveredSeat.seatId}</strong>
+                  {getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)) > 0 && (
+                    <span className="seat-tooltip-price">
+                      {formatCurrency(getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)))}
+                    </span>
+                  )}
+                  <span className={`seat-tooltip-status ${statusText.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {statusText}
+                  </span>
+                </div>
+                <div className="seat-tooltip-details">
+                  <span>{hoveredSeat.section ? `${hoveredSeat.section} • ` : ''}Row <strong>{hoveredSeat.rowLabel}</strong>, Seat <strong>{hoveredSeat.seatNumber}</strong></span>
+                  <span className="seat-tooltip-divider">•</span>
+                  <span className="seat-tooltip-cat">{hoveredSeat.categoryName}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div> {/* end venue-map-row */}
 
@@ -984,50 +1092,6 @@ export const VenueSeatMap: React.FC<VenueSeatMapProps> = ({
           </div>
         </div>
       )}
-
-      {/* Hover tooltip */}
-      {!loading && hoveredSeat && (() => {
-        const hoveredStatus = seatStatuses.get(hoveredSeat.seatId)?.status;
-        if (hoveredStatus === 'LOCKED' && !isRestrictedUser()) return null;
-
-        let statusText: string = hoveredStatus || 'AVAILABLE';
-        if (isSalesClosed && (statusText === 'AVAILABLE' || !hoveredStatus)) {
-          statusText = 'UNAVAILABLE';
-        } else if (statusText === 'HELD' || (selectedSeats && selectedSeats.includes(hoveredSeat.seatId))) {
-          statusText = 'TEMPORARILY HELD';
-        }
-
-        return (
-          <div className="seat-tooltip">
-            <div className="seat-tooltip-header">
-              <strong>{hoveredSeat.seatId}</strong>
-              {getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)) > 0 && (
-                <span className="seat-tooltip-price">
-                  {formatCurrency(getDisplayPrice(seatStatuses.get(hoveredSeat.seatId)))}
-                </span>
-              )}
-              <span className={`seat-tooltip-status ${statusText.toLowerCase().replace(/\s+/g, '-')}`}>
-                {statusText}
-              </span>
-              <button
-                className="seat-tooltip-close"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHoveredSeat(null);
-                }}
-                title="Close tooltip"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="seat-tooltip-details">
-              <span>{t('sectionLabel', 'Section:')} <strong>{hoveredSeat.section}</strong></span>
-              <span>{t('rowLabelText', 'Row:')} <strong>{hoveredSeat.rowLabel}</strong>, {t('seatLabel', 'Seat:')} <strong>{hoveredSeat.seatNumber}</strong></span>
-              <span>{t('categoryLabel', 'Cat:')} <strong>{hoveredSeat.categoryName}</strong></span>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Dynamic Shared Area Dialog */}
       <Dialog
