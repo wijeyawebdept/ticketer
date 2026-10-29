@@ -18,6 +18,11 @@ public interface EventEmployeeAssignmentRepository extends JpaRepository<EventEm
     
     // Find all assignments for a specific employee
     List<EventEmployeeAssignment> findByEmployee_EmployeeIdAndIsActiveTrue(UUID employeeId);
+
+    @Query("SELECT ea FROM EventEmployeeAssignment ea " +
+           "WHERE ea.employee.employeeId = :employeeId " +
+           "AND (ea.isActive = true OR ea.isActive IS NULL)")
+    List<EventEmployeeAssignment> findActiveByEmployeeId(@Param("employeeId") UUID employeeId);
     
     // Find all assignments by organizer
     List<EventEmployeeAssignment> findByAssignedBy_OrganizerIdAndIsActiveTrue(UUID organizerId);
