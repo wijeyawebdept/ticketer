@@ -20,7 +20,6 @@ Dedicated Login: (https://ticketer.hitad.lk/login/tkemp)
 Dedicated Gate Login: (https://ticketer.hitad.lk/login/gate)
 
 ### 6. Customer / Public Portal:
-Homepage & Events: https://ticketer.hitad.lk/
 Customer Login: https://ticketer.hitad.lk/login
 
 
