@@ -159,7 +159,7 @@ public class AdminGateStaffAssignmentController {
             return true;
         }
         return userRepository.findById(a.getAssignedById())
-                .map(u -> u.getRole() == com.ticket.ticket_booking_system.entity.Role.ADMIN || u.getRole() == com.ticket.ticket_booking_system.entity.Role.SUPER_ADMIN)
+                .map(u -> u.getRole() == User.Role.ADMIN || u.getRole() == User.Role.SUPER_ADMIN)
                 .orElse(false);
     }
 

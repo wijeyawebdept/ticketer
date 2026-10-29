@@ -1,7 +1,7 @@
 package com.ticket.ticket_booking_system.service;
 
-import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;

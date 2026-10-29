@@ -20,6 +20,7 @@ import com.ticket.ticket_booking_system.entity.Event;
 import com.ticket.ticket_booking_system.entity.EventSchedule;
 import com.ticket.ticket_booking_system.entity.GateStaff;
 import com.ticket.ticket_booking_system.entity.GateStaffAssignment;
+import com.ticket.ticket_booking_system.entity.User;
 import com.ticket.ticket_booking_system.exception.ResourceNotFoundException;
 import com.ticket.ticket_booking_system.repository.EventRepository;
 import com.ticket.ticket_booking_system.repository.EventScheduleRepository;
@@ -304,7 +305,7 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                         if (userOpt.isPresent()) {
                             var u = userOpt.get();
                             assignedByName = (u.getFirstName() + " " + u.getLastName()).trim();
-                            isAssignedByAdmin = u.getRole() == com.ticket.ticket_booking_system.entity.Role.ADMIN || u.getRole() == com.ticket.ticket_booking_system.entity.Role.SUPER_ADMIN;
+                            isAssignedByAdmin = u.getRole() == User.Role.ADMIN || u.getRole() == User.Role.SUPER_ADMIN;
                         }
                     }
                 }
