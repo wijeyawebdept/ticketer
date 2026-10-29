@@ -14,7 +14,11 @@ public interface GateStaffService {
 
     List<GateStaffDTO> getAllGateStaff();
 
+    List<GateStaffDTO> getGateStaffByEventIds(java.util.Collection<UUID> eventIds);
+
     Page<GateStaffDTO> getGateStaffPage(Pageable pageable, String search, Integer active);
+
+    Page<GateStaffDTO> getGateStaffPageByEventIds(java.util.Collection<UUID> eventIds, Pageable pageable, String search, Integer active);
 
     GateStaffDTO getGateStaffById(UUID id);
 

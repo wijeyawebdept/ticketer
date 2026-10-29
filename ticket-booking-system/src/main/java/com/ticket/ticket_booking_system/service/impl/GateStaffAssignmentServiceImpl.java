@@ -62,6 +62,18 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
 
     @Override
     @Transactional(readOnly = true)
+    public List<GateStaffAssignmentDTO> getAssignmentsByEventIds(java.util.Collection<UUID> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return assignmentRepository.findByEventIds(eventIds)
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<GateStaffAssignmentDTO> getAssignmentsBySchedule(UUID scheduleId) {
         return assignmentRepository.findByScheduleId(scheduleId)
                 .stream()

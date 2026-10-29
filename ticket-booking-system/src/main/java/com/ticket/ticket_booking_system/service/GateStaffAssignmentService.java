@@ -1,5 +1,6 @@
 package com.ticket.ticket_booking_system.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ public interface GateStaffAssignmentService {
     List<GateStaffAssignmentDTO> getAllActiveAssignments();
 
     List<GateStaffAssignmentDTO> getAssignmentsByEvent(UUID eventId);
+
+    List<GateStaffAssignmentDTO> getAssignmentsByEventIds(Collection<UUID> eventIds);
 
     List<GateStaffAssignmentDTO> getAssignmentsBySchedule(UUID scheduleId);
 

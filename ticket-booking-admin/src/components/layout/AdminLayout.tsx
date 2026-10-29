@@ -184,9 +184,7 @@ const AdminLayout: React.FC = () => {
   };
 
   const handleMenuItemClick = () => {
-    if (isMobile) {
-      setOpen(false);
-    }
+    setOpen(false);
   };
 
   const menuItems = [

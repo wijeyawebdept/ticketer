@@ -1,8 +1,11 @@
 package com.ticket.ticket_booking_system.controller.admin;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +26,13 @@ import com.ticket.ticket_booking_system.dto.AssignGateStaffRequest;
 import com.ticket.ticket_booking_system.dto.GateStaffAssignmentDTO;
 import com.ticket.ticket_booking_system.dto.UpdateGateStaffAssignmentRequest;
 import com.ticket.ticket_booking_system.entity.Admin;
+import com.ticket.ticket_booking_system.entity.GateStaffAssignment;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.GateStaffAssignmentRepository;
 import com.ticket.ticket_booking_system.service.GateStaffAssignmentService;
+import com.ticket.ticket_booking_system.service.SecurityEventScopeService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,21 +45,53 @@ import lombok.RequiredArgsConstructor;
 public class AdminGateStaffAssignmentController {
 
     private final GateStaffAssignmentService assignmentService;
+    private final SecurityEventScopeService securityEventScopeService;
+    private final GateStaffAssignmentRepository assignmentRepository;
 
     @GetMapping
     public ResponseEntity<List<GateStaffAssignmentDTO>> getAssignments(
             @RequestParam(required = false) UUID eventId,
             @RequestParam(required = false) UUID scheduleId,
-            @RequestParam(required = false) UUID staffUserId) {
-        if (scheduleId != null) {
-            return ResponseEntity.ok(assignmentService.getAssignmentsBySchedule(scheduleId));
+            @RequestParam(required = false) UUID staffUserId,
+            Authentication authentication) {
+
+        Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
+
+        if (associatedEventIds != null && associatedEventIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
         }
+
+        if (scheduleId != null) {
+            List<GateStaffAssignmentDTO> list = assignmentService.getAssignmentsBySchedule(scheduleId);
+            if (associatedEventIds != null) {
+                list = list.stream()
+                        .filter(a -> a.getEventId() != null && associatedEventIds.contains(a.getEventId()))
+                        .collect(Collectors.toList());
+            }
+            return ResponseEntity.ok(list);
+        }
+
         if (eventId != null) {
+            if (associatedEventIds != null && !associatedEventIds.contains(eventId)) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
             return ResponseEntity.ok(assignmentService.getAssignmentsByEvent(eventId));
         }
+
         if (staffUserId != null) {
-            return ResponseEntity.ok(assignmentService.getAssignmentsByStaff(staffUserId));
+            List<GateStaffAssignmentDTO> list = assignmentService.getAssignmentsByStaff(staffUserId);
+            if (associatedEventIds != null) {
+                list = list.stream()
+                        .filter(a -> a.getEventId() != null && associatedEventIds.contains(a.getEventId()))
+                        .collect(Collectors.toList());
+            }
+            return ResponseEntity.ok(list);
         }
+
+        if (associatedEventIds != null) {
+            return ResponseEntity.ok(assignmentService.getAssignmentsByEventIds(associatedEventIds));
+        }
+
         return ResponseEntity.ok(assignmentService.getAllActiveAssignments());
     }
 
@@ -61,6 +99,11 @@ public class AdminGateStaffAssignmentController {
     public ResponseEntity<List<GateStaffAssignmentDTO>> assignGateStaff(
             @Valid @RequestBody AssignGateStaffRequest request,
             Authentication authentication) {
+        Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
+        if (associatedEventIds != null && (request.getEventId() == null || !associatedEventIds.contains(request.getEventId()))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         UUID assignedById = extractUserId(authentication);
         List<GateStaffAssignmentDTO> created = assignmentService.assignGateStaff(request, assignedById);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
@@ -69,13 +112,32 @@ public class AdminGateStaffAssignmentController {
     @PutMapping("/{id}")
     public ResponseEntity<GateStaffAssignmentDTO> updateAssignment(
             @PathVariable UUID id,
-            @RequestBody UpdateGateStaffAssignmentRequest request) {
+            @RequestBody UpdateGateStaffAssignmentRequest request,
+            Authentication authentication) {
+        Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
+        if (associatedEventIds != null) {
+            GateStaffAssignment existing = assignmentRepository.findById(id).orElse(null);
+            if (existing == null || existing.getEvent() == null || !associatedEventIds.contains(existing.getEvent().getEventId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
         GateStaffAssignmentDTO updated = assignmentService.updateAssignment(id, request);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> removeAssignment(@PathVariable UUID id) {
+    public ResponseEntity<Map<String, Object>> removeAssignment(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
+        if (associatedEventIds != null) {
+            GateStaffAssignment existing = assignmentRepository.findById(id).orElse(null);
+            if (existing == null || existing.getEvent() == null || !associatedEventIds.contains(existing.getEvent().getEventId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
         assignmentService.removeAssignment(id);
         return ResponseEntity.ok(Map.of("success", true, "message", "Assignment removed successfully"));
     }

@@ -58,9 +58,58 @@ public class GateStaffServiceImpl implements GateStaffService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<GateStaffDTO> getGateStaffByEventIds(java.util.Collection<UUID> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        List<GateStaff> staffList = assignmentRepository.findDistinctActiveGateStaffByEventIds(eventIds);
+        return staffList.stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<GateStaffDTO> getGateStaffPage(Pageable pageable, String search, Integer active) {
         Specification<GateStaff> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (active != null) {
+                predicates.add(cb.equal(root.get("active"), active));
+            } else {
+                // Exclude soft deleted (-1) by default
+                predicates.add(cb.notEqual(root.get("active"), -1));
+            }
+
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = "%" + search.trim().toLowerCase() + "%";
+                Predicate firstNamePred = cb.like(cb.lower(root.get("firstName")), searchLower);
+                Predicate lastNamePred = cb.like(cb.lower(root.get("lastName")), searchLower);
+                Predicate emailPred = cb.like(cb.lower(root.get("email")), searchLower);
+                Predicate phonePred = cb.like(cb.lower(root.get("phoneNumber")), searchLower);
+                predicates.add(cb.or(firstNamePred, lastNamePred, emailPred, phonePred));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<GateStaff> page = gateStaffRepository.findAll(spec, pageable);
+        List<GateStaffDTO> dtos = page.getContent().stream().map(this::mapToDTO).collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, page.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<GateStaffDTO> getGateStaffPageByEventIds(java.util.Collection<UUID> eventIds, Pageable pageable, String search, Integer active) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return new PageImpl<>(java.util.Collections.emptyList(), pageable, 0);
+        }
+        List<UUID> staffIds = assignmentRepository.findDistinctGateStaffIdsByEventIds(eventIds);
+        if (staffIds == null || staffIds.isEmpty()) {
+            return new PageImpl<>(java.util.Collections.emptyList(), pageable, 0);
+        }
+
+        Specification<GateStaff> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("gateStaffId").in(staffIds));
 
             if (active != null) {
                 predicates.add(cb.equal(root.get("active"), active));
