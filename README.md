@@ -33,7 +33,3 @@ Base Domain: `https://ticketer.hitad.lk`
 
 ---
 
-## Project Structure
-
-* **`ticket-booking-system/`**: Backend Spring Boot REST API service.
-* **`ticket-booking-admin/`**: Frontend React web application for Admin, Organizer, Organizer Employee, Gate Staff, and Customer ticketing.
