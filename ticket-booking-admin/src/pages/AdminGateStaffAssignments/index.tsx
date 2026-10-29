@@ -54,6 +54,11 @@ export const AdminGateStaffAssignments: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' ||
+                  user?.role === 'SUPER_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
+
   // Filter
   const [filterEventId, setFilterEventId] = useState<string>('');
 
@@ -529,38 +534,66 @@ export const AdminGateStaffAssignments: React.FC = () => {
                     </TableCell>
 
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                      <Tooltip title="Edit Assignment">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleOpenEdit(assignment)}
-                          sx={{
-                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(25, 118, 210, 0.2)',
-                            },
-                            mr: 0.5,
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {(() => {
+                        const isByAdmin = assignment.isAssignedByAdmin ||
+                                          assignment.assignedByName === 'System Admin' ||
+                                          assignment.assignedByName?.toLowerCase().includes('admin');
+                        if (!isAdmin && isByAdmin) {
+                          return (
+                            <Tooltip title="Assigned by Administrator - Read Only">
+                              <Chip
+                                label="Admin Assigned"
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: 600,
+                                  fontSize: '0.72rem',
+                                  height: 24,
+                                  color: 'text.secondary',
+                                  borderColor: 'rgba(0, 0, 0, 0.2)',
+                                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                }}
+                              />
+                            </Tooltip>
+                          );
+                        }
+                        return (
+                          <>
+                            <Tooltip title="Edit Assignment">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleOpenEdit(assignment)}
+                                sx={{
+                                  backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                                  },
+                                  mr: 0.5,
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
 
-                      <Tooltip title="Remove Assignment">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setDeleteConfirmId(assignment.assignmentId)}
-                          sx={{
-                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(211, 47, 47, 0.2)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                            <Tooltip title="Remove Assignment">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setDeleteConfirmId(assignment.assignmentId)}
+                                sx={{
+                                  backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))

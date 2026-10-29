@@ -541,6 +541,7 @@ export interface GateStaffAssignment {
   isAllSchedules: boolean;
   assignedById?: string;
   assignedByName?: string;
+  isAssignedByAdmin?: boolean;
   assignedAt: string;
   gateName?: string;
   notes?: string;

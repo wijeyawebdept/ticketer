@@ -47,6 +47,8 @@ public class AdminGateStaffAssignmentController {
     private final GateStaffAssignmentService assignmentService;
     private final SecurityEventScopeService securityEventScopeService;
     private final GateStaffAssignmentRepository assignmentRepository;
+    private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepository;
+    private final com.ticket.ticket_booking_system.repository.UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<GateStaffAssignmentDTO>> getAssignments(
@@ -120,6 +122,9 @@ public class AdminGateStaffAssignmentController {
             if (existing == null || existing.getEvent() == null || !associatedEventIds.contains(existing.getEvent().getEventId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
+            if (isAssignedByAdmin(existing)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
         }
 
         GateStaffAssignmentDTO updated = assignmentService.updateAssignment(id, request);
@@ -136,10 +141,26 @@ public class AdminGateStaffAssignmentController {
             if (existing == null || existing.getEvent() == null || !associatedEventIds.contains(existing.getEvent().getEventId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
+            if (isAssignedByAdmin(existing)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "message", "Cannot delete gate staff assignment created by administrator"));
+            }
         }
 
         assignmentService.removeAssignment(id);
         return ResponseEntity.ok(Map.of("success", true, "message", "Assignment removed successfully"));
+    }
+
+    private boolean isAssignedByAdmin(GateStaffAssignment a) {
+        if (a == null || a.getAssignedById() == null) {
+            return true;
+        }
+        if (adminRepository.existsById(a.getAssignedById())) {
+            return true;
+        }
+        return userRepository.findById(a.getAssignedById())
+                .map(u -> u.getRole() == com.ticket.ticket_booking_system.entity.Role.ADMIN || u.getRole() == com.ticket.ticket_booking_system.entity.Role.SUPER_ADMIN)
+                .orElse(false);
     }
 
     private UUID extractUserId(Authentication auth) {

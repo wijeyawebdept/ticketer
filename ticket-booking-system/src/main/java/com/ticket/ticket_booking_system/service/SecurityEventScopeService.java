@@ -80,7 +80,32 @@ public class SecurityEventScopeService {
             UUID employeeId = employee.getEmployeeId();
             Set<UUID> employeeEventIds = new java.util.HashSet<>();
 
-            // 1. Explicit event assignments for this employee
+            // Just like the organizer, his employees see their owned events:
+            UUID organizerId = null;
+            try {
+                if (employee.getOrganizer() != null) {
+                    organizerId = employee.getOrganizer().getOrganizerId();
+                }
+            } catch (Exception ignored) {
+            }
+            if (organizerId == null) {
+                organizerId = organizerEmployeeRepository.findById(employeeId)
+                        .map(e -> e.getOrganizer() != null ? e.getOrganizer().getOrganizerId() : null)
+                        .orElse(null);
+            }
+
+            if (organizerId != null) {
+                List<Event> orgEvents = eventRepository.findByOrganizer_OrganizerId(organizerId);
+                if (orgEvents != null) {
+                    for (Event ev : orgEvents) {
+                        if (ev != null && ev.getEventId() != null) {
+                            employeeEventIds.add(ev.getEventId());
+                        }
+                    }
+                }
+            }
+
+            // Also include any explicit event assignments for this employee
             try {
                 var assignments = eventEmployeeAssignmentRepository.findActiveByEmployeeId(employeeId);
                 if (assignments != null) {
@@ -94,34 +119,8 @@ public class SecurityEventScopeService {
                 log.warn("Error fetching event employee assignments for {}: {}", employeeId, e.getMessage());
             }
 
-            // 2. If no explicit event assignments are configured, fall back to all events of the employee's organizer
-            // (in line with how organizer employees access all events of their employer organizer in the portal)
-            if (employeeEventIds.isEmpty()) {
-                UUID organizerId = null;
-                try {
-                    if (employee.getOrganizer() != null) {
-                        organizerId = employee.getOrganizer().getOrganizerId();
-                    }
-                } catch (Exception ignored) {
-                }
-                if (organizerId == null) {
-                    organizerId = organizerEmployeeRepository.findById(employeeId)
-                            .map(e -> e.getOrganizer() != null ? e.getOrganizer().getOrganizerId() : null)
-                            .orElse(null);
-                }
-
-                if (organizerId != null) {
-                    employeeEventIds = eventRepository.findByOrganizer_OrganizerId(organizerId)
-                            .stream()
-                            .map(Event::getEventId)
-                            .filter(Objects::nonNull)
-                            .collect(Collectors.toSet());
-                    log.info("Fallback to organizer {} events for employee {}: {} events found",
-                            organizerId, employeeId, employeeEventIds.size());
-                }
-            }
-
-            log.info("Resolved {} associated event(s) for organizer employee {}", employeeEventIds.size(), employeeId);
+            log.info("Resolved {} associated event(s) for organizer employee {} (organizer: {})",
+                    employeeEventIds.size(), employeeId, organizerId);
             return employeeEventIds;
         }
 

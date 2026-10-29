@@ -39,6 +39,7 @@ public class GateStaffAssignmentDTO {
     private String gateName;
     private UUID assignedById;
     private String assignedByName;
+    private Boolean isAssignedByAdmin;
     private LocalDateTime assignedAt;
     private String notes;
     private Boolean isActive;

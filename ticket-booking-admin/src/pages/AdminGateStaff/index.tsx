@@ -55,6 +55,11 @@ export const AdminGateStaff: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' ||
+                  user?.role === 'SUPER_ADMIN' || user?.role === 'ROLE_SUPER_ADMIN';
+
   // Pagination & Filters
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -228,23 +233,25 @@ export const AdminGateStaff: React.FC = () => {
           <IconButton onClick={() => fetchGateStaff()} sx={{ mr: 1 }} title="Refresh">
             <RefreshIcon />
           </IconButton>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenAdd}
-            sx={{
-              borderRadius: 2,
-              padding: '8px 16px',
-              fontWeight: 600,
-              boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
-              '&:hover': {
-                boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
-              },
-            }}
-          >
-            Add Gate Staff
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAdd}
+              sx={{
+                borderRadius: 2,
+                padding: '8px 16px',
+                fontWeight: 600,
+                boxShadow: '0 4px 6px rgba(25, 118, 210, 0.2)',
+                '&:hover': {
+                  boxShadow: '0 6px 8px rgba(25, 118, 210, 0.3)',
+                },
+              }}
+            >
+              Add Gate Staff
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -426,70 +433,74 @@ export const AdminGateStaff: React.FC = () => {
                         <ViewIcon fontSize="small" />
                       </IconButton>
 
-                      <IconButton
-                        onClick={() => handleOpenEdit(staff)}
-                        size="small"
-                        color="primary"
-                        sx={{
-                          backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(25, 118, 210, 0.2)',
-                          },
-                          mr: 0.5,
-                        }}
-                        title="Edit Gate Staff"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+                      {isAdmin && (
+                        <>
+                          <IconButton
+                            onClick={() => handleOpenEdit(staff)}
+                            size="small"
+                            color="primary"
+                            sx={{
+                              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                              },
+                              mr: 0.5,
+                            }}
+                            title="Edit Gate Staff"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
 
-                      {staff.active === 1 ? (
-                        <IconButton
-                          onClick={() => handleToggleStatus(staff)}
-                          size="small"
-                          color="error"
-                          sx={{
-                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(211, 47, 47, 0.2)',
-                            },
-                            mr: 0.5,
-                          }}
-                          title="Deactivate Gate Staff"
-                        >
-                          <BlockIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          onClick={() => handleToggleStatus(staff)}
-                          size="small"
-                          color="success"
-                          sx={{
-                            backgroundColor: 'rgba(46, 125, 50, 0.1)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(46, 125, 50, 0.2)',
-                            },
-                            mr: 0.5,
-                          }}
-                          title="Activate Gate Staff"
-                        >
-                          <CheckCircleIcon fontSize="small" />
-                        </IconButton>
+                          {staff.active === 1 ? (
+                            <IconButton
+                              onClick={() => handleToggleStatus(staff)}
+                              size="small"
+                              color="error"
+                              sx={{
+                                backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                              title="Deactivate Gate Staff"
+                            >
+                              <BlockIcon fontSize="small" />
+                            </IconButton>
+                          ) : (
+                            <IconButton
+                              onClick={() => handleToggleStatus(staff)}
+                              size="small"
+                              color="success"
+                              sx={{
+                                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                                },
+                                mr: 0.5,
+                              }}
+                              title="Activate Gate Staff"
+                            >
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          )}
+
+                          <IconButton
+                            onClick={() => setStaffToDelete(staff)}
+                            size="small"
+                            color="warning"
+                            sx={{
+                              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                              },
+                            }}
+                            title="Move to Recycle Bin"
+                          >
+                            <DeleteSweepIcon fontSize="small" />
+                          </IconButton>
+                        </>
                       )}
-
-                      <IconButton
-                        onClick={() => setStaffToDelete(staff)}
-                        size="small"
-                        color="warning"
-                        sx={{
-                          backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                          },
-                        }}
-                        title="Move to Recycle Bin"
-                      >
-                        <DeleteSweepIcon fontSize="small" />
-                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))

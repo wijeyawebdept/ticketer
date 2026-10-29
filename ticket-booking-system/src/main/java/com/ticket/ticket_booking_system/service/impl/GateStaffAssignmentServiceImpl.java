@@ -41,6 +41,10 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
     private final EventScheduleRepository eventScheduleRepository;
     private final GateStaffRepository gateStaffRepository;
     private final EventService eventService;
+    private final com.ticket.ticket_booking_system.repository.OrganizerRepository organizerRepository;
+    private final com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final com.ticket.ticket_booking_system.repository.AdminRepository adminRepository;
+    private final com.ticket.ticket_booking_system.repository.UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -272,6 +276,41 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
         Event event = a.getEvent();
         EventSchedule schedule = a.getEventSchedule();
 
+        UUID assignedById = a.getAssignedById();
+        String assignedByName = "System Admin";
+        boolean isAssignedByAdmin = true;
+
+        if (assignedById != null) {
+            var orgOpt = organizerRepository.findById(assignedById);
+            if (orgOpt.isPresent()) {
+                var org = orgOpt.get();
+                String name = (org.getFirstName() != null ? org.getFirstName() + " " + (org.getLastName() != null ? org.getLastName() : "") : org.getEmail()).trim();
+                assignedByName = name + " (Organizer)";
+                isAssignedByAdmin = false;
+            } else {
+                var empOpt = organizerEmployeeRepository.findById(assignedById);
+                if (empOpt.isPresent()) {
+                    var emp = empOpt.get();
+                    assignedByName = (emp.getFirstName() + " " + emp.getLastName()).trim() + " (Staff)";
+                    isAssignedByAdmin = false;
+                } else {
+                    var adminOpt = adminRepository.findById(assignedById);
+                    if (adminOpt.isPresent()) {
+                        var adm = adminOpt.get();
+                        assignedByName = (adm.getFirstName() + " " + adm.getLastName()).trim();
+                        isAssignedByAdmin = true;
+                    } else {
+                        var userOpt = userRepository.findById(assignedById);
+                        if (userOpt.isPresent()) {
+                            var u = userOpt.get();
+                            assignedByName = (u.getFirstName() + " " + u.getLastName()).trim();
+                            isAssignedByAdmin = u.getRole() == com.ticket.ticket_booking_system.entity.Role.ADMIN || u.getRole() == com.ticket.ticket_booking_system.entity.Role.SUPER_ADMIN;
+                        }
+                    }
+                }
+            }
+        }
+
         return GateStaffAssignmentDTO.builder()
                 .assignmentId(a.getAssignmentId())
                 .staffUserId(staff != null ? staff.getGateStaffId() : null)
@@ -286,8 +325,9 @@ public class GateStaffAssignmentServiceImpl implements GateStaffAssignmentServic
                 .startTime(schedule != null ? schedule.getStartTime() : null)
                 .endTime(schedule != null ? schedule.getEndTime() : null)
                 .isAllSchedules(schedule == null)
-                .assignedById(a.getAssignedById())
-                .assignedByName("System Admin")
+                .assignedById(assignedById)
+                .assignedByName(assignedByName)
+                .isAssignedByAdmin(isAssignedByAdmin)
                 .assignedAt(a.getAssignedAt())
                 .gateName(a.getGateName())
                 .notes(a.getNotes())

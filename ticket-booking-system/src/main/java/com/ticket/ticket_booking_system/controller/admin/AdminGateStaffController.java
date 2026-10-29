@@ -92,7 +92,11 @@ public class AdminGateStaffController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<GateStaffDTO> createGateStaff(@Valid @RequestBody CreateGateStaffRequest request) {
+    public ResponseEntity<GateStaffDTO> createGateStaff(@Valid @RequestBody CreateGateStaffRequest request, Authentication authentication) {
+        Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
+        if (associatedEventIds != null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         GateStaffDTO created = gateStaffService.createGateStaff(request);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
@@ -104,9 +108,7 @@ public class AdminGateStaffController {
             Authentication authentication) {
         Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
         if (associatedEventIds != null) {
-            if (associatedEventIds.isEmpty() || !assignmentRepository.isStaffAssignedToAnyEvent(id, associatedEventIds)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         GateStaffDTO updated = gateStaffService.updateGateStaff(id, request);
         return ResponseEntity.ok(updated);
@@ -119,9 +121,7 @@ public class AdminGateStaffController {
             Authentication authentication) {
         Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
         if (associatedEventIds != null) {
-            if (associatedEventIds.isEmpty() || !assignmentRepository.isStaffAssignedToAnyEvent(id, associatedEventIds)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         gateStaffService.toggleGateStaffStatus(id, active);
         return ResponseEntity.ok(Map.of("success", true, "active", active));
@@ -131,9 +131,7 @@ public class AdminGateStaffController {
     public ResponseEntity<Map<String, Object>> deleteGateStaff(@PathVariable UUID id, Authentication authentication) {
         Set<UUID> associatedEventIds = securityEventScopeService.getAssociatedEventIds(authentication);
         if (associatedEventIds != null) {
-            if (associatedEventIds.isEmpty() || !assignmentRepository.isStaffAssignedToAnyEvent(id, associatedEventIds)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         gateStaffService.deleteGateStaff(id);
         return ResponseEntity.ok(Map.of("success", true, "message", "Gate staff deleted successfully"));
