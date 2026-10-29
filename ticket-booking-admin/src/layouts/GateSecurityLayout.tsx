@@ -174,6 +174,8 @@ export const GateSecurityLayout: React.FC = () => {
     });
   }, [isDarkMode]);
 
+  const outletContext = useMemo(() => ({ isDarkMode, toggleDarkMode }), [isDarkMode, toggleDarkMode]);
+
   return (
     <ThemeProvider theme={gateMuiTheme}>
       <Box
@@ -320,7 +322,7 @@ export const GateSecurityLayout: React.FC = () => {
 
       {/* Main Gate Scanner Outlet */}
       <Container maxWidth="xl" sx={{ flexGrow: 1, py: { xs: 1.5, sm: 2.5 }, px: { xs: 1.5, sm: 2.5, md: 3 } }}>
-        <Outlet context={{ isDarkMode, toggleDarkMode }} />
+        <Outlet context={outletContext} />
       </Container>
     </Box>
   </ThemeProvider>

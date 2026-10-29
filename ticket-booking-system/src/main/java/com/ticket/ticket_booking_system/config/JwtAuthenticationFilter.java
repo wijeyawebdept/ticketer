@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.ticket.ticket_booking_system.repository.AdminRepository;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerEmployeeRepository;
 import com.ticket.ticket_booking_system.repository.OrganizerRepository;
 import com.ticket.ticket_booking_system.repository.UserRepository;
@@ -30,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AdminRepository adminRepository;
     private final OrganizerRepository organizerRepository;
     private final OrganizerEmployeeRepository organizerEmployeeRepository;
+    private final GateStaffRepository gateStaffRepository;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
@@ -37,13 +39,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserRepository userRepository,
             AdminRepository adminRepository,
             OrganizerRepository organizerRepository,
-            OrganizerEmployeeRepository organizerEmployeeRepository) {
+            OrganizerEmployeeRepository organizerEmployeeRepository,
+            GateStaffRepository gateStaffRepository) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.organizerRepository = organizerRepository;
         this.organizerEmployeeRepository = organizerEmployeeRepository;
+        this.gateStaffRepository = gateStaffRepository;
     }
 
     @Override
@@ -133,6 +137,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 case "ROLE_ORGANIZER_EMPLOYEE":
                     return organizerEmployeeRepository.findByEmail(email)
                             .<UserDetails>map(e -> e)
+                            .orElseGet(() -> userDetailsService.loadUserByUsername(email));
+
+                case "ROLE_GATE_STAFF":
+                case "GATE_STAFF":
+                    return gateStaffRepository.findByEmail(email)
+                            .<UserDetails>map(g -> g)
                             .orElseGet(() -> userDetailsService.loadUserByUsername(email));
 
                 case "ROLE_USER":

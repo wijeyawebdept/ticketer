@@ -571,7 +571,9 @@ export const GateScanner: React.FC = () => {
 
           setSelectedEventId(targetId);
           localStorage.setItem('ticketer_gate_event_id', targetId);
-          navigate(`/gate/${targetId}`, { replace: true });
+          if (targetId && routeEventId !== targetId) {
+            navigate(`/gate/${targetId}`, { replace: true });
+          }
         } else {
           setSelectedEventId('');
           setSelectedScheduleId('');

@@ -19,6 +19,7 @@ import com.ticket.ticket_booking_system.entity.Admin;
 import com.ticket.ticket_booking_system.entity.Organizer;
 import com.ticket.ticket_booking_system.entity.OrganizerEmployee;
 import com.ticket.ticket_booking_system.entity.User;
+import com.ticket.ticket_booking_system.repository.GateStaffRepository;
 import com.ticket.ticket_booking_system.service.EventService;
 import com.ticket.ticket_booking_system.service.GateStaffAssignmentService;
 
@@ -35,6 +36,7 @@ public class GateStaffPortalController {
 
     private final GateStaffAssignmentService assignmentService;
     private final EventService eventService;
+    private final GateStaffRepository gateStaffRepository;
 
     @GetMapping("/my-assignments")
     public ResponseEntity<List<EventResponse>> getMyAssignedEvents(Authentication authentication) {
@@ -99,8 +101,16 @@ public class GateStaffPortalController {
 
     private UUID extractUserId(Authentication auth) {
         if (auth == null || auth.getPrincipal() == null) return null;
-        if (auth.getPrincipal() instanceof User) {
-            return ((User) auth.getPrincipal()).getId();
+        if (auth.getPrincipal() instanceof com.ticket.ticket_booking_system.entity.GateStaff) {
+            return ((com.ticket.ticket_booking_system.entity.GateStaff) auth.getPrincipal()).getGateStaffId();
+        }
+        // Check gateStaffRepository by email first so gate staff assignments are found even if user was mapped to another entity
+        String email = auth.getName();
+        if (email != null && !email.isBlank()) {
+            var staffOpt = gateStaffRepository.findByEmail(email);
+            if (staffOpt.isPresent()) {
+                return staffOpt.get().getGateStaffId();
+            }
         }
         if (auth.getPrincipal() instanceof Admin) {
             return ((Admin) auth.getPrincipal()).getAdminId();
@@ -111,8 +121,8 @@ public class GateStaffPortalController {
         if (auth.getPrincipal() instanceof OrganizerEmployee) {
             return ((OrganizerEmployee) auth.getPrincipal()).getEmployeeId();
         }
-        if (auth.getPrincipal() instanceof com.ticket.ticket_booking_system.entity.GateStaff) {
-            return ((com.ticket.ticket_booking_system.entity.GateStaff) auth.getPrincipal()).getGateStaffId();
+        if (auth.getPrincipal() instanceof User) {
+            return ((User) auth.getPrincipal()).getId();
         }
         return null;
     }

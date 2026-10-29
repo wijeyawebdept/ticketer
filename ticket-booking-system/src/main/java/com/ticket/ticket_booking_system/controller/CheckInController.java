@@ -123,50 +123,58 @@ public class CheckInController {
 
     private UUID extractStaffId(Authentication authentication) {
         if (authentication == null) return null;
-        if (authentication.getPrincipal() instanceof User) {
-            return ((User) authentication.getPrincipal()).getUserId();
-        }
-        if (authentication.getPrincipal() instanceof Organizer) {
-            return ((Organizer) authentication.getPrincipal()).getOrganizerId();
+        if (authentication.getPrincipal() instanceof GateStaff) {
+            return ((GateStaff) authentication.getPrincipal()).getGateStaffId();
         }
         if (authentication.getPrincipal() instanceof OrganizerEmployee) {
             return ((OrganizerEmployee) authentication.getPrincipal()).getEmployeeId();
         }
-        if (authentication.getPrincipal() instanceof GateStaff) {
-            return ((GateStaff) authentication.getPrincipal()).getGateStaffId();
+        if (authentication.getPrincipal() instanceof Organizer) {
+            return ((Organizer) authentication.getPrincipal()).getOrganizerId();
         }
 
         String email = authentication.getName();
         if (email != null) {
-            User user = userRepository.findByEmail(email).orElse(null);
-            if (user != null) return user.getUserId();
-            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
-            if (organizer != null) return organizer.getOrganizerId();
+            boolean isGateStaffRole = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().contains("GATE_STAFF"));
+            if (isGateStaffRole) {
+                GateStaff staff = gateStaffRepository.findByEmail(email).orElse(null);
+                if (staff != null) return staff.getGateStaffId();
+            }
+
             OrganizerEmployee employee = organizerEmployeeRepository.findByEmail(email).orElse(null);
             if (employee != null) return employee.getEmployeeId();
+            Organizer organizer = organizerRepository.findByEmail(email).orElse(null);
+            if (organizer != null) return organizer.getOrganizerId();
             GateStaff staff = gateStaffRepository.findByEmail(email).orElse(null);
             if (staff != null) return staff.getGateStaffId();
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) return user.getUserId();
+        }
+
+        if (authentication.getPrincipal() instanceof User) {
+            return ((User) authentication.getPrincipal()).getUserId();
         }
         return null;
     }
 
     private String extractStaffName(Authentication authentication) {
         if (authentication == null) return "Staff";
-        if (authentication.getPrincipal() instanceof User) {
-            User u = (User) authentication.getPrincipal();
-            return (u.getFirstName() + " " + u.getLastName()).trim();
-        }
-        if (authentication.getPrincipal() instanceof Organizer) {
-            Organizer o = (Organizer) authentication.getPrincipal();
-            return (o.getFirstName() + " " + o.getLastName()).trim();
+        if (authentication.getPrincipal() instanceof GateStaff) {
+            GateStaff g = (GateStaff) authentication.getPrincipal();
+            return (g.getFirstName() + " " + g.getLastName()).trim();
         }
         if (authentication.getPrincipal() instanceof OrganizerEmployee) {
             OrganizerEmployee e = (OrganizerEmployee) authentication.getPrincipal();
             return (e.getFirstName() + " " + e.getLastName()).trim();
         }
-        if (authentication.getPrincipal() instanceof GateStaff) {
-            GateStaff g = (GateStaff) authentication.getPrincipal();
-            return (g.getFirstName() + " " + g.getLastName()).trim();
+        if (authentication.getPrincipal() instanceof Organizer) {
+            Organizer o = (Organizer) authentication.getPrincipal();
+            return (o.getFirstName() + " " + o.getLastName()).trim();
+        }
+        if (authentication.getPrincipal() instanceof User) {
+            User u = (User) authentication.getPrincipal();
+            return (u.getFirstName() + " " + u.getLastName()).trim();
         }
         return authentication.getName() != null ? authentication.getName() : "Gate Staff";
     }

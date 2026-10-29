@@ -20,7 +20,8 @@ axiosInstance.interceptors.request.use(
                           config.url?.includes('/api/auth/register') ||
                           config.url?.includes('/api/auth/admin/login') ||
                           config.url?.includes('/api/auth/organizer/login') ||
-                          config.url?.includes('/api/auth/organizer-employee/login');
+                          config.url?.includes('/api/auth/organizer-employee/login') ||
+                          config.url?.includes('/api/auth/gate/login');
     
     if (isAuthEndpoint) {
       return config;
@@ -32,6 +33,7 @@ axiosInstance.interceptors.request.use(
                               currentPath.includes('/admin') || 
                               currentPath.includes('/organizer') || 
                               currentPath.includes('/employee') ||
+                              currentPath.includes('/gate') ||
                               currentPath.includes('/users') ||
                               currentPath.includes('/admins') ||
                               currentPath.includes('/venues') ||
@@ -120,6 +122,7 @@ axiosInstance.interceptors.response.use(
                           requestUrl.includes('/api/auth/admin/login') ||
                           requestUrl.includes('/api/auth/organizer/login') ||
                           requestUrl.includes('/api/auth/organizer-employee/login') ||
+                          requestUrl.includes('/api/auth/gate/login') ||
                           requestUrl.includes('/api/auth/verify-email') ||
                           requestUrl.includes('/api/auth/send-verification');
 
@@ -137,7 +140,9 @@ axiosInstance.interceptors.response.use(
       sessionStorage.removeItem('user_data');
       
       // Redirect based on which section they were on
-      if (currentPath.includes('/admin') || currentPath.includes('/organizer') || currentPath.includes('/employee')) {
+      if (currentPath.includes('/gate')) {
+        window.location.href = '/login/gate';
+      } else if (currentPath.includes('/admin') || currentPath.includes('/organizer') || currentPath.includes('/employee')) {
         window.location.href = '/login/tkadmin';
       } else {
         window.location.href = '/login';

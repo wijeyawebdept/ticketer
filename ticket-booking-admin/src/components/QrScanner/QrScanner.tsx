@@ -41,6 +41,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   const [hasTorch, setHasTorch] = useState(false);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const activeCameraIdRef = useRef<string | null>(null);
   const isTransitioningRef = useRef<boolean>(false);
   const mountedRef = useRef<boolean>(true);
   const lastScannedTextRef = useRef<string>('');
@@ -88,6 +89,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         setTorchOn(false);
         setHasTorch(false);
       }
+      activeCameraIdRef.current = null;
     } catch (err) {
       console.warn('Error stopping scanner:', err);
     } finally {
@@ -96,19 +98,21 @@ export const QrScanner: React.FC<QrScannerProps> = ({
   }, []);
 
   // Camera enumeration helper
-  const loadCameras = useCallback(async (): Promise<CameraDevice[]> => {
+  const loadCameras = useCallback(async (autoSelectPreferred = false): Promise<CameraDevice[]> => {
     try {
       const devices = await Html5Qrcode.getCameras();
       if (!mountedRef.current) return [];
       if (devices && devices.length > 0) {
         setCameras(devices);
-        const backCamera = devices.find(d => 
-          d.label.toLowerCase().includes('back') || 
-          d.label.toLowerCase().includes('rear') || 
-          d.label.toLowerCase().includes('environment')
-        );
-        const preferredId = backCamera ? backCamera.id : devices[0].id;
-        setSelectedCameraId((prev) => prev || preferredId);
+        if (autoSelectPreferred) {
+          const backCamera = devices.find(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('rear') || 
+            d.label.toLowerCase().includes('environment')
+          );
+          const preferredId = backCamera ? backCamera.id : devices[0].id;
+          setSelectedCameraId((prev) => prev || preferredId);
+        }
         return devices;
       } else {
         return [];
@@ -209,9 +213,10 @@ export const QrScanner: React.FC<QrScannerProps> = ({
         setIsScanning(true);
         setIsInitializing(false);
         setErrorMsg(null);
+        activeCameraIdRef.current = typeof cameraTarget === 'string' ? cameraTarget : 'environment';
 
-        // Refresh camera list now that camera permission is granted (gets real device labels on iOS/Android)
-        loadCameras();
+        // Refresh camera list now that camera permission is granted (gets real device labels on iOS/Android without mutating selection)
+        loadCameras(false);
 
         try {
           const capabilities = instance.getRunningTrackCapabilities();
@@ -234,9 +239,9 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     }
   }, [fps, loadCameras, scannerId, selectedCameraId]);
 
-  // Initial camera enumeration
+  // Initial camera enumeration with preferred selection
   useEffect(() => {
-    loadCameras();
+    loadCameras(true);
   }, [loadCameras]);
 
   // Start or stop based on isActive & selectedCameraId
@@ -244,6 +249,10 @@ export const QrScanner: React.FC<QrScannerProps> = ({
     if (!isActive) {
       stopScanner();
     } else {
+      const targetCam = selectedCameraId || 'environment';
+      if (html5QrCodeRef.current?.isScanning && activeCameraIdRef.current === targetCam) {
+        return;
+      }
       startScanner();
     }
 
